@@ -107,10 +107,11 @@ function renderHreben(h, dom) {
 }
 
 /**
- * Dlaždica spotrebiča (docs/navrhy/teraz-dlazdice.html, teraz-dlazdice-odrazky.html): ikona v kruhu, veľké číslo,
- * meno, pásik slnka a siete, najviac dve odrážky a odznak. Prvky idú vždy v tomto poradí a pásik je aj tam, kde
- * nie je čo ukázať (prázdny, drží miesto): dlaždice v rade zdieľajú riadky mriežky, takže číslo aj pásik sú
- * v nich na rovnakej výške. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
+ * Dlaždica spotrebiča (docs/navrhy/teraz-dlazdice.html, teraz-dlazdice-odrazky.html, teraz-pasik-zdroje.html): ikona
+ * v kruhu, veľké číslo, meno, pásik slnka a siete a najviac dve odrážky, z ktorých druhou môže byť odznak. Prvky
+ * idú vždy v tomto poradí a pásik je aj tam, kde nie je čo ukázať (prázdny, drží miesto): dlaždice v rade zdieľajú
+ * riadky mriežky, takže číslo aj pásik sú v nich na rovnakej výške, a odrážky majú vždy miesto na dva riadky,
+ * takže sú všetky dlaždice rovnako vysoké. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
  * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `riadi` bodka stavu bojlera so zásuvkou,
  * `rezim` značka v rohu, kto bojler zapína.
  * @param {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
@@ -121,8 +122,8 @@ const dlazdicaHtml = (d) =>
     `<span class="dl-ico"${d.riadi ? ` data-riadi="${d.riadi}"` : ''} aria-hidden="true">${vecIcon(d.id)}</span>` +
     `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimHtml(d.rezim)}` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%"`}></i>` +
-    `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}</small>` +
-    `${d.potom ? `<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</span></button>`;
+    `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
+    `${d.potom ? `<span class="sr">, </span><em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></button>`;
 
 /** Značka režimu bojlera v rohu dlaždice, pre čítačku slovom. @param {'appka' | 'rucne' | null | undefined} rezim */
 const rezimHtml = (rezim) =>
@@ -154,8 +155,8 @@ function renderCo(co, dom, bojler) {
     const p = h.dalsi;
     const hore = dnes
         ? [
-              ...h.dlazdice.map((d) => ({ ...d, podiel: null })),
-              ...(p ? [{ id: p.id, tone: 'tiche', kind: p.tone, velky: p.cas, meno: p.name, podiel: null, odr: p.odr }] : []),
+              ...h.dlazdice,
+              ...(p ? [{ id: p.id, tone: 'tiche', kind: p.tone, velky: p.cas, meno: p.name, podiel: p.podiel, odr: p.odr }] : []),
           ]
         : [];
     const dalsie = co.riadky.map((r) => ({
@@ -327,7 +328,7 @@ function bojlerHtml(state, co) {
     // Len pri dnešku - iný deň v hrebeni ukazuje plán, nie čo sa deje teraz.
     if (!co || co.den || !riadeny(state) || !state.bojler) return '';
     const t = bojlerDlazdica(state.bojler, state.now, state.site.timezone);
-    return dlazdicaHtml({ id: 'bojler', ...t, podiel: null });
+    return dlazdicaHtml({ id: 'bojler', ...t });
 }
 
 /**

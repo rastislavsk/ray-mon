@@ -4,12 +4,12 @@
 // rozvrhuje ten istý výpočet ako Plán dňa (shared/plan-dna.js), sám za seba a s rozpočtom slnka od
 // polnoci. Čisté funkcie bez DOM, texty skladá shared/messages-core.js.
 
-import { DEVICES, MINUTES_PER_DAY, MOZEM_ITEMS, PLAN_DNA, PREDPOVED_HODINY, TARIFF_LIMITS, TYZDEN } from './config.js';
+import { MINUTES_PER_DAY, PLAN_DNA, PREDPOVED_HODINY, TARIFF_LIMITS, TYZDEN } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { dayNameShort, weekDayName } from './format.js';
 import { planDnaRowText, terazDenHlavickaText, terazNudzaText, terazRiadokText, terazVecText } from './messages-core.js';
-import { dayCtx, freeKw, programDraw } from './mozem-jadro.js';
-import { cheapFrom, chosen, najlepsiDen } from './plan-dna.js';
+import { dayCtx, programDraw } from './mozem-jadro.js';
+import { cheapFrom, chosen, najlepsiDen, podielSlnka, vec, volne } from './plan-dna.js';
 import { localDateKey } from './solar.js';
 
 /** @typedef {import('./mozem-jadro.js').DayCtx} DayCtx */
@@ -87,28 +87,6 @@ export function dalsieSlnko(dni, id) {
 }
 
 /**
- * Voľný výkon dňa po minútach bez toho, čo si už vzali spotrebiče na slnku (`slnko`).
- * @param {DayCtx} ctx @param {SunRow[]} slnko
- */
-function volne(ctx, slnko) {
-    const free = Array.from({ length: MINUTES_PER_DAY }, (_, m) => freeKw(ctx, m));
-    for (const r of slnko) {
-        const { item, device } = vec(r.id);
-        const draw = item.runMin === null ? null : programDraw(item, device.powerKw);
-        for (let m = r.start; m < Math.min(r.end, MINUTES_PER_DAY); m++) {
-            free[m] = Math.max(0, free[m] - (draw ? (draw[m - r.start]?.kw ?? 0) : device.powerKw));
-        }
-    }
-    return free;
-}
-
-/** Vec a jej spotrebič podľa id. @param {string} id */
-function vec(id) {
-    const item = /** @type {(typeof MOZEM_ITEMS)[number]} */ (MOZEM_ITEMS.find((i) => i.id === id));
-    return { item, device: /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === item.device)) };
-}
-
-/**
  * Núdzové časy pre veci `ids`, ktoré sa v deň `ctx` na slnko nezmestia: kedy ich to stojí najmenej
  * zo siete. Vec, ktorá na niečo čaká (sušička na práčku), ide až po nej. Každá si zo zvyšného slnka
  * odpočíta svoje, ďalšia dostane, čo ostane. Vráti ich podľa času, bez času na konci.
@@ -172,18 +150,14 @@ function nudzovyCas(id, ctx, free, from) {
  * @param {Array<{ kw: number }>} draw @param {DayCtx} ctx @param {number[]} free @param {number} from
  */
 function starty(draw, ctx, free, from) {
-    const all = draw.reduce((sum, { kw }) => sum + kw, 0);
     /** @type {Array<{ start: number, podiel: number, cena: number }>} */ const out = [];
     for (let start = from; start + draw.length <= MINUTES_PER_DAY; start += STEP) {
-        let sun = 0;
         let cena = 0;
         draw.forEach(({ kw }, m) => {
             const slot = ctx.plan[Math.floor((start + m) / STEP)];
-            const zoSlnka = Math.min(kw, free[start + m]);
-            sun += zoSlnka;
-            cena += (kw - zoSlnka) * (slot.band.price ?? VAHA[slot.level]);
+            cena += (kw - Math.min(kw, free[start + m])) * (slot.band.price ?? VAHA[slot.level]);
         });
-        out.push({ start, podiel: all > 0 ? sun / all : 0, cena });
+        out.push({ start, podiel: podielSlnka(draw, free, start), cena });
     }
     return out;
 }
@@ -224,7 +198,7 @@ function usek(span, od, po) {
 }
 
 /**
- * Riadok a detail núdzového času: veľký čas, doplnok a podiel slnka v % pre pásik (pri aute null),
+ * Riadok a detail núdzového času: veľký čas, doplnok a podiel slnka v % pre pásik (auto v lacnom pásme 0),
  * a pre panel spotrebiča kedy, od-do, prečo a úsek na osi dňa (zlatý s kúskom slnka, modrý zo siete).
  * @param {Nudza} n @param {{ name: string, span: { from: number, to: number }, den: string, potom: string | null }} o
  *   meno veci, os dňa, meno iného dňa (pri dnešku prázdne) a pri dnešku deň, keď pôjde celá zo slnka
@@ -240,7 +214,7 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
             kind: /** @type {const} */ ('nudza'),
             cas: t.cas,
             odr: t.odr,
-            podiel: n.podiel === null ? null : Math.round(n.podiel * 100),
+            podiel: Math.round((n.podiel ?? 0) * 100),
         },
         detail: {
             id: n.id,
@@ -269,7 +243,16 @@ export function denInyModel(d, devices, nad, voice = 'drzy') {
         .map((r) => {
             const t = planDnaRowText(r, voice);
             /** @type {import('./plan-dna.js').PlanRow & { name: string, why: string }} */
-            const row = { id: r.id, kind: 'later', day: { ...den, start: r.start }, end: r.end, after: r.after, name: t.name, why: t.why };
+            const row = {
+                id: r.id,
+                kind: 'later',
+                day: { ...den, start: r.start },
+                end: r.end,
+                after: r.after,
+                podiel: r.podiel,
+                name: t.name,
+                why: t.why,
+            };
             const u = usek(span, r.start, r.end);
             return {
                 riadok: {
@@ -277,7 +260,7 @@ export function denInyModel(d, devices, nad, voice = 'drzy') {
                     name: t.name,
                     kind: /** @type {'later' | 'nudza'} */ ('later'),
                     ...terazRiadokText(row),
-                    podiel: /** @type {number | null} */ (null),
+                    podiel: Math.round(r.podiel * 100),
                 },
                 detail: {
                     id: r.id,

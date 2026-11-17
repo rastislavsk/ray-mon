@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Pásik zdrojov na dlaždiciach Teraz</title>
+        <style>
+            /* Mockup, nie snímka z appky. Dlaždice sú kreslené ručne podľa css/teraz.css (.dl, .podiel).
+               Scenár „Zamračený deň“ je vymyslený, čísla sú ilustračné, appka ich takto nevypočítala. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(255, 255, 255, 0.82);
+                --line: rgba(242, 240, 234, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --cheap-text: #b0dbff;
+                --costly: #ff7a66;
+                --sun: #ffd166;
+                --amber: #ffc94a;
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p,
+            li {
+                color: var(--dim);
+                max-width: 72ch;
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                border-top: 1px solid var(--line);
+                padding-top: 28px;
+            }
+            .riadok {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: start;
+            }
+            .tel {
+                width: 100%;
+                max-width: 340px;
+                padding: 16px;
+                border-radius: 34px;
+                background: linear-gradient(180deg, #2c3c5c, #46597c 60%, #5a6a86);
+                border: 1px solid var(--line);
+            }
+            .tel h3 {
+                font-size: 0.85rem;
+                color: var(--dim);
+                margin-bottom: 10px;
+                font-weight: 700;
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .dl {
+                display: grid;
+                padding: 14px;
+                border-radius: 24px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                color: #fff;
+            }
+            .dl[data-tone='go'] {
+                background: var(--yes);
+                color: #14300c;
+            }
+            .ico {
+                width: 44px;
+                height: 44px;
+                margin-bottom: 22px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+                display: grid;
+                place-items: center;
+                font-size: 0.7rem;
+                font-weight: 800;
+            }
+            .dl[data-tone='go'] .ico {
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .velky {
+                font-size: 1.75rem;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .velky.modry {
+                color: var(--cheap-text);
+            }
+            .dl b {
+                margin-top: 2px;
+                font-size: 1.25rem;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .podiel {
+                display: flex;
+                height: 6px;
+                margin: 8px 0 4px;
+                border-radius: 3px;
+                overflow: hidden;
+            }
+            .podiel i {
+                display: block;
+                height: 100%;
+            }
+            .s {
+                background: var(--sun);
+            }
+            .l {
+                background: rgba(124, 196, 255, 0.75);
+            }
+            .d {
+                background: var(--costly);
+            }
+            .podiel.stv {
+                gap: 3px;
+                border-radius: 0;
+            }
+            .podiel.stv i {
+                flex: 1;
+                border-radius: 3px;
+            }
+            .dl[data-tone='go'] .podiel {
+                box-shadow: 0 0 0 1.5px rgba(20, 48, 12, 0.35);
+            }
+            .odr {
+                font-size: 0.875rem;
+                font-weight: 600;
+                line-height: 1.3;
+                display: grid;
+            }
+            .odr span {
+                position: relative;
+                padding-left: 0.8em;
+            }
+            .odr span::before {
+                content: '';
+                position: absolute;
+                left: 0.1em;
+                top: 0.55em;
+                width: 0.3em;
+                height: 0.3em;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            .odr .drahe {
+                color: #ffc4ba;
+            }
+            .znak {
+                justify-self: start;
+                margin-top: 6px;
+                padding: 2px 8px;
+                border-radius: 999px;
+                font-size: 0.75rem;
+                font-weight: 800;
+                font-style: normal;
+            }
+            .znak.drahe {
+                background: var(--costly);
+                color: #3a0b03;
+            }
+            .poz {
+                font-size: 0.85rem;
+            }
+            .poz ul {
+                margin: 6px 0 0;
+                padding-left: 18px;
+            }
+            .legenda {
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            .legenda i {
+                display: inline-block;
+                width: 22px;
+                height: 6px;
+                border-radius: 3px;
+                margin-right: 6px;
+                vertical-align: middle;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 0.9rem;
+                max-width: 900px;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 8px 10px;
+                text-align: left;
+                vertical-align: top;
+                color: var(--dim);
+            }
+            th {
+                color: var(--ink);
+            }
+            .odp {
+                color: var(--amber);
+                font-weight: 800;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Pásik zdrojov na dlaždiciach Teraz</h1>
+                <p>
+                    Želanie (17. 11. 2026, upravené): pásik má mať každý spotrebič, nielen núdzový čas. Celý zo slnka žltý, celý zo siete
+                    modrý, zmiešaný oboma farbami. Drahé pásmo (VT) zatiaľ neriešime, sieť je jedna modrá.
+                </p>
+                <p class="legenda">
+                    <span><i class="s"></i>zo slnka</span>
+                    <span><i class="l"></i>zo siete</span>
+                </p>
+                <p>
+                    <b>Stav dnes:</b> pásik má len núdzový čas (spotrebič, ktorý sa dnes na slnko nezmestí). Ostatné dlaždice ho majú skrytý
+                    (<code>visibility: hidden</code>), miesto po ňom ostáva.
+                </p>
+                <p>
+                    <b>Zistenie z kódu:</b> „zo slnka“ v Pláne dňa neznamená 100 %. Riadok ide na slnko, keď slnko pokryje ohrevy programu
+                    (<code>sunStart</code> v <code>shared/plan-dna.js</code>); zvyšok programu môže ísť aj zo siete. Celý žltý pásik by
+                    preto pri takom riadku mohol klamať. Práve v tom sa líšia možnosti A a B. (Prvá verzia tohto návrhu tu chybne uvádzala
+                    hranicu polovice programu, <code>MIN_SUN_SHARE</code> platí pre kartu Môžem?.)
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Možnosť A · najjednoduchšia</small>Pevná farba podľa druhu riadku</h2>
+                <div class="riadok">
+                    <div class="tel">
+                        <h3>Polojasný deň · ďalej dnes</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <span class="ico">UM</span><span class="velky">11:15</span><b>Umývačka</b>
+                                <span class="podiel"><i class="s" style="width: 100%"></i></span>
+                                <span class="odr"><span>dobehne 13:15</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">PR</span><span class="velky">13:30</span><b>Práčka</b>
+                                <span class="podiel"><i class="s" style="width: 100%"></i></span>
+                                <span class="odr"><span>dobehne 15:30</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">SU</span><span class="velky">14:00</span><b>Sušička</b>
+                                <span class="podiel"><i class="s" style="width: 40%"></i><i class="l" style="width: 60%"></i></span>
+                                <span class="odr"><span>tretina zo slnka</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">AU</span><span class="velky modry"><small>od </small>22:00</span><b>Auto</b>
+                                <span class="podiel"><i class="l" style="width: 100%"></i></span>
+                                <span class="odr"><span>lacná elektrina</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="poz">
+                        <ul>
+                            <li>Riadok zo slnka (aj iný deň zo slnka) má pásik vždy celý žltý.</li>
+                            <li>Riadok z lacného pásma a auto majú pásik celý modrý.</li>
+                            <li>Núdzový čas ostáva, ako je: žltá časť podľa podielu slnka, zvyšok modrý.</li>
+                            <li>Dlaždice „ide teraz“ (plné zelené a modré) ostávajú bez pásika, ich farba to už hovorí.</li>
+                            <li><b>Plus:</b> malá zmena bez nového výpočtu, len percento 100 alebo 0 podľa druhu riadku.</li>
+                            <li>
+                                <b>Mínus:</b> práčka môže mať v skutočnosti 60 % zo slnka a 40 % zo siete, pásik ukáže 100 % žltú. Pri
+                                slabšom dni to bude nepresné práve vtedy, keď na tom záleží.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Možnosť B · najpoctivejšia · odporúčam</small>Skutočný podiel slnka pri každom riadku</h2>
+                <div class="riadok">
+                    <div class="tel">
+                        <h3>Polojasný deň · teraz a ďalej dnes</h3>
+                        <div class="mriezka">
+                            <div class="dl" data-tone="go">
+                                <span class="ico">BO</span><span class="velky">do 14:00</span><b>Bojler</b>
+                                <span class="podiel"><i class="s" style="width: 100%"></i></span>
+                                <span class="odr"><span>zo slnka</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">UM</span><span class="velky">11:15</span><b>Umývačka</b>
+                                <span class="podiel"><i class="s" style="width: 100%"></i></span>
+                                <span class="odr"><span>dobehne 13:15</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">PR</span><span class="velky">13:30</span><b>Práčka</b>
+                                <span class="podiel"><i class="s" style="width: 70%"></i><i class="l" style="width: 30%"></i></span>
+                                <span class="odr"><span>dobehne 15:30</span><span>väčšina zo slnka</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">SU</span><span class="velky">14:00</span><b>Sušička</b>
+                                <span class="podiel"><i class="s" style="width: 40%"></i><i class="l" style="width: 60%"></i></span>
+                                <span class="odr"><span>tretina zo slnka</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="poz">
+                        <ul>
+                            <li>
+                                Každý riadok (zo slnka, iný deň zo slnka, núdzový čas) dostane skutočný podiel programu zo slnka, spočítaný
+                                tak isto ako dnes pri núdzovom čase (<code>starty()</code> v <code>shared/tyzden.js</code>).
+                            </li>
+                            <li>Riadok z lacného pásma a auto: celý modrý (slnko tam nebeží).</li>
+                            <li>
+                                Keď riadok zo slnka nemá celé zo slnka (pod 85 %), pribudne odrážka so slovom ako pri núdzovom čase
+                                („väčšina zo slnka“). Nad 85 % ostane len „dobehne …“, pásik povie zvyšok.
+                            </li>
+                            <li>Pásik majú aj plné dlaždice „ide teraz“, s tmavým lemom, aby žltá na zelenej nezanikla.</li>
+                            <li><b>Plus:</b> pásik nikdy neklame a zelená dlaždica „ide teraz“ ukáže, koľko naozaj dá slnko.</li>
+                            <li>
+                                <b>Mínus:</b> viac práce. Plán dňa dnes podiel riadku neukladá, treba ho dopočítať a pokryť testami. Plná
+                                dlaždica s pásikom je o riadok vyššia ako dnes.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Možnosť C · nekonvenčná</small>Štvrtiny namiesto plynulého pásika</h2>
+                <div class="riadok">
+                    <div class="tel">
+                        <h3>Polojasný deň · ďalej dnes</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <span class="ico">UM</span><span class="velky">11:15</span><b>Umývačka</b>
+                                <span class="podiel stv"><i class="s"></i><i class="s"></i><i class="s"></i><i class="s"></i></span>
+                                <span class="odr"><span>dobehne 13:15</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">PR</span><span class="velky">13:30</span><b>Práčka</b>
+                                <span class="podiel stv"><i class="s"></i><i class="s"></i><i class="s"></i><i class="l"></i></span>
+                                <span class="odr"><span>dobehne 15:30</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">SU</span><span class="velky">14:00</span><b>Sušička</b>
+                                <span class="podiel stv"><i class="s"></i><i class="s"></i><i class="l"></i><i class="l"></i></span>
+                                <span class="odr"><span>tretina zo slnka</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">AU</span><span class="velky modry"><small>od </small>22:00</span><b>Auto</b>
+                                <span class="podiel stv"><i class="l"></i><i class="l"></i><i class="l"></i><i class="l"></i></span>
+                                <span class="odr"><span>lacná elektrina</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="poz">
+                        <ul>
+                            <li>Výpočet ako v B, ale pásik má štyri dieliky ako ukazovateľ batérie, zaokrúhlené na štvrtiny.</li>
+                            <li><b>Plus:</b> číta sa na prvý pohľad a nepredstiera presnosť, ktorú predpoveď nemá.</li>
+                            <li>
+                                <b>Mínus:</b> zaokrúhlenie: 40 % ukáže dve štvrtiny, kým slovo hovorí „tretina“. Je to nový prvok a núdzový
+                                čas by sa musel prerobiť tiež, aby to bolo všade rovnaké.
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2><small>Rozhodnutie 17. 11. 2026</small>Možnosť B, všetky dlaždice rovnako veľké</h2>
+                <ul>
+                    <li>
+                        Podiel slnka nesie každé miesto v Pláne dňa (<code>podiel</code> v <code>PlanRow</code>): na slnku sa počíta pri
+                        rozvrhu, v lacnom pásme zo slnka, ktoré ostane po veciach na slnku (<code>podielSlnka</code>, ten istý výpočet ako
+                        núdzový čas). Auto na slnku je celé zo slnka.
+                    </li>
+                    <li>Pásik majú všetky dlaždice vrátane plných „ide teraz“. Na modrej dlaždici je sieť sýtejšia modrá.</li>
+                    <li>
+                        Bojler, ktorý riadi zásuvka: pásik je dnešná nameraná energia zo slnka a zo siete; kým dnes nehrial, je prázdny a
+                        drží miesto.
+                    </li>
+                    <li>
+                        Pod 85 % zo slnka povie odrážka slovom koľko („väčšina zo slnka“). Odrážky sú najviac dve: odznak „potom v …“
+                        nahradí druhú.
+                    </li>
+                    <li>
+                        Všetky dlaždice sú rovnako vysoké: odrážky majú vždy miesto na dva riadky a odznak stojí v nich, vysoký presne ako
+                        riadok. Dlaždice vedľa seba majú číslo, pásik aj odrážky na rovnakej výške (subgrid). Pri väčšom písme v systéme sa
+                        môže niečo zalomiť - text sa neskracuje, rad je potom vyšší.
+                    </li>
+                    <li>Núdzový čas bez času a auto v lacnom pásme v noci: pásik celý modrý.</li>
+                    <li><b>Drahé pásmo (VT)</b> je odložené. Pásik ho neodlišuje, sieť je jedna modrá.</li>
+                </ul>
+            </section>
+        </main>
+    </body>
+</html>
