@@ -5,7 +5,6 @@ import { show } from './write.js';
 
 /** @type {Record<string, string>} */
 const HLASKY = {
-    nacitavam: 'Načítavam radar…',
     chyba: 'Radar sa nepodarilo načítať.',
     mimo: 'Pre toto miesto radar nemáme. Pokrýva len Európu.',
     bezpolohy: 'Radar ukáže tvoje okolie, keď v Nastavení zadáš polohu.',
@@ -24,7 +23,16 @@ export function renderRadar(state, dom) {
         b.setAttribute('aria-pressed', String(b.dataset.rozsah === state.radarRozsah));
     const legenda = legendaPrechod();
     if (dom.rdLegenda.style.background !== legenda) dom.rdLegenda.style.background = legenda;
-    const hlaska = state.radarStav === 'ok' ? '' : HLASKY[state.radarStav];
+    // Kým nie je načítané všetko, obiehajú slnko a mesiac a prehrávanie čaká: najnovšia snímka je už na mape,
+    // no os by preskakovala po snímkach, ktoré ešte len prídu.
+    const caka = state.radarStav === 'nacitavam' || (state.radarStav === 'ok' && !state.radarHotovo);
+    show(dom.rdSvitanie, caka);
+    /** @type {HTMLButtonElement} */ (dom.rdHraj).disabled = caka;
+    dom.rdOs.setAttribute('aria-disabled', String(caka));
+    dom.rdDok.classList.toggle('caka', caka);
+    for (const b of dom.rdRozsahy.querySelectorAll('button')) b.disabled = caka;
+    show(dom.rdBezModelu, state.radarStav === 'ok' && state.radarHotovo && state.radarBezModelu);
+    const hlaska = HLASKY[state.radarStav] ?? '';
     show(dom.rdHlaska, !!hlaska);
     dom.rdHlaskaText.textContent = hlaska;
     show(dom.rdZnova, state.radarStav === 'chyba');

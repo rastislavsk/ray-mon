@@ -44,6 +44,8 @@ export function initRadar(store, dom) {
         hrac.posun((e.clientX - box.left) / box.width);
     };
     os.addEventListener('pointerdown', (e) => {
+        // Kým sa načítava, os čaká (render/radar.js ju stlmí).
+        if (!store.get().radarHotovo) return;
         tahaj = true;
         os.setPointerCapture(e.pointerId);
         store.setState({ radarHra: false });
@@ -54,7 +56,7 @@ export function initRadar(store, dom) {
     os.addEventListener('pointercancel', () => (tahaj = false));
     os.addEventListener('keydown', (e) => {
         const smer = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
-        if (!smer) return;
+        if (!smer || !store.get().radarHotovo) return;
         e.preventDefault();
         store.setState({ radarHra: false });
         hrac.krok(smer);

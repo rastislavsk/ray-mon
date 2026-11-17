@@ -240,15 +240,41 @@
                             <b id="rd-legenda"></b>
                             <div><span>slabý</span><span>silný</span></div>
                         </div>
+                        <p id="rd-bez-modelu" class="rd-poznamka hidden">Oblaky a predpoveď na Dnes a Zajtra sa nenačítali.</p>
                     </div>
+                </div>
+                <!-- Kým sa nenačíta všetko (snímky, pohyb pre predpoveď, model, mapa), v strede obiehajú slnko a mesiac
+                     ako na karte Teraz (#tz-svitanie, štýl .svitanie v css/teraz.css) a prehrávanie čaká. Masky majú vlastné
+                     id, aby neboli v stránke dvakrát. Ukazuje ho render/radar.js. -->
+                <div id="rd-svitanie" class="svitanie rd-svitanie hidden" aria-hidden="true">
+                    <svg viewBox="-50 -50 100 100" width="76" height="76">
+                        <defs>
+                            <mask id="rd-svitanie-noc" maskUnits="userSpaceOnUse" x="-60" y="-60" width="120" height="120">
+                                <rect x="-60" y="-60" width="120" height="60" fill="#fff" />
+                                <rect x="-60" y="0" width="120" height="60" fill="#5a5a5a" />
+                            </mask>
+                            <mask id="rd-svitanie-kosak" maskUnits="userSpaceOnUse" x="-12" y="22" width="24" height="24">
+                                <rect x="-12" y="22" width="24" height="24" fill="#fff" />
+                                <circle cx="5" cy="30" r="8" fill="#000" />
+                            </mask>
+                        </defs>
+                        <circle class="svitanie-draha" r="34" />
+                        <g mask="url(#rd-svitanie-noc)">
+                            <g class="svitanie-obeh">
+                                <circle class="svitanie-slnko" cy="-34" r="10" />
+                                <circle class="svitanie-mesiac" cy="34" r="9" mask="url(#rd-svitanie-kosak)" />
+                            </g>
+                        </g>
+                        <line class="svitanie-obzor" x1="-46" y1="0" x2="46" y2="0" />
+                    </svg>
                 </div>
                 <div id="rd-hlaska" class="rd-hlaska hidden" aria-live="polite">
                     <p id="rd-hlaska-text"></p>
                     <button type="button" id="rd-znova" class="pbtn hidden">Skúsiť znova</button>
                 </div>
-                <div id="rd-dok" class="rd-dok">
+                <div id="rd-dok" class="rd-dok caka">
                     <div class="rd-riadok">
-                        <button type="button" id="rd-hraj" class="rd-kruh" aria-label="Pustiť">
+                        <button type="button" id="rd-hraj" class="rd-kruh" aria-label="Pustiť" disabled>
                             <svg id="rd-ikona-hraj" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" /></svg>
                             <svg id="rd-ikona-stoj" class="hidden" viewBox="0 0 24 24" aria-hidden="true">
                                 <rect x="6" y="4.5" width="4.2" height="15" rx="1" />
