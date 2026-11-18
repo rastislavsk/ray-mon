@@ -75,6 +75,7 @@ import { backAction, closeAction, setupInit } from '../shared/setup-flow.js';
  *   oznamenia: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav: import('./oznamenia.js').OznamStav,
  *   doma: string[],
+ *   bezi: import('../shared/bezi.js').Zapis[],
  *   bojler: import('../shared/bojler.js').BojlerInfo | null,
  *   bojlerPrahy: import('../shared/bojler.js').Prahy,
  *   bojlerSkript: import('../shared/nastavenie-bojler.js').BojlerSkript,
@@ -93,21 +94,23 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
 
 /**
  * Voľby telefónu: ranné oznámenie, čo s oznámeniami telefón vie,
- * spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie - a prahy
- * bojlera na prebytky (do skriptu zásuvky).
+ * spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie -, prahy
+ * bojlera na prebytky (do skriptu zásuvky) a čo človek zapol („Už beží“ v detaile spotrebiča, shared/bezi.js).
  * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[],
- *   bojlerPrahy?: import('../shared/bojler.js').Prahy }} o
+ *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[] }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
     oznamStav = /** @type {import('./oznamenia.js').OznamStav} */ ('ok'),
     doma = domaDefault(),
     bojlerPrahy = { zapKw: BOJLER.zapKw, vypKw: BOJLER.vypKw },
+    bezi = [],
 }) => ({
     oznamenia,
     oznamStav,
     doma,
     bojlerPrahy,
+    bezi,
     // Stav bojlera hlási Worker pri meraní; skript do zásuvky appka pripraví až na požiadanie.
     bojler: null,
     bojlerSkript: /** @type {import('../shared/nastavenie-bojler.js').BojlerSkript} */ ({ stav: 'nic', text: '', schranka: false }),
@@ -139,7 +142,8 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   pristup?: import('../shared/pristup.js').Odmietnutie | null,
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
- *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy }} start
+ *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy,
+ *   bezi?: import('../shared/bezi.js').Zapis[] }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)

@@ -5,7 +5,7 @@
 
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
-import { PLAN_DNA_NOTE, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
+import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
@@ -145,10 +145,18 @@ function renderCo(co, dom, bojler) {
         podiel: r.podiel,
         odr: r.odr,
     }));
-    const html = hore.map(dlazdicaHtml).join('') + (dnes ? bojler : '') + dalsie.map(dlazdicaHtml).join('');
+    const { bezi, hotovo } = zapisane(co, dnes);
+    const html = [...hore, ...bezi].map(dlazdicaHtml).join('') + (dnes ? bojler : '') + [...dalsie, ...hotovo].map(dlazdicaHtml).join('');
     setHtml(dom.tzDlazdice, html);
     show(dom.tzDlazdice, html !== '');
 }
+
+/**
+ * Dlaždice toho, čo človek dnes zapol (docs/navrhy/teraz-bezi-spotrebic.html): čo beží, ide hneď za tým, čo ide teraz,
+ * čo dobehlo, na koniec. Iný deň ich nemá. `?? []`: model zo starého shared/teraz.js z cache po nasadení tieto polia nemá.
+ * @param {NonNullable<Model['co']>} co @param {boolean} dnes
+ */
+const zapisane = (co, dnes) => (dnes ? { bezi: co.bezi ?? [], hotovo: co.hotovo ?? [] } : { bezi: [], hotovo: [] });
 
 /** Malé slovo pred veľkým číslom („do 20:30“, „od 22:00“). @param {string | undefined} pred */
 const predHtml = (pred) => (pred ? `<span class="pred">${escapeHtml(pred)} </span>` : '');
@@ -209,11 +217,35 @@ function renderVecSheet(state, m, dom) {
         setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
         show(dom.tzVecPas, !!v.slot);
         setHtml(dom.tzVecPas, v.slot ? osHtml(m.os, v.slot) : '');
+        renderZapis(v, dom);
         setText(dom.tzVecWhy, v.why);
-        setText(dom.tzVecNote, PLAN_DNA_NOTE);
     }
     const id = state.tzVec;
     dialog(dom.tzVecSheet, !!v, () => (shows(state, 'terazky') && id ? dom.tzCo.querySelector(`[data-vec="${id}"]`) : null));
+}
+
+/**
+ * Zápis v detaile spotrebiča (docs/navrhy/teraz-bezi-spotrebic.html): „Už beží“, a keď beží či dobehol, čas zapnutia
+ * s − a + a „Nebeží“ (pri dobehnutom „Zrušiť zápis“). Spotrebič, ktorý sa zapísať nedá, ani iný deň zápis nemá.
+ * Že naraz ide len toľko, koľko strecha utiahne, hovorí o pláne - nie o tom, čo už beží či dobehlo.
+ * @param {object} v detail spotrebiča - iný deň (shared/tyzden.js) pole `zapis` nemá @param {Dom} dom
+ */
+function renderZapis(v, dom) {
+    /** @type {import('../../shared/teraz.js').VecDetail['zapis'] | null} */
+    const z = 'zapis' in v ? /** @type {any} */ (v.zapis) : null;
+    show(dom.tzVecZapis, !!z);
+    const zapisany = !!z && z.stav !== 'moze';
+    show(dom.tzVecNote, !zapisany);
+    setText(dom.tzVecNote, zapisany ? '' : PLAN_DNA_NOTE);
+    show(dom.tzVecZapol, !zapisany);
+    show(dom.tzVecPosun, zapisany);
+    show(dom.tzVecZrus, zapisany);
+    setText(dom.tzVecZapol, TERAZ_BEZI.zapol);
+    setText(dom.tzVecOd, zapisany ? z.od : '');
+    dom.tzVecSkor.setAttribute('aria-label', TERAZ_BEZI.skor);
+    dom.tzVecNeskor.setAttribute('aria-label', TERAZ_BEZI.neskor);
+    dom.tzVecNeskor.disabled = !z?.neskor;
+    setText(dom.tzVecZrus, z?.stav === 'hotovo' ? TERAZ_BEZI.zrus : TERAZ_BEZI.nebezi);
 }
 
 /**

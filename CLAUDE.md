@@ -53,6 +53,14 @@ ale relé neprepne ani pri tichu; Worker mu vtedy vráti `zapni` rovné stavu re
 Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má dlaždicu so stavom a panel Bojler dnes
 (`shared/teraz-bojler.js`), otvorený tým istým krokom `tzVec` ako detail spotrebiča.
 
+## Spotrebič beží
+
+Návrh a rozhodnutie: `docs/navrhy/teraz-bezi-spotrebic.html` (A + 1, 18. 11. 2026). „Už beží“ v detaile spotrebiča
+na karte Teraz zapíše práčku, sušičku či umývačku (`BEZI.veci`) do telefónu (`bezi-v1`, `shared/bezi.js`), len na ten deň.
+Plán dňa ju potom nerozvrhuje (`behy` v `shared/plan-dna.js`): jej odber si berie z rozpočtu od skutočného štartu a sušička
+čaká na skutočný koniec prania. Bežiaci a dobehnutý spotrebič majú vlastnú dlaždicu (`bezi`, `hotovo`), rovnako veľkú ako
+ostatné. Overiť to appka nevie – je to na slovo. Worker zápisy nevidí, ranné oznámenie sa nemení.
+
 ## Scéna toku energie na karte Teraz
 
 Návrh a rozhodnutia: `docs/navrhy/teraz-tok-energie.html` (návrh 1). Namiesto veľkého čísla kW je hore scéna: dom

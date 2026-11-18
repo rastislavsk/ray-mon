@@ -96,3 +96,4 @@ v plnej výške — líšia sa len vzhľadom, nie úsporou miesta.
 | `nacitanie-stred.html` | Obrazec v strede obrazovky počas načítania namiesto slnečného oblúka: lúče (A), slnko a mesiac na polotočky (B), deň a noc okolo obzoru (C, vybraný) |
 | `teraz-dlazdice.html` | Karta Teraz – všetky spotrebiče ako polovičné dlaždice v jednej mriežke (aj pri nepárnom počte), ploché bez lemu, s pásikom slnko/sieť, číslo a pásik zarovnané v rade (subgrid); 3D štýly vankúš, klávesa a sklo zamietnuté |
 | `teraz-dlazdice-odrazky.html` | Karta Teraz – doplnok dlaždice ako dva riadky s odrážkami (bez zalomenia), Auto a Bojler s menom pod číslom ako spotrebiče, režim bojlera (ručne / riadi appka) obrázkom: A značka v rohu, B malý prepínač |
+| `teraz-bezi-spotrebic.html` | Karta Teraz – „Zapol som“ pri práčke, sušičke a umývačke a Plán dňa s tým ráta: tlačidlo v detaile (A), na dlaždici (B), riadok „Čo beží?“ (C); zápis v telefóne, cez Worker, alebo z elektromera |

@@ -1,0 +1,1073 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Spotrebič beží</title>
+        <style>
+            /* Návrh: človek appke povie, že práčku, sušičku alebo umývačku zapol, a Plán dňa
+               s tým ráta. Samostatný súbor, nič neimportuje z appky. Čísla v telefónoch sú
+               ilustračné, nie z výpočtu appky. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --ink: #fff;
+                --dim: rgba(255, 255, 255, 0.68);
+                --line: rgba(255, 255, 255, 0.16);
+                --go: #b9f28c;
+                --go-ink: #14300c;
+                --cheap: #7cc4ff;
+                --cheap-ink: #0b2440;
+                --glass: rgba(8, 16, 40, 0.3);
+                --sheet: rgba(10, 16, 38, 0.95);
+                --run: #fff4d6;
+                --run-ink: #3a2a00;
+                --amber: #ffc24b;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--ink);
+                font-family: var(--font);
+                font-size: 16px;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1120px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 48px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+                text-wrap: balance;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 44px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 23px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 17px;
+                font-weight: 800;
+            }
+            p,
+            ul,
+            ol {
+                margin: 0;
+                max-width: 72ch;
+            }
+            ul,
+            ol {
+                padding-left: 1.2em;
+                display: grid;
+                gap: 6px;
+            }
+            code {
+                font-size: 0.88em;
+                color: var(--dim);
+            }
+            .meta {
+                color: var(--dim);
+                font-size: 14px;
+            }
+            .box {
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 16px 18px;
+                display: grid;
+                gap: 8px;
+            }
+            .box.warn {
+                border-color: rgba(255, 194, 75, 0.5);
+            }
+            .tag {
+                display: inline-block;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                padding: 2px 9px;
+                border-radius: 99px;
+                background: var(--go);
+                color: var(--go-ink);
+            }
+            .tag.no {
+                background: rgba(255, 255, 255, 0.14);
+                color: var(--ink);
+            }
+
+            /* Telefóny */
+            .phones {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+                gap: 28px;
+                align-items: start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                justify-items: center;
+            }
+            figcaption {
+                max-width: 320px;
+                font-size: 14px;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            .phone {
+                width: 300px;
+                border-radius: 34px;
+                padding: 14px 12px 16px;
+                background: linear-gradient(180deg, #2f6fd0 0%, #3d86e0 45%, #4b93e6 100%);
+                border: 2px solid rgba(255, 255, 255, 0.1);
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                position: relative;
+                overflow: hidden;
+            }
+            .oko {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                padding: 2px 4px;
+            }
+            .oko i {
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                background: var(--go);
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .dl {
+                position: relative;
+                border-radius: 20px;
+                padding: 11px;
+                background: var(--go);
+                color: var(--go-ink);
+                display: grid;
+                gap: 2px;
+                align-content: start;
+                min-height: 150px;
+            }
+            .dl[data-tone='cheap'] {
+                background: var(--cheap);
+                color: var(--cheap-ink);
+            }
+            .dl[data-tone='later'] {
+                background: var(--glass);
+                color: var(--ink);
+            }
+            .dl[data-tone='run'] {
+                background: var(--run);
+                color: var(--run-ink);
+            }
+            .dl[data-tone='done'] {
+                background: rgba(8, 16, 40, 0.18);
+                color: var(--dim);
+                min-height: 0;
+                border: 1px dashed rgba(255, 255, 255, 0.28);
+            }
+            .ico {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                background: rgba(255, 255, 255, 0.35);
+                margin-bottom: 8px;
+            }
+            .dl[data-tone='later'] .ico,
+            .dl[data-tone='done'] .ico {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .vi {
+                width: 18px;
+                height: 18px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .velky {
+                font-size: 23px;
+                font-weight: 900;
+                line-height: 1.05;
+            }
+            .velky small {
+                font-size: 13px;
+                font-weight: 800;
+            }
+            .meno {
+                font-size: 18px;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .pas {
+                height: 6px;
+                border-radius: 9px;
+                background: rgba(0, 0, 0, 0.14);
+                margin: 6px 0 4px;
+                overflow: hidden;
+            }
+            .pas i {
+                display: block;
+                height: 100%;
+                width: var(--s, 100%);
+                background: var(--amber);
+                border-radius: 9px;
+            }
+            .dl[data-tone='run'] .pas i {
+                background: #e0a100;
+            }
+            .odr {
+                font-size: 12px;
+                font-weight: 600;
+                line-height: 1.35;
+            }
+            .odr span {
+                display: block;
+            }
+            .odr span::before {
+                content: '• ';
+            }
+            .bezi {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+            .bezi::before {
+                content: '';
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: #e0a100;
+                box-shadow: 0 0 0 0 rgba(224, 161, 0, 0.6);
+                animation: pulz 1.8s infinite;
+            }
+            @keyframes pulz {
+                to {
+                    box-shadow: 0 0 0 8px rgba(224, 161, 0, 0);
+                }
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .bezi::before {
+                    animation: none !important;
+                }
+            }
+            .done-row {
+                grid-column: 1 / -1;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 13px;
+                font-weight: 700;
+            }
+            .done-row .ico {
+                margin: 0;
+                width: 26px;
+                height: 26px;
+            }
+            .moved {
+                outline: 2px solid #fff;
+                outline-offset: 2px;
+            }
+            .moved::after {
+                content: 'posunuté';
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                font-size: 10px;
+                font-weight: 800;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                background: #fff;
+                color: #0b1226;
+                padding: 1px 6px;
+                border-radius: 99px;
+            }
+
+            /* Variant B: tlačidlo priamo na dlaždici */
+            .dl .pust {
+                position: absolute;
+                top: 9px;
+                right: 9px;
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                border: 2px solid currentColor;
+                display: grid;
+                place-items: center;
+                font-size: 13px;
+                font-weight: 900;
+                opacity: 0.85;
+            }
+            .dl[data-tone='run'] .pust {
+                background: var(--run-ink);
+                color: var(--run);
+                border-color: var(--run-ink);
+            }
+
+            /* Variant C: riadok „Čo beží?“ */
+            .rad {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                padding: 8px 10px;
+                border-radius: 18px;
+                background: var(--glass);
+            }
+            .rad span {
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                margin-right: auto;
+            }
+            .rad b {
+                width: 40px;
+                height: 40px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                border: 1.5px solid rgba(255, 255, 255, 0.5);
+            }
+            .rad b.on {
+                background: var(--run);
+                color: var(--run-ink);
+                border-color: var(--run);
+            }
+
+            /* Detail spotrebiča */
+            .sheet {
+                margin: 0 -12px -16px;
+                background: var(--sheet);
+                border-radius: 26px 26px 0 0;
+                padding: 16px 16px 20px;
+                display: grid;
+                gap: 10px;
+            }
+            .sheet-h {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            .sheet-h .ico {
+                margin: 0;
+                width: 40px;
+                height: 40px;
+                background: var(--go);
+                color: var(--go-ink);
+            }
+            .sheet-h.run .ico {
+                background: var(--run);
+                color: var(--run-ink);
+            }
+            .sheet-h b {
+                display: block;
+                font-size: 21px;
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            .sheet-h small {
+                display: block;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .cas {
+                font-size: 30px;
+                font-weight: 900;
+                line-height: 1;
+            }
+            .os {
+                position: relative;
+                height: 30px;
+            }
+            .os::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 9px;
+                height: 6px;
+                border-radius: 9px;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .os .slot {
+                position: absolute;
+                top: 5px;
+                height: 14px;
+                border-radius: 9px;
+                background: var(--go);
+            }
+            .os .slot.run {
+                background: var(--run);
+            }
+            .os .now {
+                position: absolute;
+                top: 0;
+                width: 2px;
+                height: 24px;
+                background: #fff;
+            }
+            .os .h {
+                position: absolute;
+                bottom: -6px;
+                font-size: 10px;
+                color: var(--dim);
+                transform: translateX(-50%);
+            }
+            .sheet p {
+                font-size: 13px;
+            }
+            .btn {
+                display: block;
+                width: 100%;
+                border: 0;
+                border-radius: 99px;
+                padding: 13px;
+                font: 800 16px var(--font);
+                background: #fff;
+                color: #0b1226;
+                text-align: center;
+            }
+            .btn.ghost {
+                background: transparent;
+                color: var(--ink);
+                border: 1.5px solid rgba(255, 255, 255, 0.4);
+                padding: 9px;
+                font-size: 14px;
+            }
+            .korekcia {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                gap: 14px;
+                font-size: 14px;
+                font-weight: 700;
+            }
+            .korekcia b {
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                border: 1.5px solid rgba(255, 255, 255, 0.4);
+            }
+
+            /* Časová os pred / po */
+            .lanes {
+                display: grid;
+                gap: 8px;
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 16px;
+                overflow-x: auto;
+            }
+            .lane {
+                display: grid;
+                grid-template-columns: 110px 1fr;
+                align-items: center;
+                gap: 10px;
+                min-width: 560px;
+            }
+            .lane > span {
+                font-size: 14px;
+                font-weight: 700;
+            }
+            .track {
+                position: relative;
+                height: 26px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .track .sun {
+                position: absolute;
+                inset: 0 auto 0 calc((9 - 6) / 12 * 100%);
+                width: calc(7 / 12 * 100%);
+                background: rgba(255, 194, 75, 0.12);
+                border-radius: 8px;
+            }
+            .track .b {
+                position: absolute;
+                top: 3px;
+                bottom: 3px;
+                border-radius: 6px;
+                font-size: 11px;
+                font-weight: 800;
+                display: flex;
+                align-items: center;
+                padding: 0 6px;
+                white-space: nowrap;
+                background: var(--go);
+                color: var(--go-ink);
+            }
+            .track .b.run {
+                background: var(--run);
+                color: var(--run-ink);
+            }
+            .track .b.ghost {
+                background: transparent;
+                border: 1.5px dashed rgba(255, 255, 255, 0.45);
+                color: var(--dim);
+            }
+            .track .t {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                width: 2px;
+                background: #fff;
+            }
+            .hours {
+                display: grid;
+                grid-template-columns: 110px 1fr;
+                gap: 10px;
+                min-width: 560px;
+            }
+            .hours div {
+                position: relative;
+                height: 16px;
+                font-size: 11px;
+                color: var(--dim);
+            }
+            .hours i {
+                position: absolute;
+                font-style: normal;
+                transform: translateX(-50%);
+            }
+
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            .tbl {
+                overflow-x: auto;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 10px 12px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                font-size: 12px;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            td:first-child {
+                font-weight: 800;
+                min-width: 150px;
+            }
+            .plus {
+                color: var(--go);
+            }
+            .minus {
+                color: #ff9a8a;
+            }
+        </style>
+    </head>
+    <body>
+        <svg width="0" height="0" style="position: absolute">
+            <symbol id="i-pracka" viewBox="0 0 24 24">
+                <rect x="4" y="3" width="16" height="18" rx="3"></rect>
+                <path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"></path>
+                <circle cx="12" cy="14" r="4"></circle>
+            </symbol>
+            <symbol id="i-umyvacka" viewBox="0 0 24 24">
+                <rect x="4" y="3" width="16" height="18" rx="3"></rect>
+                <path d="M4 8h16M7.5 5.5h4M8 12.5h8M8 16.5h8"></path>
+            </symbol>
+            <symbol id="i-susicka" viewBox="0 0 24 24">
+                <rect x="4" y="3" width="16" height="18" rx="3"></rect>
+                <path d="M4 7.5h16M7.5 5.3h.01"></path>
+                <circle cx="12" cy="14" r="4"></circle>
+                <path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"></path>
+            </symbol>
+            <symbol id="i-auto" viewBox="0 0 24 24">
+                <path
+                    d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"
+                ></path>
+                <path d="M3.5 12.3h17"></path>
+                <circle cx="7.5" cy="16.5" r="1.7"></circle>
+                <circle cx="16.5" cy="16.5" r="1.7"></circle>
+            </symbol>
+        </svg>
+
+        <main>
+            <section>
+                <p class="meta">Návrh · 18. 11. 2026 · karta Teraz</p>
+                <h1>Spotrebič beží</h1>
+                <p>
+                    Človek appke ťuknutím povie, že <b>práčku, sušičku alebo umývačku</b> zapol. Appka si to zapamätá a
+                    <b>Plán dňa s tým ráta</b>: ten spotrebič už neradí zapnúť, jeho odber odpočíta zo slnka, sušičku naplánuje po skutočnom
+                    konci prania a ostatné veci rozvrhne do toho, čo zostane. Bojler (riadi ho zásuvka) a auto sa nemenia.
+                </p>
+                <div class="box">
+                    <h3>Rozhodnutie 18. 11. 2026: A + 1</h3>
+                    <p>
+                        Tlačidlo v detaile spotrebiča a zápis len v telefóne. Navyše: <b>všetky dlaždice rovnako veľké</b>, čísla a pásiky
+                        v rade zarovnané – aj dobehnutý spotrebič je preto celá dlaždica na konci mriežky, nie tenký riadok ako v mockupe.
+                        Tlačidlo je v appke „Už beží“ namiesto „Zapol som“, aby nehovorilo za človeka v mužskom rode.
+                    </p>
+                </div>
+                <div class="box warn">
+                    <h3>Ako to bolo predtým – na rovinu</h3>
+                    <p>
+                        Funkcia „Pustil/a som“ (PR #216, 28. 9. 2026) <b>Plán dňa neprispôsobovala</b> – ten vznikol až neskôr (PR #353).
+                        Ukazovala len „beží do 14:10“ a mesačný súčet. Zrušili sme ju 22. 10. 2026 (PR #323,
+                        <code>bez-pustil-som.html</code>), lebo bola „na čestné slovo“ a nikto ju nepoužíval.
+                    </p>
+                    <p>
+                        Čo je dnes iné: ťuknutie má hneď viditeľný úžitok (plán sa pohne, sušička sa ukáže v správny čas, dlaždica prestane
+                        radiť „zapni teraz“). Na čestné slovo to ostáva – appka zapnutie overiť nevie (možnosť 3 nižšie to len skúša obísť).
+                    </p>
+                </div>
+            </section>
+
+            <section>
+                <h2>Čo sa stane s plánom – príklad</h2>
+                <p>
+                    Plán ráno: práčka a umývačka o 11:15, sušička po práčke o 13:15. Človek pustí práčku už o 9:40 (pred slnkom) a ťukne
+                    „Zapol som“. Čísla sú ilustračné.
+                </p>
+                <div class="lanes">
+                    <div class="hours">
+                        <span></span>
+                        <div>
+                            <i style="left: 0%">6</i><i style="left: 25%">9</i><i style="left: 50%">12</i><i style="left: 75%">15</i
+                            ><i style="left: 100%">18</i>
+                        </div>
+                    </div>
+                    <p class="meta" style="margin-top: 4px">Pred ťuknutím</p>
+                    <div class="lane">
+                        <span>Práčka</span>
+                        <div class="track"><i class="sun"></i><b class="b" style="left: 43.75%; width: 16.67%">11:15–13:15</b></div>
+                    </div>
+                    <div class="lane">
+                        <span>Umývačka</span>
+                        <div class="track"><i class="sun"></i><b class="b" style="left: 43.75%; width: 20.8%">11:15–13:45</b></div>
+                    </div>
+                    <div class="lane">
+                        <span>Sušička</span>
+                        <div class="track"><i class="sun"></i><b class="b" style="left: 60.4%; width: 12.5%">13:15–14:45</b></div>
+                    </div>
+                    <p class="meta" style="margin-top: 10px">Po ťuknutí „Zapol som“ o 9:40 (teraz je 10:30)</p>
+                    <div class="lane">
+                        <span>Práčka</span>
+                        <div class="track">
+                            <i class="sun"></i><b class="b run" style="left: 30.5%; width: 16.67%">beží 9:40–11:40</b
+                            ><i class="t" style="left: 37.5%"></i>
+                        </div>
+                    </div>
+                    <div class="lane">
+                        <span>Umývačka</span>
+                        <div class="track">
+                            <i class="sun"></i><b class="b" style="left: 43.75%; width: 20.8%">11:15–13:45</b
+                            ><i class="t" style="left: 37.5%"></i>
+                        </div>
+                    </div>
+                    <div class="lane">
+                        <span>Sušička</span>
+                        <div class="track">
+                            <i class="sun"></i><b class="b ghost" style="left: 60.4%; width: 12.5%">13:15</b
+                            ><b class="b" style="left: 47.9%; width: 12.5%">11:45–13:15</b><i class="t" style="left: 37.5%"></i>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li>
+                        <b>Bežiaci spotrebič</b> ide do rozpočtu slnka od skutočného štartu tým istým odberom programu ako dnes (<code
+                            >volne</code
+                        >
+                        v <code>shared/plan-dna.js</code>) – ostatným ostane len to, čo zvýši.
+                    </li>
+                    <li>
+                        <b>Sušička</b> čaká na skutočný koniec prania, nie na plánovaný. Keď sa po ňom na slnko nezmestí, ide do lacného
+                        pásma alebo iný deň – ako dnes.
+                    </li>
+                    <li><b>Po dobehnutí</b> je spotrebič dnes „hotový“: plán ho dnes už neponúka. Iné dni v páse dní sa nemenia.</li>
+                    <li>Dĺžka behu je typický program (<code>runMin</code>: práčka 2 h, umývačka 2 h 30, sušička 1 h 30).</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Kde ťuknúť – tri možnosti</h2>
+                <p>
+                    Všetky tri majú rovnakú bežiacu dlaždicu (svetlá, „beží“, pásik ubúda) a dobehnutú vec ako tenký riadok na konci
+                    mriežky.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="mriezka">
+                                <div class="dl" data-tone="run">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <span class="bezi">beží</span>
+                                    <span class="velky"><small>do </small>11:40</span>
+                                    <span class="meno">Práčka</span>
+                                    <span class="pas"><i style="--s: 58%"></i></span>
+                                    <small class="odr"><span>zapnutá 9:40</span><span>ešte 1:10</span></small>
+                                </div>
+                                <div class="dl" data-tone="later">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-umyvacka" /></svg
+                                    ></span>
+                                    <span class="velky">11:15</span>
+                                    <span class="meno">Umývačka</span>
+                                    <span class="pas"><i></i></span>
+                                    <small class="odr"><span>o 45 min</span><span>zo slnka</span></small>
+                                </div>
+                                <div class="dl moved" data-tone="later">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-susicka" /></svg
+                                    ></span>
+                                    <span class="velky">11:45</span>
+                                    <span class="meno">Sušička</span>
+                                    <span class="pas"><i style="--s: 90%"></i></span>
+                                    <small class="odr"><span>po práčke</span></small>
+                                </div>
+                                <div class="dl" data-tone="cheap">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-auto" /></svg
+                                    ></span>
+                                    <span class="velky"><small>do </small>20:30</span>
+                                    <span class="meno">Auto</span>
+                                    <span class="pas"><i style="--s: 10%"></i></span>
+                                    <small class="odr"><span>lacná elektrina</span></small>
+                                </div>
+                            </div>
+                            <div class="sheet">
+                                <div class="sheet-h">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <div><b>Práčka</b><small>Teraz zo slnka</small></div>
+                                </div>
+                                <span class="cas">11:15 – 13:15</span>
+                                <p>Ohrev chytí slnko.</p>
+                                <button class="btn">Zapol som</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <span class="tag">A · odporúčam</span><br />
+                            <b>Tlačidlo v detaile spotrebiča.</b> Ťuknutie na dlaždicu otvorí detail ako dnes, dole je „Zapol som“. Jedno
+                            ťuknutie navyše, zato sa nedá zapnúť omylom a dlaždica ostane jedným tlačidlom. Telefón ukazuje detail
+                            <i>pred</i> ťuknutím a mriežku <i>po</i> ňom.
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="mriezka">
+                                <div class="dl" data-tone="run">
+                                    <span class="pust">■</span>
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <span class="bezi">beží</span>
+                                    <span class="velky"><small>do </small>11:40</span>
+                                    <span class="meno">Práčka</span>
+                                    <span class="pas"><i style="--s: 58%"></i></span>
+                                    <small class="odr"><span>zapnutá 9:40</span><span>ešte 1:10</span></small>
+                                </div>
+                                <div class="dl" data-tone="later">
+                                    <span class="pust">▶</span>
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-susicka" /></svg
+                                    ></span>
+                                    <span class="velky">11:45</span>
+                                    <span class="meno">Sušička</span>
+                                    <span class="pas"><i style="--s: 90%"></i></span>
+                                    <small class="odr"><span>po práčke</span></small>
+                                </div>
+                                <div class="dl" data-tone="cheap">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-auto" /></svg
+                                    ></span>
+                                    <span class="velky"><small>do </small>20:30</span>
+                                    <span class="meno">Auto</span>
+                                    <span class="pas"><i style="--s: 10%"></i></span>
+                                    <small class="odr"><span>lacná elektrina</span></small>
+                                </div>
+                            </div>
+                            <div class="done-row">
+                                <span class="ico"
+                                    ><svg class="vi"><use href="#i-umyvacka" /></svg></span
+                                >Umývačka dnes hotová · 8:10
+                            </div>
+                        </div>
+                        <figcaption>
+                            <span class="tag no">B</span><br />
+                            <b>Tlačidlo priamo na dlaždici</b> (▶ zapol som, ■ nebeží). Najrýchlejšie, jedno ťuknutie. Lenže dlaždica už je
+                            tlačidlo (otvára detail) – dve tlačidlá v sebe, malý cieľ v rohu a ľahko sa trafí omylom. Dole ukážka dobehnutej
+                            veci (tu umývačka pustená ráno).
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="rad">
+                                <span>Čo beží?</span>
+                                <b class="on"
+                                    ><svg class="vi"><use href="#i-pracka" /></svg
+                                ></b>
+                                <b
+                                    ><svg class="vi"><use href="#i-umyvacka" /></svg
+                                ></b>
+                                <b
+                                    ><svg class="vi"><use href="#i-susicka" /></svg
+                                ></b>
+                            </div>
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="mriezka">
+                                <div class="dl" data-tone="run">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <span class="bezi">beží</span>
+                                    <span class="velky"><small>do </small>11:40</span>
+                                    <span class="meno">Práčka</span>
+                                    <span class="pas"><i style="--s: 58%"></i></span>
+                                    <small class="odr"><span>zapnutá 9:40</span><span>ešte 1:10</span></small>
+                                </div>
+                                <div class="dl" data-tone="later">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-umyvacka" /></svg
+                                    ></span>
+                                    <span class="velky">11:15</span>
+                                    <span class="meno">Umývačka</span>
+                                    <span class="pas"><i></i></span>
+                                    <small class="odr"><span>o 45 min</span><span>zo slnka</span></small>
+                                </div>
+                                <div class="dl" data-tone="later">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-susicka" /></svg
+                                    ></span>
+                                    <span class="velky">11:45</span>
+                                    <span class="meno">Sušička</span>
+                                    <span class="pas"><i style="--s: 90%"></i></span>
+                                    <small class="odr"><span>po práčke</span></small>
+                                </div>
+                                <div class="dl" data-tone="cheap">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-auto" /></svg
+                                    ></span>
+                                    <span class="velky"><small>do </small>20:30</span>
+                                    <span class="meno">Auto</span>
+                                    <span class="pas"><i style="--s: 10%"></i></span>
+                                    <small class="odr"><span>lacná elektrina</span></small>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <span class="tag no">C</span><br />
+                            <b>Riadok „Čo beží?“ nad dlaždicami</b> s tromi prepínačmi. Vždy na očiach, jedno ťuknutie, nič sa neplietie s
+                            dlaždicami. Zato pridáva na kartu ďalší pás (karta už má scénu, pás dní, dlaždice) a ikony bez mien sa dajú
+                            pomýliť (práčka a sušička sú si podobné).
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Detail spotrebiča v možnosti A</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="phone" style="padding-top: 0; background: none; border: 0">
+                            <div class="sheet" style="margin: 0; border-radius: 26px">
+                                <div class="sheet-h">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-susicka" /></svg
+                                    ></span>
+                                    <div><b>Sušička</b><small>Dnes po práčke</small></div>
+                                </div>
+                                <span class="cas">11:45 – 13:15</span>
+                                <div class="os">
+                                    <i class="slot" style="left: 48%; width: 12.5%"></i><i class="now" style="left: 37.5%"></i>
+                                    <i class="h" style="left: 0">6</i><i class="h" style="left: 25%">9</i
+                                    ><i class="h" style="left: 50%">12</i><i class="h" style="left: 75%">15</i
+                                    ><i class="h" style="left: 100%">18</i>
+                                </div>
+                                <p>Po práčke, ktorá dobehne o 11:40.</p>
+                                <button class="btn">Zapol som</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Pred.</b> Tlačidlo je vždy – aj keď appka radí počkať (človek ho pustil aj tak, plán to má vedieť).
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="phone" style="padding-top: 0; background: none; border: 0">
+                            <div class="sheet" style="margin: 0; border-radius: 26px">
+                                <div class="sheet-h run">
+                                    <span class="ico"
+                                        ><svg class="vi"><use href="#i-pracka" /></svg
+                                    ></span>
+                                    <div><b>Práčka</b><small>Beží</small></div>
+                                </div>
+                                <span class="cas">9:40 – 11:40</span>
+                                <div class="os">
+                                    <i class="slot run" style="left: 30.5%; width: 16.67%"></i><i class="now" style="left: 37.5%"></i>
+                                    <i class="h" style="left: 0">6</i><i class="h" style="left: 25%">9</i
+                                    ><i class="h" style="left: 50%">12</i><i class="h" style="left: 75%">15</i
+                                    ><i class="h" style="left: 100%">18</i>
+                                </div>
+                                <div class="korekcia"><b>−</b>zapnutá 9:40<b>+</b></div>
+                                <button class="btn ghost">Nebeží</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Po.</b> Čas sa dá posunúť o 15 min (keď ťukne až neskôr). „Nebeží“ zápis zruší – omyl, alebo program skončil
+                            skôr.
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Kde si to appka zapamätá – tri možnosti</h2>
+                <div class="tbl">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Možnosť</th>
+                                <th>Ako</th>
+                                <th>Za</th>
+                                <th>Proti</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1 · Len v telefóne</td>
+                                <td>
+                                    Úložisko prehliadača, jeden kľúč (napr. <code>bezi-v1</code>): dátum, spotrebič, minúta štartu. Platí
+                                    len dnes, starší zápis appka zahodí.
+                                </td>
+                                <td class="plus">
+                                    Najjednoduchšie, nič na Workeri, nič v CSP, bez nákladov. Odkaz s nastavením sa nemení. Funguje aj
+                                    offline.
+                                </td>
+                                <td class="minus">
+                                    Druhý telefón v domácnosti o tom nevie – keď práčku pustí jeden, druhému appka stále radí „zapni teraz“.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>2 · Spoločne pre domácnosť</td>
+                                <td>
+                                    Worker drží dnešné zápisy pre elektráreň (Durable Object <code>UcetHuawei</code> alebo KV), telefón ich
+                                    číta s meraním.
+                                </td>
+                                <td class="plus">Všetky telefóny vidia to isté. Ranné oznámenie by sa raz mohlo z toho poučiť.</td>
+                                <td class="minus">
+                                    Nový zápis cez sieť (bez siete nefunguje), treba vyriešiť, kto smie zapisovať (pečať), viac kódu a
+                                    testov vo Workeri. Pre domácnosti bez Huawei treba iné miesto.
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>3 · Appka to zistí sama (pokus)</td>
+                                <td>
+                                    Elektromer meria celý dom. Skok odberu o ~2 kW na 15–20 min, ktorý nie je bojler (ten vieme zo zásuvky),
+                                    = asi práčka alebo umývačka. Appka by sa len opýtala „Pustil si práčku?“.
+                                </td>
+                                <td class="plus">Žiadne ťuknutie zadarmo, rieši presne dôvod, prečo to minule nikto nepoužíval.</td>
+                                <td class="minus">
+                                    Nespoľahlivé: meranie len raz za 5 min, práčku od umývačky z odberu nerozoznáš, rúra či kanvica vyzerá
+                                    podobne. Len pre dom s elektromerom. Najdrahšie na vývoj aj ladenie.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section>
+                <h2>Čo ostáva rovnaké</h2>
+                <ul>
+                    <li>Bojler (riadi zásuvka, má panel Bojler dnes) a auto – bez zmeny.</li>
+                    <li>Pás dní a iné dni – zápis platí len pre dnešok.</li>
+                    <li>Ranné oznámenie – počíta Worker ráno, kedy ešte nič nebeží.</li>
+                    <li>Odkaz s nastavením – zápis v ňom nie je (pri možnosti 1 ani 2), <code>SHARE_LINK_VERSION</code> ostáva.</li>
+                    <li>Tlačidlo Späť – detail je ten istý panel (<code>tzVec</code>), nič nové do <code>ZATVARA</code>.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Nové texty</h2>
+                <p class="meta">Písmo appky je podmnožina – „−“ a prípadne „■ ▶“ (len B) by ju vyžadovali vyrobiť znova.</p>
+                <ul>
+                    <li>„Zapol som“ (tlačidlo) · „Nebeží“ (zrušenie)</li>
+                    <li>„beží“ (štítok), „do 11:40“, „zapnutá 9:40“, „ešte 1:10“</li>
+                    <li>Detail: hlavička „Beží“, „zapnutá 9:40“ s − / +</li>
+                    <li>Hotové: „Práčka dnes hotová · 11:40“ (umývačka hotová, sušička hotová)</li>
+                    <li>Sušička: „Po práčke, ktorá dobehne o 11:40.“</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Odporúčanie</h2>
+                <div class="box">
+                    <p>
+                        <b>A + 1</b>: tlačidlo „Zapol som“ v detaile spotrebiča a zápis len v telefóne. Je to najmenšia zmena, ktorá splní
+                        úlohu (plán sa naozaj prispôsobí), a nič nové na Workeri. Keď sa ukáže, že to používate oba v domácnosti a vadí, že
+                        druhý telefón nevie, pridáme možnosť 2 nad tým istým jadrom – výpočet v <code>shared/plan-dna.js</code> dostane
+                        zoznam bežiacich vecí a je mu jedno, odkiaľ prišiel.
+                    </p>
+                    <p>
+                        Jadro: <code>planDna</code> dostane <code>bezi: [{ id, start }]</code>; bežiace a dobehnuté veci vyradí z rozvrhu,
+                        bežiace odpočíta z rozpočtu od skutočného štartu a sušičke dá <code>from</code> = koniec prania. Dlaždica dostane
+                        tón <code>run</code>, dobehnutá vec riadok na konci mriežky.
+                    </p>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>

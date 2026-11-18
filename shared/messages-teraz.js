@@ -126,6 +126,42 @@ export function terazDlazdicaText(r, voice = 'drzy') {
 }
 
 /**
+ * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html): tlačidlá v detaile spotrebiča a čas zapnutia pod nimi.
+ * Práčka, sušička aj umývačka sú „ona“ - „zapnutá“, „dobehla“.
+ */
+export const TERAZ_BEZI = {
+    zapol: 'Už beží',
+    nebezi: 'Nebeží',
+    zrus: 'Zrušiť zápis',
+    skor: 'Zapnutá o 15 minút skôr',
+    neskor: 'Zapnutá o 15 minút neskôr',
+};
+
+/** „zapnutá 9:40“ - kedy ju človek zapol. @param {number} start minúta dňa */
+export const terazZapnutaText = (start) => `zapnutá ${hm(start)}`;
+
+/**
+ * Dlaždica spotrebiča, ktorý človek zapol: beží - do kedy a koľko ešte -, alebo dnes dobehol - kedy a kedy
+ * ho zapol. Tie isté prvky ako ostatné dlaždice (veľký čas, meno, dve odrážky), aby sedeli v rade.
+ * @param {{ kind: 'run' | 'done', start: number, end: number }} r @param {number} nowMin
+ * @returns {{ pred: string, velky: string, odr: string[] }}
+ */
+export function terazBehText(r, nowMin) {
+    if (r.kind === 'run') return { pred: 'do', velky: hm(r.end), odr: ['beží', `ešte ${terazZaText(Math.max(1, r.end - nowMin))}`] };
+    return { pred: '', velky: hm(r.end), odr: ['dobehla', terazZapnutaText(r.start)] };
+}
+
+/**
+ * Detail spotrebiča, ktorý človek zapol: kedy, od-do a čo s tým plán robí.
+ * @param {{ kind: 'run' | 'done', start: number, end: number }} r
+ */
+export function terazBehVecText(r) {
+    const cas = `${hm(r.start)} – ${hm(r.end)}`;
+    if (r.kind === 'run') return { kedy: 'Beží', cas, why: 'Plán dňa s ňou ráta: čo zo slnka zvýši, dostanú ostatné spotrebiče.' };
+    return { kedy: 'Dnes dobehla', cas, why: 'Dnes ju plán už neponúkne.' };
+}
+
+/**
  * Dlaždica najbližšej veci, keď teraz nejde nič: o koľko príde a odkiaľ.
  * @param {{ kind: 'sun' | 'cheap', start: number, podiel: number }} r @param {number} nowMin
  */
