@@ -5,6 +5,7 @@
 // (shared/dnes-faza.js). Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
+import { daSaZapisat } from './bezi.js';
 import { interpolate, realCurveBoundary } from './chart-model.js';
 import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayChartModel, slotTone } from './day-chart.js';
@@ -12,6 +13,8 @@ import { dayPlan } from './day-plan.js';
 import { heroModel } from './hero-model.js';
 import {
     TERAZ_BEZ_SLNKA,
+    terazBehText,
+    terazBehVecText,
     terazCitanieText,
     terazChartText,
     terazDalsiText,
@@ -26,6 +29,7 @@ import {
     terazTypicalText,
     terazVecText,
     terazWindowText,
+    terazZapnutaText,
     voiceTexts,
 } from './messages-core.js';
 import { dayCtx, planWindows, sunWindows } from './mozem-jadro.js';
@@ -68,13 +72,14 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
     const plan = dayPlan(input);
     const note = estimate ? null : noteOf(input, now, voice);
     const m = mozemModel(input, { voice, devices });
-    const rows = m.plan ? m.plan.rows : [];
+    const { rows, behy } = m.plan ?? { rows: [], behy: [] };
     const os = denOs(daylightSpan(input.site, localDateKey(input.now, input.site.timezone)), localMinutes(input.now, input.site.timezone));
     const teraz = {
         nowMin: now.minutes,
         level: plan[Math.floor(now.minutes / STEP)].level,
         slnkoDnes: sunWindows(plan).length > 0,
         dni: dniOf(input),
+        behy,
     };
     return {
         ...empty('ok', estimate),
@@ -122,7 +127,7 @@ export function grafModel(input, { voice = 'drzy', devices } = {}) {
     const m = mozemModel(input, { voice, devices });
     return {
         chart: chartOf(input, dayPlan(input), hero, now),
-        den: denModel(input, m.plan ? m.plan.rows : [], input.previewMinutes, voice),
+        den: denModel(input, m.plan ? m.plan.rows : [], input.previewMinutes, voice, m.plan ? m.plan.behy : []),
         pocasie: pocasieOf(input, hero),
     };
 }
@@ -138,9 +143,10 @@ export function grafModel(input, { voice = 'drzy', devices } = {}) {
 function dnesOf(input, rows, teraz, span, voice) {
     const slnko = /** @type {Extract<RiadokPlanu, { kind: 'sun' }>[]} */ (rows.filter((r) => r.kind === 'sun'));
     const cakaju = rows.filter((r) => r.kind === 'later' || r.kind === 'none');
+    // Čo človek zapol, si zo slnka tiež berie a sušička naň čaká.
     const nudza = nudzoveCasy(
         dayCtx(input),
-        slnko,
+        [...(teraz.behy ?? []), ...slnko],
         cakaju.map((r) => r.id),
     ).map((n) => {
         const r = /** @type {RiadokPlanu} */ (cakaju.find((x) => x.id === n.id));
@@ -151,10 +157,37 @@ function dnesOf(input, rows, teraz, span, voice) {
         const dalsi = dalsieSlnko(teraz.tyzden, r.id);
         if (dalsi?.index !== 1) potom[r.id] = terazPotomText(dalsi);
     }
+    // Čo sa dá zapísať („Už beží“), má v detaile tlačidlo; čo už beží či dobehlo, detail so zápisom.
+    const moze = (/** @type {VecDetail} */ v) =>
+        daSaZapisat(v.id) ? { ...v, zapis: { stav: /** @type {const} */ ('moze'), od: '', neskor: false } } : v;
     return {
         co: coZapnutModel(rows, { ...teraz, nudza: nudza.map((n) => n.riadok), potom }, voice),
-        veci: [...rows.filter((r) => dnesny(r)).map((r) => vecDetail(r, teraz.nowMin, span)), ...nudza.map((n) => n.detail)],
+        veci: [
+            ...rows.filter((r) => dnesny(r)).map((r) => moze(vecDetail(r, teraz.nowMin, span))),
+            ...nudza.map((n) => moze(n.detail)),
+            ...(teraz.behy ?? []).map((b) => behDetail(b, span, teraz.nowMin)),
+        ],
     };
+}
+
+/**
+ * Detail spotrebiča, ktorý človek zapol: beží či dobehol, od-do, jeho úsek na osi dňa a zápis (kedy ho zapol).
+ * `neskor`: čas zapnutia sa dá ešte posunúť neskôr - najviac na teraz (`nowMin`).
+ * @param {Beh} b @param {{ from: number, to: number }} span os dňa @param {number} nowMin @returns {VecDetail}
+ */
+function behDetail(b, span, nowMin) {
+    const slot =
+        b.end <= span.from || b.start >= span.to
+            ? null
+            : {
+                  left: spanPct(span, b.start),
+                  width: Math.round((spanPct(span, b.end) - spanPct(span, b.start)) * 10) / 10,
+                  tone: /** @type {const} */ ('bezi'),
+                  dnes: true,
+              };
+    const stav = b.kind === 'run' ? /** @type {const} */ ('bezi') : /** @type {const} */ ('hotovo');
+    const zapis = { stav, od: terazZapnutaText(b.start), neskor: b.start < nowMin };
+    return { id: b.id, name: b.name, tone: b.kind === 'run' ? 'bezi' : '', den: '', ...terazBehVecText(b), slot, zapis };
 }
 
 /**
@@ -367,10 +400,14 @@ function soFar(hourly, nowMin) {
 /** @typedef {ReturnType<typeof terazModel>} TerazModel */
 /**
  * Detail spotrebiča pre panel: `slot` je jeho úsek na osi dňa v % - zo slnka zelený, z lacnej siete
- * modrý, núdzový čas s kúskom slnka zlatý (`part`).
+ * modrý, núdzový čas s kúskom slnka zlatý (`part`), čo beží či dobehlo, krémový (`bezi`). `zapis`: dnes sa dá
+ * zapísať, že beží (`moze`, tlačidlo „Už beží“), alebo už beží či dobehol a `od` povie, kedy ho človek zapol
+ * (`neskor`: čas sa dá posunúť neskôr).
  * @typedef {{ id: string, name: string, tone: string, den: string, kedy: string, cas: string, why: string,
- *   slot: { left: number, width: number, tone: 'go' | 'cheap' | 'part', dnes: boolean } | null }} VecDetail
+ *   slot: { left: number, width: number, tone: 'go' | 'cheap' | 'part' | 'bezi', dnes: boolean } | null,
+ *   zapis?: { stav: 'moze' | 'bezi' | 'hotovo', od: string, neskor: boolean } }} VecDetail
  */
+/** Spotrebič, ktorý človek dnes zapol, s menom (planDnaModel, `behy`). @typedef {import('./plan-dna.js').BehRow & { name: string }} Beh */
 
 // ---- Nová karta Teraz (docs/navrhy/teraz-navrh-2.html) ----------------------------------
 // Čo zapnúť (mriežka dlaždíc z Plánu dňa) a detail spotrebiča. Graf dňa s odčítaním zvoleného času
@@ -401,13 +438,15 @@ const dnesny = (r) => r.kind === 'sun' || r.kind === 'cheap';
  * Riadky sú z Plánu dňa (planDnaModel), nič sa nepočíta znova. Vec v lacnom pásme ide teraz, keď v tom
  * pásme teraz sme. Čo ide zo slnka, nesie odznak, kedy bude slnko najbližšie (`potom`, podľa id veci).
  * Keď dnes zo slnka nejde nič a slnko príde až o viac dní, riadok hore to povie (`dlho`).
+ * Čo človek dnes zapol (`behy`, docs/navrhy/teraz-bezi-spotrebic.html), má vlastné dlaždice: čo beží, hneď za tým,
+ * čo ide teraz (`bezi`), čo dobehlo, na konci mriežky (`hotovo`).
  * @param {RiadokPlanu[]} rows
- * @param {{ nowMin: number, level: string, slnkoDnes: boolean, dni?: string[], nudza?: Riadok[], potom?: Record<string, Potom> }} teraz
+ * @param {{ nowMin: number, level: string, slnkoDnes: boolean, dni?: string[], nudza?: Riadok[], potom?: Record<string, Potom>, behy?: Beh[] }} teraz
  *   minúta dňa, úroveň siete teraz, či dnes slnko na veľké veci stačí aspoň chvíľu a dátumy dní predpovede
  *   od dneška (bez nich riadok hore o viacerých dňoch nehovorí)
  * @param {import('./messages.js').Voice} [voice]
  */
-export function coZapnutModel(rows, { nowMin, level, slnkoDnes, dni = [], nudza = [], potom = {} }, voice = 'drzy') {
+export function coZapnutModel(rows, { nowMin, level, slnkoDnes, dni = [], nudza = [], potom = {}, behy = [] }, voice = 'drzy') {
     // Ten istý štart „teraz“ ako v Pláne dňa: najbližšia štvrťhodina.
     const now = Math.ceil(nowMin / STEP) * STEP;
     const ide = (/** @type {DnesnyRiadok} */ r) => r.start <= now && now < r.end;
@@ -433,11 +472,20 @@ export function coZapnutModel(rows, { nowMin, level, slnkoDnes, dni = [], nudza 
             podiel: pct(r.podiel),
         };
     };
+    const beh = (/** @type {Beh} */ b) => ({
+        id: b.id,
+        tone: b.kind === 'run' ? /** @type {const} */ ('bezi') : /** @type {const} */ ('hotovo'),
+        meno: b.name,
+        ...terazBehText(b, nowMin),
+        podiel: pct(b.podiel),
+    });
     return {
         // Riadok o viacerých dňoch povie, že dnes slnko nestačí - veta pod ním by to opakovala.
         hore: oko ? { ...hore, oko, bod: /** @type {const} */ ('cloud'), bezSlnka: '' } : hore,
         dlho: !!oko,
         /** @type {Riadok[]} */ riadky: [...dnes.map(riadok), ...nudza],
+        bezi: behy.filter((b) => b.kind === 'run').map(beh),
+        hotovo: behy.filter((b) => b.kind === 'done').map(beh),
     };
 }
 
@@ -538,15 +586,15 @@ function horeDalsi(p, slnkoPride, { nowMin, level, dalej }, voice) {
  * slnko stačí, sieť, oblačnosť a čo z Plánu dňa (`rows`) vtedy beží - a slnko na oblohe panelu. Výkon v inom čase je ten istý ako náhľad grafu (heroModel): dozadu meranie,
  * dopredu predpoveď.
  * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {number | null} min
- * @param {import('./messages.js').Voice} [voice]
+ * @param {import('./messages.js').Voice} [voice] @param {Beh[]} [behy] čo človek dnes zapol - tiež vtedy beží
  */
-export function denModel(input, rows, min, voice = 'drzy') {
+export function denModel(input, rows, min, voice = 'drzy', behy = []) {
     const tz = input.site.timezone;
     const nowMin = localMinutes(input.now, tz);
     const plan = dayPlan(input);
     const t = Math.max(0, Math.min(plan.length * STEP - 1, min ?? nowMin));
     return {
-        citanie: citanieOf(input, plan, rows, { t, min }, voice),
+        citanie: citanieOf(input, plan, rows, { t, min, behy }, voice),
         slnko: slnkoVKarte(daylightSpan(input.site, localDateKey(input.now, tz)), t),
         min: t,
         zvolene: min !== null,
@@ -566,9 +614,10 @@ function slnkoVKarte(span, t) {
 
 /**
  * Odčítanie grafu dňa v minúte `t` (zvolený čas `min`, null = teraz). @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
- * @param {RiadokPlanu[]} rows @param {{ t: number, min: number | null }} cas @param {import('./messages.js').Voice} voice
+ * @param {RiadokPlanu[]} rows @param {{ t: number, min: number | null, behy: Beh[] }} cas `behy` čo človek dnes zapol
+ * @param {import('./messages.js').Voice} voice
  */
-function citanieOf(input, plan, rows, { t, min }, voice) {
+function citanieOf(input, plan, rows, { t, min, behy }, voice) {
     const hero = heroModel({ ...input, previewMinutes: min }, voice);
     const slot = plan[Math.floor(t / STEP)];
     const slnko = slot.tier === 'green' ? 'go' : slot.night ? 'noc' : 'part';
@@ -578,7 +627,7 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
     const hour = input.forecast?.hourlyToday.find((p) => p.hour === Math.floor(t / 60));
     // Teraz je pre plán najbližšia štvrťhodina, ako v Pláne dňa a pri dlaždiciach - inak by vec, ktorá
     // ide teraz, bola tu „potom o …“.
-    const { bezi, dalsi } = coBezi(rows, min === null ? Math.ceil(t / STEP) * STEP : t);
+    const { bezi, dalsi } = coBezi(rows, min === null ? Math.ceil(t / STEP) * STEP : t, behy);
     return terazCitanieText({
         min: t,
         teraz: min === null,
@@ -595,12 +644,12 @@ function citanieOf(input, plan, rows, { t, min }, voice) {
 }
 
 /**
- * Čo z Plánu dňa beží v minúte `t`, a keď nič, čo príde najskôr (inak null).
- * @param {RiadokPlanu[]} rows @param {number} t
+ * Čo z Plánu dňa a z toho, čo človek zapol (`behy`), beží v minúte `t`, a keď nič, čo príde najskôr (inak null).
+ * @param {RiadokPlanu[]} rows @param {number} t @param {Beh[]} behy
  */
-function coBezi(rows, t) {
+function coBezi(rows, t, behy) {
     const dnes = rows.filter(dnesny);
-    const bezi = dnes.filter((r) => r.start <= t && t < r.end);
+    const bezi = [...behy, ...dnes].filter((r) => r.start <= t && t < r.end);
     const dalsi = bezi.length ? null : (dnes.filter((r) => r.start > t).sort((a, b) => a.start - b.start)[0] ?? null);
     return { bezi, dalsi };
 }

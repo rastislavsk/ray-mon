@@ -240,3 +240,73 @@ test('lacné pásmo má koniec: do konca pásma, cez polnoc podľa rozvrhu ďal�
     const cely = planDnaModel(input(at('23:00'), { tariff: lacna }), { devices: ['auto'] });
     assert.equal(row(cely?.rows ?? [], 'auto').end, 2 * 24 * 60);
 });
+
+// ---- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html) -----------------------------
+const VELKE = ['pracka', 'umyvacka', 'susicka', 'auto'];
+/** Zápis „Už beží“ 5. 9. 2026. @param {string} id @param {number} m */
+const zapis = (id, m) => ({ id, d: '2026-09-05', m });
+
+test('práčka beží od 8:00: plán ju nerozvrhuje, sušička ide po jej skutočnom konci, model ju ukáže v behoch', () => {
+    const i = input(at('09:00'), { bezi: [zapis('pracka', 480)] });
+    const rows = planDnaAt(i, VELKE);
+    assert.equal(row(rows, 'pracka'), undefined);
+    const susicka = row(rows, 'susicka');
+    assert.equal(susicka.kind, 'sun');
+    assert.equal(susicka.start, 600, 'hneď, keď práčka dobehne');
+    assert.equal(susicka.after, 'pracka');
+    const m = planDnaModel(i, { devices: VELKE });
+    assert.deepEqual(
+        m?.behy.map(({ id, kind, start, end, name }) => ({ id, kind, start, end, name })),
+        [{ id: 'pracka', kind: 'run', start: 480, end: 600, name: 'Práčka' }],
+    );
+    assert.ok((m?.behy[0].podiel ?? 0) > 0 && (m?.behy[0].podiel ?? 1) < 1, 'o 8:00 len časť zo slnka');
+    assert.equal(row(m?.rows ?? [], 'susicka').why, 'po práčke, celá zo strechy');
+});
+
+test('práčka dobehla: dnes ju plán neponúka, sušička od teraz', () => {
+    const i = input(at('11:00'), { bezi: [zapis('pracka', 480)] });
+    const m = planDnaModel(i, { devices: VELKE });
+    assert.deepEqual(
+        m?.behy.map((b) => b.kind),
+        ['done'],
+    );
+    assert.equal(row(m?.rows ?? [], 'pracka'), undefined);
+    const susicka = row(m?.rows ?? [], 'susicka');
+    assert.equal(susicka.start, 11 * 60);
+    assert.equal(susicka.after, 'pracka');
+});
+
+test('bežiaci spotrebič si berie z rozpočtu: počas ohrevov nič neprekročí výrobu nad spotrebou domu', () => {
+    const i = input(at('09:00'), { bezi: [zapis('pracka', 540)] });
+    const ctx = dayCtx(i);
+    const rows = planDna(ctx, i, ['pracka', 'umyvacka', 'susicka']);
+    /** @type {number[]} */ const draw = new Array(24 * 60).fill(0);
+    /** @type {boolean[]} */ const heavy = new Array(24 * 60).fill(false);
+    for (const r of [{ id: 'pracka', start: 540 }, ...rows.filter((x) => x.kind === 'sun')]) {
+        const item = /** @type {(typeof MOZEM_ITEMS)[number]} */ (MOZEM_ITEMS.find((x) => x.id === r.id));
+        const device = /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === item.device));
+        programDraw(item, device.powerKw).forEach((p, k) => {
+            draw[r.start + k] += p.kw;
+            heavy[r.start + k] ||= p.heavy;
+        });
+    }
+    heavy.forEach((h, k) => h && k >= 540 && assert.ok(draw[k] <= freeKw(ctx, k) + 1e-9, `minúta ${k}: ${draw[k]} kW`));
+    assert.ok(row(rows, 'susicka').start >= 660);
+});
+
+test('za oblačna sušička po bežiacej práčke radšej v ten deň v lacnom pásme než inokedy', () => {
+    const i = input(at('09:00'), { pv: null, forecast: cloudy(0.15), bezi: [zapis('pracka', 540)] });
+    const susicka = row(planDnaAt(i, VELKE), 'susicka');
+    assert.equal(susicka.kind, 'cheap');
+    assert.ok(susicka.start >= 660, `${susicka.start}`);
+});
+
+test('zápis iného dňa, spotrebiča mimo plánu či bojlera plán nemení', () => {
+    const bez = planDnaAt(input(at('09:00')), VELKE);
+    for (const bezi of [[{ ...zapis('pracka', 480), d: '2026-09-04' }], [zapis('bojler', 480)]]) {
+        const i = input(at('09:00'), { bezi });
+        assert.deepEqual(planDnaAt(i, VELKE), bez, JSON.stringify(bezi));
+        assert.deepEqual(planDnaModel(i, { devices: VELKE })?.behy, []);
+    }
+    assert.deepEqual(planDnaModel(input(at('09:00'), { bezi: [zapis('pracka', 480)] }), { devices: ['umyvacka'] })?.behy, []);
+});

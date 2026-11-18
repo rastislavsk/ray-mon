@@ -1029,6 +1029,22 @@
                 </div>
                 <p id="tz-vec-cas" class="vec-cas"></p>
                 <div id="tz-vec-pas" class="vec-pas" aria-hidden="true"></div>
+                <!-- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html): „Už beží“, potom čas zapnutia s − a + a „Nebeží“. -->
+                <div id="tz-vec-zapis" class="vec-zapis hidden">
+                    <button type="button" id="tz-vec-zapol" class="pbtn"></button>
+                    <div id="tz-vec-posun" class="vec-posun">
+                        <button type="button" id="tz-vec-skor" class="vec-krok" data-smer="-1">
+                            <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12h12"></path></svg>
+                        </button>
+                        <span id="tz-vec-od" aria-live="polite"></span>
+                        <button type="button" id="tz-vec-neskor" class="vec-krok" data-smer="1">
+                            <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d="M6 12h12M12 6v12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    <button type="button" id="tz-vec-zrus" class="pbtn ghost"></button>
+                </div>
                 <p id="tz-vec-why"></p>
                 <p id="tz-vec-note" class="dim"></p>
             </div>

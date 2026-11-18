@@ -6,6 +6,7 @@ import { wordSize } from '../../web/render/mozem.js';
 import { pocasieStav } from '../../web/pocasie.js';
 import { PARTS } from '../../web/state.js';
 import {
+    BEZI_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     OLD_STORAGE_KEYS,
     PANELS,
@@ -24,7 +25,7 @@ import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { stavMeraniaText, TERAZ_TEXTS } from '../../shared/messages-core.js';
+import { stavMeraniaText, TERAZ_BEZI, TERAZ_TEXTS } from '../../shared/messages-core.js';
 import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
 import { grafModel, pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
@@ -1417,8 +1418,9 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-vec-pas .os-usek')).toHaveAttribute('data-tone', v.slot?.tone ?? '');
             await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(1);
             expect(await vazneNalezy(page)).toEqual([]);
-            // Tlačidlo Zavrieť panel nemá. Escape vráti fokus na dlaždicu či riadok, z ktorého sa detail otvoril.
-            await expect(panel.locator('button')).toHaveCount(0);
+            // Tlačidlo Zavrieť panel nemá - jediné tlačidlo je „Už beží“. Escape vráti fokus na dlaždicu či riadok,
+            // z ktorého sa detail otvoril.
+            await expect(panel.locator('button:visible')).toHaveText([TERAZ_BEZI.zapol]);
             await page.keyboard.press('Escape');
             await expect(panel).toBeHidden();
             await expect(vec(id)).toBeFocused();
@@ -1433,6 +1435,53 @@ test.describe('karta Teraz', () => {
         await page.goBack();
         await expect(panel).toBeHidden();
         await ocakavajKartu(page, 'terazky');
+        expect(errors).toEqual([]);
+    });
+
+    test('„Už beží“: dlaždica beží s textami z modelu, rovnako veľká, čas sa dá posunúť, ostane po obnovení, „Nebeží“ ju vráti', async ({
+        page,
+    }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        const time = at('13:00');
+        const errors = await openTeraz(page, { time });
+        const panel = page.locator('#tz-vec-sheet');
+        await page.locator('#tz-co [data-vec="pracka"]').click();
+        await page.locator('#tz-vec-zapol').click();
+        const d = '2026-09-05';
+        const m = terazModel(vstupTeraz(time, { bezi: [{ id: 'pracka', d, m: 13 * 60 }] }));
+        const v = m.veci.find((x) => x.id === 'pracka');
+        // Detail ostane otvorený a povie, že beží; neskôr než teraz sa čas posunúť nedá.
+        await expect(page.locator('#tz-vec-kedy')).toHaveText(v?.kedy ?? '');
+        await expect(page.locator('#tz-vec-cas')).toHaveText(v?.cas ?? '');
+        await expect(page.locator('#tz-vec-od')).toHaveText('zapnutá 13:00');
+        await expect(page.locator('#tz-vec-zapol')).toBeHidden();
+        await expect(page.locator('#tz-vec-neskor')).toBeDisabled();
+        await expect(page.locator('#tz-vec-zrus')).toHaveText(TERAZ_BEZI.nebezi);
+        await expect(page.locator('#tz-vec-note')).toBeHidden();
+        expect(await vazneNalezy(page)).toEqual([]);
+        await page.locator('#tz-vec-skor').click();
+        await page.locator('#tz-vec-skor').click();
+        await expect(page.locator('#tz-vec-od')).toHaveText('zapnutá 12:30');
+        await expect(page.locator('#tz-vec-neskor')).toBeEnabled();
+        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+        const posunuty = terazModel(vstupTeraz(time, { bezi: [{ id: 'pracka', d, m: 12 * 60 + 30 }] }));
+        const t = posunuty.co?.bezi[0];
+        const dlazdica = page.locator('#tz-co [data-vec="pracka"]');
+        await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
+        await expect(dlazdica.locator('.velky')).toHaveText(`${t?.pred} ${t?.velky}`);
+        await expect(dlazdica.locator('.odr > span:not(.sr)')).toHaveText(t?.odr ?? []);
+        expect(await rozmeryDlazdic(page)).toEqual({ vysky: 1, nezarovnane: 0 });
+        // Zápis je v telefóne: po obnovení stránky práčka stále beží.
+        await page.reload();
+        await page.locator('#nav-terazky').click();
+        await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
+        await dlazdica.click();
+        await page.locator('#tz-vec-zrus').click();
+        await expect(page.locator('#tz-vec-zapol')).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(dlazdica).not.toHaveAttribute('data-tone', 'bezi');
+        expect(await page.evaluate((k) => localStorage.getItem(k), BEZI_STORAGE_KEY)).toBe('[]');
         expect(errors).toEqual([]);
     });
 

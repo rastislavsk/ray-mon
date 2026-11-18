@@ -606,6 +606,15 @@ export const DOMA_STORAGE_KEY = 'doma-v1';
 export const BOJLER_STORAGE_KEY = 'bojler-v1';
 
 /**
+ * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1): „Zapol som“ v detaile spotrebiča na karte
+ * Teraz zapíše, kedy človek spotrebič zapol, a Plán dňa s tým ráta (shared/bezi.js). Len `veci` - bojler
+ * riadi zásuvka a auto zatiaľ nie. `posunMin`: o koľko posunie čas zapnutia jedno ťuknutie na − či +.
+ * Zápis patrí telefónu a platí len v ten deň; do odkazu s nastavením nejde.
+ */
+export const BEZI = { veci: ['pracka', 'umyvacka', 'susicka'], posunMin: 15 };
+export const BEZI_STORAGE_KEY = 'bezi-v1';
+
+/**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
  * v Nastavení. Nový kľúč patrí sem, inak by po vymazaní ostal v prehliadači.
  */
@@ -625,6 +634,7 @@ export const STORAGE_KEYS = [
     ODBER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
+    BEZI_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
 ];

@@ -9,6 +9,7 @@ import {
     loadDayLog,
     loadBojlerPrahy,
     loadDoma,
+    loadBezi,
     loadRanna,
     loadTrasy,
     loadLook,
@@ -65,6 +66,8 @@ const store = createStore(
         oznamStav: oznamStav(),
         doma: loadDoma(),
         bojlerPrahy: loadBojlerPrahy(),
+        // Čo človek dnes zapol („Už beží“) - Plán dňa s tým ráta.
+        bezi: loadBezi(),
     }),
 );
 

@@ -5,6 +5,7 @@
 
 import {
     ADRESA_SESSION_KEY,
+    BEZI_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
@@ -26,6 +27,7 @@ import {
     VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
+import { parseBezi } from '../shared/bezi.js';
 import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
@@ -302,6 +304,16 @@ export function loadDoma() {
 /** @param {readonly string[]} devices @returns {boolean} podarilo sa? */
 export function saveDoma(devices) {
     return write(DOMA_STORAGE_KEY, JSON.stringify(domaToStored(devices)));
+}
+
+/** Čo človek zapol („Už beží“, BEZI_STORAGE_KEY, shared/bezi.js); bez úložiska nič. @returns {import('../shared/bezi.js').Zapis[]} */
+export function loadBezi() {
+    return readJson(BEZI_STORAGE_KEY, parseBezi, []);
+}
+
+/** @param {import('../shared/bezi.js').Zapis[]} list @returns {boolean} podarilo sa? */
+export function saveBezi(list) {
+    return write(BEZI_STORAGE_KEY, JSON.stringify(list));
 }
 
 /** Prahy bojlera (BOJLER_STORAGE_KEY); bez úložiska či pokazené predvolené. @returns {import('../shared/bojler.js').Prahy} */

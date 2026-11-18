@@ -94,7 +94,8 @@ export function dalsieSlnko(dni, id) {
  * Núdzové časy pre veci `ids`, ktoré sa v deň `ctx` na slnko nezmestia: kedy ich to stojí najmenej
  * zo siete. Vec, ktorá na niečo čaká (sušička na práčku), ide až po nej. Každá si zo zvyšného slnka
  * odpočíta svoje, ďalšia dostane, čo ostane. Vráti ich podľa času, bez času na konci.
- * @param {DayCtx} ctx @param {SunRow[]} slnko čo v ten deň ide na slnku @param {readonly string[]} ids
+ * @param {DayCtx} ctx @param {import('./plan-dna.js').Usek[]} slnko čo v ten deň ide na slnku (aj čo človek zapol)
+ * @param {readonly string[]} ids
  * @returns {Nudza[]}
  */
 export function nudzoveCasy(ctx, slnko, ids) {
