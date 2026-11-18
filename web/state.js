@@ -2,12 +2,12 @@
 // cez render (render/index.js). Polia o elektrárni a dátach sú tie isté,
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
-import { BOJLER, LAYOUT_PX, MOZEM_ITEMS, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
+import { BOJLER, LAYOUT_PX, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
 import { domaDefault } from '../shared/doma.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../shared/settings.js';
-import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
-import { setupInit } from '../shared/setup-flow.js';
+import { emptySettings } from '../shared/setup.js';
+import { backAction, closeAction, setupInit } from '../shared/setup-flow.js';
 
 /**
  * Stav. `mzGraf` otvorený panel s grafom dňa na karte Dnes (docs/navrhy/dnes-predpoved-graf.html) a `terazPreview`
@@ -83,21 +83,6 @@ import { setupInit } from '../shared/setup-flow.js';
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
  */
-/**
- * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci, panel s grafom
- * dňa na karte Dnes (`graf`) a detail karty 7 dní. Zvolený čas v grafe krokom nie je - posun po grafe
- * ani „Späť na teraz“ do histórie nič nepridajú, Späť zavrie celý graf naraz. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
- * dňa vráti do prehľadu. Obrazovka sprievodcu
- * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
- * Appka (`sheet`) rovnako - Späť ho zavrie, a rozbalená sekcia karty Nastavenie (`fold`) - Späť ju zbalí. Otvorený detail spotrebiča na karte Teraz (`vec`)
- * a panel s vysvetlením nad jej dlaždicami (`chip`) Späť zavrie, rovnako vysvetlenie odznaku na karte Dnes (`trieda`). `dash` hovorí, že krok patrí prehľadu so stĺpcami
- * (dashboard): prepnutie stĺpca v ňom nie je nový krok a detail v ňom nepatrí len
- * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
- * @typedef {{ panel: Panel, detail: WeekDetail | null,
- *   setup: import('../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, fold: NsFold | null,
- *   vec: string | null, chip: TzChip | null, trieda: MzChip | null, graf: boolean, dash?: true }} NavStep
- */
-
 /**
  * Zbaliteľné sekcie karty Nastavenie, v poradí na karte. Rozbalená je najviac jedna.
  * Appka sa nezbaľuje: zdieľanie a vymazanie údajov sú samostatné položky pod nadpisom.
@@ -322,163 +307,47 @@ export function neededParts(state) {
     return PARTS.filter((part) => shown.includes(part) || (part === 'nastavenie' && (!!state.incoming || !!state.linkError)));
 }
 
-/** @param {AppState} state @returns {NavStep} */
-export function navStep(state) {
-    return {
-        panel: state.panel,
-        detail: state.weekDetail,
-        setup: state.setupStep,
-        roof: state.setupRoof,
-        sheet: state.appSheet,
-        fold: state.nsOpen,
-        vec: state.tzVec,
-        chip: state.tzChip,
-        trieda: state.mzChip,
-        graf: state.mzGraf,
-        ...(dashboard(state) ? { dash: /** @type {const} */ (true) } : {}),
-    };
+/**
+ * Obrazovka sprievodcu nastavením, z ktorej Späť ide o obrazovku späť (ako jeho vlastné tlačidlo Späť).
+ * Obrazovka, na ktorú sprievodcu vracia zatvorenie (kým appka nepozná polohu, otázka na ňu), patrí karte.
+ * @param {AppState} s @returns {Partial<AppState> | null}
+ */
+function sprievodcaSpat(s) {
+    const zavri = closeAction(s);
+    if (s.panel !== 'nastavenie' || !s.setupStep || zavri.type !== 'patch' || s.setupStep === zavri.patch.setupStep) return null;
+    const krok = backAction(s) ?? zavri;
+    return krok.type === 'patch' ? krok.patch : null;
 }
 
 /**
- * Rovnaký krok? V prehľade sú všetky stĺpce jedna obrazovka - prepnutie stĺpca nový krok nepridá.
- * @param {NavStep} a @param {NavStep} b
+ * Čo Späť zatvára, zvnútra von: bublina a čísla v scéne, okno sekcie Appka, sprievodca, sekcia Nastavenia,
+ * panely na kartách Teraz a Dnes, detail karty 7 dní a nakoniec iný deň v páse dní karty Teraz.
+ * @type {((s: AppState) => Partial<AppState> | null)[]}
  */
-export function sameNavStep(a, b) {
-    return (a.panel === b.panel || (!!a.dash && !!b.dash)) && ROVNAKE_V_KROKU.every((k) => a[k] === b[k]);
-}
-
-/** Časti kroku, ktoré musia byť rovnaké, aby to bol ten istý krok. @type {(keyof NavStep)[]} */
-const ROVNAKE_V_KROKU = ['detail', 'setup', 'roof', 'sheet', 'fold', 'vec', 'chip', 'trieda', 'graf'];
+const ZATVARA = [
+    (s) => (s.stavTip ? { stavTip: false } : null),
+    (s) => (s.tzCisla ? { tzCisla: false } : null),
+    (s) => (s.appSheet ? { appSheet: null } : null),
+    sprievodcaSpat,
+    (s) => (s.nsOpen ? { nsOpen: null } : null),
+    (s) => (s.tzVec ? { tzVec: null } : null),
+    (s) => (s.tzChip ? { tzChip: null } : null),
+    (s) => (s.mzChip ? { mzChip: null } : null),
+    (s) => (s.mzGraf ? { mzGraf: false, terazPreview: null } : null),
+    (s) => (s.weekDetail ? { weekDetail: null } : null),
+    (s) => (s.tzDen ? { tzDen: 0 } : null),
+];
 
 /**
- * Detail z položky histórie. Patrí len karte 7 dní (v prehľade ktorémukoľvek stĺpcu - 7 dní je
- * vidieť vždy); položka zo skoršej verzie ho nemá.
- * @param {Panel} panel @param {boolean} dash @param {unknown} detail @returns {WeekDetail | null}
+ * Čo spraví tlačidlo Späť (web/nav-history.js): zavrie, čo je otvorené - vždy jednu vec (ZATVARA) -,
+ * potom prejde na kartu Teraz (v prehľade so stĺpcami ostane prehľad) a až z nej appka odíde (null).
+ * Zatvorenie okna či detailu krížikom je obyčajná zmena stavu, s históriou nemá nič spoločné.
+ * @param {AppState} s @returns {Partial<AppState> | null}
  */
-const weekDetailOf = (panel, dash, detail) => ((panel === '7dni' || dash) && (detail === 'day' || detail === 'week') ? detail : null);
-
-/**
- * Okno sekcie Appka z položky histórie. Patrí len karte Nastavenie; položka zo skoršej verzie ho nemá.
- * @param {Panel} panel @param {unknown} sheet @returns {AppSheet | null}
- */
-const appSheetOf = (panel, sheet) => (panel === 'nastavenie' && (sheet === 'share' || sheet === 'reset') ? sheet : null);
-
-/**
- * Rozbalená sekcia karty Nastavenie z položky histórie. Patrí len tej karte; položka zo skoršej
- * verzie ju nemá - všetko je zbalené.
- * @param {Panel} panel @param {unknown} fold @returns {NsFold | null}
- */
-const nsFoldOf = (panel, fold) => (panel === 'nastavenie' && NS_FOLDS.find((f) => f === fold)) || null;
-
-/**
- * Otvorený detail spotrebiča z položky histórie. Patrí len karte Teraz (v prehľade ktorémukoľvek
- * stĺpcu - Teraz je vidieť vždy); položka zo skoršej verzie ho nemá, cudzia vec nie je.
- * @param {Panel} panel @param {boolean} dash @param {unknown} vec @returns {string | null}
- */
-const tzVecOf = (panel, dash, vec) => ((panel === 'terazky' || dash) && MOZEM_ITEMS.find((i) => i.id === vec)?.id) || null;
-
-/**
- * Otvorený panel štítka z položky histórie. Patrí karte Teraz ako Plán dňa; položka zo skoršej verzie
- * ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} chip @returns {TzChip | null}
- */
-const tzChipOf = (panel, dash, chip) =>
-    (panel === 'terazky' || dash) && (chip === 'stav' || chip === 'siet' || chip === 'tok') ? chip : null;
-
-/**
- * Otvorené vysvetlenie odznaku karty Dnes z položky histórie. Patrí karte Dnes (v prehľade ktorémukoľvek
- * stĺpcu); položka zo skoršej verzie ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} trieda @returns {MzChip | null}
- */
-const mzChipOf = (panel, dash, trieda) => ((panel === 'mozem' || dash) && (trieda === 'dnes' || trieda === 'zajtra') ? trieda : null);
-
-/**
- * Otvorený panel s grafom dňa z položky histórie. Patrí karte Dnes (v prehľade ktorémukoľvek stĺpcu);
- * položka zo skoršej verzie ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} graf
- */
-const mzGrafOf = (panel, dash, graf) => (panel === 'mozem' || dash) && graf === true;
-
-/**
- * Obrazovka sprievodcu a plocha z položky histórie. Položka zo skoršej verzie sprievodcu nepozná -
- * chýbajúci krok je prehľad karty. Cudzia hodnota je null.
- * @param {unknown} setup @param {unknown} roof
- * @returns {{ setup: import('../shared/setup.js').SetupStep | null, roof: number } | null}
- */
-function setupPlaceOf(setup = null, roof = 0) {
-    const s = setup === null ? null : SETUP_STEPS.find((x) => x === setup);
-    if (s === undefined || !Number.isInteger(roof) || /** @type {number} */ (roof) < 0) return null;
-    return { setup: s, roof: /** @type {number} */ (roof) };
-}
-
-/**
- * Prehľad so stĺpcami z položky histórie. Poznajú ho len jeho karty; položka zo skoršej verzie ho nemá.
- * Vracia časť kroku: `{ dash: true }`, inak nič. @param {Panel} panel @param {unknown} dash @returns {{ dash?: true }}
- */
-const dashOf = (panel, dash) => (dash === true && isColumn(panel) ? { dash: true } : {});
-
-/**
- * Krok z hodnoty v položke histórie (`step` alebo `prev`). Cudzia hodnota je null a Späť sa
- * pri nej správa ako predtým - odíde zo stránky.
- * @param {unknown} raw @returns {NavStep | null}
- */
-export function navStepOf(raw) {
-    // Položka zo skoršej verzie appky mala za krok len kartu.
-    if (typeof raw === 'string') raw = { panel: raw };
-    if (!raw || typeof raw !== 'object') return null;
-    // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami, Plán dňa (`plan`) a zoznam pod grafom
-    // (`legend`) s prestavbou karty Teraz; položka, ktorá ich ešte nesie, vráti len kartu. Zvolený čas
-    // v grafe (`preview`) krokom býval - položka, ktorá ho nesie, vráti graf bez neho.
-    const { panel, detail, setup, roof, sheet, fold, vec, chip, trieda, graf, dash } =
-        /** @type {{ panel?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
-         *   sheet?: unknown, fold?: unknown, vec?: unknown, chip?: unknown, trieda?: unknown, graf?: unknown, dash?: unknown }} */ (raw);
-    const p = PANELS.find((x) => x === panel);
-    const place = setupPlaceOf(setup, roof);
-    if (!p || !place) return null;
-    const d = dashOf(p, dash);
-    const inDash = !!d.dash;
-    const g = mzGrafOf(p, inDash, graf);
-    return {
-        panel: p,
-        detail: weekDetailOf(p, inDash, detail),
-        ...place,
-        sheet: appSheetOf(p, sheet),
-        fold: nsFoldOf(p, fold),
-        vec: tzVecOf(p, inDash, vec),
-        chip: tzChipOf(p, inDash, chip),
-        trieda: mzChipOf(p, inDash, trieda),
-        graf: g,
-        ...d,
-    };
-}
-
-/** Krok, na ktorom položka histórie stojí. @param {unknown} raw */
-export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ step?: unknown }} */ (raw).step : null);
-
-/** Krok, z ktorého sa do položky histórie prišlo. @param {unknown} raw */
-export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
-
-/**
- * Návrat na krok z histórie (tlačidlo Späť): karta, detaily a panely tak, ako boli. Zvolený čas
- * v grafe ostane, kým je graf otvorený, so zatvoreným grafom sa vráti na teraz; detail dňa na dni, kde sa naposledy
- * stálo. Úprava jedného kroku sprievodcu končí zhrnutím alebo prehľadom - návrat na ne ju ukončí.
- * Návrat v prehľade na krok prehľadu nechá aktívny stĺpec, aký je - stĺpec nebol krokom.
- * @param {AppState} state @param {NavStep} step
- */
-export function navChange(state, step) {
-    const endsEdit = step.setup === null || step.setup === 'suhrn';
-    const panel = !!step.dash && dashboard(state) ? state.panel : step.panel;
-    return {
-        ...panelChange(state.panel, panel),
-        terazPreview: step.graf ? state.terazPreview : null,
-        weekDetail: step.detail,
-        setupStep: step.setup,
-        setupRoof: step.roof,
-        appSheet: step.sheet,
-        nsOpen: step.fold,
-        tzVec: step.vec,
-        // Zatvorenie detailu spotrebiča či vysvetlenia (krok späť na tej istej karte) nechá zvolený deň.
-        tzDen: panel === state.panel ? state.tzDen : 0,
-        tzChip: step.chip,
-        mzChip: step.trieda,
-        mzGraf: step.graf,
-        ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
-    };
+export function spatZmena(s) {
+    for (const zavri of ZATVARA) {
+        const zmena = zavri(s);
+        if (zmena) return zmena;
+    }
+    return s.panel === 'terazky' || dashboard(s) ? null : panelChange(s.panel, 'terazky');
 }

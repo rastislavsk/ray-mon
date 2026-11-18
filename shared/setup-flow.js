@@ -84,11 +84,9 @@ import { sposobOf, sposobyOf, udajeOk, znackaOf } from './zdroje.js';
  */
 /** @typedef {Partial<SetupState>} SetupPatch */
 /**
- * Čo spraví „Ďalej“, „Späť“ či zatvorenie: `patch` je obyčajná zmena stavu, `back` krok späť
- * (pokiaľ sa dá, cez históriu prehliadača - ten istý krok ako Späť na telefóne), `site` uloží
+ * Čo spraví „Ďalej“, „Späť“ či zatvorenie: `patch` je obyčajná zmena stavu, `site` uloží
  * samotnú polohu a `save` celé nastavenie. `extra` je zmena stavu, ktorá ide s uložením.
  * @typedef {{ type: 'patch', patch: SetupPatch }
- *   | { type: 'back', patch: SetupPatch }
  *   | { type: 'site', site: import('./config.js').Site, extra: SetupPatch }
  *   | { type: 'save', settings: Settings, extra: SetupPatch }} SetupAction
  */
@@ -108,8 +106,8 @@ export function setupInit(start, known) {
         // Hlásenie po uložení; pri ďalšej úprave zmizne.
         settingsNote: '',
         geo: /** @type {GeoSearch} */ ({ status: 'idle', results: [] }),
-        // Otvorená obrazovka (null = karta ukazuje prehľad) a plocha panelov, ktorej sa týka. Oboje
-        // je krok navigácie, takže tlačidlo Späť na telefóne vracia o obrazovku sprievodcu.
+        // Otvorená obrazovka (null = karta ukazuje prehľad) a plocha panelov, ktorej sa týka. Tlačidlo
+        // Späť na telefóne vracia o obrazovku sprievodcu (spatZmena vo web/state.js).
         setupStep: /** @type {SetupStep | null} */ (known === 'nic' ? 'lokalita' : null),
         setupRoof: 0,
         // Úprava jedného kroku: kam sa po nej vrátiť - na zhrnutie sprievodcu, alebo na prehľad
@@ -134,7 +132,7 @@ export function setupInit(start, known) {
         // Odkaz s nastavením vložený v sprievodcovi (obrazovka „odkaz“).
         setupLink: '',
         // Rozvrh tarify, ktorý sa práve upravuje (0 = základ, ďalej výnimky), a pásmo, ktorým sa
-        // maľuje po kruhu (null = najdrahšie). Nastavenie vnútri obrazovky, nie krok navigácie.
+        // maľuje po kruhu (null = najdrahšie). Nastavenie vnútri obrazovky, Späť ho nevracia.
         setupSched: 0,
         setupBrush: /** @type {string | null} */ (null),
         // Človek pri tarife ťukol na „Neviem“ - obrazovka vysvetlí, s čím appka počíta.
@@ -674,7 +672,7 @@ export function stepEdit(s, key, fromHome) {
  * elektrárne sa naopak zahodí, lebo tam „zavrieť“ znamená „nechať, ako bolo“. Kým appka
  * nepozná polohu, za sprievodcom nie je nič - vracia sa na otázku o nej. @param {SetupState} s @returns {SetupAction} */
 export function closeAction(s) {
-    if (s.known === 'nic') return { type: 'back', patch: { setupStep: 'lokalita', setupReturn: null } };
+    if (s.known === 'nic') return { type: 'patch', patch: { setupStep: 'lokalita', setupReturn: null } };
     if (s.setupReturn !== 'prehlad') return { type: 'patch', patch: { setupStep: null, setupReturn: null } };
     const saved = savedSettings(s);
     return {
@@ -697,7 +695,7 @@ export function nextAction(s) {
 /** „Ďalej“ podľa obrazovky a toho, odkiaľ sa na ňu prišlo (nextAction). @param {SetupState} s @returns {SetupAction | null} */
 function stepAction(s) {
     if (!setupReady(s) || !s.setupStep) return null;
-    if (s.setupReturn === 'suhrn') return { type: 'back', patch: { setupStep: 'suhrn', setupReturn: null } };
+    if (s.setupReturn === 'suhrn') return { type: 'patch', patch: { setupStep: 'suhrn', setupReturn: null } };
     // Bez zadaných panelov sa ukladá len poloha: pri prvom otvorení (a sprievodca pokračuje
     // panelmi) aj pri jej zmene z prehľadu karty.
     if (isWelcome(s, s.setupStep)) return { type: 'site', site: s.settingsDraft.site, extra: { setupStep: 'panel' } };
@@ -734,7 +732,7 @@ const MERANIE_BACK = {
 /** „Späť“ v sprievodcovi - o obrazovku späť, z prvej ho zavrie (closeAction). @param {SetupState} s @returns {SetupAction | null} */
 export function backAction(s) {
     const meranie = MERANIE_BACK[/** @type {string} */ (s.setupStep)];
-    if (meranie) return { type: 'back', patch: { setupStep: meranie(s) } };
+    if (meranie) return { type: 'patch', patch: { setupStep: meranie(s) } };
     if (!s.setupStep || s.setupReturn === 'prehlad' || s.setupStep === 'start' || (s.known === 'nic' && s.setupStep === 'odkaz'))
         return closeAction(s);
     const place = prevSetupPlace(
@@ -742,7 +740,7 @@ export function backAction(s) {
         s.settingsDraft.plant.strings.length,
         tariffKind(s.settingsDraft.tariff),
     );
-    return place && { type: 'back', patch: { setupStep: place.step, setupRoof: place.roof } };
+    return place && { type: 'patch', patch: { setupStep: place.step, setupRoof: place.roof } };
 }
 
 /** „Teraz nie, ukáž predpoveď“ na otázke o polohe: uloží len ju a zavrie sprievodcu. Kam appka

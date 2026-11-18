@@ -172,17 +172,18 @@ let opened = null;
  * návrate vráti na svoje miesto. V prehľade so stĺpcami je detail len v stĺpci 7 dní - stránka sa
  * posunie len toľko, aby bol jeho začiatok vidieť.
  * @param {AppState} state @param {'day' | 'week' | null} detail @param {Dom} dom
+ * @param {number} y posun stránky pred prekreslením - skrytý prehľad by ho skrátil
  */
-function moveFocus(state, detail, dom) {
+function moveFocus(state, detail, dom, y) {
     if (detail && !opened) {
-        opened = { from: detail === 'week' ? 'week' : state.weekDay, y: window.scrollY };
+        opened = { from: detail === 'week' ? 'week' : state.weekDay, y };
         const dash = dashboard(state);
         if (!dash) window.scrollTo(0, 0);
         (detail === 'week' ? dom.sdWeekBack : dom.sdDayBack).focus({ preventScroll: !dash });
     } else if (!detail && opened) {
-        const { from, y } = opened;
+        const { from } = opened;
+        window.scrollTo(0, opened.y);
         opened = null;
-        window.scrollTo(0, y);
         const to = from === 'week' ? dom.sdSum : dom.sdDays.querySelector(`[data-day="${from}"]`);
         if (to instanceof HTMLElement) to.focus({ preventScroll: true });
     }
@@ -196,11 +197,12 @@ export function renderSedem(state, dom) {
     // Detail má zmysel len s predpoveďou; bez nej ostáva prehľad so stavom karty.
     const data = m.kind === 'ok' ? /** @type {SedemData} */ (state) : null;
     const detail = data ? state.weekDetail : null;
+    const y = window.scrollY;
     show(dom.sdList, !detail);
     show(dom.sdDay, detail === 'day');
     show(dom.sdWeek, detail === 'week');
     renderList(m, dom, voiceTexts(state.voice).SEDEM_TEXTS);
     if (data && detail === 'day') renderDay(data, Math.min(state.weekDay, data.forecast.days.length - 1), dom, state.voice);
     if (data && detail === 'week') renderWeek(data, dom, state.voice);
-    moveFocus(state, detail, dom);
+    moveFocus(state, detail, dom, y);
 }

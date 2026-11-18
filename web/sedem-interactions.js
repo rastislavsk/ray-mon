@@ -1,10 +1,8 @@
 // Poslucháče karty 7 dní: otvorenie detailu dňa a týždňa, návrat do prehľadu
 // (šípka späť, Escape), listovanie dní v detaile dňa a „Skúsiť znova“. Každý končí volaním
-// setState (alebo krokom v histórii); kreslí render/sedem.js. Tlačidlo Späť v telefóne rieši
-// trackHistory - detail je krok navigácie, deň v ňom nie.
+// setState; kreslí render/sedem.js. Tlačidlo Späť v telefóne detail zavrie (spatZmena vo web/state.js).
 
 import { initDayPager } from './day-pager.js';
-import { closeDetail } from './nav-back.js';
 import { renderSedem } from './render/sedem.js';
 import { shows } from './state.js';
 
@@ -58,7 +56,7 @@ export function initSedem(store, dom, refresh) {
         if (row instanceof HTMLElement) store.setState({ weekDetail: 'day', weekDay: Number(row.dataset.day), panel: '7dni' });
     });
     dom.sdSum.addEventListener('click', () => store.setState({ weekDetail: 'week', panel: '7dni' }));
-    for (const btn of [dom.sdDayBack, dom.sdWeekBack]) btn.addEventListener('click', () => closeDetail(store));
+    for (const btn of [dom.sdDayBack, dom.sdWeekBack]) btn.addEventListener('click', () => store.setState({ weekDetail: null }));
     // Escape v detaile robí to isté ako „‹ 7 dní“. Na iných kartách si Escape berú ich prvky - v
     // prehľade so stĺpcami otvorený dialóg (panel s grafom dňa, okno sekcie Appka, …), ktorý zavrie najprv seba.
     document.addEventListener('keydown', (e) => {
@@ -66,7 +64,7 @@ export function initSedem(store, dom, refresh) {
         if (e.key !== 'Escape' || e.defaultPrevented || !shows(s, '7dni') || !s.weekDetail) return;
         if (document.querySelector('dialog:modal')) return;
         e.preventDefault();
-        closeDetail(store);
+        store.setState({ weekDetail: null });
     });
     dom.sdRetry.addEventListener('click', () => {
         store.setState({ loading: true });

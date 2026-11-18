@@ -69,6 +69,15 @@ ukáže na `TERAZ_CISLA_MS`, ďalšie otvorí panel Elektrina teraz (s elektrome
 pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru. Bodka stavu merania je v hlavičke za miestom (na stred riadku),
 ťuknutie ukáže len bublinu, ktorej nadpis začína tou istou bodkou; `#tz-stav` je do prvého prekreslenia skrytý a `boot.js` ho pri chybe odkryje.
 
+## Tlačidlo Späť
+
+Späť najprv zavrie, čo je otvorené (vždy jednu vec, zvnútra von), potom ide na Teraz a až z nej appka odíde –
+rozhodnuté 18. 11. 2026. Kroky navigácie sa do histórie nezapisujú: `web/nav-history.js` drží len jednu strážnu
+položku, kým je čo vrátiť, a čo Späť urobí, počíta `spatZmena` vo `web/state.js` (zoznam `ZATVARA`). Nová vec, ktorá
+sa otvára (bublina, panel, okno), patrí do `ZATVARA`, inak ju Späť preskočí. Zatváranie krížikom je obyčajný
+`setState`, `history.back()` v ňom nepíš. Strážna položka smie pribudnúť len po ťuknutí: Chrome položku pridanú bez
+neho pri Späť preskočí.
+
 ## Verzia odkazu s nastavením
 
 Odkaz `#nastavenie=…` nesie verziu formátu (`v`, `SHARE_LINK_VERSION` v `shared/config.js`).

@@ -2,7 +2,7 @@
 
 /**
  * Panel zdola: Escape a ťuknutie vedľa (na stmavenú stránku trafí samotný dialóg, nie jeho obsah) ho
- * zavrú krokom späť, rovnako ako tlačidlo Späť. Tlačidlo Zavrieť panely nemajú - bolo by navyše.
+ * zavrú, rovnako ako tlačidlo Späť. Tlačidlo Zavrieť panely nemajú - bolo by navyše.
  * Escape dialóg nezavrie sám - zavrie ho render podľa stavu.
  * @param {HTMLDialogElement} d @param {() => void} close
  */
