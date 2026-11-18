@@ -899,6 +899,9 @@ export const BOJLER_ULOZENE_MS = 2500;
 /** Ako dlho svietia čísla v scéne toku energie karty Teraz po ťuknutí, kým samy zhasnú (ms). */
 export const TERAZ_CISLA_MS = 8000;
 
+/** Okná domu v scéne karty Teraz svietia v tme, okrem času na spánok (miestne minúty dňa, od vrátane, do bez). */
+export const TERAZ_OKNA_SPANOK = { od: 0, do: 5 * 60 };
+
 // Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.
 // Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
 export const STALE_PV_SUN_DEG = 5;

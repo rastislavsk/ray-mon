@@ -27,7 +27,7 @@ import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { stavMeraniaText, TERAZ_TEXTS } from '../../shared/messages-core.js';
 import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
 import { grafModel, pocasieTeraz, terazModel } from '../../shared/teraz.js';
-import { scenaModel } from '../../shared/teraz-scena.js';
+import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -2553,6 +2553,23 @@ test.describe('počasie v pozadí karty Teraz', () => {
         await expect(page.locator('#wx .wx-moonglow svg')).toHaveCount(0);
         await expect(page.locator('#wx .wx-halo')).toBeHidden();
         expect(errors).toEqual([]);
+    });
+
+    test('okná domu v scéne svietia v tme, od polnoci do piatej nie', async ({ browser }) => {
+        for (const [cas, svieti] of /** @type {[Date, boolean][]} */ ([
+            [at('13:00'), false],
+            [at('22:30'), true],
+            [new Date('2026-09-06T01:30:00+02:00'), false],
+        ])) {
+            const noc = terazModel(vstupTeraz(cas)).pocasie?.noc === true;
+            expect(oknaSvietia(noc, cas, SITE.timezone), `výpočet o ${cas.toISOString()}`).toBe(svieti);
+            const page = await browser.newPage();
+            const errors = await openTeraz(page, { time: cas });
+            await expect(page.locator('#tz-scena')).toBeVisible();
+            await expect(page.locator('#tz-scena-kresba .sc-okna')).toHaveCount(svieti ? 1 : 0);
+            expect(errors).toEqual([]);
+            await page.close();
+        }
     });
 
     test('Mesiac stojí v tom istom poli ako hviezdy a osvetlenou stranou k Slnku', async ({ page }) => {

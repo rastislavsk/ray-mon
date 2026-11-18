@@ -2,7 +2,9 @@
 // dom a kam ide sieť, a z toho koľko lúčov padá do panelov a koľko bodov beží po vedení. Čísla sú bez slov -
 // čo znamenajú, hovorí miesto v scéne; slovami ich dostane len čítačka. Čistá funkcia, kreslí web/render/teraz-scena.js.
 
+import { TERAZ_OKNA_SPANOK } from './config.js';
 import { fmt1 } from './format.js';
+import { localMinutes } from './solar.js';
 import { tokSiete } from './teraz-bojler.js';
 
 export const TERAZ_SCENA_TEXTS = {
@@ -58,4 +60,13 @@ function popisOf(vyroba, odhad, dom, siet) {
     if (dom) casti.push(`${T.dom} ${dom} kW`);
     if (siet) casti.push(`${T[siet.smer]} ${siet.kw} kW`);
     return casti.join(', ');
+}
+
+/**
+ * Svietia okná domu? V tme áno, akoby bol niekto doma, len v čase na spánok (TERAZ_OKNA_SPANOK) nie.
+ * @param {boolean} noc @param {Date} now @param {string} tz
+ */
+export function oknaSvietia(noc, now, tz) {
+    const min = localMinutes(now, tz);
+    return noc && !(min >= TERAZ_OKNA_SPANOK.od && min < TERAZ_OKNA_SPANOK.do);
 }
