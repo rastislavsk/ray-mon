@@ -1,6 +1,6 @@
 // Texty karty Teraz: číslo a stav, čo zapnúť, panel štítka. Čisté funkcie bez DOM.
 
-import { MINUTES_PER_DAY } from './config.js';
+import { MINUTES_PER_DAY, PLAN_DNA } from './config.js';
 import { fmt1, kwpRoughText, weekDateLabel, weekDayName } from './format.js';
 import { HERO_SAY, MOZEM_SKY_TEXTS, PLAN_AFTER, countdownText, laterWhen, mozemTexts } from './messages-mozem.js';
 import { andList, cap, dniSlovo, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
@@ -122,7 +122,8 @@ export function terazDlazdicaText(r, voice = 'drzy') {
     }
     const zapni = vy ? 'zapnite teraz' : 'zapni teraz';
     if (r.kind === 'cheap') return { pred: 'do', velky: koniecHm(r.end), meno: r.name, odr: [zapni, lacna] };
-    return { pred: '', velky: hm(r.start), meno: r.name, odr: [zapni, zoSlnkaSlovo(r.podiel)] };
+    const zdroj = r.id === 'susicka' && r.podiel < PLAN_DNA.zoSiete ? 'zo siete' : zoSlnkaSlovo(r.podiel);
+    return { pred: '', velky: hm(r.start), meno: r.name, odr: [zapni, zdroj] };
 }
 
 /**
@@ -169,6 +170,15 @@ export function terazDalsiText(r, nowMin) {
     return [`za ${terazZaText(Math.max(0, r.start - nowMin))}`, r.kind === 'cheap' ? 'lacná elektrina' : zoSlnkaSlovo(r.podiel)];
 }
 
+/**
+ * Odrážka, koľko zo slnka - prázdna, keď skoro celé. Vec po inej (sušička po práčke) pod PLAN_DNA.zoSiete povie „zo siete“.
+ * @param {number} p podiel 0 až 1 @param {boolean} po @returns {string[]}
+ */
+function kolkoSlovo(p, po) {
+    if (po && p < PLAN_DNA.zoSiete) return ['zo siete'];
+    return p < CELE_ZO_SLNKA ? [podielSlovo(p)] : [];
+}
+
 /** Od tohto podielu slnka je vec „zo slnka“ bez ďalšieho slova - zvyšok ukáže pásik dlaždice. */
 const CELE_ZO_SLNKA = 0.85;
 
@@ -186,8 +196,9 @@ export function terazRiadokText(r) {
     if (r.kind === 'none') return { cas: '–', odr: ['slnko nestačí'] };
     if (r.kind === 'cheap') return { pred: 'od', cas: hm(r.start), odr: ['lacná elektrina'] };
     const start = r.kind === 'later' ? r.day.start : r.start;
-    const kolko = r.podiel < CELE_ZO_SLNKA ? [podielSlovo(r.podiel)] : [];
     const after = r.after ? (PLAN_AFTER[r.after] ?? '') : '';
+    // Sušička ide hneď po práčke aj vtedy, keď ju slnko neutiahne - povie, že pôjde zo siete.
+    const kolko = kolkoSlovo(r.podiel, Boolean(after));
     if (after) return { cas: hm(start), odr: [after, ...kolko] };
     if (r.id === 'auto') return { cas: hm(start), odr: [r.kind === 'sun' && r.km ? `~${r.km} km zo slnka` : 'zo slnka'] };
     return { cas: hm(start), odr: [`dobehne ${hm(r.end)}`, ...kolko] };

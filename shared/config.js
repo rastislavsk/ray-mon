@@ -425,12 +425,14 @@ export const MOZEM_ITEMS = [
  * domácich spotrebičov vyhrá, len keď zmestí na slnko viac vecí, ušetrí aspoň `betterKwh` zo siete
  * alebo dá autu aspoň `betterKm` km navyše - inak sa riadky zbytočne nepreskupujú
  * (docs/navrhy/plan-dna-poradie.html). `after`: spotrebič, na ktorý vec čaká (sušička suší, čo
- * práčka vyprala). `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide vždy posledné
+ * práčka vyprala) - ide vždy hneď po jej konci a v ten istý deň, aj zo siete, nikdy nečaká na slnko
+ * (variant B, 18. 11. 2026). `zoSiete`: pod týmto podielom slnka povie, že taká vec pôjde zo siete. `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide vždy posledné
  * a berie silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse.
  */
 export const PLAN_DNA = {
     order: ['pracka', 'susicka', 'umyvacka', 'bojler', 'auto'],
     after: /** @type {Record<string, string>} */ ({ susicka: 'pracka' }),
+    zoSiete: 0.42,
     devices: ['pracka', 'umyvacka', 'susicka', 'auto'],
     autoMinMin: 60,
     betterKwh: 0.1,

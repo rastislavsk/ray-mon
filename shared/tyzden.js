@@ -92,7 +92,7 @@ export function dalsieSlnko(dni, id) {
 
 /**
  * Núdzové časy pre veci `ids`, ktoré sa v deň `ctx` na slnko nezmestia: kedy ich to stojí najmenej
- * zo siete. Vec, ktorá na niečo čaká (sušička na práčku), ide až po nej. Každá si zo zvyšného slnka
+ * zo siete. Vec, ktorá na niečo čaká (sušička na práčku), ide hneď po jej konci, aj zo siete. Každá si zo zvyšného slnka
  * odpočíta svoje, ďalšia dostane, čo ostane. Vráti ich podľa času, bez času na konci.
  * @param {DayCtx} ctx @param {import('./plan-dna.js').Usek[]} slnko čo v ten deň ide na slnku (aj čo človek zapol)
  * @param {readonly string[]} ids
@@ -105,11 +105,32 @@ export function nudzoveCasy(ctx, slnko, ids) {
     return PLAN_DNA.order
         .filter((id) => ids.includes(id))
         .map((id) => {
-            const n = nudzovyCas(id, ctx, free, Math.max(from0, ends[PLAN_DNA.after[id] ?? ''] ?? 0));
+            const after = PLAN_DNA.after[id];
+            // Sušička ide hneď po práčke (aj zo siete); keď práčka čas nemá, nemá ho ani ona.
+            const n =
+                after && ids.includes(after) && ends[after] === undefined
+                    ? { id, start: null, end: null, podiel: 0, zdroj: /** @type {const} */ ('siet') }
+                    : after && ends[after] !== undefined
+                      ? hnedPo(id, ctx, free, Math.max(from0, ends[after]))
+                      : nudzovyCas(id, ctx, free, from0);
             if (n.end !== null) ends[id] = n.end;
             return n;
         })
         .sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity));
+}
+
+/**
+ * Vec pustená presne o `start` (sušička hneď po práčke): podiel slnka a odkiaľ pôjde. Odpočíta z `free`.
+ * @param {string} id @param {DayCtx} ctx @param {number[]} free @param {number} start @returns {Nudza}
+ */
+function hnedPo(id, ctx, free, start) {
+    const { item, device } = vec(id);
+    const draw = programDraw(item, device.powerKw);
+    const podiel = podielSlnka(draw, free, start);
+    draw.forEach(({ kw }, m) => (free[start + m] = Math.max(0, (free[start + m] ?? 0) - kw)));
+    const vLacnom = ctx.plan[Math.floor(start / STEP) % ctx.plan.length]?.level === 'lacna';
+    const zdroj = podiel >= TYZDEN.minPodiel ? 'slnko' : vLacnom ? 'lacna' : 'bezna';
+    return { id, start, end: start + draw.length, podiel, zdroj };
 }
 
 /** Váha ceny pásma, keď tarifa ceny nemá: lacné pásmo je lacnejšie než bežné a to než drahé. */

@@ -1,6 +1,6 @@
 // Texty karty Dnes (kódové meno mozem), Plánu dňa a dlaždíc. Čisté funkcie bez DOM.
 
-import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS } from './config.js';
+import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS, PLAN_DNA } from './config.js';
 import { fmt1, fmtSum, kwpRoughText } from './format.js';
 import { andList, cap, endHm, hm, money, polite, spanText } from './messages-zaklad.js';
 
@@ -575,6 +575,9 @@ function laterItem(a, notToday, voice) {
 export const PLAN_DNA_NOTE = 'Naraz len toľko, koľko strecha utiahne.';
 
 /** „po práčke“ - na koho vec v pláne čaká (PLAN_DNA.after). */
+/** Sušička hneď po práčke, keď ju slnko neutiahne (variant B, 18. 11. 2026). */
+export const PLAN_ZO_SIETE = 'Slnko stačí len na pranie, sušička pôjde zo siete.';
+
 export const PLAN_AFTER = /** @type {Record<string, string>} */ ({ pracka: 'po práčke' });
 
 /**
@@ -594,6 +597,7 @@ export function planDnaRowText(row, voice = 'drzy') {
     const why = { start: 'ohrev chytí slnko', twice: 'oba ohrevy chytia slnko', whole: `${t.pron === 'ju' ? 'celá' : 'celý'} zo strechy` }[
         p.shape
     ];
+    if (row.after && row.podiel < PLAN_DNA.zoSiete) return { name, time: hm(row.start), why: PLAN_ZO_SIETE, tone: 'wait' };
     const after = row.after ? `${PLAN_AFTER[row.after] ?? ''}, ` : '';
     return { name, time: hm(row.start), why: `${after}${why}`, tone: 'go' };
 }
