@@ -128,7 +128,6 @@ function terazDom() {
         tzOkoT: byId('tz-oko-t'),
         tzOkoPod: byId('tz-oko-pod'),
         tzHreben: byId('tz-hreben'),
-        tzHrebenSvg: byId('tz-hreben-svg'),
         tzHrebenDni: byId('tz-hreben-dni'),
         tzDen: byId('tz-den'),
         tzDenNazov: byId('tz-den-nazov'),

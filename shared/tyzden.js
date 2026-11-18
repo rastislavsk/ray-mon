@@ -1,5 +1,5 @@
-// Týždeň na karte Teraz (docs/navrhy/teraz-vyhlad-alternativy.html, C s radami z B): hrebeň - krivky
-// výkonu dní predpovede vedľa seba s hranicou veľkých spotrebičov -, plán zvoleného dňa a núdzový čas
+// Týždeň na karte Teraz (docs/navrhy/teraz-vyhlad-alternativy.html, C s radami z B): pás dní - počasie
+// a okná nad hranicou veľkých spotrebičov pre dni predpovede vedľa seba -, plán zvoleného dňa a núdzový čas
 // pre spotrebič, ktorý sa v ten deň na slnko nezmestí: kedy ho to stojí najmenej zo siete. Každý deň
 // rozvrhuje ten istý výpočet ako Plán dňa (shared/plan-dna.js), sám za seba a s rozpočtom slnka od
 // polnoci. Čisté funkcie bez DOM, texty skladá shared/messages-core.js.
@@ -10,6 +10,7 @@ import { dayNameShort, weekDayName } from './format.js';
 import { planDnaRowText, terazDenHlavickaText, terazNudzaText, terazRiadokText, terazVecText } from './messages-core.js';
 import { dayCtx, programDraw } from './mozem-jadro.js';
 import { cheapFrom, chosen, najlepsiDen, podielSlnka, vec, volne } from './plan-dna.js';
+import { skyWeather } from './sky.js';
 import { localDateKey } from './solar.js';
 
 /** @typedef {import('./mozem-jadro.js').DayCtx} DayCtx */
@@ -44,35 +45,38 @@ export function dniTyzdna(input, devices) {
 }
 
 /**
- * Hrebeň týždňa: pre každý deň krivka výkonu od východu po západ (`body`, 0 až 1 z najvyššieho bodu
- * týždňa), či deň aspoň chvíľu prekročí hranicu veľkých spotrebičov (`nad`), výška tej hranice
- * a „teraz“ na dnešnej krivke (mimo dňa null). Všetky dni idú na os dnešného svetla - dĺžka dňa sa
- * za týždeň zmení o pár minút. Menej ako dva dni hrebeň nie je.
+ * Pás dní (docs/navrhy/teraz-pas-dni.html): pre každý deň počasie (podľa priemernej oblačnosti), či deň
+ * aspoň chvíľu prekročí hranicu veľkých spotrebičov (`nad`) a kedy (`okna`, začiatok a koniec 0 až 1
+ * na osi dnešného svetla), a „teraz“ na tej istej osi (mimo dňa null). Všetky dni idú na os dnešného
+ * svetla - dĺžka dňa sa za týždeň zmení o pár minút. Menej ako dva dni pás nie je.
  * @param {DenTyzdna[]} dni
  */
 export function hrebenModel(dni) {
     if (dni.length < 2) return null;
-    const { span, th, nowMin, plan } = dni[0].ctx;
-    const kwAt = (/** @type {DayCtx['plan']} */ p, /** @type {number} */ m) => {
-        const kw = p[Math.min(p.length - 1, Math.floor(m / STEP))].kw;
-        return Number.isFinite(kw) ? Math.max(0, kw) : 0;
+    const { span, th, nowMin } = dni[0].ctx;
+    const x = (/** @type {number} */ m) => Math.round(((m - span.from) / (span.to - span.from)) * 1000) / 1000;
+    /** Úseky dňa nad hranicou, orezané na os svetla a zlúčené. @param {DayCtx['plan']} plan */
+    const okna = (plan) => {
+        /** @type {Array<[number, number]>} */ const o = [];
+        for (const s of plan) {
+            if (s.night || !(s.kw >= th.lowKw)) continue;
+            const od = Math.max(span.from, s.startMin);
+            const po = Math.min(span.to, s.startMin + s.min);
+            if (po <= od) continue;
+            const last = o[o.length - 1];
+            if (last && last[1] === od) last[1] = po;
+            else o.push([od, po]);
+        }
+        return o.map(([od, po]) => ({ zac: x(od), kon: x(po) }));
     };
-    const kw = dni.map((d) =>
-        Array.from({ length: TYZDEN.body + 1 }, (_, i) => kwAt(d.ctx.plan, span.from + (i * (span.to - span.from)) / TYZDEN.body)),
-    );
-    const max = Math.max(th.lowKw * TYZDEN.nadHranicou, ...kw.flat());
-    const r = (/** @type {number} */ v) => Math.round((v / max) * 1000) / 1000;
-    const dnu = nowMin >= span.from && nowMin <= span.to;
     return {
-        hranica: r(th.lowKw),
-        teraz: dnu
-            ? { x: Math.round(((nowMin - span.from) / (span.to - span.from)) * 1000) / 1000, y: Math.min(1, r(kwAt(plan, nowMin))) }
-            : null,
-        dni: dni.map((d, i) => ({
+        teraz: nowMin >= span.from && nowMin <= span.to ? x(nowMin) : null,
+        dni: dni.map((d) => ({
             den: dayNameShort(d.day.date),
             name: d.name,
-            body: kw[i].map(r),
+            pocasie: d.day.cloudAvgPct === null ? null : skyWeather(d.day.cloudAvgPct),
             nad: d.ctx.plan.some((s) => !s.night && s.kw >= th.lowKw),
+            okna: okna(d.ctx.plan),
         })),
     };
 }

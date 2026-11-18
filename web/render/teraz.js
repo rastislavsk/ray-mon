@@ -11,7 +11,7 @@ import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDet
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
-import { rezimIcon, tokIcon, vecIcon } from './icons.js';
+import { rezimIcon, tokIcon, vecIcon, weatherIcon } from './icons.js';
 import { cislaSvg, scenaSvg } from './teraz-scena.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
@@ -53,43 +53,16 @@ function renderStav(state, dom) {
     show(dom.tipBtn, !!t.tlacidlo);
 }
 
-/** Rozmery hrebeňa v jednotkách SVG: šírka, výška, os (spodok kriviek) a výška najvyššieho bodu. */
-const HREBEN = { w: 322, h: 92, os: 70, vyska: 60 };
-
 /**
- * Krivka jedného dňa ako uzavretá plocha nad osou: body spojené oblúkmi cez stredy úsečiek.
- * @param {number[]} body výšky 0 až 1 @param {number} x0 ľavý kraj stĺpca dňa @param {number} sirka šírka stĺpca
- */
-function plochaDna(body, x0, sirka) {
-    const p = body.map((v, i) => [x0 + 3 + (i * (sirka - 6)) / (body.length - 1), HREBEN.os - v * HREBEN.vyska]);
-    const r = (/** @type {number} */ n) => Math.round(n * 10) / 10;
-    let d = `M${r(p[0][0])},${HREBEN.os}L${r(p[0][0])},${r(p[0][1])}`;
-    for (let i = 1; i < p.length - 1; i++)
-        d += `Q${r(p[i][0])},${r(p[i][1])} ${r((p[i][0] + p[i + 1][0]) / 2)},${r((p[i][1] + p[i + 1][1]) / 2)}`;
-    const k = p[p.length - 1];
-    return `${d}L${r(k[0])},${r(k[1])}L${r(k[0])},${HREBEN.os}Z`;
-}
-
-/**
- * Hrebeň týždňa (docs/navrhy/teraz-vyhlad-alternativy.html, C): krivky dní vedľa seba, čo je nad hranicou
- * veľkých spotrebičov zlaté, pod ňou sivomodré (len 4 dni: ďalšie sú príliš nepresné),
- * biela bodka je teraz. Pod každým dňom je tlačidlo cez celý stĺpec - ťuknutie ukáže plán toho dňa.
+ * Pás dní (docs/navrhy/teraz-pas-dni.html): každý deň je čip s menom, ikonou počasia a pásom svetla
+ * od východu po západ, zlatým tam, kde slnko stačí na veľké spotrebiče; biela čiarka je teraz. Čip je
+ * tlačidlo - ťuknutie ukáže plán toho dňa.
  * @param {Model['hreben']} h @param {Dom} dom
  */
 function renderHreben(h, dom) {
     show(dom.tzHreben, !!h);
     if (!h) return;
-    const sirka = HREBEN.w / h.dni.length;
-    const y = HREBEN.os - h.hranica * HREBEN.vyska;
-    const dni = h.dni.map((d, i) => `<path d="${plochaDna(d.body, i * sirka, sirka)}"/>`).join('');
-    const t = h.teraz;
-    const teraz = t ? `<circle class="hr-teraz" cx="${3 + t.x * (sirka - 6)}" cy="${HREBEN.os - t.y * HREBEN.vyska}" r="3.5"/>` : '';
-    setHtml(
-        dom.tzHrebenSvg,
-        `<svg viewBox="0 0 ${HREBEN.w} ${HREBEN.h}"><defs><clipPath id="tz-hreben-nad"><rect width="${HREBEN.w}" height="${y}"/></clipPath></defs>` +
-            `<g class="hr-pod">${dni}</g><g class="hr-nad" clip-path="url(#tz-hreben-nad)">${dni}</g>` +
-            `<line class="hr-hranica" x1="0" x2="${HREBEN.w}" y1="${y}" y2="${y}"/><line class="hr-os" x1="0" x2="${HREBEN.w}" y1="${HREBEN.os}" y2="${HREBEN.os}"/>${teraz}</svg>`,
-    );
+    const pct = (/** @type {number} */ x) => `${Math.round(x * 1000) / 10}%`;
     dom.tzHrebenDni.setAttribute('aria-label', TERAZ_HREBEN.label);
     // Zvolený deň nie je v HTML tlačidiel - ťuknutie ich tak neprepíše a fokus ostane, kde bol.
     setHtml(
@@ -98,7 +71,10 @@ function renderHreben(h, dom) {
             .map(
                 (d, i) =>
                     // Meno dňa a či slnko stačí je pre čítačku za skratkou - prístupné meno tak obsahuje to, čo je vidno.
-                    `<button type="button" data-den="${i}"${i === 0 ? ' data-dnes' : ''}${d.nad ? ' data-nad' : ''}>${escapeHtml(d.den)}` +
+                    `<button type="button" data-den="${i}"${i === 0 ? ' data-dnes' : ''}${d.nad ? ' data-nad' : ''}>` +
+                    `<b>${escapeHtml(d.den)}</b>${d.pocasie ? weatherIcon(d.pocasie) : ''}` +
+                    `<span class="pd-pas" aria-hidden="true"><span class="pd-okna">${d.okna.map((o) => `<i style="left:${pct(o.zac)};width:${pct(o.kon - o.zac)}"></i>`).join('')}</span>` +
+                    `${i === 0 && h.teraz !== null ? `<i class="pd-teraz" style="left:${pct(h.teraz)}"></i>` : ''}</span>` +
                     `<span class="sr"> – ${escapeHtml(d.nad ? d.name : `${d.name}, ${TERAZ_HREBEN.pod}`)}</span></button>`,
             )
             .join(''),
