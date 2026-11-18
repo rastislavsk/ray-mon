@@ -15,7 +15,8 @@ import { backAction, closeAction, setupInit } from '../shared/setup-flow.js';
  * `tzDen` deň zvolený v hrebeni týždňa karty Teraz (poradie od dneška, 0 = dnes; docs/navrhy/teraz-vyhlad-alternativy.html),
  * `tzObrys` čaká alebo beží jednorazový obrys toho, čo zapnúť, po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, web/oznamenia-klik.js),
  * `tzChip` otvorený panel s vysvetlením riadku nad dlaždicami karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html),
- * `tzCisla` čísla v scéne toku energie karty Teraz, ukázané po ťuknutí na scénu (docs/navrhy/teraz-tok-energie.html),
+ * `tzCisla` čísla v scéne toku energie karty Teraz, ukázané po ťuknutí na scénu (`tuk`) alebo samy po príchode na kartu
+ * z navigácie (`prichod`; docs/navrhy/teraz-tok-energie.html),
  * `mzChip` otvorené vysvetlenie odznaku triedy dňa na karte Dnes - dnešného, alebo večer zajtrajšieho (docs/navrhy/dnes-upravy.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
@@ -46,7 +47,7 @@ import { backAction, closeAction, setupInit } from '../shared/setup-flow.js';
  *   tzDen: number,
  *   tzObrys: boolean,
  *   tzChip: TzChip | null,
- *   tzCisla: boolean,
+ *   tzCisla: 'tuk' | 'prichod' | null,
  *   mzChip: MzChip | null,
  *   weekDetail: WeekDetail | null,
  *   weekDay: number,
@@ -231,7 +232,7 @@ export function panelChange(from, to) {
         tzDen: 0,
         tzObrys: false,
         tzChip: /** @type {TzChip | null} */ (null),
-        tzCisla: false,
+        tzCisla: null,
         mzChip: /** @type {MzChip | null} */ (null),
         weekDetail: /** @type {WeekDetail | null} */ (null),
         appSheet: /** @type {AppSheet | null} */ (null),
@@ -330,7 +331,8 @@ function sprievodcaSpat(s) {
  */
 const ZATVARA = [
     (s) => (s.stavTip ? { stavTip: false } : null),
-    (s) => (s.tzCisla ? { tzCisla: false } : null),
+    // Čísla, ktoré sa ukázali samy po príchode na kartu, nikto neotvoril - Späť ich preskočí.
+    (s) => (s.tzCisla === 'tuk' ? { tzCisla: null } : null),
     (s) => (s.appSheet ? { appSheet: null } : null),
     sprievodcaSpat,
     (s) => (s.nsOpen ? { nsOpen: null } : null),

@@ -51,6 +51,22 @@ test('scéna: tok okolo nuly nie je tok, výkon, ktorý appka nepozná, je nula'
     assert.equal(scenaModel({ vyrobaKw: NaN, odhad: false, sietKw: null }).luce, 0);
 });
 
+test('scéna: čísla sú vždy, keď ich appka pozná - aj nulové', () => {
+    assert.deepEqual(scenaModel({ vyrobaKw: 2.7, odhad: false, sietKw: 0.02 }).cisla, {
+        slnko: '2,7',
+        dom: '2,7',
+        siet: { k: 'nula', kw: '0,0' },
+    });
+    assert.deepEqual(scenaModel({ vyrobaKw: 0, odhad: false, sietKw: -0.6 }).cisla, {
+        slnko: '0,0',
+        dom: '0,6',
+        siet: { k: 'dnu', kw: '0,6' },
+    });
+    // Bez elektromera dom ani sieť appka nepozná, bez výkonu ani slnko.
+    assert.deepEqual(scenaModel({ vyrobaKw: 0, odhad: true, sietKw: null }).cisla, { slnko: '~0,0', dom: null, siet: null });
+    assert.equal(scenaModel({ vyrobaKw: null, odhad: false, sietKw: null }).cisla.slnko, null);
+});
+
 test('scéna: okná svietia v tme, od polnoci do piatej nie (miestny čas)', () => {
     const tz = 'Europe/Bratislava';
     const o = (/** @type {string} */ iso, noc = true) => oknaSvietia(noc, new Date(iso), tz);

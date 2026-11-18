@@ -1,13 +1,13 @@
 // Poslucháče. Každý končí volaním setState; nikto tu nekreslí do DOM.
 
-import { LAYOUT_PX, PANELS, PRIPOJENIE_BUBLINA_MS } from '../shared/config.js';
+import { LAYOUT_PX, PANELS, PRIPOJENIE_BUBLINA_MS, TERAZ_PRICHOD_MS } from '../shared/config.js';
 import { strazSpat } from './nav-history.js';
 import { createRefresh, startTicks } from './refresh.js';
 import { setupStart } from '../shared/setup-flow.js';
 import { initMozem } from './mozem-interactions.js';
 import { obnovaMerania } from '../shared/hlavicka.js';
 import { pripojenieOf } from './render/header.js';
-import { initTeraz } from './teraz-interactions.js';
+import { initTeraz, ukazCisla } from './teraz-interactions.js';
 import { dashboard, isColumn, layoutOf, panelChange, spatZmena } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -36,7 +36,13 @@ function initNavigation(store, dom) {
         store.setState(panelChange(store.get().panel, to));
         if (dashboard(store.get())) dom.panels[to].focus();
     };
-    for (const p of PANELS) dom.navs[p].addEventListener('click', () => go(p));
+    for (const p of PANELS)
+        dom.navs[p].addEventListener('click', () => {
+            const prichod = p === 'terazky' && store.get().panel !== 'terazky';
+            go(p);
+            // Príchod na Teraz z inej karty ukáže výkony v scéne aj bez ťuknutia na ňu.
+            if (prichod) ukazCisla(store, 'prichod', TERAZ_PRICHOD_MS);
+        });
     const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.tzNoteBtn, dom.sdGuessBtn, dom.sdAskBtn];
     toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn, dom.tipBtn);
     // Kto pozná len polohu, ide rovno na krok sprievodcu s panelmi.

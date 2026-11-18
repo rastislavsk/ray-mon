@@ -73,7 +73,8 @@ farbu zeme berie z oblohy (`--s2`). Elektráreň a vedenie kreslí
 `web/render/teraz-scena.js`, čo kresliť (čísla, lúče, body), počíta `shared/teraz-scena.js`. Panely na kresbe
 hľadia doľava, preto slnko živej oblohy svieti z ľavého horného rohu (`--wx-sx` v `css/zaklad.css`) a krajina je
 zrkadlová. Čísla v scéne sú bez slov (význam dáva miesto) a biele ako všetok text na holej oblohe; ťuknutie ich
-ukáže na `TERAZ_CISLA_MS`, ďalšie otvorí panel Elektrina teraz (s elektromerom). Impulzy na vedení (výboj s chvostom) sú SMIL, nie CSS -
+ukáže na `TERAZ_CISLA_MS`, ďalšie otvorí panel Elektrina teraz (s elektromerom). Príchod na kartu ťuknutím v navigácii
+ich ukáže na `TERAZ_PRICHOD_MS`. Číslo, ktoré appka pozná, je tam vždy, aj nulové („0,0“; `cisla` v modeli scény). Impulzy na vedení (výboj s chvostom) sú SMIL, nie CSS -
 pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru. Bodka stavu merania je v hlavičke za miestom (na stred riadku),
 ťuknutie ukáže len bublinu, ktorej nadpis začína tou istou bodkou; `#tz-stav` je do prvého prekreslenia skrytý a `boot.js` ho pri chybe odkryje.
 
