@@ -57,7 +57,9 @@ Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má d
 
 Návrh a rozhodnutia: `docs/navrhy/teraz-tok-energie.html` (návrh 1). Namiesto veľkého čísla kW je hore scéna: dom
 je čiarová kresba `img/dom.png` (biele čiary na priehľadnom pozadí) s výplňou `img/dom-vypln.png` pod ňou
-(vyrába ju `scripts/dom-vypln.js` z kresby; pri zmene kresby ju vyrob znova). Dom stojí na kopci a zem, dom aj
+(vyrába ju `scripts/dom-vypln.js` z kresby; pri zmene kresby ju vyrob znova). Ten istý skript vyrába
+`img/dom-okna.png`: tabuľky dvoch okien na štíte pod panelmi, ktoré v tme svietia, akoby bol niekto doma, okrem
+`TERAZ_OKNA_SPANOK` (0:00–5:00 miestneho času; rozhoduje `oknaSvietia` v `shared/teraz-scena.js`). Dom stojí na kopci a zem, dom aj
 elektráreň sú plné, aby za nimi nebolo vidno dážď, sneh ani oblaky (`docs/navrhy/teraz-scena-zem.html`, počasie B);
 farbu zeme berie z oblohy (`--s2`). Elektráreň a vedenie kreslí
 `web/render/teraz-scena.js`, čo kresliť (čísla, lúče, body), počíta `shared/teraz-scena.js`. Panely na kresbe

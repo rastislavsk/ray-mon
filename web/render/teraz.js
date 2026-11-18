@@ -8,7 +8,7 @@ import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
-import { scenaModel } from '../../shared/teraz-scena.js';
+import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { rezimIcon, tokIcon, vecIcon } from './icons.js';
@@ -275,7 +275,8 @@ function renderScena(state, m, dom) {
     const siet = meranieToku(state)?.sietKw;
     const s = scenaModel({ vyrobaKw: m.vykon, odhad: m.odhadVykonu, sietKw: typeof siet === 'number' ? siet : null });
     // `=== true`: starý web/state.js z cache po nasadení pole tzCisla nemá (CLAUDE.md, Nasadenie a cache).
-    setHtml(dom.tzScenaKresba, scenaSvg(s, m.pocasie?.noc === true));
+    const noc = m.pocasie?.noc === true;
+    setHtml(dom.tzScenaKresba, scenaSvg(s, noc, oknaSvietia(noc, state.now, state.site.timezone)));
     setHtml(dom.tzScenaCisla, cislaSvg(s, state.tzCisla === true));
     dom.tzScena.setAttribute('aria-label', s.popis);
     dom.tzScena.toggleAttribute('data-tok', !!s.siet);

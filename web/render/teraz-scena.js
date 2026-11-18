@@ -5,6 +5,7 @@
 // shared/teraz-scena.js; tu sa len skladá SVG. Zem, dom aj elektráreň sú plné, takže zakryjú dážď, sneh
 // a oblaky živej oblohy za sebou (docs/navrhy/teraz-scena-zem.html).
 // Pohyb je v CSS (lúče, para) a SMIL (impulzy); pri obmedzenom pohybe CSS impulzy skryje a ukáže šípku.
+// V tme svietia okná na štíte pod panelmi (img/dom-okna.png so žiarou), kedy, rozhoduje shared/teraz-scena.js.
 
 import { escapeHtml } from '../../shared/format.js';
 
@@ -189,10 +190,10 @@ export function cislaSvg(s, ukaz) {
 }
 
 /**
- * Kresba scény ako SVG. `noc` stmaví krajinu a dom.
- * @param {Scena} s @param {boolean} noc
+ * Kresba scény ako SVG. `noc` stmaví krajinu a dom, `okna` rozsvieti okná domu.
+ * @param {Scena} s @param {boolean} noc @param {boolean} okna
  */
-export function scenaSvg(s, noc) {
+export function scenaSvg(s, noc, okna) {
     const r2 = ramena(238, 198, 40);
     const hlavna = vedenie([doKrajiny(T(PRIPOJKA)), [206, 156], r2[0], [262, 172]]);
     const druha = vedenie([[206, 156], [216, 156], r2[1], [270, 168]]);
@@ -210,6 +211,7 @@ export function scenaSvg(s, noc) {
         '<mask id="sc-zem-m" maskUnits="userSpaceOnUse" x="-20" y="100" width="380" height="200"><rect x="-20" y="100" width="380" height="200" fill="url(#sc-zem-mg)"/></mask>' +
         '<linearGradient id="sc-veza" x1="0" x2="1"><stop offset="0" class="sc-veza0"/><stop offset=".65" class="sc-veza1"/><stop offset="1" class="sc-veza2"/></linearGradient>' +
         '<linearGradient id="sc-lesk" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8"/><stop offset=".5" stop-color="#fff6d8" stop-opacity=".1"/><stop offset="1" stop-color="#fff6d8" stop-opacity="0"/></linearGradient>' +
+        '<filter id="sc-ziara" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="2.2"/></filter>' +
         '<radialGradient id="sc-bod"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="currentColor"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs>' +
         // Krajina sprava, zrkadlená doľava: elektráreň pri slnku, dom na druhej strane.
         `<g transform="translate(0 ${ZEM}) matrix(-1 0 0 1 ${SCENA.w} 0)">` +
@@ -221,8 +223,12 @@ export function scenaSvg(s, noc) {
         trafo(206) +
         body(s, hlavna) +
         '</g>' +
-        // Dom: výplň, nad ňou lesk panelov (keď svieti slnko) a navrchu čiarová kresba.
+        // Dom: výplň, svietiace okná so žiarou (v tme), lesk panelov (keď svieti slnko) a navrchu čiarová kresba.
         `<image class="sc-vypln" href="img/dom-vypln.png" ${obraz}/>` +
+        (okna
+            ? `<g class="sc-okna"><image class="sc-ziara" href="img/dom-okna.png" filter="url(#sc-ziara)" ${obraz}/>` +
+              `<image href="img/dom-okna.png" ${obraz}/></g>`
+            : '') +
         (s.luce ? `<polygon class="sc-lesk" points="${panely}"/>` : '') +
         `<image class="sc-dom" href="img/dom.png" ${obraz}/>` +
         luce(s) +

@@ -626,6 +626,10 @@
 [data-noc] .sc-dom {
     opacity: 0.55;
 }
+/* Svietiace okná domu (len v tme): teplá žiara okolo tabúľ. */
+.sc-ziara {
+    opacity: 0.9;
+}
 /* Čísla po ťuknutí: bez slov - čo znamenajú, hovorí miesto. Dvojitý tieň drží čitateľnosť na jasnej oblohe. */
 .sc-cislo {
     fill: #fff;

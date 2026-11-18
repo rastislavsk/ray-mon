@@ -1,7 +1,7 @@
 // Scéna toku energie na karte Teraz (shared/teraz-scena.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { scenaModel, TERAZ_SCENA_TEXTS } from '../shared/teraz-scena.js';
+import { oknaSvietia, scenaModel, TERAZ_SCENA_TEXTS } from '../shared/teraz-scena.js';
 
 test('scéna: prebytok do siete - výroba, dom, sieť von, lúče a body podľa kW', () => {
     const m = scenaModel({ vyrobaKw: 6.4, odhad: false, sietKw: 4.6 });
@@ -49,4 +49,17 @@ test('scéna: tok okolo nuly nie je tok, výkon, ktorý appka nepozná, je nula'
     assert.equal(m.body, 0);
     assert.equal(m.dom, '0,0');
     assert.equal(scenaModel({ vyrobaKw: NaN, odhad: false, sietKw: null }).luce, 0);
+});
+
+test('scéna: okná svietia v tme, od polnoci do piatej nie (miestny čas)', () => {
+    const tz = 'Europe/Bratislava';
+    const o = (/** @type {string} */ iso, noc = true) => oknaSvietia(noc, new Date(iso), tz);
+    assert.equal(o('2026-11-18T21:30:00+01:00'), true);
+    assert.equal(o('2026-11-18T23:59:00+01:00'), true);
+    assert.equal(o('2026-11-19T00:00:00+01:00'), false);
+    assert.equal(o('2026-11-19T04:59:00+01:00'), false);
+    assert.equal(o('2026-11-19T05:00:00+01:00'), true);
+    assert.equal(o('2026-11-18T13:00:00+01:00', false), false);
+    // Polnoc je miestna, nie UTC: 23:30 UTC je v Bratislave už spánok.
+    assert.equal(o('2026-11-18T23:30:00Z'), false);
 });

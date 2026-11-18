@@ -1,7 +1,8 @@
 // Výplň domu pre scénu na karte Teraz: img/dom-vypln.png leží pod čiarovou kresbou img/dom.png a robí z nej
 // plný dom (steny a strecha svetlé asi ako elektráreň, tmavé okná a panely, modrý strom a auto). Plný dom zakryje dážď, sneh
-// aj oblaky za sebou (docs/navrhy/teraz-scena-zem.html, počasie B). Nie je súčasťou behu appky - výsledok
-// leží v repozitári a stránka ho servíruje tak, ako je.
+// aj oblaky za sebou (docs/navrhy/teraz-scena-zem.html, počasie B). Druhý výsledok, img/dom-okna.png, sú len
+// tabuľky dvoch okien na štíte pod panelmi v teplej farbe: večer svietia, akoby bol niekto doma. Nie je to
+// súčasťou behu appky - výsledky ležia v repozitári a stránka ich servíruje tak, ako sú.
 //
 // Zopakovanie (keď sa zmení kresba img/dom.png - semienka nižšie treba vtedy skontrolovať):
 //
@@ -22,10 +23,23 @@ const FARBY = {
     stena: [188, 201, 222],
     tien: [160, 177, 204],
     okno: [45, 85, 151],
+    svetlo: [255, 207, 122],
     panel: [28, 47, 99],
     strom: [61, 112, 187],
     auto: [92, 136, 200],
 };
+
+/** Tabuľky dvoch okien na štíte pod panelmi (tie večer svietia). */
+const OKNA_STIT = [
+    [60, 310],
+    [76, 316],
+    [62, 338],
+    [78, 345],
+    [110, 329],
+    [126, 335],
+    [110, 357],
+    [128, 364],
+];
 
 /** Semienka: bod kresby (px) a farba plochy, v ktorej leží. */
 const SEMIENKA = [
@@ -41,20 +55,7 @@ const SEMIENKA = [
         [267, 271],
     ].map((p) => [p, 'panel']),
     // Okná na štíte a vo vikieri, sklo auta.
-    ...[
-        [60, 310],
-        [76, 316],
-        [62, 338],
-        [78, 345],
-        [110, 329],
-        [126, 335],
-        [110, 357],
-        [128, 364],
-        [354, 304],
-        [388, 316],
-        [422, 327],
-        [421, 543],
-    ].map((p) => [p, 'okno']),
+    ...[...OKNA_STIT, [354, 304], [388, 316], [422, 327], [421, 543]].map((p) => [p, 'okno']),
     [[230, 450], 'strom'],
     [[403, 583], 'auto'],
     [[508, 551], 'auto'],
@@ -75,10 +76,11 @@ const SEMIENKA = [
 ];
 
 /**
- * Výplň v prehliadači: označí plochy, zafarbí ich a vráti PNG ako data URL.
- * @param {{ src: string, farby: Record<string, number[]>, semienka: [number[], string][] }} v
+ * Výplň v prehliadači: označí plochy, zafarbí ich a vráti PNG ako data URL. S `len` ostane všetko okrem plôch
+ * so semienkom priehľadné.
+ * @param {{ src: string, farby: Record<string, number[]>, semienka: [number[], string][], len?: boolean }} v
  */
-async function vypln({ src, farby, semienka }) {
+async function vypln({ src, farby, semienka, len = false }) {
     const img = new Image();
     img.src = src;
     await img.decode();
@@ -119,10 +121,12 @@ async function vypln({ src, farby, semienka }) {
     /** @type {Map<number, number[]>} */
     const farbaPlochy = new Map();
     for (const [[k, y], f] of semienka) farbaPlochy.set(plocha[y * W + k], farby[f]);
+    /** Plocha, ktorá ostane priehľadná: okolie domu, s `len` aj každá bez semienka. @param {number} p */
+    const priehladna = (p) => (p >= 0 && okolie[p]) || (len && !farbaPlochy.has(p));
     const o = x.createImageData(W, H);
     for (let i = 0; i < W * H; i++) {
         const p = plocha[i];
-        if (p >= 0 && okolie[p]) continue;
+        if (priehladna(p)) continue;
         const f = (p >= 0 && farbaPlochy.get(p)) || farby.strecha;
         o.data.set([f[0], f[1], f[2], 255], i * 4);
     }
@@ -134,9 +138,17 @@ const kresba = await readFile(new URL('../img/dom.png', import.meta.url));
 const browser = await chromium.launch();
 try {
     const page = await browser.newPage();
-    const url = await page.evaluate(vypln, { src: `data:image/png;base64,${kresba.toString('base64')}`, farby: FARBY, semienka: SEMIENKA });
-    await writeFile(new URL('../img/dom-vypln.png', import.meta.url), Buffer.from(url.split(',')[1], 'base64'));
-    console.log('hotovo: img/dom-vypln.png');
+    const src = `data:image/png;base64,${kresba.toString('base64')}`;
+    /** @type {[string, [number[], string][], boolean][]} */
+    const vysledky = [
+        ['dom-vypln.png', SEMIENKA, false],
+        ['dom-okna.png', OKNA_STIT.map((p) => [p, 'svetlo']), true],
+    ];
+    for (const [meno, semienka, len] of vysledky) {
+        const url = await page.evaluate(vypln, { src, farby: FARBY, semienka, len });
+        await writeFile(new URL(`../img/${meno}`, import.meta.url), Buffer.from(url.split(',')[1], 'base64'));
+        console.log(`hotovo: img/${meno}`);
+    }
 } finally {
     await browser.close();
 }
