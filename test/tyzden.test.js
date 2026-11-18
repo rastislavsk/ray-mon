@@ -93,30 +93,39 @@ test('dniTyzdna: dnes a ďalšie dni s tým, čo sa zmestí na slnko; bez spotre
     assert.deepEqual(dniTyzdna({ ...input({}), now: new Date('2026-09-06T00:30:00+02:00') }, DEVICES), []);
 });
 
-test('hrebenModel: krivky dní v mierke týždňa, hranica veľkých spotrebičov, teraz na dnešnej krivke', () => {
+test('hrebenModel: počasie dní, okná nad hranicou veľkých spotrebičov na osi svetla, teraz na tej istej osi', () => {
     const h = hrebenModel(dniTyzdna(input(DVA_DNI), DEVICES));
     assert.ok(h);
     assert.deepEqual(
-        h.dni.map((d) => [d.den, d.nad]),
+        h.dni.map((d) => [d.den, d.nad, d.okna.length > 0]),
         [
-            ['So', true],
-            ['Ne', false],
-            ['Po', false],
-            ['Ut', true],
+            ['So', true, true],
+            ['Ne', false, false],
+            ['Po', false, false],
+            ['Ut', true, true],
         ],
     );
     assert.equal(h.dni.length, TYZDEN.dni);
-    assert.ok(h.dni.every((d) => d.body.length === TYZDEN.body + 1 && d.body.every((v) => v >= 0 && v <= 1)));
-    assert.equal(Math.max(...h.dni.flatMap((d) => d.body)), 1, 'najvyšší bod týždňa je navrchu');
-    assert.ok(h.hranica > 0 && h.hranica < 1);
-    assert.ok(Math.max(...h.dni[1].body) < h.hranica, 'zamračený deň ostáva pod hranicou');
-    assert.ok(h.teraz && h.teraz.x === 0.25 && h.teraz.y > h.hranica, 'o 9:00 je štvrtina dňa a slnko už stačí');
-    // V noci teraz na krivke nie je; týždeň bez slnka má hranicu stále vidno.
+    assert.ok(h.dni.every((d) => d.pocasie === null || ['jasno', 'polojasno', 'zamracene'].includes(d.pocasie)));
+    const so = h.dni[0].okna;
+    assert.equal(so.length, 1, 'jasný deň má jedno súvislé okno');
+    assert.ok(so[0].zac > 0 && so[0].zac < so[0].kon && so[0].kon < 1, 'okno je vnútri dňa, nie od východu po západ');
+    assert.equal(h.teraz, 0.25, 'o 9:00 je štvrtina dňa');
+    // Počasie z oblačnosti dňa, bez nej nič.
+    const vstup = input(DVA_DNI);
+    const f = /** @type {NonNullable<typeof vstup.forecast>} */ (vstup.forecast);
+    const zmena = {
+        ...vstup,
+        forecast: { ...f, days: f.days.map((d, i) => ({ ...d, cloudAvgPct: i < 4 ? [5, 50, 95, null][i] : d.cloudAvgPct })) },
+    };
+    assert.deepEqual(
+        hrebenModel(dniTyzdna(zmena, DEVICES))?.dni.map((d) => d.pocasie),
+        ['jasno', 'polojasno', 'zamracene', null],
+    );
+    // V noci teraz na osi nie je.
     assert.equal(hrebenModel(dniTyzdna(input({}, at('23:00')), DEVICES))?.teraz, null);
-    const tma = Object.fromEntries(['05', '06', '07', '08', '09', '10', '11'].map((d) => [`2026-09-${d}`, 0.01]));
-    assert.equal(hrebenModel(dniTyzdna(input(tma), DEVICES))?.hranica, Math.round(1000 / TYZDEN.nadHranicou) / 1000);
     assert.equal(hrebenModel([]), null);
-    assert.equal(hrebenModel(dniTyzdna(input({}), DEVICES).slice(0, 1)), null, 'jeden deň nie je hrebeň');
+    assert.equal(hrebenModel(dniTyzdna(input({}), DEVICES).slice(0, 1)), null, 'jeden deň nie je pás');
 });
 
 test('dalsieSlnko: najbližší ďalší deň, keď sa spotrebič zmestí na slnko', () => {

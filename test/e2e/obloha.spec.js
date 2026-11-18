@@ -1482,7 +1482,8 @@ test.describe('karta Teraz', () => {
             h.dni.map((d, i) => [d.nad, String(i === 0)]),
         );
         await expect(dni.nth(1)).toHaveAccessibleName('Ne – Zajtra, slnko na veľké spotrebiče nestačí');
-        await expect(page.locator('#tz-hreben-svg .hr-nad path')).toHaveCount(h.dni.length);
+        await expect(page.locator('#tz-hreben-dni .wi')).toHaveCount(h.dni.filter((d) => d.pocasie).length);
+        await expect(page.locator('#tz-hreben-dni .pd-okna i')).toHaveCount(h.dni.reduce((n, d) => n + d.okna.length, 0));
         await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/, celá v utorok$/);
         expect(await vazneNalezy(page)).toEqual([]);
         await page.locator('#tz-oko').click();
@@ -1503,7 +1504,7 @@ test.describe('karta Teraz', () => {
         const dnes = terazModel(vstup);
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(dnes));
         await expect(page.locator('#tz-dlazdice .potom').first()).toHaveText('potom v pondelok');
-        await expect(page.locator('#tz-hreben-svg .hr-teraz')).toHaveCount(1);
+        await expect(page.locator('#tz-hreben-dni .pd-teraz')).toHaveCount(1);
         const dni = page.locator('#tz-hreben-dni button');
         // Zajtrajšok bez slnka: hlavička „pod hranicou“ a núdzové časy s pásikom podielu slnka.
         await dni.nth(1).click();

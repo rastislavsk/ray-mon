@@ -81,61 +81,40 @@
     background: #b4c3dc;
     box-shadow: 0 0 0 3px rgba(180, 195, 220, 0.3);
 }
-/* Hrebeň týždňa (docs/navrhy/teraz-vyhlad-alternativy.html, C): krivky dní predpovede vedľa seba na tmavom
-   skle, nad hranicou veľkých spotrebičov zlaté, pod ňou sivomodré. Cez každý stĺpec je tlačidlo dňa s menom
-   dole - zvolený deň má biely rámik. Hrebeň siaha takmer po okraje karty a nemá vnútorný okraj po stranách:
-   sedem tlačidiel má aj na šírke 320 px aspoň 44 px. */
+/* Pás dní (docs/navrhy/teraz-pas-dni.html): čip na každý deň s menom, ikonou počasia a pásom svetla
+   od východu po západ, zlatým tam, kde slnko stačí na veľké spotrebiče. Zvolený deň má svetlejší
+   podklad s rámikom. Pás siaha takmer po okraje karty: štyri čipy majú aj na šírke 320 px vyše 44 px
+   a medzi sebou 8 px. */
 .hreben {
-    position: relative;
     margin: 0 -10px 12px;
-    padding: 10px 0 8px;
-    border-radius: 18px;
-    background: rgba(10, 20, 50, 0.38);
-}
-.hreben svg {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-.hr-pod {
-    fill: rgba(180, 195, 220, 0.5);
-}
-.hr-nad {
-    fill: #ffd166;
-}
-.hr-hranica {
-    stroke: rgba(255, 255, 255, 0.7);
-    stroke-dasharray: 3 4;
-}
-.hr-os {
-    stroke: rgba(255, 255, 255, 0.25);
-}
-.hr-teraz {
-    fill: #fff;
-    stroke: rgba(10, 20, 50, 0.6);
-    stroke-width: 1.5;
 }
 .hreben-dni {
-    position: absolute;
-    inset: 4px 0;
     display: grid;
     grid-auto-columns: minmax(0, 1fr);
     grid-auto-flow: column;
+    gap: 8px;
 }
 .hreben-dni button {
+    position: relative;
     display: grid;
-    align-content: end;
-    justify-items: center;
-    padding: 0 0 3px;
+    grid-template-rows: 1fr auto;
+    align-items: start;
+    gap: 12px;
+    min-height: 74px;
+    padding: 10px 9px 12px;
     border: 0;
-    border-radius: 12px;
-    background: none;
+    border-radius: 14px;
+    background: rgba(10, 20, 50, 0.38);
     color: #dfe7f3;
+    text-align: left;
+    cursor: pointer;
+}
+.hreben-dni b {
+    padding-left: 3px;
     font-size: 0.75rem;
     font-weight: 800;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    cursor: pointer;
 }
 .hreben-dni button[data-nad] {
     color: #ffd166;
@@ -143,9 +122,46 @@
 .hreben-dni button[data-dnes] {
     color: #fff;
 }
+/* Biela vrstva ide na tmavé sklo, nie priamo na oblohu - inak by biely text nemal dosť kontrastu. */
 .hreben-dni button[aria-pressed='true'] {
-    background: rgba(255, 255, 255, 0.14);
+    background: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)), rgba(10, 20, 50, 0.38);
     box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+}
+.hreben-dni .wi {
+    position: absolute;
+    top: 5px;
+    right: 7px;
+    width: 30px;
+    height: 30px;
+}
+.pd-pas {
+    position: relative;
+    height: 9px;
+    border-radius: 5px;
+    background: rgba(180, 195, 220, 0.35);
+}
+/* Okná nad hranicou orezáva zaoblený pás, čiarka teraz z neho vyčnieva. */
+.pd-okna {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-radius: inherit;
+}
+.pd-okna i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    background: #ffd166;
+}
+.pd-teraz {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    width: 3px;
+    margin-left: -1.5px;
+    border-radius: 2px;
+    background: #fff;
+    box-shadow: 0 0 0 1px rgba(10, 20, 50, 0.6);
 }
 /* Hlavička plánu iného dňa: meno dňa a vedľa neho dátum, o koľko dní a či slnko stačí. */
 .den-h {
