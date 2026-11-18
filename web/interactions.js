@@ -1,14 +1,14 @@
 // Poslucháče. Každý končí volaním setState; nikto tu nekreslí do DOM.
 
 import { LAYOUT_PX, PANELS, PRIPOJENIE_BUBLINA_MS } from '../shared/config.js';
-import { trackHistory } from './nav-history.js';
+import { strazSpat } from './nav-history.js';
 import { createRefresh, startTicks } from './refresh.js';
 import { setupStart } from '../shared/setup-flow.js';
 import { initMozem } from './mozem-interactions.js';
 import { obnovaMerania } from '../shared/hlavicka.js';
 import { pripojenieOf } from './render/header.js';
 import { initTeraz } from './teraz-interactions.js';
-import { dashboard, isColumn, layoutOf, navChange, navStep, navStepFrom, panelChange, sameNavStep } from './state.js';
+import { dashboard, isColumn, layoutOf, panelChange, spatZmena } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -31,9 +31,6 @@ function initNavigation(store, dom) {
             // Len iný aktívny stĺpec: panel veci, náhľad aj detail v ostatných stĺpcoch ostávajú.
             store.setState({ panel: to });
             dom.panels[to].focus();
-            // Nie je to krok navigácie, no položka histórie si stĺpec pamätá - Späť zo Štatistiky či
-            // Nastavenia sa tak vráti na stĺpec, z ktorého človek odišiel.
-            history.replaceState({ ...history.state, step: navStep(store.get()) }, '');
             return;
         }
         store.setState(panelChange(store.get().panel, to));
@@ -42,19 +39,13 @@ function initNavigation(store, dom) {
     for (const p of PANELS) dom.navs[p].addEventListener('click', () => go(p));
     const toSetup = [dom.setup, dom.mzGuessBtn, dom.mzAskBtn, dom.tzGuessBtn, dom.tzAskBtn, dom.tzNoteBtn, dom.sdGuessBtn, dom.sdAskBtn];
     toSetup.push(dom.stAskBtn, dom.stSetupBtn, dom.stMeasureBtn, dom.stPricesBtn, dom.tipBtn);
-    // Kto pozná len polohu, ide rovno na krok sprievodcu s panelmi. Sú to dva kroky navigácie -
-    // Späť z panelov vráti do prehľadu Nastavenia, ako keby ich otvoril odtiaľ.
+    // Kto pozná len polohu, ide rovno na krok sprievodcu s panelmi.
     const toPanels = () => {
         if (store.get().panel !== 'nastavenie') go('nastavenie');
         if (store.get().known === 'poloha') store.setState(setupStart(store.get()));
     };
     for (const btn of toSetup) btn.addEventListener('click', toPanels);
-    trackHistory(store, {
-        step: navStep,
-        same: sameNavStep,
-        parse: navStepFrom,
-        change: navChange,
-    });
+    strazSpat(store, spatZmena);
 }
 
 /**

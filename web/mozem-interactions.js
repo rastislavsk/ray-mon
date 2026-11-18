@@ -5,7 +5,6 @@
 
 import { localMinutes } from '../shared/solar.js';
 import { bindKarty } from './mozem-karty.js';
-import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 import { shows } from './state.js';
 import { bindDayScrub } from './teraz-gestures.js';
@@ -23,17 +22,16 @@ export function initMozem(store, dom, refresh) {
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
-    // Vysvetlenie odznaku je krok navigácie (robí z Dnes aktívny stĺpec prehľadu), zatvorenie ten istý
-    // krok ako tlačidlo Späť.
+    // Vysvetlenie odznaku robí z Dnes aktívny stĺpec prehľadu.
     dom.mzChip.addEventListener('click', () => store.setState({ mzChip: 'dnes', panel: 'mozem' }));
     dom.mzTomChip.addEventListener('click', () => store.setState({ mzChip: 'zajtra', panel: 'mozem' }));
-    initSheet(dom.mzTriedaSheet, () => stepBack(store, { mzChip: null }));
+    initSheet(dom.mzTriedaSheet, () => store.setState({ mzChip: null }));
     bindKarty(dom.mzKarty, dom.mzBodky);
     initGraf(store, dom);
 }
 
 /**
- * Graf dňa: ťuknutie kdekoľvek na kartu Graf dňa v páse otvorí panel (krok navigácie, zatvorenie ťuknutím
+ * Graf dňa: ťuknutie kdekoľvek na kartu Graf dňa v páse otvorí panel (zatvorenie ťuknutím
  * vedľa, Escape a Späť), v ňom krivka ako posúvač času a „Späť na teraz“.
  * @param {Store} store @param {Dom} dom
  */
@@ -42,7 +40,7 @@ function initGraf(store, dom) {
         if (e.target instanceof Element && e.target.closest('[data-kind="graf"]')) store.setState({ mzGraf: true, panel: 'mozem' });
     });
     // Zatvorenie vráti aj zvolený čas na teraz - otvorený graf ukáže vždy teraz.
-    initSheet(dom.grSheet, () => stepBack(store, { mzGraf: false, terazPreview: null }));
+    initSheet(dom.grSheet, () => store.setState({ mzGraf: false, terazPreview: null }));
     bindDayScrub(dom.grChart, {
         active: () => {
             const s = store.get();
@@ -51,7 +49,6 @@ function initGraf(store, dom) {
         current: () => store.get().terazPreview,
         nowMin: () => localMinutes(store.get().now, store.get().site.timezone),
         preview: (min) => store.setState({ terazPreview: min, panel: 'mozem' }),
-        // Zvolený čas nie je krok navigácie (NavStep) - návrat na teraz ide priamo cez setState.
         reset: () => store.setState({ terazPreview: null }),
     });
     dom.grReset.addEventListener('click', () => {

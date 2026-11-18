@@ -126,7 +126,7 @@ kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré o
 nemenil stav ani HTML. `INFO_ITEMS` dnes zahŕňa všetky rozbaľovacie položky karty (Elektráreň,
 Čo máš doma, Oznámenia, Vzhľad, Zdieľať appku, Vymazať údaje): rozbalená je najviac jedna a je
 krokom navigácie, takže ju tlačidlo Späť zbalí. Nová appka má to isté pre svoje sekcie Nastavenia (`nsOpen`, `NS_FOLDS`
-v `web/state.js`, v kroku histórie `fold`), so zbaliteľnou hlavičkou ako Plán dňa. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
+v `web/state.js`; Späť ich zbalí, `spatZmena`), so zbaliteľnou hlavičkou ako Plán dňa. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
 ho ešte nesie (`guide`), sa vráti na kartu bez neho. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
 `shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia
@@ -159,12 +159,15 @@ nastavenie prevziať namiesto otázky na polohu. Prístup k živému meraniu adr
 appka z plochy ho pripojí ešte raz; odkaz bez merania sa pritom s uloženým nastavením porovnáva
 bez neho (`incomingSettings`), inak by appka po každom otvorení ponúkala prevziať samú seba. Z toho istého dôvodu manifest nemá `start_url` – bez
 neho sa appka spúšťa z adresy, z ktorej ju človek pridal, aj s časťou za mriežkou.
-`history.js` prekladá tlačidlo Späť na krok späť v appke: každý krok navigácie (karta,
-detail dňa) pridá `pushState` položku do histórie prehliadača a `popstate` ju vráti tou
-istou cestou ako klik – jediným `setState`. Adresa sa pritom nemení; položka histórie je
-len značka s krokom navigácie, takže odkaz na appku ostáva jeden. Šípka späť v detaile dňa
-je ten istý krok ako tlačidlo Späť, preto volajú `history.back()`
-(`closeDetail`) a nový krok nezapisujú – inak by Späť na telefóne detail znovu otvorilo.
+Tlačidlo Späť (od 18. 11. 2026): kroky navigácie sa do histórie prehliadača nezapisujú.
+`web/nav-history.js` drží nad položkou, na ktorej appka stojí, jednu strážnu položku
+(`{ spat: true }`), a to len vtedy, keď má Späť čo urobiť. Späť ju zoberie a appka spraví krok
+späť sama: `spatZmena` vo `web/state.js` zavrie jednu otvorenú vec zvnútra von (`ZATVARA`),
+potom prejde na Teraz, a keď už nie je kam, vráti null – strážna položka nepribudne a ďalšie
+Späť appku zavrie. Keď sa všetko zavrie inak (krížikom, navigáciou na Teraz), appka strážnu
+položku zoberie sama cez `history.back()`. Zatvorenie krížikom je teda obyčajný `setState`.
+Strážna položka pribúda len pri zmene stavu po ťuknutí – Chrome položku pridanú bez neho pri
+Späť preskočí. Adresa sa nemení, odkaz na appku ostáva jeden.
 
 Prechod medzi kartami je iba CSS: `panelChange` v `state.js` dopočíta k novej karte aj smer
 (`panelDir`), `renderPanels` ho vyloží na `#page[data-dir]` a zvyšok je animácia `panel-in-*`
@@ -349,7 +352,7 @@ stav → zmena), texty v `shared/setup-texts.js`, poslucháče vo `web/setup-wir
 sprievodcu majú v oboch appkách tie isté id a data- atribúty, takže ich obsluhuje ten istý kód
 a ukladá tým istým `web/storage.js`. Každá appka si len kreslí svoje (`web/render/nastavenie.js`,
 `web/render/sprievodca.js`) a dodá krok späť cez svoju históriu. Obrazovka sprievodcu je
-krok navigácie aj v novej appke (`setup` a `roof` v kroku histórie); Escape je
+v novej appke tlačidlom Späť vracia o obrazovku ako jeho „Späť“ (`spatZmena`); Escape je
 jeho „Späť“. Úprava panelov z prehľadu má navyše
 záložky Výkon, Plochy a Menič (`editTabs`), lebo riadok Panely zahŕňa všetko o streche.
 
@@ -361,8 +364,7 @@ Pod strednou šírkou (telefón, tablet na výšku) je appka taká, ako bola. Od
 Teraz a 7 dní **prehľad so stĺpcami** (`dashboard`): na tablete na šírku dva, na počítači tri,
 navigácia je hore. Stĺpce sú tie isté karty, ktoré vidno naraz (`shows`), nie druhá verzia –
 render každej karty sa len pýta, či je na obrazovke. `panel` je v prehľade aktívny stĺpec: vyberie
-ho navigácia (presunie naň fokus, krokom v histórii to nie je – `sameNavStep` berie stĺpce prehľadu
-ako jednu obrazovku) alebo to, čo v ňom človek otvorí (panel veci, náhľad, detail). Pri zmene okna
+ho navigácia (presunie naň fokus; pre tlačidlo Späť je celý prehľad ako karta Teraz) alebo to, čo v ňom človek otvorí (panel veci, náhľad, detail). Pri zmene okna
 sa preto ukáže práve ten stĺpec aj s tým, čo je v ňom otvorené. Štatistika a Nastavenie sú aj na
 širokej obrazovke samostatná stránka. Ťah do strán listuje len dni v detaile dňa – pás s dňom je
 v stĺpci 7 dní, takže ťah inde nerobí nič.

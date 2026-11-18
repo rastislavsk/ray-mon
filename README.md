@@ -91,14 +91,13 @@ pohybu, dostane prelistovanie bez dojazdu. Nad grafom stĺpcov v detaile týžd�
 prezeraním s tooltipom, rýchle švihnutie ho ani neukáže. Zvislý ťah je posúvanie stránky – aj keď
 prst začne na grafe – a tooltip sa pri ňom neukáže tiež.
 
-Systémové tlačidlo Späť na telefóne a tablete (a šípka v prehliadači) vracia o krok späť
-v appke: najprv zavrie detail dňa, potom sa vracia po kartách v opačnom poradí, než si
-nimi prešiel. Dopredu vedie tá istá cesta naspäť. Výber vnútri karty – vybraný deň
-alebo stránka pásu odporúčaní – krok navigácie nie je, na ten sa Späť nevracia.
-Keď sa kroky minú, ďalšie Späť z appky odíde; v nainštalovanej appke (PWA) to znamená jej
-zatvorenie. Zatvorenie sa nikde nevynucuje dvojitým stlačením – to je zvyk natívnych
-androidových appiek, nie webu, a stránka sa sama zavrieť ani nevie. Adresa sa pritom
-nemení, takže odkaz na appku ostáva jeden.
+Systémové tlačidlo Späť na telefóne a tablete (a šípka v prehliadači) najprv zavrie, čo je
+otvorené – vždy jednu vec: bublinu, okno, panel, detail dňa, sekciu Nastavenia, iný deň v páse
+dní karty Teraz; v sprievodcovi ide o obrazovku späť ako jeho vlastné „Späť“. Potom ide na kartu
+Teraz (na širokej obrazovke na prehľad so stĺpcami), nech človek prešiel kariet koľkokoľvek,
+a až z nej appka odíde; v nainštalovanej appke (PWA) to znamená jej zatvorenie. Zatvorenie sa
+nikde nevynucuje dvojitým stlačením – to je zvyk natívnych androidových appiek, nie webu.
+Adresa sa pritom nemení, takže odkaz na appku ostáva jeden.
 
 ## Živá obloha
 
