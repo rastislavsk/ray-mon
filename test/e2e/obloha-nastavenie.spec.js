@@ -1097,6 +1097,10 @@ test.describe('bojler na prebytky', () => {
         await page.keyboard.press('Escape');
         await expect(tokSheet).toBeHidden();
         await expect(scena).toBeFocused();
+        // Príchod na Teraz z inej karty ťuknutím v navigácii ukáže tie isté čísla aj bez ťuknutia na scénu.
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveText([`${s.vyroba}kW`, `${s.dom}kW`, `${s.siet?.kw}kW`]);
         // Všetky dlaždice v tvare Bojlera (A3): s veľkým číslom.
         await expect(page.locator('#tz-dlazdice .dl .velky')).toHaveCount(await page.locator('#tz-dlazdice .dl').count());
         const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);

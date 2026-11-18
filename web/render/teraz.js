@@ -282,10 +282,10 @@ function renderScena(state, m, dom) {
     if (!ok) return;
     const siet = meranieToku(state)?.sietKw;
     const s = scenaModel({ vyrobaKw: m.vykon, odhad: m.odhadVykonu, sietKw: typeof siet === 'number' ? siet : null });
-    // `=== true`: starý web/state.js z cache po nasadení pole tzCisla nemá (CLAUDE.md, Nasadenie a cache).
+    // `!!`: starý web/state.js z cache po nasadení pole tzCisla nemá (CLAUDE.md, Nasadenie a cache).
     const noc = m.pocasie?.noc === true;
     setHtml(dom.tzScenaKresba, scenaSvg(s, noc, oknaSvietia(noc, state.now, state.site.timezone)));
-    setHtml(dom.tzScenaCisla, cislaSvg(s, state.tzCisla === true));
+    setHtml(dom.tzScenaCisla, cislaSvg(s, !!state.tzCisla));
     dom.tzScena.setAttribute('aria-label', s.popis);
     dom.tzScena.toggleAttribute('data-tok', !!s.siet);
 }

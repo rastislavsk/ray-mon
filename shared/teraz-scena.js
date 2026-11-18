@@ -28,10 +28,11 @@ const medzi = (n, od, po) => Math.max(od, Math.min(po, n));
  * meranie elektromera (kladné dodávka do siete), bez elektromera alebo pri starom meraní null. Dom je výroba
  * mínus dodávka (plus odber) - batériu appka nepozná, preto ho bez elektromera nevie.
  * `luce`: počet lúčov (0 pri nule) a `jas` ich sila, `body`: počet bodov na vedení (0 bez toku), `popis`: veta pre čítačku.
+ * `cisla`: čo ukázať v scéne - každé číslo, ktoré appka pozná, aj nulové („0,0“); `k` pri sieti je smer, bez toku `nula`.
  * @param {{ vyrobaKw: number | null, odhad: boolean, sietKw: number | null }} v
  */
 export function scenaModel({ vyrobaKw, odhad, sietKw }) {
-    const kw = Number.isFinite(vyrobaKw) ? Math.max(0, /** @type {number} */ (vyrobaKw)) : 0;
+    const kw = Math.max(0, Number.isFinite(vyrobaKw) ? /** @type {number} */ (vyrobaKw) : 0);
     const svieti = kw >= 0.05;
     const vyroba = svieti ? `${odhad ? '~' : ''}${fmt1(kw)}` : null;
     const dom = sietKw === null ? null : fmt1(Math.max(0, kw - sietKw));
@@ -41,12 +42,27 @@ export function scenaModel({ vyrobaKw, odhad, sietKw }) {
         vyroba,
         dom,
         siet,
+        cisla: cislaOf(vyrobaKw, odhad, vyroba, dom, siet),
         luce: svieti ? medzi(Math.round(kw * 1.15), 1, LUCE_MAX) : 0,
         // Slabá výroba sú bledé čiarky.
         jas: svieti ? Math.round(Math.min(1, 0.35 + kw / 7) * 100) / 100 : 0,
         body: siet && sietKw !== null ? medzi(Math.ceil(Math.abs(sietKw) / 1.6), 1, BODY_MAX) : 0,
         popis: popisOf(vyroba, odhad, dom, siet),
     };
+}
+
+/**
+ * Čísla v scéne. Bez elektromera je `dom` null a sieť sa nekreslí; s elektromerom a bez toku (`siet` null)
+ * je pri elektrárni „0,0“ s kľúčom `nula`.
+ * Výkon panelov, ktorý appka nepozná, sa neukáže, pod 0,05 kW je „0,0“.
+ * @param {number | null} vyrobaKw @param {boolean} odhad @param {string | null} vyroba @param {string | null} dom
+ * @param {{ smer: 'von' | 'dnu', kw: string } | null} siet
+ */
+function cislaOf(vyrobaKw, odhad, vyroba, dom, siet) {
+    const nula = fmt1(0);
+    const slnko = Number.isFinite(vyrobaKw) ? (vyroba ?? `${odhad ? '~' : ''}${nula}`) : null;
+    const sietCislo = dom === null ? null : siet ? { k: siet.smer, kw: siet.kw } : { k: 'nula', kw: nula };
+    return { slnko, dom, siet: sietCislo };
 }
 
 /**

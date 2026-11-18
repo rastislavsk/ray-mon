@@ -78,15 +78,26 @@ let cislaTimer;
  * @param {Store} store @param {Dom} dom
  */
 function tukniNaScenu(store, dom) {
-    clearTimeout(cislaTimer);
-    if (store.get().tzCisla) {
-        store.setState(dom.tzScena.hasAttribute('data-tok') ? { tzCisla: false, tzChip: 'tok', panel: 'terazky' } : { tzCisla: false });
+    // Čísla, ktoré sa ukázali samy po príchode, ťuknutie len predĺži ako prvé ťuknutie.
+    if (store.get().tzCisla === 'tuk') {
+        clearTimeout(cislaTimer);
+        store.setState(dom.tzScena.hasAttribute('data-tok') ? { tzCisla: null, tzChip: 'tok', panel: 'terazky' } : { tzCisla: null });
         return;
     }
-    store.setState({ tzCisla: true, panel: 'terazky' });
+    store.setState({ panel: 'terazky' });
+    ukazCisla(store, 'tuk', TERAZ_CISLA_MS);
+}
+
+/**
+ * Ukáže čísla v scéne na `ms` a potom ich zhasne. Volá ho aj príchod na kartu Teraz z navigácie (interactions.js).
+ * @param {Store} store @param {'tuk' | 'prichod'} druh @param {number} ms
+ */
+export function ukazCisla(store, druh, ms) {
+    clearTimeout(cislaTimer);
+    store.setState({ tzCisla: druh });
     cislaTimer = setTimeout(() => {
-        if (store.get().tzCisla) store.setState({ tzCisla: false });
-    }, TERAZ_CISLA_MS);
+        if (store.get().tzCisla) store.setState({ tzCisla: null });
+    }, ms);
 }
 
 /** Čakanie na zhasnutie „Uložené“ pod prepínačom režimu bojlera. @type {ReturnType<typeof setTimeout> | undefined} */

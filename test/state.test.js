@@ -83,7 +83,9 @@ test('spatZmena: najprv zavrie, čo je otvorené - vždy jednu vec, zvnútra von
     };
     assert.equal(po({ panel: 'terazky', stavTip: true, tzVec: 'pracka' }).stavTip, false);
     assert.equal(po({ panel: 'terazky', stavTip: true, tzVec: 'pracka' }).tzVec, 'pracka');
-    assert.equal(po({ panel: 'terazky', tzCisla: true }).tzCisla, false);
+    assert.equal(po({ panel: 'terazky', tzCisla: 'tuk' }).tzCisla, null);
+    // Čísla, ktoré sa ukázali samy po príchode na Teraz, nikto neotvoril: Späť z Teraz appku zavrie.
+    assert.equal(spatZmena(stateWith({ panel: 'terazky', tzCisla: 'prichod' })), null);
     assert.equal(po({ panel: 'terazky', tzVec: 'pracka', tzDen: 2 }).tzVec, null);
     assert.equal(po({ panel: 'terazky', tzVec: 'pracka', tzDen: 2 }).tzDen, 2);
     assert.equal(po({ panel: 'terazky', tzChip: 'stav' }).tzChip, null);

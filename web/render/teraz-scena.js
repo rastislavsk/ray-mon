@@ -183,9 +183,10 @@ export function cislaSvg(s, ukaz) {
     const c = (k, p, v) =>
         `<text class="sc-cislo" data-k="${k}" x="${p[0]}" y="${p[1]}"><tspan>${escapeHtml(v)}</tspan><tspan class="sc-kw" dx="1">kW</tspan></text>`;
     let o = '';
-    if (s.vyroba) o += c('slnko', [64, 54], s.vyroba);
-    if (s.dom) o += c('dom', [292, 104], s.dom);
-    if (s.siet) o += c(s.siet.smer, [96, 120], s.siet.kw);
+    const { slnko, dom, siet } = s.cisla;
+    if (slnko) o += c('slnko', [64, 54], slnko);
+    if (dom) o += c('dom', [292, 104], dom);
+    if (siet) o += c(siet.k, [96, 120], siet.kw);
     return `${SVG}>${o}</svg>`;
 }
 
