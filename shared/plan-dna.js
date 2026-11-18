@@ -180,8 +180,7 @@ export function behy(ctx, input, devices) {
  * do lacného pásma, ostatné tým istým výpočtom na ďalšie dni predpovede (iný deň má rozpočet
  * slnka od polnoci). Čo sa nezmestí celý týždeň, ide aspoň do lacného pásma, inak tento týždeň
  * nie. Riadky sú v poradí PLAN_DNA.order. Čo človek dnes zapol (behy), riadok nemá: nerozvrhuje sa, len si
- * berie z rozpočtu slnka a vec, ktorá naň čaká (sušička), ide až po jeho konci - keď sa po ňom na slnko
- * nezmestí, radšej v ten deň v lacnom pásme než inokedy.
+ * berie z rozpočtu slnka a vec, ktorá naň čaká (sušička), ide hneď po jeho konci, aj zo siete.
  * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices
  * @returns {PlanRow[]}
  */
@@ -194,10 +193,7 @@ export function planDna(ctx, input, devices) {
     for (const r of slnko) rows.set(r.id, r);
     const rest = list.filter(({ item, device }) => {
         if (rows.has(item.id)) return false;
-        // Na zapnutý spotrebič čaká (sušička na práčku): v ten deň v lacnom pásme po jeho konci.
-        const beh = pred.find((b) => b.id === PLAN_DNA.after[item.id]);
-        const od = beh ? Math.max(from0, beh.end) : from0;
-        const cheap = device.cheapGrid || beh ? cheapRow(item.id, cheapFrom(ctx, od), ctx, input) : null;
+        const cheap = device.cheapGrid ? cheapRow(item.id, cheapFrom(ctx, from0), ctx, input) : null;
         if (cheap) rows.set(item.id, cheap);
         return !cheap;
     });
@@ -256,8 +252,8 @@ export function najlepsiDen(ctx, currency, list, pred = []) {
 
 /**
  * Rozvrh jedného dňa v danom poradí. Vec, ktorá na niečo čaká (`after`, sušička na práčku), ide
- * až po nej a v ten istý deň: keď sa po nej nezmestí, nejde v ten deň ani jedna a rozvrh sa
- * spraví znova bez nich - inak by mokrá bielizeň čakala na sušičku do ďalšieho dňa. V slabý deň
+ * hneď po jej konci v ten istý deň, aj keď ju slnko neutiahne (podiel povie, koľko zo siete): práčka
+ * so sušičkou sú jeden blok a o mieste na slnku rozhoduje práčka. V slabý deň
  * sa spotrebiče, ktoré sa vtedy neodporúčajú (weakDay), na slnko nedávajú. Vráti miesta na slnku
  * a to, čím sa plány porovnávajú: koľko vecí je na slnku, kWh domácich spotrebičov zo siete a km auta.
  * Čo už beží či dobehlo (`pred`), si z rozpočtu berie od svojho štartu a vec, ktorá naň čaká, ide po jeho konci.
@@ -272,15 +268,12 @@ function rozvrh(ctx, currency, list, pred) {
     for (const { item, device } of list) {
         const after = waitsFor(item.id, list, ends);
         if (after && ends[after] === undefined) continue;
-        const from = after ? Math.max(from0, ends[after]) : from0;
-        const row = device.weakDay || !ctx.weakToday ? onSun(item, device, from, day) : null;
-        if (!row && after)
-            return rozvrh(
-                ctx,
-                currency,
-                list.filter(({ item: i }) => i.id !== item.id && i.id !== after),
-                pred,
-            );
+        // Sušička ide hneď po práčke, aj keď ju slnko neutiahne - mokrá bielizeň nečaká.
+        const row = after
+            ? polozit(item, device, Math.max(from0, ends[after]), day)
+            : device.weakDay || !ctx.weakToday
+              ? onSun(item, device, from0, day)
+              : null;
         if (!row) continue;
         ends[item.id] = row.end;
         rows.push({ ...row, after });
@@ -358,12 +351,23 @@ function onSun(item, device, from, { ctx, currency, free }) {
     }
     const draw = programDraw(item, device.powerKw);
     const start = sunStart(draw, free, from);
-    if (start === null) return null;
+    return start === null ? null : polozit(item, device, start, { ctx, currency, free });
+}
+
+/**
+ * Domáci spotrebič pustený presne o `start`: podiel slnka a odpočítanie odberu z rozpočtu (pod nulu
+ * to ide tam, kde ho slnko neutiahne - to je odber zo siete).
+ * @param {MozemItem} item @param {(typeof DEVICES)[number]} device @param {number} start @param {Den} day
+ * @returns {SunRow}
+ */
+function polozit(item, device, start, { currency, free }) {
+    const draw = programDraw(item, device.powerKw);
     const podiel = podielSlnka(draw, free, start);
     draw.forEach(({ kw }, m) => {
         if (start + m < DAY_MIN) free[start + m] -= kw;
     });
-    return { ...base, start, end: start + item.runMin, km: null, save: null, podiel };
+    const runMin = /** @type {number} */ (item.runMin);
+    return { id: item.id, kind: 'sun', after: null, currency, start, end: start + runMin, km: null, save: null, podiel };
 }
 
 /**

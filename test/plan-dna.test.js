@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, DEVICES, MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { dayCtx, freeKw, programDraw } from '../shared/mozem-jadro.js';
 import { planDna, planDnaModel } from '../shared/plan-dna.js';
-import { PLAN_DNA_NOTE } from '../shared/messages.js';
+import { PLAN_DNA_NOTE, PLAN_ZO_SIETE, terazRiadokText } from '../shared/messages.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
@@ -152,7 +152,7 @@ test('poradie: kvôli autu len pri zreteľnom rozdiele km, sušička vždy po pr
         for (const hm of ['07:00', '09:00', '11:00', '13:00']) {
             const rows = planDnaAt(input(at(hm), { pv: null, forecast: cloudy(k, [0]) }), ALL);
             const [pracka, susicka] = [row(rows, 'pracka'), row(rows, 'susicka')];
-            if (pracka.kind === 'sun' && susicka.kind === 'sun') assert.ok(susicka.start >= pracka.end, `${k} ${hm}`);
+            if (pracka.kind === 'sun') assert.equal(susicka.start, pracka.end, `${k} ${hm}: sušička nikdy nečaká`);
         }
 });
 
@@ -166,10 +166,6 @@ test('práčka a sušička v jeden deň: aj zajtra sušička až po práčke', (
     assert.ok(susicka.day.start >= pracka.day.start + 120, `${pracka.day.start} ${susicka.day.start}`);
     assert.equal(susicka.why, 'po práčke');
     assert.equal(pracka.why, 'dnes slnko nestačí');
-    // 16:30: ohrev práčky ešte chytí slnko, sušička po nej už nie - obe idú zajtra.
-    const popoludni = planDnaAt(input(at('16:30')), ALL);
-    assert.equal(row(popoludni, 'pracka').kind, 'later');
-    assert.equal(row(popoludni, 'susicka').kind, 'later');
     assert.equal(row(planDnaAt(input(at('16:30')), ['pracka']), 'pracka').kind, 'sun', 'bez sušičky práčka ide dnes');
     // Hocijaké počasie a čas: obe v ten istý deň, sušička po práčke.
     for (const k of [1, 0.7, 0.4, 0.2])
@@ -180,8 +176,29 @@ test('práčka a sušička v jeden deň: aj zajtra sušička až po práčke', (
                 r.kind === 'sun' ? [0, r.start] : r.kind === 'later' ? [r.day.index, r.day.start] : null;
             const [wp, ws] = [when(p), when(s)];
             if (!wp || !ws) continue;
-            assert.equal(ws[0], wp[0], `${k} ${hm}: ten istý deň`);
+            assert.equal(ws[0], wp[0], `${k} ${hm}: nikdy práčka dnes a sušička zajtra`);
             assert.ok(ws[1] >= wp[1] + 120, `${k} ${hm}: sušička po práčke`);
+        }
+});
+
+test('slnko len na práčku: obe dnes, sušička hneď po nej zo siete', () => {
+    // 16:30: ohrev práčky ešte chytí slnko, sušička po nej už nie - obe idú dnes, sušička zo siete.
+    const m2 = planDnaModel(input(at('16:30')), { devices: ALL });
+    const [p2, s2] = [row(m2?.rows ?? [], 'pracka'), row(m2?.rows ?? [], 'susicka')];
+    assert.equal(p2.kind, 'sun');
+    assert.equal(s2.kind, 'sun');
+    assert.equal(s2.start, p2.end, 'sušička hneď po práčke');
+    assert.ok(s2.podiel < PLAN_DNA.zoSiete, `${s2.podiel}`);
+    assert.equal(s2.why, PLAN_ZO_SIETE);
+    assert.deepEqual(terazRiadokText(s2).odr, ['po práčke', 'zo siete']);
+});
+
+test('sušička nikdy nečaká po práčke: dnes štartuje presne na jej konci', () => {
+    for (const k of [1, 0.7, 0.4, 0.2])
+        for (const hm of ['07:00', '11:00', '15:00', '17:00']) {
+            const rows = planDnaAt(input(at(hm), { pv: null, forecast: cloudy(k, [0, 1]) }), ALL);
+            const [p, s] = [row(rows, 'pracka'), row(rows, 'susicka')];
+            if (p.kind === 'sun') assert.equal(s.start, p.end, `${k} ${hm}`);
         }
 });
 
@@ -294,11 +311,11 @@ test('bežiaci spotrebič si berie z rozpočtu: počas ohrevov nič neprekročí
     assert.ok(row(rows, 'susicka').start >= 660);
 });
 
-test('za oblačna sušička po bežiacej práčke radšej v ten deň v lacnom pásme než inokedy', () => {
+test('za oblačna sušička po bežiacej práčke hneď po jej konci, nie inokedy', () => {
     const i = input(at('09:00'), { pv: null, forecast: cloudy(0.15), bezi: [zapis('pracka', 540)] });
     const susicka = row(planDnaAt(i, VELKE), 'susicka');
-    assert.equal(susicka.kind, 'cheap');
-    assert.ok(susicka.start >= 660, `${susicka.start}`);
+    assert.equal(susicka.kind, 'sun');
+    assert.equal(susicka.start, 660);
 });
 
 test('zápis iného dňa, spotrebiča mimo plánu či bojlera plán nemení', () => {
