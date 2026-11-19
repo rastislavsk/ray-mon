@@ -4,6 +4,7 @@
 import { PANELS } from '../../shared/config.js';
 import { skyNow } from '../../shared/sky.js';
 import { pocasieTeraz } from '../../shared/teraz.js';
+import { naucenaPredpoved } from '../../shared/ucenie.js';
 import { loaded } from '../parts.js';
 import { dashboard, isColumn, PARTS, partOf, ready, shows } from '../state.js';
 import { renderGraf } from './graf.js';
@@ -82,8 +83,28 @@ function renderWait(state, dom) {
     show(dom.waitLater, st === 'koniec');
 }
 
-/** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
-export function render(state, dom) {
+/** Posledný stav s naučenou predpoveďou - nová len pri inej predpovedi či inom učení. */
+let pamat = {
+    forecast: /** @type {unknown} */ (undefined),
+    ucenie: /** @type {unknown} */ (undefined),
+    naucena: /** @type {import('../state.js').AppState['forecast']} */ (null),
+};
+
+/**
+ * Stav, ako ho vidia všetky karty: predpoveď opravená tým, čo sa appka naučila z histórie (shared/ucenie.js,
+ * docs/navrhy/plan-dna-ucenie.html). Je to jedno miesto - v stave ostáva predpoveď tak, ako prišla, z nej sa učí.
+ * @param {import('../state.js').AppState} state
+ */
+function sNaucenim(state) {
+    if (pamat.forecast !== state.forecast || pamat.ucenie !== state.ucenie) {
+        pamat = { forecast: state.forecast, ucenie: state.ucenie, naucena: naucenaPredpoved(state.forecast, state.ucenie) };
+    }
+    return pamat.naucena === state.forecast ? state : { ...state, forecast: pamat.naucena };
+}
+
+/** @param {import('../state.js').AppState} raw @param {import('../dom.js').Dom} dom */
+export function render(raw, dom) {
+    const state = sNaucenim(raw);
     renderSky(state, dom);
     renderHeader(state, dom);
     renderPanels(state, dom);

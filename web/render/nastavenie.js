@@ -100,6 +100,7 @@ function renderDoma(m, dom) {
     setText(dom.nsDomaHint, m.doma.hint);
     setHtml(dom.nsDoma, minisHtml(m.doma.devices.map((d) => ({ attr: `data-device="${d.id}"`, label: d.name, on: d.on }))));
     setText(dom.nsDomaNote, m.doma.note);
+    renderUcenie(m.doma.ucenie, dom);
     renderBojler(m.doma.bojler, dom);
 }
 
@@ -271,6 +272,37 @@ function renderFolds(state, dom) {
         f.head.setAttribute('aria-expanded', String(open));
         show(f.body, open);
     }
+}
+
+/**
+ * Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): z koľkých dní, strecha oproti predpovedi a dom
+ * ako malé grafy, potreba bojlera a „Začať odznova“.
+ * @param {ReturnType<typeof nastavenieModel>['doma']['ucenie']} u @param {Dom} dom
+ */
+function renderUcenie(u, dom) {
+    show(dom.nsUcenie, !!u);
+    if (!u) return;
+    setText(dom.nsUcenieTitle, u.nazov);
+    setText(dom.nsUcenieDni, u.dni);
+    show(dom.nsUcenieZatial, !!u.zatial);
+    setText(dom.nsUcenieZatial, u.zatial);
+    const g = u.grafy;
+    show(dom.nsUcenieGrafy, !!g);
+    if (g) {
+        const stlpce = g.strecha.stlpce
+            .map((c) => `<rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" data-tone="${c.viac ? 'viac' : 'menej'}"></rect>`)
+            .join('');
+        setHtml(
+            dom.nsUcenieGrafy,
+            `<figure><figcaption>${escapeHtml(g.strecha.nazov)}</figcaption>` +
+                `<svg viewBox="0 0 260 70" role="img" aria-label="${escapeHtml(g.strecha.popis)}"><line x1="0" y1="35" x2="260" y2="35"></line>${stlpce}</svg></figure>` +
+                `<figure><figcaption>${escapeHtml(g.dom.nazov)} · ${escapeHtml(g.dom.popisMax)}</figcaption>` +
+                `<svg viewBox="0 0 260 70" role="img" aria-label="${escapeHtml(g.dom.popis)}"><polyline points="${g.dom.body}"></polyline></svg></figure>`,
+        );
+    }
+    show(dom.nsUcenieBojler, !!u.bojler);
+    setText(dom.nsUcenieBojler, u.bojler);
+    setText(dom.nsUcenieOdznova, u.odznova);
 }
 
 /** @param {AppState} state @param {Dom} dom */

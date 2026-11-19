@@ -5,6 +5,7 @@
 import { DEVICES, EVERYDAY, HOUSE_BASE_KW, MOZEM_ITEMS, PLAN_ZIVE, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayPlan } from './day-plan.js';
 import { domBezBojlera } from './historia.js';
+import { domProfil } from './ucenie.js';
 import { weekDayName } from './format.js';
 import { daylightSpan, localDateKey, localMinutes } from './solar.js';
 import { bandAt, scheduleFor } from './tariff.js';
@@ -34,7 +35,8 @@ import { bandAt, scheduleFor } from './tariff.js';
  * `span` je deň so slnkom (daylightSpan) - os pásu dňa, tá istá ako os grafu dňa na karte Teraz.
  * @typedef {{ nowMin: number, span: import('./solar.js').Span, plan: PlanSlot[], th: import('./config.js').PowerThresholds, draha: boolean,
  *   cheap: boolean, price: number | null, currency: string, weakToday: boolean,
- *   later: Array<{ day: import('./solar.js').ForecastDay, index: number }>, zive: Zive }} DayCtx
+ *   later: Array<{ day: import('./solar.js').ForecastDay, index: number }>, zive: Zive, dom: number[] }} DayCtx
+ * `dom`: spotreba domu po hodinách dneška (naučená z histórie, shared/ucenie.js, inak HOUSE_BASE_KW).
  */
 
 /**
@@ -159,14 +161,15 @@ const ziveTeraz = (ctx) => ctx.zive.nowMin === ctx.nowMin;
 
 /**
  * Spotreba domu v minúte dňa: základ z elektromera celý PLAN_ZIVE.plnaMin minút od teraz, do PLAN_ZIVE.doMin sa vráti
- * k HOUSE_BASE_KW (krok 2). Bez merania a v minulosti HOUSE_BASE_KW.
+ * k spotrebe domu tej hodiny (krok 2; naučená z histórie, inak HOUSE_BASE_KW). Bez merania a v minulosti tá hodina.
  * @param {DayCtx} ctx @param {number} m
  */
 function domKw(ctx, m) {
+    const zaklad = ctx.dom[Math.floor(m / 60) % 24];
     const za = m - ctx.nowMin;
-    if (!ziveTeraz(ctx) || ctx.zive.zakladKw === null || za < 0) return HOUSE_BASE_KW;
+    if (!ziveTeraz(ctx) || ctx.zive.zakladKw === null || za < 0) return zaklad;
     const w = za <= PLAN_ZIVE.plnaMin ? 1 : Math.max(0, (PLAN_ZIVE.doMin - za) / (PLAN_ZIVE.doMin - PLAN_ZIVE.plnaMin));
-    return HOUSE_BASE_KW + (ctx.zive.zakladKw - HOUSE_BASE_KW) * w;
+    return zaklad + (ctx.zive.zakladKw - zaklad) * w;
 }
 
 /**
@@ -295,5 +298,6 @@ export function dayCtx(input) {
         weakToday: !!days[0] && days[0].date === today && days[0].peakKw < th.weakPeakKw,
         later: days.map((day, index) => ({ day, index })).filter((x) => x.day.date > today),
         zive: ziveMeranie(input, nowMin),
+        dom: domProfil(input.ucenie, today),
     };
 }

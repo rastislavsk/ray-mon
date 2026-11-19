@@ -659,6 +659,31 @@ export const BEZI_STORAGE_KEY = 'bezi-v1';
 export const HISTORIA = { dni: 60, snimkaOdMin: 5 * 60 };
 export const PREDPOVED_HIST_STORAGE_KEY = 'predpoved-hist-v1';
 export const BEHY_HIST_STORAGE_KEY = 'behy-hist-v1';
+
+/**
+ * Učenie Plánu dňa z histórie (docs/navrhy/plan-dna-ucenie.html, C + M1, shared/ucenie.js): tabuľky sa každý deň
+ * prepočítajú z histórie (HISTORIA.dni dní), novší deň váži viac (`polcasDni`). Políčko tabuľky platí od `minDni` dní,
+ * potreba bojlera od `minDniBojler` dní, keď ho vypol termostat; inak predvolené hodnoty. Hodina histórie sa ráta, keď
+ * má aspoň `minMerani` meraní a predpoveď aspoň `minKw`. Pomer meranie / predpoveď v jednej hodine je orezaný na
+ * `pomer`, výsledná oprava predpovede na `oprava`. Oblačnosť sa delí na jasno / polojasno / zamračené hranicami
+ * `oblacnost` (%), teplota dňa pre bojler hranicami `teploty` (°C), potreba bojlera je v rozsahu `bojlerWh`.
+ */
+export const UCENIE = {
+    polcasDni: 14,
+    minDni: 5,
+    minDniBojler: 3,
+    minMerani: 6,
+    minKw: 0.3,
+    pomer: [0.2, 2],
+    oprava: [0.5, 1.5],
+    oblacnost: [30, 70],
+    teploty: [5, 15],
+    bojlerWh: [500, 6000],
+};
+/** História elektrárne z Workera (`/historia`) stiahnutá dnes: { d, dni }. Telefón sa pýta raz za deň. */
+export const HISTORIA_STORAGE_KEY = 'historia-v1';
+/** Od ktorého dňa sa appka učí - „Začať odznova“ v Nastavení. Formát: dátum YYYY-MM-DD. */
+export const UCENIE_OD_STORAGE_KEY = 'ucenie-od-v1';
 /** Oznámenia bojlera na tomto telefóne zapnuté (vypínač v paneli Bojler dnes). */
 export const BOJLER_OZNAM_STORAGE_KEY = 'bojler-oznam-v1';
 
@@ -686,6 +711,8 @@ export const STORAGE_KEYS = [
     BOJLER_OZNAM_STORAGE_KEY,
     PREDPOVED_HIST_STORAGE_KEY,
     BEHY_HIST_STORAGE_KEY,
+    HISTORIA_STORAGE_KEY,
+    UCENIE_OD_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
 ];
@@ -790,6 +817,7 @@ export const WORKER_BOJLER_REZIM_PATH = '/bojler-rezim';
 export const WORKER_BOJLER_REZIM_URL = new URL(WORKER_BOJLER_REZIM_PATH, WORKER_URL).href;
 /** História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. */
 export const WORKER_HISTORIA_PATH = '/historia';
+export const WORKER_HISTORIA_URL = new URL(WORKER_HISTORIA_PATH, WORKER_URL).href;
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 

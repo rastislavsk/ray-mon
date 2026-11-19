@@ -83,7 +83,14 @@ teraz je z výkonu teraz a spotreba domu z elektromera bez bežiacich spotrebič
 v `shared/mozem-jadro.js`). Živé meranie platí len pre kontext teraz - kópie kontextu od polnoci (iné dni, trieda
 dňa) ho nevidia. Bojler, ktorý riadi zásuvka, ide v pláne pred všetkými: `simulujBojler` (`shared/bojler.js`) púšťa
 to isté `rozhodni` ako Worker nad rozpočtom plánu, práčka a sušička potom idú natvrdo a bojler sa odsimuluje znova
-(`bojlerPrvy` v `shared/plan-dna.js`). Potrebu bojlera zatiaľ berie z `MOZEM_ITEMS` (2 kWh).
+(`bojlerPrvy` v `shared/plan-dna.js`).
+
+Učenie (`shared/ucenie.js`, `UCENIE`) nemá vlastný stav: `web/ucenie.js` po každej obnove dát prepočíta model z histórie
+Workera (stiahnutej raz za deň, `historia-v1`), snímok predpovede a behov. Naučená oprava predpovede sa pridáva na jednom
+mieste - `sNaucenim` vo `web/render/index.js` pred kreslením; v stave ostáva predpoveď tak, ako prišla, lebo z nej sa
+učí. Spotreba domu po hodinách (`ctx.dom`) a potreba bojlera (`potrebaBojlera`) idú do Plánu dňa cez `input.ucenie`.
+„Začať odznova“ v Nastavení len posunie deň, od ktorého sa učí (`ucenie-od-v1`). Ranné oznámenie (service worker)
+učenie nevidí.
 
 ## Scéna toku energie na karte Teraz
 

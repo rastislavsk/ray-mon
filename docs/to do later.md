@@ -49,6 +49,12 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 
 ## Funkcie na neskôr
 
+- **Učenie aj bez Huawei Northbound** (19. 11. 2026): návrh `docs/navrhy/plan-dna-ucenie.html` počítal s tým, že pri
+  kiosku FusionSolar sa appka naučí aspoň opravu predpovede z krivky dňa v telefóne. Zatiaľ sa učí len z histórie
+  z Workera, ktorú má iba Northbound. Doplniť: telefón si k snímke predpovede pripíše výrobu po hodinách z krivky dňa.
+- **Ranné oznámenie nepozná učenie ani bojler** (19. 11. 2026): service worker nemá prístup k úložisku telefónu,
+  plán v rannom oznámení ide bez naučenej predpovede a bez bojlera.
+
 - **Porovnanie s FusionSolar – vyhodnotiť a zmazať** (19. 11. 2026): Worker dočasne zapisuje do logu riadky
   `porovnanie:` (okamžitý menič a elektromer, história oboch s časom zberu) a pýta sa na históriu elektromera
   (`elektromerAt`, `zalogujPorovnanie` vo `worker/src/zdroje.js`). Po 1–2 dňoch porovnať, či sú menič a elektromer

@@ -23,6 +23,7 @@ import { dayCtx, freeKw, kmOf, programDraw } from './mozem-jadro.js';
 import { NB } from './huawei-nb.js';
 import { addDays, localDateKey } from './solar.js';
 import { bojlerRiadeny } from './teraz-bojler.js';
+import { potrebaBojlera } from './ucenie.js';
 
 /** @typedef {import('./mozem-jadro.js').DayCtx} DayCtx */
 /** @typedef {import('./mozem-jadro.js').LaterDay} LaterDay */
@@ -264,19 +265,21 @@ function planDnaCely(ctx, input, devices) {
 }
 
 /**
- * Simulácia bojlera, ktorý riadi zásuvka (bojlerRiadeny), pre dnešok - alebo null. Potrebuje energiu programu bojlera
- * z MOZEM_ITEMS a meria sa ako Huawei, raz za NB.meranieMs.
+ * Simulácia bojlera, ktorý riadi zásuvka (bojlerRiadeny), pre dnešok - alebo null. Potrebuje toľko, koľko sa appka
+ * naučila pri teplote dneška (potrebaBojlera), a meria sa ako Huawei, raz za NB.meranieMs.
  * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @returns {SimBojler | null}
  */
 function bojlerPlanu(ctx, input) {
     const b = input.bojler;
     if (!b || !bojlerRiadeny(b, input.now)) return null;
-    const { item, device } = vec('bojler');
+    const { device } = vec('bojler');
+    const dnes = input.forecast?.days.find((d) => d.date === localDateKey(input.now, input.site.timezone));
+    const teplota = dnes && dnes.tempMinC !== null && dnes.tempMaxC !== null ? (dnes.tempMinC + dnes.tempMaxC) / 2 : null;
     const o = {
         nowMin: ctx.nowMin,
         now: input.now.getTime(),
         dnes: localDateKey(input.now, input.site.timezone),
-        potrebaWh: (item.runKwh ?? 0) * 1000,
+        potrebaWh: potrebaBojlera(input.ucenie, teplota),
         kw: device.powerKw,
         krokMin: NB.meranieMs / 60000,
     };

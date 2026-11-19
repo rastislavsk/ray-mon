@@ -12,6 +12,7 @@ import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.j
 import { prepniSpotrebic } from '../shared/doma.js';
 import { bojlerPecat, zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
+import { zacniOdznova } from './ucenie.js';
 import { clearStored, saveBojlerPrahy, saveDoma, saveLook } from './storage.js';
 import { stepBack } from './nav-back.js';
 import { NS_FOLDS, panelChange } from './state.js';
@@ -101,6 +102,8 @@ function initBojler(store, dom) {
         // Starý skript má staré prahy - pole s ním zmizne.
         store.setState({ bojlerPrahy, bojlerSkript: { stav: 'nic', text: '', schranka: false } });
     });
+    // Učenie z histórie: odteraz sa appka učí len z nových dní (web/ucenie.js).
+    dom.nsUcenieOdznova.addEventListener('click', () => void zacniOdznova(store));
     dom.nsBojlerSkript.addEventListener('click', async () => {
         const { zdroj, bojlerPrahy } = store.get();
         if (!zdroj) return;

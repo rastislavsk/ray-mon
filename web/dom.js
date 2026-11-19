@@ -303,6 +303,19 @@ const SETUP_SCREENS = /** @type {const} */ ([
 const input = (/** @type {string} */ id) => /** @type {HTMLInputElement} */ (byId(id));
 const select = (/** @type {string} */ id) => /** @type {HTMLSelectElement} */ (byId(id));
 
+/** Učenie z histórie v Nastavení (docs/navrhy/plan-dna-ucenie.html). */
+function ucenieDom() {
+    return {
+        nsUcenie: byId('ns-ucenie'),
+        nsUcenieTitle: byId('ns-ucenie-title'),
+        nsUcenieDni: byId('ns-ucenie-dni'),
+        nsUcenieZatial: byId('ns-ucenie-zatial'),
+        nsUcenieGrafy: byId('ns-ucenie-grafy'),
+        nsUcenieBojler: byId('ns-ucenie-bojler'),
+        nsUcenieOdznova: byId('ns-ucenie-odznova'),
+    };
+}
+
 /** Karta Nastavenie: prehľad elektrárne a ponuka prevziať nastavenie z odkazu. */
 function nastavenieDom() {
     return {
@@ -338,6 +351,7 @@ function nastavenieDom() {
         nsBojlerSprava: byId('ns-bojler-sprava'),
         nsBojlerText: /** @type {HTMLTextAreaElement} */ (byId('ns-bojler-text')),
         nsBojlerKroky: byId('ns-bojler-kroky'),
+        ...ucenieDom(),
         nsLookTitle: byId('ns-look-title'),
         nsLookHint: byId('ns-look-hint'),
         nsVoiceLabel: byId('ns-voice-label'),

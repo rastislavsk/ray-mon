@@ -356,7 +356,13 @@ test('sunShare: celý program na slnku, polovica, nič po konci plánu', () => {
     const plan = (/** @type {(m: number) => number} */ kw) =>
         Array.from({ length: 96 }, (_, i) => ({ startMin: i * 15, min: 15, kw: kw(i * 15) }));
     const ctx = (/** @type {(m: number) => number} */ kw) =>
-        /** @type {any} */ ({ plan: plan(kw), th, nowMin: 0, zive: { nowMin: -1, vyrobaKw: null, zakladKw: null } });
+        /** @type {any} */ ({
+            plan: plan(kw),
+            th,
+            nowMin: 0,
+            zive: { nowMin: -1, vyrobaKw: null, zakladKw: null },
+            dom: Array(24).fill(0.4),
+        });
     assert.equal(
         sunShare(
             pracka,

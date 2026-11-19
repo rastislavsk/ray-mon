@@ -10,12 +10,14 @@ import {
     WEATHER_KEEP_MS,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_REZIM_URL,
+    WORKER_HISTORIA_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
     WORKER_TRASY_URL,
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
 import { bojlerInfoZ } from '../shared/bojler.js';
+import { parseHistoria } from '../shared/ucenie.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
@@ -92,6 +94,22 @@ export async function bojlerPecat(pecat, fetchImpl = fetch) {
         const res = await postWorker(WORKER_BOJLER_PECAT_URL, pecat, fetchImpl);
         const body = res.ok ? await res.json() : null;
         return body && typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * História elektrárne pre učenie Plánu dňa (Worker `/historia`, docs/navrhy/plan-dna-ucenie.html), alebo null, keď ju
+ * Worker nedá (iný zdroj než Huawei Northbound, výpadok).
+ * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<import('../shared/historia.js').DenHistorie[] | null>}
+ */
+export async function stiahniHistoriu(pecat, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_HISTORIA_URL, JSON.stringify({ pecat }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) && Array.isArray(body.dni) ? parseHistoria(body.dni) : null;
     } catch {
         return null;
     }
