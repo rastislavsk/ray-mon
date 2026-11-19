@@ -2,8 +2,9 @@
 // okná so slnkom, kontext dňa a odpoveď pre jednu vec. Čisté funkcie bez DOM. Sú zvlášť od modelu
 // karty, aby Plán dňa a trieda dňa nemuseli importovať kartu, ktorá importuje ich.
 
-import { DEVICES, EVERYDAY, HOUSE_BASE_KW, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { DEVICES, EVERYDAY, HOUSE_BASE_KW, MOZEM_ITEMS, PLAN_ZIVE, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayPlan } from './day-plan.js';
+import { domBezBojlera } from './historia.js';
 import { weekDayName } from './format.js';
 import { daylightSpan, localDateKey, localMinutes } from './solar.js';
 import { bandAt, scheduleFor } from './tariff.js';
@@ -33,10 +34,18 @@ import { bandAt, scheduleFor } from './tariff.js';
  * `span` je deň so slnkom (daylightSpan) - os pásu dňa, tá istá ako os grafu dňa na karte Teraz.
  * @typedef {{ nowMin: number, span: import('./solar.js').Span, plan: PlanSlot[], th: import('./config.js').PowerThresholds, draha: boolean,
  *   cheap: boolean, price: number | null, currency: string, weakToday: boolean,
- *   later: Array<{ day: import('./solar.js').ForecastDay, index: number }> }} DayCtx
+ *   later: Array<{ day: import('./solar.js').ForecastDay, index: number }>, zive: Zive }} DayCtx
+ */
+
+/**
+ * Živé meranie pre rozpočet dňa (docs/navrhy/plan-dna-zive-data.html, kroky 2 a 4): výkon panelov teraz a základ domu
+ * z elektromera (dom bez bežiacich spotrebičov a bojlera), oboje null, keď ich appka nemá alebo sú staré. Platí len pre
+ * kontext teraz (`nowMin` toho istého merania) - kópie kontextu pre celý deň od polnoci (iné dni, trieda dňa) ho nevidia.
+ * @typedef {{ nowMin: number, vyrobaKw: number | null, zakladKw: number | null }} Zive
  */
 
 const SLOT_H = TARIFF_LIMITS.stepMin / 60;
+const STEP = TARIFF_LIMITS.stepMin;
 /** Najmenší podiel programu zo slnka, pri ktorom karta ešte povie „teraz“. */
 const MIN_SUN_SHARE = 0.5;
 
@@ -134,8 +143,64 @@ export function programDraw(item, powerKw) {
  * @param {DayCtx} ctx @param {number} m
  */
 export function freeKw(ctx, m) {
-    const slot = ctx.plan[Math.floor(m / TARIFF_LIMITS.stepMin)];
-    return slot && Number.isFinite(slot.kw) ? Math.max(0, slot.kw - HOUSE_BASE_KW) : 0;
+    const slot = ctx.plan[Math.floor(m / STEP)];
+    // Štvrťhodina teraz a tá, od ktorej plán púšťa („teraz“), idú z merania (krok 4), nie z predpovede.
+    const zivo =
+        ziveTeraz(ctx) &&
+        ctx.zive.vyrobaKw !== null &&
+        m >= Math.floor(ctx.nowMin / STEP) * STEP &&
+        m < Math.ceil(ctx.nowMin / STEP) * STEP + STEP;
+    const kw = zivo ? /** @type {number} */ (ctx.zive.vyrobaKw) : slot?.kw;
+    return slot && Number.isFinite(kw) ? Math.max(0, kw - domKw(ctx, m)) : 0;
+}
+
+/** Je kontext ten istý „teraz“, v ktorom appka merala? @param {DayCtx} ctx */
+const ziveTeraz = (ctx) => ctx.zive.nowMin === ctx.nowMin;
+
+/**
+ * Spotreba domu v minúte dňa: základ z elektromera celý PLAN_ZIVE.plnaMin minút od teraz, do PLAN_ZIVE.doMin sa vráti
+ * k HOUSE_BASE_KW (krok 2). Bez merania a v minulosti HOUSE_BASE_KW.
+ * @param {DayCtx} ctx @param {number} m
+ */
+function domKw(ctx, m) {
+    const za = m - ctx.nowMin;
+    if (!ziveTeraz(ctx) || ctx.zive.zakladKw === null || za < 0) return HOUSE_BASE_KW;
+    const w = za <= PLAN_ZIVE.plnaMin ? 1 : Math.max(0, (PLAN_ZIVE.doMin - za) / (PLAN_ZIVE.doMin - PLAN_ZIVE.plnaMin));
+    return HOUSE_BASE_KW + (ctx.zive.zakladKw - HOUSE_BASE_KW) * w;
+}
+
+/**
+ * Koľko minút je meranie staré: od `measuredAt` (zdroje cez API), inak od posledného bodu krivky dňa - kiosk čas merania
+ * neposiela (PvData). Meranie „z budúcnosti“ či bez času nie je čerstvé (Infinity).
+ * @param {import('./kiosk.js').PvData} pv @param {Date} now @param {number} nowMin
+ */
+function vekMerania(pv, now, nowMin) {
+    if (pv.measuredAt) return (now.getTime() - Date.parse(pv.measuredAt)) / 60000;
+    const last = pv.realCurveToday.at(-1);
+    const vek = last ? nowMin - last.hour * 60 : NaN;
+    return vek >= 0 ? vek : Infinity;
+}
+
+/**
+ * Živé meranie pre rozpočet (Zive): výkon panelov, keď meranie nie je staršie než PLAN_ZIVE.meranieMin, a základ domu
+ * = dom bez bojlera (shared/historia.js) bez odberu spotrebičov, ktoré človek zapol a práve bežia (programDraw).
+ * @param {PlanInput} input @param {number} nowMin @returns {Zive}
+ */
+export function ziveMeranie(input, nowMin) {
+    const pv = input.pv;
+    const now = input.now.getTime();
+    if (!pv || !(vekMerania(pv, input.now, nowMin) <= PLAN_ZIVE.meranieMin) || typeof pv.realTimePowerKw !== 'number')
+        return { nowMin, vyrobaKw: null, zakladKw: null };
+    const dom = domBezBojlera(pv.realTimePowerKw, pv.sietKw, input.bojler, now);
+    if (dom === null) return { nowMin, vyrobaKw: pv.realTimePowerKw, zakladKw: null };
+    const dnes = localDateKey(input.now, input.site.timezone);
+    const bezi = (input.bezi ?? []).filter((z) => z.d === dnes && z.m <= nowMin && nowMin < z.k);
+    const spotrebice = bezi.reduce((sum, z) => {
+        const item = /** @type {MozemItem} */ (MOZEM_ITEMS.find((i) => i.id === z.id));
+        return sum + (programDraw(item, deviceOf(item.device)?.powerKw ?? 0)[nowMin - z.m]?.kw ?? 0);
+    }, 0);
+    const zaklad = Math.min(PLAN_ZIVE.domMax, Math.max(PLAN_ZIVE.domMin, dom - spotrebice));
+    return { nowMin, vyrobaKw: pv.realTimePowerKw, zakladKw: Math.round(zaklad * 1000) / 1000 };
 }
 
 /**
@@ -229,5 +294,6 @@ export function dayCtx(input) {
         currency: tariff.currency,
         weakToday: !!days[0] && days[0].date === today && days[0].peakKw < th.weakPeakKw,
         later: days.map((day, index) => ({ day, index })).filter((x) => x.day.date > today),
+        zive: ziveMeranie(input, nowMin),
     };
 }

@@ -25,6 +25,12 @@ export const TERAZ_BOJLER_TEXTS = {
     mlci: 'zásuvka mlčí',
     od: 'od',
     zapnePri: 'zapne pri',
+    zapneOkolo: 'zapne okolo',
+    /** Čo plán čaká od bojlera (docs/navrhy/plan-dna-zive-data.html): kedy dohreje, alebo že dnes nie. */
+    plan: {
+        dohreje: (/** @type {string} */ cas) => `Podľa plánu dohreje okolo ${cas}.`,
+        nedohreje: 'Dnes ho slnko asi nedohreje.',
+    },
     dnesZoSlnka: 'dnes zo slnka',
     o: 'o',
     bezSpojenia: 'skript alebo Wi-Fi',
@@ -216,12 +222,14 @@ function dlazdicaRucne(b, stav, den) {
 /**
  * Dlaždica Bojler (docs/navrhy/teraz-dlazdice-odrazky.html): tón ako ostatné dlaždice (`go` hreje, `next`
  * čaká, `tiche` nahriata, `chyba` mlčí), bodka stavu pri ikone (`bezi`, `caka`, `vyp`, `mlci`), veľké
- * číslo, meno, pásik (koľko dnes išlo zo slnka, `podiel` v %, kým dnes nehrial null) a najviac dve odrážky.
+ * číslo, meno, pásik (koľko dnes išlo zo slnka, `podiel` v %, kým dnes nehrial null) a najviac dve odrážky. Keď
+ * Plán dňa vie, kedy zásuvka bojler zapne (`plan`, docs/navrhy/plan-dna-zive-data.html), čakajúci bojler povie
+ * „zapne okolo …“ namiesto prahu.
  * `rezim` je značka v rohu: kto bojler zapína (pri tichej zásuvke nevieme, null).
- * @param {BojlerInfo} b @param {Date} now @param {string} tz
+ * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./plan-dna.js').BojlerPlan | null} [plan]
  * @returns {{ tone: string, riadi: string, rezim: 'appka' | 'rucne' | null, velky: string, meno: string, odr: string[], podiel: number | null }}
  */
-export function bojlerDlazdica(b, now, tz) {
+export function bojlerDlazdica(b, now, tz, plan = null) {
     const T = TERAZ_BOJLER_TEXTS;
     const stav = bojlerStav(b, now.getTime());
     const meno = T.meno;
@@ -241,7 +249,15 @@ export function bojlerDlazdica(b, now, tz) {
     const t =
         stav === 'caka'
             ? // Veľké číslo je odber bojlera ako v ostatných stavoch, prebytok, pri ktorom zapne, je v odrážke.
-              { tone: 'next', riadi: 'caka', velky: '0 kW', odr: [T.caka, `${T.zapnePri} ${fmt1(b.prahy.zapKw)} kW`] }
+              {
+                  tone: 'next',
+                  riadi: 'caka',
+                  velky: '0 kW',
+                  odr: [
+                      T.caka,
+                      plan?.zapne != null ? `${T.zapneOkolo} ${minutesToTimeStr(plan.zapne)}` : `${T.zapnePri} ${fmt1(b.prahy.zapKw)} kW`,
+                  ],
+              }
             : stav === 'hotovo'
               ? dlazdicaHotovo(den)
               : dlazdicaHreje(b, den);
@@ -338,11 +354,12 @@ function behRiadok(b, den, x, now, tz) {
 }
 
 /**
- * Panel „Bojler dnes“: nadpis, čo sa deje teraz, pás dňa, štyri čísla (zapnutia, ako dlho hrial,
- * kWh zo slnka a zo siete) a behy s časom a odkiaľ.
- * @param {BojlerInfo} b @param {Date} now @param {string} tz
+ * Panel „Bojler dnes“: nadpis, čo sa deje teraz, čo čaká plán (`plan`: kedy dohreje, alebo že dnes nie - pri nahriatej
+ * vode a bez plánu prázdne), pás dňa, štyri čísla (zapnutia, ako dlho hrial, kWh zo slnka a zo siete) a behy s časom
+ * a odkiaľ.
+ * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./plan-dna.js').BojlerPlan | null} [plan]
  */
-export function bojlerDetail(b, now, tz) {
+export function bojlerDetail(b, now, tz, plan = null) {
     const T = TERAZ_BOJLER_TEXTS;
     const den = dnes(b, now, tz);
     const s = den ? suctyDna(den) : { zapnuti: 0, min: 0, slnkoKwh: 0, sietKwh: 0 };
@@ -350,6 +367,7 @@ export function bojlerDetail(b, now, tz) {
     return {
         nadpis: T.detail,
         pod: podDetail(b, den, now, tz),
+        plan: !plan || plan.nahriaty ? '' : plan.dohreje === null ? T.plan.nedohreje : T.plan.dohreje(minutesToTimeStr(plan.dohreje)),
         rezim: { rucne: b.rucne, popis: b.rucne ? T.rezim.popisRucne : T.rezim.popisAppka(fmt1(b.prahy.zapKw), fmt1(b.prahy.vypKw)) },
         pas: pasDna(den, localMinutes(now, tz)),
         cisla: [

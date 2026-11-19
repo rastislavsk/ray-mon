@@ -158,10 +158,12 @@ test('v drahom pásme rano to karta povie, aj čo z plánu pôjde prvé', () => 
 });
 
 test('karta podľa Plánu dňa: čo ide teraz, čo potom, a keď slnko na nič z plánu nestačí', () => {
-    const rano = mozemModel(input(at('09:00')));
+    // Bez merania: ráno 5. 9. dala strecha len tretinu predpovede a plán by ju opravil (test/plan-dna.test.js).
+    const bezKrivky = { pv: null };
+    const rano = mozemModel(input(at('09:00'), bezKrivky));
     assert.equal(rano.state, 'go');
-    assert.equal(rano.hero.lead, 'Slnko to teraz platí za nás. Teraz práčka a umývačka, o 09:20 auto.');
-    assert.equal(mozemModel(input(at('09:00')), { voice: 'slusny' }).hero.lead.startsWith('Elektrinu teraz dodáva slnko. Teraz '), true);
+    assert.equal(rano.hero.lead, 'Podľa predpovede teraz svieti. Teraz práčka a umývačka, o 09:20 auto.');
+    assert.match(mozemModel(input(at('09:00'), bezKrivky), { voice: 'slusny' }).hero.lead, /. Teraz práčka a umývačka/);
     // 17:10: zelená ešte svieti, ale na nič z plánu už nestačí - nie „zapni“.
     const vecer = mozemModel(input(at('17:10')));
     assert.equal(vecer.state, 'none');
@@ -172,9 +174,9 @@ test('karta podľa Plánu dňa: čo ide teraz, čo potom, a keď slnko na nič z
     const slusne = mozemModel(input(at('17:10')), { voice: 'slusny' });
     assert.equal(slusne.hero.lead, 'Na veľké spotrebiče už slnko nestačí. Auto od 17:15 z lacnej siete, ostatné zajtra.');
     // Bez spotrebičov doma karta odpovedá podľa slnka a dlaždice podľa vecí.
-    const nic = mozemModel(input(at('09:00')), { devices: [] });
+    const nic = mozemModel(input(at('09:00'), bezKrivky), { devices: [] });
     assert.equal(nic.state, 'go');
-    assert.equal(nic.hero.lead, 'Slnko to teraz platí za nás.');
+    assert.equal(nic.hero.lead, 'Podľa predpovede teraz svieti.');
     assert.equal(nic.groups.length, 3);
 });
 
@@ -353,7 +355,8 @@ test('sunShare: celý program na slnku, polovica, nič po konci plánu', () => {
     const th = powerThresholds(PLANT);
     const plan = (/** @type {(m: number) => number} */ kw) =>
         Array.from({ length: 96 }, (_, i) => ({ startMin: i * 15, min: 15, kw: kw(i * 15) }));
-    const ctx = (/** @type {(m: number) => number} */ kw) => /** @type {any} */ ({ plan: plan(kw), th });
+    const ctx = (/** @type {(m: number) => number} */ kw) =>
+        /** @type {any} */ ({ plan: plan(kw), th, nowMin: 0, zive: { nowMin: -1, vyrobaKw: null, zakladKw: null } });
     assert.equal(
         sunShare(
             pracka,

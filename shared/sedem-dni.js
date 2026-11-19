@@ -8,6 +8,7 @@ import {
     bestDayIndex,
     dayKwAt,
     HOUR_RANGE,
+    opravenaPredpoved,
     realCurveBoundary,
     usePct,
     visibleHours,
@@ -205,7 +206,7 @@ export function sedemDayModel(input, index, voice = 'drzy') {
  */
 function chartOf(input, day, plan, nowMin) {
     const curve = nowMin !== null && input.pv ? input.pv.realCurveToday : [];
-    const hourly = nowMin !== null ? input.forecast.hourlyToday : day.hourly;
+    const hourly = nowMin !== null ? opravenaPredpoved(curve, input.forecast.hourlyToday, nowMin) : day.hourly;
     const nowKw = nowMin === null ? NaN : dayKwAt(nowMin, curve, hourly, nowMin);
     const tone = (/** @type {number} */ min) => slotTone(plan[Math.floor(min / plan[0].min)]);
     const windows = (/** @type {import('./day-chart.js').Tone} */ t) => planWindows(plan, (s) => slotTone(s) === t);

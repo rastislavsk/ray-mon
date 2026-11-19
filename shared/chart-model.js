@@ -1,7 +1,7 @@
 // Geometria grafov ako čisté dáta: body v súradniciach viewBoxu, mriežky, tooltipy.
 // Kreslenie (SVG reťazce) je vo web/svg.js; tu nie je nič, čo by potrebovalo DOM.
 
-import { MINUTES_PER_DAY } from './config.js';
+import { MINUTES_PER_DAY, PLAN_ZIVE } from './config.js';
 import { weekDateLabel, weekDayName, weekDayShort } from './format.js';
 
 /** @typedef {{ x: number, y: number }} Pt */
@@ -134,7 +134,49 @@ export function realCurveBoundary(realCurve, nowMinutes) {
 }
 
 /**
- * Výkon v ľubovoľnej minúte dňa: po hranicu meranie, za ňou predpoveď; NaN bez dát.
+ * Oprava predpovede podľa merania (docs/navrhy/plan-dna-zive-data.html, krok 1): pomer meranie / predpoveď za
+ * posledných PLAN_ZIVE.oknoMin minút pred hranicou. Null, keď meraní či predpovede v okne je málo alebo sa pomer
+ * od 1 líši menej než PLAN_ZIVE.prah.
+ * @param {Array<{hour: number, kw: number}> | null | undefined} realCurve @param {HourPoint[] | null | undefined} hourly
+ * @param {number} nowMinutes @returns {{ k: number, od: number } | null}
+ */
+export function opravaPredpovede(realCurve, hourly, nowMinutes) {
+    const od = realCurveBoundary(realCurve, nowMinutes);
+    if (od === null || !realCurve || !hourly || !hourly.length) return null;
+    const body = realCurve.filter((p) => p.hour * 60 > od - PLAN_ZIVE.oknoMin && p.hour * 60 <= od);
+    if (body.length < PLAN_ZIVE.minBodov) return null;
+    const real = body.reduce((s, p) => s + p.kw, 0) / body.length;
+    const fc = body.reduce((s, p) => s + interpolate(hourly, p.hour, 'kw'), 0) / body.length;
+    if (fc < PLAN_ZIVE.minKw) return null;
+    const k = Math.min(PLAN_ZIVE.kMax, Math.max(PLAN_ZIVE.kMin, real / fc));
+    return Math.abs(k - 1) < PLAN_ZIVE.prah ? null : { k, od };
+}
+
+/**
+ * Násobok predpovede v minúte dňa: celá oprava PLAN_ZIVE.plnaMin minút za hranicou, potom sa do PLAN_ZIVE.doMin
+ * vytratí. Bez opravy 1.
+ * @param {{ k: number, od: number } | null} o @param {number} minutes
+ */
+function nasobok(o, minutes) {
+    if (!o) return 1;
+    const za = minutes - o.od;
+    const w = za <= PLAN_ZIVE.plnaMin ? 1 : Math.max(0, (PLAN_ZIVE.doMin - za) / (PLAN_ZIVE.doMin - PLAN_ZIVE.plnaMin));
+    return 1 + (o.k - 1) * w;
+}
+
+/**
+ * Hodinová predpoveď dneška opravená meraním (opravaPredpovede) - pre graf dňa, aby ukazoval to isté ako dayKwAt.
+ * Body pred hranicou ostanú. Bez opravy ten istý zoznam.
+ * @param {Array<{hour: number, kw: number}> | null | undefined} realCurve @param {HourPoint[]} hourly @param {number} nowMinutes
+ * @returns {HourPoint[]}
+ */
+export function opravenaPredpoved(realCurve, hourly, nowMinutes) {
+    const o = opravaPredpovede(realCurve, hourly, nowMinutes);
+    return o ? hourly.map((p) => (p.hour * 60 > o.od ? { ...p, kw: p.kw * nasobok(o, p.hour * 60) } : p)) : hourly;
+}
+
+/**
+ * Výkon v ľubovoľnej minúte dňa: po hranicu meranie, za ňou predpoveď opravená meraním (opravaPredpovede); NaN bez dát.
  * @param {number} minutes @param {Array<{hour: number, kw: number}> | null | undefined} realCurve
  * @param {HourPoint[] | null | undefined} hourlyToday @param {number} nowMinutes
  */
@@ -142,7 +184,7 @@ export function dayKwAt(minutes, realCurve, hourlyToday, nowMinutes) {
     const boundary = realCurveBoundary(realCurve, nowMinutes);
     if (boundary !== null && minutes <= boundary) return interpolate(realCurve ?? [], minutes / 60, 'kw');
     if (!hourlyToday || !hourlyToday.length) return NaN;
-    return interpolate(hourlyToday, minutes / 60, 'kw');
+    return interpolate(hourlyToday, minutes / 60, 'kw') * nasobok(opravaPredpovede(realCurve, hourlyToday, nowMinutes), minutes);
 }
 
 // ---- Karta 7 dní -----------------------------------------------------------------

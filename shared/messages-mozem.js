@@ -580,6 +580,9 @@ export const PLAN_ZO_SIETE = 'Slnko stačí len na pranie, sušička pôjde zo s
 
 export const PLAN_AFTER = /** @type {Record<string, string>} */ ({ pracka: 'po práčke' });
 
+/** Spotrebič, ktorý by bez bojlera riadeného zásuvkou išiel skôr (docs/navrhy/plan-dna-zive-data.html). */
+export const PLAN_PO_BOJLERI = 'po bojleri';
+
 /**
  * Texty riadku plánu dňa.
  * @param {import('./plan-dna.js').PlanRow} row @param {import('./messages-zaklad.js').Voice} [voice]
@@ -598,7 +601,7 @@ export function planDnaRowText(row, voice = 'drzy') {
         p.shape
     ];
     if (row.after && row.podiel < PLAN_DNA.zoSiete) return { name, time: hm(row.start), why: PLAN_ZO_SIETE, tone: 'wait' };
-    const after = row.after ? `${PLAN_AFTER[row.after] ?? ''}, ` : '';
+    const after = row.after ? `${PLAN_AFTER[row.after] ?? ''}, ` : row.poBojleri ? `${PLAN_PO_BOJLERI}, ` : '';
     return { name, time: hm(row.start), why: `${after}${why}`, tone: 'go' };
 }
 
@@ -728,7 +731,7 @@ export function mozemTileNote(a) {
  * a riadok pod ňou. Na slnku teraz „teraz“ (auto do konca svojho úseku), neskôr „o 10:45“,
  * inak čas riadku plánu.
  * @param {{ id: string, kind: string, start?: number, end?: number, km?: number | null, now: boolean, time: string,
- *   tone: TileTone }} row
+ *   tone: TileTone, poBojleri?: boolean }} row
  * @returns {{ value: string, short: string, tone: TileTone, note: string }}
  */
 export function planTileText(row) {
@@ -739,7 +742,7 @@ export function planTileText(row) {
     }
     if (row.kind === 'sun') {
         const at = `o ${hm(row.start ?? 0)}`;
-        return { value: at, short: at, tone: 'wait', note: sunNote };
+        return { value: at, short: at, tone: 'wait', note: row.poBojleri ? PLAN_PO_BOJLERI : sunNote };
     }
     if (row.kind === 'cheap') return { value: row.time, short: row.time, tone: 'cheap', note: 'lacná sieť' };
     return { value: row.time, short: row.time, tone: row.tone, note: '' };

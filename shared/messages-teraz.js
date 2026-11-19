@@ -2,7 +2,7 @@
 
 import { BEZI, MINUTES_PER_DAY, PLAN_DNA } from './config.js';
 import { fmt1, kwpRoughText, weekDateLabel, weekDayName } from './format.js';
-import { HERO_SAY, MOZEM_SKY_TEXTS, PLAN_AFTER, countdownText, laterWhen, mozemTexts } from './messages-mozem.js';
+import { HERO_SAY, MOZEM_SKY_TEXTS, PLAN_AFTER, PLAN_PO_BOJLERI, countdownText, laterWhen, mozemTexts } from './messages-mozem.js';
 import { andList, cap, dniSlovo, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
 
 // ---- Karta Teraz -----------------------------------------------------
@@ -227,8 +227,8 @@ const CELE_ZO_SLNKA = 0.85;
 const zoSlnkaSlovo = (p) => (p >= CELE_ZO_SLNKA ? 'zo slnka' : podielSlovo(p));
 
 /**
- * Dlaždica ďalšieho spotrebiča: veľký čas a pod menom krátky doplnok - dobehne, po čom ide, km auta, lacná
- * elektrina - ako odrážky. Keď slnko nepokryje skoro celý program, druhá odrážka povie koľko („väčšina zo
+ * Dlaždica ďalšieho spotrebiča: veľký čas a pod menom krátky doplnok - dobehne, po čom ide (aj „po bojleri“), km auta,
+ * lacná elektrina - ako odrážky. Keď slnko nepokryje skoro celý program, druhá odrážka povie koľko („väčšina zo
  * slnka“); odznak spotrebiča ju môže nahradiť. „Tento týždeň nie“ má namiesto času pomlčku. Lacné pásmo má
  * pred časom malé „od“ (`pred`).
  * @param {import('./plan-dna.js').PlanRow} r @returns {{ pred?: string, cas: string, odr: string[] }}
@@ -242,7 +242,18 @@ export function terazRiadokText(r) {
     const kolko = kolkoSlovo(r.podiel, Boolean(after));
     if (after) return { cas: hm(start), odr: [after, ...kolko] };
     if (r.id === 'auto') return { cas: hm(start), odr: [r.kind === 'sun' && r.km ? `~${r.km} km zo slnka` : 'zo slnka'] };
-    return { cas: hm(start), odr: [`dobehne ${hm(r.end)}`, ...kolko] };
+    return { cas: hm(start), odr: odrazkyDomu(r, kolko) };
+}
+
+/**
+ * Odrážky domáceho spotrebiča: kedy dobehne a koľko zo slnka. Posunutý bojlerom (`poBojleri`) povie najprv prečo
+ * a potom koľko zo slnka - alebo kedy dobehne.
+ * @param {Exclude<import('./plan-dna.js').PlanRow, { kind: 'none' | 'cheap' }>} r @param {string[]} kolko
+ */
+function odrazkyDomu(r, kolko) {
+    const dobehne = `dobehne ${hm(r.end)}`;
+    if (r.kind === 'sun' && r.poBojleri) return [PLAN_PO_BOJLERI, ...(kolko.length ? kolko : [dobehne])];
+    return [dobehne, ...kolko];
 }
 
 /**

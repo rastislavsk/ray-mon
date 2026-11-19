@@ -18,10 +18,14 @@ const ALL = ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'];
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
 
-/** Vstup v danej chvíli s fixtures. @param {Date} now @param {object} [extra] */
+/**
+ * Vstup v danej chvíli s predpoveďou z fixtures, bez merania - tieto testy overujú rozvrh nad predpoveďou. Živé
+ * meranie (shared/mozem-jadro.js, ziveMeranie) má vlastné testy nižšie.
+ * @param {Date} now @param {object} [extra]
+ */
 function input(now, extra = {}) {
-    const { pv, forecast } = fixtureData(now);
-    return { now, site: SITE, plant: PLANT, tariff: PRICED, loading: false, pv, forecast, ...extra };
+    const { forecast } = fixtureData(now);
+    return { now, site: SITE, plant: PLANT, tariff: PRICED, loading: false, pv: null, forecast, ...extra };
 }
 
 /** Predpoveď zmenšená na zlomok vo vybraných dňoch (predvolene všetky); meranie sa zahodí. @param {number} k @param {number[]} [dayIdx] */
@@ -264,7 +268,8 @@ const VELKE = ['pracka', 'umyvacka', 'susicka', 'auto'];
 const zapis = (id, m, k) => ({ id, d: '2026-09-05', m, k: k ?? m + (MOZEM_ITEMS.find((x) => x.id === id)?.runMin ?? 0) });
 
 test('práčka beží od 8:00: plán ju nerozvrhuje, sušička ide po jej skutočnom konci, model ju ukáže v behoch', () => {
-    const i = input(at('09:00'), { bezi: [zapis('pracka', 480)] });
+    // S nameranou krivkou: o 8:00 dala strecha menej, než predpoveď sľubovala.
+    const i = input(at('09:00'), { pv: fixtureData(at('09:00')).pv, bezi: [zapis('pracka', 480)] });
     const rows = planDnaAt(i, VELKE);
     assert.equal(row(rows, 'pracka'), undefined);
     const susicka = row(rows, 'susicka');
