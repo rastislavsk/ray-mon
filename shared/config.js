@@ -624,6 +624,17 @@ export const BEZI = {
     maxZvysokMin: 360,
 };
 export const BEZI_STORAGE_KEY = 'bezi-v1';
+
+/**
+ * Zber histórie pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html, shared/historia.js). Worker si v Durable
+ * Objecte účtu drží `dni` dní hodinových súhrnov výroby a spotreby domu a deň bojlera, telefón toľko isto dní snímok
+ * predpovede (PREDPOVED_HIST_STORAGE_KEY) a behov z „Už beží“ (BEHY_HIST_STORAGE_KEY). Zatiaľ sa len zbiera, appka
+ * z toho ešte nič nepočíta. Snímka predpovede je prvá predpoveď dňa, ktorú telefón videl od `snimkaOdMin`
+ * (skôr ráno býva ešte včerajší beh modelu). Patrí telefónu, do odkazu s nastavením nejde.
+ */
+export const HISTORIA = { dni: 60, snimkaOdMin: 5 * 60 };
+export const PREDPOVED_HIST_STORAGE_KEY = 'predpoved-hist-v1';
+export const BEHY_HIST_STORAGE_KEY = 'behy-hist-v1';
 /** Oznámenia bojlera na tomto telefóne zapnuté (vypínač v paneli Bojler dnes). */
 export const BOJLER_OZNAM_STORAGE_KEY = 'bojler-oznam-v1';
 
@@ -649,6 +660,8 @@ export const STORAGE_KEYS = [
     BOJLER_STORAGE_KEY,
     BEZI_STORAGE_KEY,
     BOJLER_OZNAM_STORAGE_KEY,
+    PREDPOVED_HIST_STORAGE_KEY,
+    BEHY_HIST_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
 ];
@@ -751,6 +764,8 @@ export const WORKER_BOJLER_PECAT_PATH = '/bojler-pecat';
 export const WORKER_BOJLER_PECAT_URL = new URL(WORKER_BOJLER_PECAT_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_REZIM_PATH = '/bojler-rezim';
 export const WORKER_BOJLER_REZIM_URL = new URL(WORKER_BOJLER_REZIM_PATH, WORKER_URL).href;
+/** História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. */
+export const WORKER_HISTORIA_PATH = '/historia';
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 

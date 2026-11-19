@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Plán dňa zo živých dát</title>
+        <style>
+            /* Návrh: Plán dňa na karte Teraz ráta so živým meraním (výroba, elektromer, bežiace
+               spotrebiče) a bojler na prebytky má prednosť pred práčkou, sušičkou a umývačkou.
+               Balík B, odhad energie bojlera z histórie (ii), sušička ide hneď po práčke (1).
+               Samostatný súbor, nič neimportuje z appky. Čísla v príkladoch sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --ink: #fff;
+                --dim: rgba(255, 255, 255, 0.68);
+                --line: rgba(255, 255, 255, 0.16);
+                --go: #b9f28c;
+                --go-ink: #14300c;
+                --glass: rgba(8, 16, 40, 0.3);
+                --card: rgba(255, 255, 255, 0.06);
+                --amber: #ffc24b;
+                --boil: #ff9f7a;
+                --cheap: #8fd3ff;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--ink);
+                font-family: var(--font);
+                font-size: 16px;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1120px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 48px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+                text-wrap: balance;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 44px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 23px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 17px;
+                font-weight: 800;
+            }
+            p,
+            ul,
+            ol {
+                margin: 0;
+                max-width: 72ch;
+            }
+            ul,
+            ol {
+                padding-left: 22px;
+                display: grid;
+                gap: 6px;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            code {
+                font-size: 0.92em;
+                background: var(--card);
+                padding: 1px 5px;
+                border-radius: 5px;
+            }
+            .lead {
+                font-size: 18px;
+                color: var(--dim);
+            }
+            .steps {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 12px;
+            }
+            .step {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                padding: 16px;
+                display: grid;
+                gap: 8px;
+                align-content: start;
+            }
+            .step b.n {
+                display: inline-grid;
+                place-items: center;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                background: var(--go);
+                color: var(--go-ink);
+                font-size: 14px;
+                margin-right: 6px;
+            }
+            .chart {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                padding: 12px;
+                overflow-x: auto;
+            }
+            .chart svg {
+                display: block;
+                width: 100%;
+                min-width: 640px;
+                height: auto;
+            }
+            .legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 18px;
+                font-size: 14px;
+                color: var(--dim);
+            }
+            .legend i {
+                display: inline-block;
+                width: 14px;
+                height: 10px;
+                border-radius: 3px;
+                margin-right: 6px;
+                vertical-align: middle;
+            }
+            .phones {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+            }
+            figcaption {
+                font-size: 14px;
+                color: var(--dim);
+            }
+            .phone {
+                background: linear-gradient(180deg, #3d6fb5 0%, #1d3a6e 60%, #13254a 100%);
+                border-radius: 28px;
+                padding: 18px 14px;
+                display: grid;
+                gap: 10px;
+                border: 1px solid var(--line);
+            }
+            .phone .hdr {
+                display: flex;
+                justify-content: space-between;
+                font-size: 14px;
+                color: var(--dim);
+            }
+            .tiles {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .tile {
+                background: var(--glass);
+                border-radius: 14px;
+                padding: 10px 12px;
+                display: grid;
+                gap: 2px;
+                min-height: 86px;
+                align-content: start;
+            }
+            .tile .nm {
+                font-size: 13px;
+                color: var(--dim);
+            }
+            .tile .v {
+                font-size: 24px;
+                font-weight: 850;
+                line-height: 1.1;
+            }
+            .tile .v.go {
+                color: var(--go);
+            }
+            .tile .v.boil {
+                color: var(--boil);
+            }
+            .tile .v.cheap {
+                color: var(--cheap);
+            }
+            .tile .nt {
+                font-size: 12.5px;
+                color: var(--dim);
+            }
+            .tile.bad {
+                outline: 2px dashed var(--amber);
+                outline-offset: -2px;
+            }
+            .warn {
+                font-size: 13px;
+                color: var(--amber);
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 15px;
+            }
+            .tbl {
+                overflow-x: auto;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+                font-size: 13px;
+            }
+            .q {
+                background: var(--card);
+                border-left: 4px solid var(--amber);
+                border-radius: 10px;
+                padding: 12px 14px;
+                display: grid;
+                gap: 6px;
+            }
+            .tag {
+                display: inline-block;
+                font-size: 12px;
+                font-weight: 800;
+                padding: 1px 8px;
+                border-radius: 999px;
+                background: var(--go);
+                color: var(--go-ink);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Plán dňa zo živých dát</h1>
+                <p class="lead">
+                    Karta Teraz, Plán dňa. Balík B: plán sa opraví podľa merania, ráta so skutočnou spotrebou domu a bojler na prebytky má
+                    prednosť pred práčkou, sušičkou aj umývačkou. Koľko bojler potrebuje, sa učí z posledných dní (ii). Sušička ide aj
+                    naďalej hneď po práčke (1).
+                </p>
+                <p class="dim">Návrh 19. 11. 2026, čaká na schválenie. Čísla v príkladoch sú ilustračné, nie z naozajstného dňa.</p>
+            </section>
+
+            <section>
+                <h2>Ako plán ráta dnes</h2>
+                <ul>
+                    <li>
+                        Výroba: do posledného bodu krivky meranie, potom hodinová predpoveď Open-Meteo bez úpravy (<code>dayKwAt</code>).
+                    </li>
+                    <li>Spotreba domu: celý deň pevných 0,4 kW (<code>HOUSE_BASE_KW</code>).</li>
+                    <li>Bežiace spotrebiče („Už beží“): odpočíta sa modelový odber programu od skutočného štartu.</li>
+                    <li>
+                        Bojler riadený zásuvkou: plán ho vôbec nevidí (<code>spotrebice</code> vo <code>web/render/teraz.js</code>), hoci si
+                        pri prebytku od 2,3 kW berie ~2 kW.
+                    </li>
+                    <li>
+                        Výkon teraz, elektromer (<code>sietKw</code>) ani stav bojlera do plánu nevstupujú. Ani to, že termostat bojler už
+                        vypol.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Čo sa zmení – päť krokov</h2>
+                <div class="steps">
+                    <div class="step">
+                        <h3><b class="n">1</b>Predpoveď opravená meraním</h3>
+                        <p>
+                            Pomer <i>meranie / predpoveď</i> za poslednú hodinu (len minúty s predpoveďou aspoň 0,3 kW). Na najbližšiu
+                            hodinu platí celý, do troch hodín sa vytratí k čistej predpovedi.
+                        </p>
+                        <p class="dim">
+                            Pomer sa obmedzí na 0,3–1,5. Kým sa od 1 nelíši aspoň o 15 %, plán ho nepoužije, aby neposkakoval (krok 5).
+                        </p>
+                    </div>
+                    <div class="step">
+                        <h3><b class="n">2</b>Skutočná spotreba domu</h3>
+                        <p>
+                            Z elektromera: <i>dom = výroba − dodávka</i>. Bez bežiacich spotrebičov (ich modelový odber) a bez príkonu
+                            bojlera zo zásuvky ostane <b>základ domu teraz</b>. Ten platí hodinu, potom sa do dvoch hodín vráti k 0,4 kW.
+                        </p>
+                        <p class="dim">
+                            Bez odpočtu bežiacich spotrebičov by sa ich odber rátal dvakrát. Meranie staršie ako 15 min sa nepoužije.
+                        </p>
+                    </div>
+                    <div class="step">
+                        <h3><b class="n">3</b>Bojler prvý</h3>
+                        <p>
+                            Plán najprv odsimuluje zásuvku nad rozpočtom slnka: zapne pri prebytku aspoň
+                            <code>zapKw</code> (dve merania za sebou), vypne pod <code>vypKw</code>, s minimálnym behom aj pauzou. Ohrev
+                            končí, keď bojler dostane dnešnú potrebu. Práčka, sušička a umývačka dostanú zvyšok.
+                        </p>
+                        <p class="dim">
+                            Ten istý výpočet ako vo Workeri (<code>shared/bojler.js</code>), prahy z hlásenia zásuvky. Keď je bojler
+                            <code>hotovo</code>, potrebuje 0.
+                        </p>
+                    </div>
+                    <div class="step">
+                        <h3><b class="n">4</b>„Teraz“ podľa merania</h3>
+                        <p>
+                            Prvá štvrťhodina rozpočtu je výkon panelov teraz bez základu domu, nie predpoveď. Po odpočte bežiacich
+                            spotrebičov a bojlera vyjde dodávka do siete z elektromera. Spotrebič dostane „teraz“, len keď ju naozaj pokryje
+                            jeho ohrev.
+                        </p>
+                    </div>
+                    <div class="step">
+                        <h3><b class="n">5</b>Pokojný plán</h3>
+                        <p>
+                            Merania prichádzajú každých 5 minút. Aby časy na dlaždiciach neskákali, oprava z kroku 1 sa použije až od 15 %
+                            rozdielu a pomer je z celej hodiny, nie z posledného bodu (5b).
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Bojler s prednosťou – na osi dňa</h2>
+                <p>
+                    Príklad o 10:00: predpoveď sľubuje okolo jednej 5 kW, strecha však za poslednú hodinu dala len 70 %. Bojler dnes ešte
+                    nehrial a z posledných dní potrebuje asi 3,2 kWh.
+                </p>
+                <div class="chart">
+                    <svg
+                        viewBox="0 0 720 300"
+                        role="img"
+                        aria-label="Os dňa od 8:00 do 17:00: predpoveď, opravená predpoveď, bojler, práčka, sušička"
+                    >
+                        <!-- os: 8:00 = x 40, 17:00 = x 700, 1 h = 73,3 px; výkon: 0 kW = y 230, 1 kW = 36 px -->
+                        <g stroke="rgba(255,255,255,0.12)">
+                            <line x1="40" y1="230" x2="700" y2="230" />
+                            <line x1="40" y1="158" x2="700" y2="158" />
+                            <line x1="40" y1="86" x2="700" y2="86" />
+                        </g>
+                        <g fill="rgba(255,255,255,0.6)" font-size="12">
+                            <text x="8" y="234">0</text>
+                            <text x="8" y="162">2 kW</text>
+                            <text x="8" y="90">4 kW</text>
+                            <text x="34" y="250">8</text>
+                            <text x="180" y="250">10</text>
+                            <text x="327" y="250">12</text>
+                            <text x="474" y="250">14</text>
+                            <text x="620" y="250">16</text>
+                        </g>
+                        <!-- teraz -->
+                        <line x1="187" y1="40" x2="187" y2="235" stroke="#fff" stroke-dasharray="3 4" />
+                        <text x="192" y="50" fill="#fff" font-size="12">teraz 10:00</text>
+                        <!-- predpoveď bez opravy -->
+                        <path
+                            d="M40 215 C 120 170, 180 120, 260 90 S 360 50, 400 52 S 520 80, 560 120 S 660 200, 700 222"
+                            fill="none"
+                            stroke="rgba(255,255,255,0.45)"
+                            stroke-width="2"
+                            stroke-dasharray="6 5"
+                        />
+                        <!-- meranie do teraz + opravená predpoveď -->
+                        <path d="M40 220 C 100 200, 150 180, 187 165" fill="none" stroke="var(--go)" stroke-width="3" />
+                        <path
+                            d="M187 165 C 250 150, 320 110, 380 72 S 420 56, 440 58 S 520 84, 560 120 S 660 200, 700 222"
+                            fill="none"
+                            stroke="var(--go)"
+                            stroke-width="2.5"
+                            stroke-dasharray="2 4"
+                        />
+                        <!-- pás spotrebičov -->
+                        <g font-size="12" font-weight="700">
+                            <rect x="278" y="262" width="118" height="16" rx="4" fill="var(--boil)" />
+                            <text x="284" y="274" fill="#3a1300">bojler 11:15–12:50</text>
+                            <rect x="398" y="262" width="144" height="16" rx="4" fill="var(--go)" />
+                            <text x="404" y="274" fill="var(--go-ink)">práčka 12:50–14:50</text>
+                            <rect x="544" y="262" width="110" height="16" rx="4" fill="#d9f7c2" />
+                            <text x="550" y="274" fill="var(--go-ink)">sušička –16:20</text>
+                            <rect
+                                x="232"
+                                y="282"
+                                width="400"
+                                height="12"
+                                rx="4"
+                                fill="none"
+                                stroke="rgba(255,255,255,0.35)"
+                                stroke-dasharray="4 3"
+                            />
+                            <text x="284" y="292" fill="rgba(255,255,255,0.6)" font-weight="400">umývačka sa dnes nezmestí – zajtra</text>
+                        </g>
+                    </svg>
+                </div>
+                <div class="legend">
+                    <span><i style="background: rgba(255, 255, 255, 0.45)"></i>predpoveď dnes (bez opravy)</span>
+                    <span><i style="background: var(--go)"></i>meranie a opravená predpoveď</span>
+                    <span><i style="background: var(--boil)"></i>bojler (simulácia zásuvky)</span>
+                </div>
+                <p class="dim">
+                    Bez úprav by plán povedal „práčka teraz“: podľa predpovede by bolo slnka dosť. V skutočnosti by práčka o 10:00 ťahala zo
+                    siete a o 11:15 by bojler aj tak nezapol, lebo by mu práčka zjedla prebytok.
+                </p>
+            </section>
+
+            <section>
+                <h2>Ako to uvidíš na karte Teraz</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <div class="hdr"><span>Teraz · 10:00</span><span>dnes</span></div>
+                            <div class="tiles">
+                                <div class="tile bad">
+                                    <span class="nm">Práčka</span><span class="v go">teraz</span><span class="nt">zo slnka</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Bojler</span><span class="v">čaká</span><span class="nt">na prebytok</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Sušička</span><span class="v">o 12:00</span><span class="nt">po práčke</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Umývačka</span><span class="v">o 13:45</span><span class="nt">zo slnka</span>
+                                </div>
+                            </div>
+                            <span class="warn">„teraz“ klame: elektromer práve ukazuje dodávku len 0,9 kW</span>
+                        </div>
+                        <figcaption>Dnes – plán vidí len predpoveď a bojler nepozná.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="phone">
+                            <div class="hdr"><span>Teraz · 10:00</span><span>dnes</span></div>
+                            <div class="tiles">
+                                <div class="tile">
+                                    <span class="nm">Práčka</span><span class="v">o 12:50</span><span class="nt">po bojleri</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Bojler</span><span class="v">čaká</span><span class="nt">zapne okolo 11:15</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Sušička</span><span class="v">o 14:50</span><span class="nt">po práčke</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Umývačka</span><span class="v">zajtra 10:30</span
+                                    ><span class="nt">dnes sa už nezmestí</span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>Po úprave – bojler najprv, ostatné podľa toho, čo ostane.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="phone">
+                            <div class="hdr"><span>Teraz · 12:45</span><span>dnes</span></div>
+                            <div class="tiles">
+                                <div class="tile">
+                                    <span class="nm">Práčka</span><span class="v go">teraz</span><span class="nt">zo slnka</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Bojler</span><span class="v">nahriaty</span><span class="nt">12:40 · 2,9 kWh</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Sušička</span><span class="v">o 14:45</span><span class="nt">po práčke</span>
+                                </div>
+                                <div class="tile">
+                                    <span class="nm">Umývačka</span><span class="v">o 13:15</span><span class="nt">zo slnka</span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>Bojler dohrial skôr a menej, než sa čakalo: uvoľnené slnko hneď dostane umývačka.</figcaption>
+                    </figure>
+                </div>
+                <p class="dim">
+                    Dlaždica bojlera ostáva taká, ako je dnes (<code>bojlerDlazdica</code>). Nový je len doplnok „zapne okolo …“ a „po
+                    bojleri“ pri spotrebiči, ktorý bojler posunul. Oboje je otázka 3 nižšie.
+                </p>
+            </section>
+
+            <section>
+                <h2>Texty</h2>
+                <div class="tbl">
+                    <table>
+                        <tr>
+                            <th>Kde</th>
+                            <th>Kedy</th>
+                            <th>Text</th>
+                        </tr>
+                        <tr>
+                            <td>Plán dňa, riadok spotrebiča</td>
+                            <td>bez bojlera by išiel skôr</td>
+                            <td>„po bojleri, ohrev chytí slnko“ (ako dnes „po práčke, …“)</td>
+                        </tr>
+                        <tr>
+                            <td>Dlaždica, doplnok</td>
+                            <td>to isté</td>
+                            <td>„po bojleri“</td>
+                        </tr>
+                        <tr>
+                            <td>Dlaždica Bojler, doplnok</td>
+                            <td>čaká a plán vie, kedy zapne</td>
+                            <td>„zapne okolo 11:15“</td>
+                        </tr>
+                        <tr>
+                            <td>Panel Bojler dnes</td>
+                            <td>bojler ešte nedohrial</td>
+                            <td>„Podľa plánu dohreje okolo 12:50.“ / „Dnes ho slnko asi nedohreje.“</td>
+                        </tr>
+                        <tr>
+                            <td>Plán dňa, riadok sušičky</td>
+                            <td>po práčke počas ohrevu bojlera</td>
+                            <td>bez zmeny: „po práčke, …“ alebo „Slnko stačí len na pranie, sušička pôjde zo siete.“</td>
+                        </tr>
+                    </table>
+                </div>
+            </section>
+
+            <section>
+                <h2>Koľko bojler potrebuje (ii)</h2>
+                <ul>
+                    <li>
+                        Dnes Worker drží len dnešný záznam bojlera (<code>b:&lt;elektráreň&gt;</code> v Durable Objecte
+                        <code>UcetHuawei</code>). Nový deň začína prázdny.
+                    </li>
+                    <li>
+                        Nové: pri prvom hlásení zásuvky v novom dni pripíše Worker zhrnutie včerajška do
+                        <code>hd:<code>bh:&lt;elektráreň&gt;</code>lt;elektráreň<code>bh:&lt;elektráreň&gt;</code>gt;</code> (spolu s
+                        hodinovými súhrnmi z <code>plan-dna-ucenie.html</code>): dátum, energia ohrevu (Wh, aj tá zo siete) a či termostat
+                        vypol. Najviac 60 dní, jeden zápis za deň. Nová trieda ani migrácia netreba.
+                    </li>
+                    <li>Telefón si históriu stiahne raz denne (<code>/historia</code>). Staršia appka o nej nevie a nič sa jej nezmení.</li>
+                    <li>
+                        Odhad (<code>shared/bojler.js</code>): medián energie dní, keď termostat vypol. Vtedy je to celá potreba dňa, inak
+                        len dolná hranica. Obmedzený na 0,5–6 kWh. Kým takéto dni nie sú aspoň tri, platia 2 kWh z <code>MOZEM_ITEMS</code>.
+                    </li>
+                    <li>Dnešná potreba = odhad − čo dnes už nahrial. Keď je <code>hotovo</code>, 0.</li>
+                    <li>
+                        História sa začne zbierať až po nasadení, takže prvé dni pôjde plán s 2 kWh. Preto navrhujem nasadiť históriu ako
+                        prvý, samostatný pull request.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Sušička hneď po práčke (1) a bojler</h2>
+                <p>
+                    Sušička mokrú bielizeň nenechá čakať, ani keď práve hreje bojler. Fyzicky sa vtedy stane toto: sušička zoberie 1,5 kW,
+                    prebytok bez bojlera klesne pod <code>vypKw</code> a zásuvka bojler sama vypne. Plán preto ráta v dvoch krokoch:
+                </p>
+                <ol>
+                    <li>bojler prvý, z toho čas práčky,</li>
+                    <li>
+                        práčku a hneď po nej sušičku položí natvrdo, potom bojler odsimuluje znova nad tým, čo ostane. Z toho vyjde jeho
+                        skutočný koniec aj miesto pre umývačku.
+                    </li>
+                </ol>
+                <p class="dim">
+                    Rovnako sa ráta s tým, čo človek zapol sám: bežiaci spotrebič z „Už beží“ si berie rozpočet pred bojlerom, lebo zásuvka
+                    mu tiež ustúpi.
+                </p>
+            </section>
+
+            <section>
+                <h2>Čo zostáva rovnaké</h2>
+                <ul>
+                    <li>Auto ide naďalej posledné a berie silné slnko, ktoré ostane.</li>
+                    <li>Bojler bez zásuvky (alebo zásuvka mlčí dlhšie ako <code>riadenyHod</code>) je v pláne ako dnes.</li>
+                    <li>Ručný režim bojlera: plán bojler nesimuluje. Keď relé hreje, ráta sa ako bežiaci, kým nedostane potrebu.</li>
+                    <li>Rozhodovanie zásuvky vo Workeri sa nemení.</li>
+                    <li>Bez elektromera (kiosk FusionSolar) sa použije len krok 1. Bez merania vôbec ostáva plán, ako je dnes.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Kde sa to zmení</h2>
+                <div class="tbl">
+                    <table>
+                        <tr>
+                            <th>Súbor</th>
+                            <th>Zmena</th>
+                        </tr>
+                        <tr>
+                            <td><code>shared/config.js</code></td>
+                            <td>
+                                nové <code>PLAN_ZIVE</code>: okno pomeru 60 min, vytratenie do 180 min, rozsah 0,3–1,5, prah 15 %, platnosť
+                                merania 15 min, dni histórie 14
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><code>shared/day-plan.js</code> / <code>shared/chart-model.js</code></td>
+                            <td>oprava predpovede (krok 1) a prvá štvrťhodina z merania (krok 4)</td>
+                        </tr>
+                        <tr>
+                            <td><code>shared/mozem-jadro.js</code></td>
+                            <td><code>freeKw</code> so základom domu z elektromera (krok 2), aj pre odpovede Môžem?</td>
+                        </tr>
+                        <tr>
+                            <td><code>shared/bojler.js</code></td>
+                            <td>potreba z histórie a simulácia zásuvky nad rozpočtom (z tých istých prahov)</td>
+                        </tr>
+                        <tr>
+                            <td><code>shared/plan-dna.js</code></td>
+                            <td>bojler pred domácimi spotrebičmi, druhý prechod po sušičke, príznak „po bojleri“</td>
+                        </tr>
+                        <tr>
+                            <td><code>web/render/teraz.js</code></td>
+                            <td>bojler do plánu ako vstup (<code>PlanInput.bojler</code>), nie len vyradenie</td>
+                        </tr>
+                        <tr>
+                            <td><code>worker/src/ucet.js</code></td>
+                            <td>história <code>hd:</code> a endpoint <code>/historia</code> (podľa <code>plan-dna-ucenie.html</code>)</td>
+                        </tr>
+                        <tr>
+                            <td><code>shared/messages-mozem.js</code>, <code>shared/teraz-bojler.js</code></td>
+                            <td>texty „po bojleri“, „zapne okolo …“, „dohreje okolo …“</td>
+                        </tr>
+                    </table>
+                </div>
+                <p class="dim">
+                    Všetko výpočtové je v <code>shared/</code> s časom a meraním v parametroch. Pokryje sa jednotkovými testami, e2e testy
+                    počítajú texty tou istou funkciou. Ranné oznámenie počíta plán v telefóne (<code>sw.js</code>). Pri implementácii treba
+                    overiť, či má pri zobudení stav bojlera, inak by ráno radilo bez neho.
+                </p>
+            </section>
+
+            <section>
+                <h2>Rozhodnuté 19. 11. 2026</h2>
+                <ul>
+                    <li>Balík B, bojler s prednosťou, potreba bojlera z histórie (ii), sušička hneď po práčke (1).</li>
+                    <li>
+                        Všetky štyri odporúčania nižšie: oprava predpovede na jednom mieste (aj graf dňa), pokojný plán 5b, bojler ukázaný
+                        (A), najprv história bojlera, potom plán.
+                    </li>
+                    <li>K histórii pribudne učenie z reálnych dát. Jeho podoba sa ešte vyberá.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Rozhodnutia (pôvodné možnosti)</h2>
+                <div class="q">
+                    <h3>1. Oprava predpovede aj v grafe dňa?</h3>
+                    <p>
+                        <b>A</b> – len v rozpočte plánu a Môžem?. Graf dňa ukazuje čistú predpoveď. Jednoduchšie, ale graf môže hovoriť
+                        „slnko“ tam, kde plán už nie.<br />
+                        <b>B</b> – na jednom mieste (<code>dayKwAt</code>), takže graf dňa, farba pozadia, karta Dnes aj plán hovoria to
+                        isté. Mení to vzhľad grafu po čase „teraz“. Treba overiť, čo všetko z <code>dayKwAt</code> číta.
+                    </p>
+                    <p><span class="tag">odporúčam B</span> – jedno miesto pravdy.</p>
+                </div>
+                <div class="q">
+                    <h3>2. Ako upokojiť plán (krok 5)?</h3>
+                    <p>
+                        <b>5a</b> – appka si pamätá naposledy ukázaný čas spotrebiča a zmení ho až pri posune aspoň o 30 min alebo pri zmene
+                        slnko ↔ sieť. Najpokojnejšie, ale pribudne stav mimo prekreslenia.<br />
+                        <b>5b</b> – len prah 15 % a pomer z celej hodiny. Bez nového stavu.
+                    </p>
+                    <p><span class="tag">odporúčam 5b</span> – 5a doplniť, len ak to na telefóne bude skákať.</p>
+                </div>
+                <div class="q">
+                    <h3>3. Ukázať, čo urobí bojler?</h3>
+                    <p>
+                        <b>A</b> – áno: „po bojleri“ pri spotrebiči, „zapne okolo …“ na dlaždici, „dohreje okolo …“ v paneli.<br />
+                        <b>B</b> – len „po bojleri“. Bojler ostane bez predpovede, aby appka nesľubovala, čo nevie.<br />
+                        <b>C</b> – nič. Plán len potichu posunie časy.
+                    </p>
+                    <p><span class="tag">odporúčam A</span> – inak nie je jasné, prečo sa práčka posunula.</p>
+                </div>
+                <div class="q">
+                    <h3>4. Poradie nasadenia</h3>
+                    <p>
+                        <b>A</b> – najprv história bojlera vo Workeri (malý PR), potom plán. Kým sa plán dorobí, budú dáta.<br />
+                        <b>B</b> – všetko v jednom PR.
+                    </p>
+                    <p><span class="tag">odporúčam A</span></p>
+                </div>
+            </section>
+
+            <section>
+                <h2>Ako sa to overí</h2>
+                <ul>
+                    <li>
+                        Jednotkové testy: oprava a jej obmedzenia, základ domu bez dvojitého počítania, simulácia zásuvky, odhad z histórie,
+                        druhý prechod so sušičkou.
+                    </li>
+                    <li>
+                        <code>test/golden/forecast.json</code> by sa nemal zmeniť, lebo predpoveď sama ostáva. Ak sa zmení, zdôvodní sa v
+                        PR.
+                    </li>
+                    <li>Na S22 v slnečný aj premenlivý deň: či „teraz“ sedí s elektromerom a či časy neskáču.</li>
+                </ul>
+            </section>
+        </main>
+    </body>
+</html>

@@ -8,6 +8,7 @@ import {
     handleBojlerOznam,
     handleBojlerPecat,
     handleBojlerRezim,
+    handleHistoria,
     handlePripoj,
     handlePv,
     handleRequest,
@@ -1249,4 +1250,37 @@ test('Durable Object: zlé heslo zásuvky nezastaví rozhodovanie, bez merania b
     assert.equal((await (await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2200, e: 1 }), env, po(17))).json()).zapni, false);
     // Pripojenie a prvé meranie objektu (pečať zásuvky token nemá); ďalšie už z objektu.
     assert.equal(s.prihlasenia(), 2);
+});
+
+test('história: Durable Object skladá hodiny z meraní a deň bojlera, telefón ju dostane cez /historia', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom({ sietW: () => -1409 });
+    const historia = async (/** @type {string} */ pecat, /** @type {number} */ m) =>
+        handleHistoria(post('/historia', JSON.stringify({ pecat })), env, po(m));
+    assert.deepEqual(await (await historia(telefon, 0)).json(), { dni: [] }, 'zatiaľ nič');
+    // 13:01 a 13:06 miestneho času: dve merania, 14:01 uzavrie hodinu 13. Bojler hreje 2 kW - do domu nepatrí.
+    const pv = (await (await handlePv(pvRequest(telefon), env, po(1), s.impl)).json()).pv;
+    await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2000, e: 100 }), env, po(2));
+    await handlePv(pvRequest(telefon), env, po(6), s.impl);
+    await handlePv(pvRequest(telefon), env, po(61), s.impl);
+    const { dni } = await (await historia(telefon, 62)).json();
+    assert.equal(dni.length, 1);
+    assert.equal(dni[0].d, '2026-09-05');
+    const dom = Math.round((pv.realTimePowerKw + 1.409) * 1000) / 1000;
+    const bezBojlera = Math.round((pv.realTimePowerKw + 1.409 - 2) * 1000) / 1000;
+    assert.deepEqual(dni[0].h[13], [pv.realTimePowerKw, Math.round(((dom + bezBojlera) / 2) * 1000) / 1000, 2]);
+    assert.equal(dni[0].b, null);
+    // Prvý dopyt zásuvky na druhý deň uzavrie deň bojlera.
+    await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 10, e: 1300 }), env, po(30));
+    await handleBojler(bojlerReq({ pecat: zasuvka, rele: false, w: 0, e: 1300 }), env, po(13 * 60));
+    const dalsi = (await (await historia(telefon, 13 * 60 + 1)).json()).dni;
+    assert.deepEqual(dalsi[0].b, { wh: 1200, hotovo: true });
+    assert.deepEqual(dalsi[0].h[13], dni[0].h[13], 'hodiny ostali');
+    // Iba pečať telefónu Northbound, nie zdieľaný odkaz; bez Durable Objects 503.
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = /** @type {any} */ (await otvor(key, telefon, NOW));
+    const zdielana = await zapecat(key, { sposob: 'huawei-northbound', pristup: obsah.pristup, platiDo: po(60).getTime() });
+    assert.equal((await historia(zdielana, 1)).status, 400);
+    assert.equal((await handleHistoria(post('/historia', 'nie json'), env, NOW)).status, 400);
+    assert.equal((await handleHistoria(post('/historia', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
+    assert.equal((await handleRequest(post('/historia', JSON.stringify({ pecat: telefon })), env, po(14 * 60))).status, 200);
 });

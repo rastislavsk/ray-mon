@@ -27,6 +27,26 @@ Odložené 22. 10. 2026. Zdieľanie nastavenia elektrárne musí v appke z obcho
   TWA + Glance (Android); Capacitor/Swift + WidgetKit (iOS). Každá potrebuje `/widget` s výpočtom
   v `shared/`, nastavenie cez `#nastavenie=…` a narazí na limit Huawei.
 
+## S termínom – vrátiť sa k tomu
+
+Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrhy/plan-dna-zive-data.html`,
+`docs/navrhy/plan-dna-ucenie.html`). Termín je odhad, kedy bude dosť dát. Na každý je nastavená pripomienka
+(naplánovaná úloha v appke Claude).
+
+- **7. 12. 2026 – Pokojný plán 5a?** Po ~2 týždňoch Plánu dňa zo živých dát na S22 overiť, či časy na
+  dlaždiciach neskáču. Ak áno, doplniť pamäť naposledy ukázaného času (posun aspoň o 30 min alebo zmena
+  slnko ↔ sieť). Ak nie, riadok zmazať.
+- **11. 1. 2027 – Kontrola plánu (f):** porovnať plánovaný podiel slnka s tým, čo beh naozaj dostal (história behov
+  - meranie), a podľa toho doladiť rezervu na mrak (`DEN_TRIEDA.reserve`, `PLAN_DNA.zoSiete`). Treba ~6 týždňov
+    behov a opravenej predpovede.
+- **1. 2. 2027 – Programy spotrebičov (d) a kedy spúšťaš (e):** z histórie behov a elektromera naučiť skutočnú
+  dĺžku a odber programov (`runMin`, `runKwh`, ohrevy) a okná, keď domácnosť spotrebiče naozaj púšťa. Pozor:
+  hodinové súhrny na odber programu nestačia, treba 5-minútové meranie okolo behov. Bod e mení radu, preto najprv
+  mockup.
+- **1. 3. 2027 – Model M2:** nad tými istými dátami (už 3+ mesiace a prechod zimy do jari) skúsiť malú lineárnu
+  regresiu (hodina, výška slnka, oblačnosť, teplota, deň v týždni) a porovnať s tabuľkami M1 spätným testom.
+  Nasadiť, len ak je zreteľne presnejšia.
+
 ## Funkcie na neskôr
 
 - **Porovnanie s FusionSolar – vyhodnotiť a zmazať** (19. 11. 2026): Worker dočasne zapisuje do logu riadky

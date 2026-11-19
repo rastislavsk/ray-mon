@@ -80,8 +80,9 @@ function zapis(store, zmena, o) {
     const now = new Date();
     const tz = s.site.timezone;
     // `?? []`: starý web/state.js z cache po nasadení pole bezi nemá.
-    const bezi = zmena(s.bezi ?? [], id, localDateKey(now, tz), localMinutes(now, tz));
-    saveBezi(bezi);
+    const today = localDateKey(now, tz);
+    const bezi = zmena(s.bezi ?? [], id, today, localMinutes(now, tz));
+    saveBezi(bezi, today);
     store.setState({ bezi, now });
     objednajKoniec(store, id, o);
 }
