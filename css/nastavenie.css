@@ -615,3 +615,49 @@
     display: grid;
     gap: 4px;
 }
+
+/* Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): počet dní pri nadpise a dva malé grafy. */
+.ns-ucenie-h {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+}
+.ns-ucenie-h small {
+    font-weight: 400;
+    color: var(--dim);
+}
+.ns-ucenie-grafy {
+    display: grid;
+    gap: 10px;
+}
+.ns-ucenie-grafy figure {
+    margin: 0;
+    display: grid;
+    gap: 4px;
+}
+.ns-ucenie-grafy figcaption {
+    font-size: 12.5px;
+    color: var(--dim);
+}
+.ns-ucenie-grafy svg {
+    display: block;
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+}
+.ns-ucenie-grafy line {
+    stroke: rgba(255, 255, 255, 0.4);
+    stroke-dasharray: 3 3;
+}
+.ns-ucenie-grafy rect[data-tone='viac'] {
+    fill: var(--yes);
+}
+.ns-ucenie-grafy rect[data-tone='menej'] {
+    fill: var(--costly);
+}
+.ns-ucenie-grafy polyline {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.5;
+}

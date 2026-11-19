@@ -24,6 +24,7 @@ import {
     saveSettings,
     saveSucty,
 } from './storage.js';
+import { obnovUcenie } from './ucenie.js';
 
 /**
  * Polia stavu, ktoré obnova číta a zapisuje.
@@ -43,6 +44,7 @@ import {
  *   doma: string[],
  *   ranna: import('../shared/den-trieda.js').RannaTrieda | null,
  *   bojler: import('../shared/bojler.js').BojlerInfo | null,
+ *   ucenie: import('../shared/ucenie.js').Naucene | null,
  * }} RefreshState
  * @typedef {{ get: () => RefreshState, setState: (patch: Partial<RefreshState>) => void }} RefreshStore
  */
@@ -221,6 +223,8 @@ export function createRefresh(store) {
         // appka po návrate z pozadia neopýta, výpadok nehlási.
         store.setState({ forecast: result.forecast, loading: false, now, pokusAt: now.getTime(), dayLog, ...pecat, ...meranie, ...bojler });
         zapamatajRannu(store);
+        // Učenie z histórie (web/ucenie.js): históriu z Workera stiahne raz za deň, model prepočíta.
+        void obnovUcenie(store);
     };
     return ({ skus = false } = {}) => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.

@@ -10,6 +10,7 @@ import {
     BOJLER_OZNAM_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     DOMA_STORAGE_KEY,
+    HISTORIA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
@@ -27,6 +28,7 @@ import {
     STORAGE_KEYS,
     SUCTY_STORAGE_KEY,
     TRASY_STORAGE_KEY,
+    UCENIE_OD_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
@@ -34,6 +36,8 @@ import { parseBezi } from '../shared/bezi.js';
 import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parsePredpovedHist, pridajBehy, snimkaPredpovede } from '../shared/historia.js';
+import { parseHistoria } from '../shared/ucenie.js';
+import { DATE_RE } from '../shared/valid.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { parseRanna } from '../shared/den-trieda.js';
 import { parseOznamenia } from '../shared/oznamenia.js';
@@ -324,6 +328,37 @@ export function saveBezi(list, today) {
     const hist = readJson(BEHY_HIST_STORAGE_KEY, parseBezi, /** @type {import('../shared/bezi.js').Zapis[]} */ ([]));
     write(BEHY_HIST_STORAGE_KEY, JSON.stringify(pridajBehy(hist, list, today)));
     return write(BEZI_STORAGE_KEY, JSON.stringify(list));
+}
+
+/**
+ * Vstupy učenia Plánu dňa (shared/ucenie.js): história z Workera stiahnutá v deň `d`, snímky predpovede, behy a od
+ * ktorého dňa sa appka učí („Začať odznova“). Bez úložiska prázdne.
+ * @returns {{ historia: { d: string, dni: import('../shared/historia.js').DenHistorie[] } | null,
+ *   snimky: import('../shared/historia.js').SnimkaPredpovede[], behy: import('../shared/bezi.js').Zapis[], od: string | null }}
+ */
+export function loadUcenie() {
+    const historia = readJson(
+        HISTORIA_STORAGE_KEY,
+        (/** @type {any} */ x) => (x && typeof x.d === 'string' && DATE_RE.test(x.d) ? { d: x.d, dni: parseHistoria(x.dni) } : null),
+        null,
+    );
+    const od = read(UCENIE_OD_STORAGE_KEY);
+    return {
+        historia,
+        snimky: readJson(PREDPOVED_HIST_STORAGE_KEY, parsePredpovedHist, []),
+        behy: readJson(BEHY_HIST_STORAGE_KEY, parseBezi, []),
+        od: od && DATE_RE.test(od) ? od : null,
+    };
+}
+
+/** @param {{ d: string, dni: import('../shared/historia.js').DenHistorie[] }} h @returns {boolean} podarilo sa? */
+export function saveHistoria(h) {
+    return write(HISTORIA_STORAGE_KEY, JSON.stringify(h));
+}
+
+/** Od ktorého dňa sa appka učí. @param {string} d @returns {boolean} podarilo sa? */
+export function saveUcenieOd(d) {
+    return write(UCENIE_OD_STORAGE_KEY, d);
 }
 
 /**

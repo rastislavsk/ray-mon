@@ -11,10 +11,11 @@ import { bandAt, scheduleFor, smartTier } from './tariff.js';
  * @typedef {{ now: Date, tariff: import('./config.js').Tariff, site: import('./config.js').Site,
  *   plant: import('./config.js').Plant, pv: import('./kiosk.js').PvData | null,
  *   forecast: import('./solar.js').Forecast | null, pokusAt?: number, bezi?: import('./bezi.js').Zapis[],
- *   bojler?: import('./bojler.js').BojlerInfo | null }} PlanInput
+ *   bojler?: import('./bojler.js').BojlerInfo | null, ucenie?: import('./ucenie.js').Naucene | null }} PlanInput
  * `pokusAt`: kedy appka naposledy dokončila pokus o stiahnutie dát (pvFreshness v hero-model.js). `bezi`: čo človek
  * zapol („Zapol som“, shared/bezi.js) - Plán dňa to nerozvrhuje a ráta s tým (shared/plan-dna.js). `bojler`: posledné
- * hlásenie zásuvky s bojlerom na prebytky - Plán dňa s ním ráta ako s prvým spotrebičom.
+ * hlásenie zásuvky s bojlerom na prebytky - Plán dňa s ním ráta ako s prvým spotrebičom. `ucenie`: čo sa appka naučila
+ * z histórie (shared/ucenie.js) - spotreba domu a potreba bojlera.
  */
 /**
  * Štvrťhodina plánu. `kw` je výkon z krivky dňa (merané, potom predpoveď), nie živý údaj -
