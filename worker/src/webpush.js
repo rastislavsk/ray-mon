@@ -61,15 +61,86 @@ export async function vapidAuth(endpoint, { key, k }, now) {
     return `vapid t=${unsigned}.${b64url(sig)}, k=${k}`;
 }
 
+/** Bajty za sebou. @param {...Uint8Array} casti @returns {Uint8Array<ArrayBuffer>} */
+function spoj(...casti) {
+    const out = new Uint8Array(casti.reduce((n, c) => n + c.length, 0));
+    let i = 0;
+    for (const c of casti) {
+        out.set(c, i);
+        i += c.length;
+    }
+    return out;
+}
+
+/** HKDF-SHA-256 (extract aj expand) na `dlzka` bajtov. @param {BufferSource} salt @param {BufferSource} ikm @param {BufferSource} info @param {number} dlzka */
+async function hkdf(salt, ikm, info, dlzka) {
+    const key = await crypto.subtle.importKey('raw', ikm, 'HKDF', false, ['deriveBits']);
+    return new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', hash: 'SHA-256', salt, info }, key, dlzka * 8));
+}
+
+const TEXT = new TextEncoder();
+
 /**
- * Pošle prázdny push. Vráti stav odpovede push služby: 201 doručené na službu, 404/410 odber už
- * neplatí (Worker ho zmaže).
- * @param {string} endpoint @param {{ key: CryptoKey, k: string }} klic @param {Date} now @param {typeof fetch} fetchImpl
+ * Telo pushu s obsahom (docs/navrhy/spotrebic-koniec-opakovanie.html): `text` zašifrovaný pre odber s kľúčmi `keys`
+ * podľa RFC 8291 (aes128gcm, jeden záznam) - prečítať ho vie len telefón. Kľúč odosielateľa a soľ sú pri každom
+ * pushi nové; `pevne` ich dá len test so známymi hodnotami z RFC.
+ * @param {string} text @param {{ p256dh: string, auth: string }} keys
+ * @param {{ as?: CryptoKeyPair, salt?: Uint8Array<ArrayBuffer> }} [pevne]
  */
-export async function posliPush(endpoint, klic, now, fetchImpl) {
+export async function zasifruj(text, keys, pevne = {}) {
+    const uaPub = fromB64url(keys.p256dh);
+    const as =
+        pevne.as ??
+        /** @type {CryptoKeyPair} */ (await crypto.subtle.generateKey({ name: 'ECDH', namedCurve: 'P-256' }, true, ['deriveBits']));
+    const asPub = new Uint8Array(/** @type {ArrayBuffer} */ (await crypto.subtle.exportKey('raw', as.publicKey)));
+    const ua = await crypto.subtle.importKey('raw', uaPub, { name: 'ECDH', namedCurve: 'P-256' }, false, []);
+    const ecdh = new Uint8Array(await crypto.subtle.deriveBits(/** @type {any} */ ({ name: 'ECDH', public: ua }), as.privateKey, 256));
+    const ikm = await hkdf(fromB64url(keys.auth), ecdh, spoj(TEXT.encode('WebPush: info\0'), uaPub, asPub), 32);
+    const salt = pevne.salt ?? crypto.getRandomValues(new Uint8Array(16));
+    const cek = await hkdf(salt, ikm, TEXT.encode('Content-Encoding: aes128gcm\0'), 16);
+    const nonce = await hkdf(salt, ikm, TEXT.encode('Content-Encoding: nonce\0'), 12);
+    const key = await crypto.subtle.importKey('raw', cek, 'AES-GCM', false, ['encrypt']);
+    // Posledný (a jediný) záznam končí oddeľovačom 2.
+    const sifra = new Uint8Array(
+        await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce }, key, spoj(TEXT.encode(text), new Uint8Array([2]))),
+    );
+    const hlava = new Uint8Array(16 + 4 + 1 + asPub.length);
+    hlava.set(salt);
+    new DataView(hlava.buffer).setUint32(16, 4096);
+    hlava[20] = asPub.length;
+    hlava.set(asPub, 21);
+    return spoj(hlava, sifra);
+}
+
+/**
+ * Pošle push: prázdny (ranné oznámenie si text vypočíta service worker), alebo s obsahom `obsah` - JSON zašifrovaný
+ * pre kľúče odberu. Vráti stav odpovede push služby: 201 doručené na službu, 404/410 odber už neplatí (Worker ho zmaže).
+ * @param {string} endpoint @param {{ key: CryptoKey, k: string }} klic @param {Date} now @param {typeof fetch} fetchImpl
+ * @param {{ data: object, keys: { p256dh: string, auth: string } }} [obsah]
+ */
+export async function posliPush(endpoint, klic, now, fetchImpl, obsah) {
+    const telo = obsah ? await zasifruj(JSON.stringify(obsah.data), obsah.keys) : null;
     const res = await fetchImpl(endpoint, {
         method: 'POST',
-        headers: { authorization: await vapidAuth(endpoint, klic, now), ttl: String(TTL_S), urgency: 'high', 'content-length': '0' },
+        headers: {
+            authorization: await vapidAuth(endpoint, klic, now),
+            ttl: String(TTL_S),
+            urgency: 'high',
+            ...(telo ? { 'content-encoding': 'aes128gcm', 'content-type': 'application/octet-stream' } : { 'content-length': '0' }),
+        },
+        ...(telo ? { body: telo } : {}),
     });
     return res.status;
+}
+
+/**
+ * Kľúče odberu z tela požiadavky (`p256dh` verejný kľúč P-256, `auth` 16 bajtov), inak null.
+ * @param {unknown} keys @returns {{ p256dh: string, auth: string } | null}
+ */
+export function klucOdberu(keys) {
+    if (!keys || typeof keys !== 'object') return null;
+    const { p256dh, auth } = /** @type {Record<string, unknown>} */ (keys);
+    const b64 = (/** @type {unknown} */ s, /** @type {number} */ n) =>
+        typeof s === 'string' && /^[A-Za-z0-9_-]+$/.test(s) && fromB64url(s).length === n;
+    return b64(p256dh, 65) && b64(auth, 16) ? { p256dh: /** @type {string} */ (p256dh), auth: /** @type {string} */ (auth) } : null;
 }

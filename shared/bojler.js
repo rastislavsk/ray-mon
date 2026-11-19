@@ -180,6 +180,26 @@ export function bojlerStav(b, now) {
     return b.w >= BOJLER.hotovoW ? 'hreje' : 'hotovo';
 }
 
+/** Hreje bojler naozaj (relé zapnuté a príkon aspoň BOJLER.hotovoW)? @param {{ rele: boolean, w: number }} b */
+const hrejeTo = (b) => b.rele && b.w >= BOJLER.hotovoW;
+
+/**
+ * Zmena ohrevu medzi dvoma hláseniami zásuvky pre oznámenie (docs/navrhy/spotrebic-koniec-opakovanie.html): zapol sa či
+ * vypol a prečo - termostat (relé ostalo zapnuté), ručne v Shelly (ručný režim), zásuvka nemala spojenie (od
+ * predchádzajúceho hlásenia prešlo viac než BOJLER.tichoMin - vypla sa sama), inak appka podľa prebytku `kw`.
+ * Bez predchádzajúceho hlásenia či bez zmeny null.
+ * @param {BojlerInfo | null} stary @param {BojlerInfo} novy
+ * @returns {{ zapol: boolean, dovod: 'appka' | 'termostat' | 'rucne' | 'spojenie', kw: number | null } | null}
+ */
+export function zmenaOhrevu(stary, novy) {
+    if (!stary || hrejeTo(stary) === hrejeTo(novy)) return null;
+    const zapol = hrejeTo(novy);
+    const rele = zapol ? stary.rele : novy.rele;
+    const ticho = novy.kontaktAt - stary.kontaktAt > BOJLER.tichoMin * MIN;
+    const dovod = rele ? 'termostat' : !zapol && ticho ? 'spojenie' : novy.rucne ? 'rucne' : 'appka';
+    return { zapol, dovod, kw: novy.prebytokKw };
+}
+
 /**
  * Súčty dňa pre panel: počet zapnutí, ako dlho bojler hrial (minúty), energia zo slnka a zo siete (kWh).
  * @param {Den} den

@@ -1343,7 +1343,8 @@
     background: rgba(255, 255, 255, 0.14);
 }
 /* Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html): čo človek zapol, je krémové - nie zelené ani modré, tie radia
-   zapnúť. Čo dnes dobehlo, je na slabšom skle s čiarkovaným okrajom. Rozmery a riadky má ako každá dlaždica. */
+   zapnúť. Rozmery a riadky má ako každá dlaždica. Čo dobehlo, vlastnú dlaždicu nemá - dlaždica s ďalším časom
+   má odrážku „dnes už 1×“ (docs/navrhy/spotrebic-koniec-opakovanie.html). */
 .dl[data-tone='bezi'] {
     background: #fff4d6;
     color: #3a2a00;
@@ -1355,14 +1356,6 @@
 .dl[data-tone='bezi'] .podiel {
     box-shadow: 0 0 0 1.5px rgba(58, 42, 0, 0.3);
 }
-.dl[data-tone='hotovo'] {
-    background: rgba(8, 16, 40, 0.18);
-    box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3);
-    color: #fff;
-}
-.dl[data-tone='hotovo'] .dl-ico {
-    background: rgba(255, 255, 255, 0.14);
-}
 .os-usek[data-tone='bezi'] {
     background: #fff4d6;
     box-shadow: 0 0 18px rgba(255, 244, 214, 0.6);
@@ -1371,7 +1364,7 @@
     background: #fff4d6;
     color: #3a2a00;
 }
-/* Zápis v detaile spotrebiča: „Už beží“, potom čas zapnutia s − a + a „Nebeží“. */
+/* Zápis v detaile spotrebiča: „Už beží“, potom zvyšok programu či čas zapnutia s − a +, oznámenie o konci a „Nebeží“. */
 .vec-zapis {
     display: grid;
     gap: 10px;
@@ -1403,6 +1396,76 @@
 .vec-krok:disabled {
     cursor: default;
     opacity: 0.4;
+}
+/* Zvyšok programu práčky a sušičky (docs/navrhy/spotrebic-koniec-opakovanie.html): hodiny a minúty vedľa seba, každé
+   s − a +, nad nimi „Zostáva“, pod nimi kedy skončí. */
+.vec-zvysok {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+    padding: 10px 8px;
+    border-radius: 18px;
+    background: rgba(255, 244, 214, 0.1);
+}
+.vec-zost-ttl {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.vec-zost {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 18px;
+}
+.vec-zost .vec-posun {
+    gap: 8px;
+}
+.vec-zost .vec-posun span {
+    min-width: 4.2em;
+    text-align: center;
+    font-size: 20px;
+}
+.vec-konci {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+}
+/* Čo dnes už dobehlo: riadok na behu, čas vpravo. */
+.vec-hotove {
+    list-style: none;
+    margin: 12px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 6px;
+}
+.vec-hotove li {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    font-size: 14px;
+    font-weight: 700;
+}
+/* Fajka je kreslená - písmo appky je podmnožina bez znaku ✓. */
+.vec-hotove li::before {
+    content: '';
+    flex: none;
+    width: 5px;
+    height: 10px;
+    margin: 0 4px 3px 2px;
+    border: solid var(--yes);
+    border-width: 0 2.5px 2.5px 0;
+    transform: rotate(45deg);
+}
+.vec-hotove li span {
+    margin-left: auto;
+    color: var(--dim);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
 }
 /* Bodka pri ikone: bojler riadi zásuvka - beží (zelená), čaká (biela), mlčí (jantárová). */
 .dl-ico[data-riadi] {
@@ -1598,4 +1661,29 @@
     font-style: normal;
     font-weight: 700;
     text-align: right;
+}
+/* Vypínač oznámení bojlera na konci panela Bojler dnes (docs/navrhy/spotrebic-koniec-opakovanie.html); prepínač .tg
+   je spoločný s Nastavením (css/nastavenie.css). */
+.bj-oznam {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 14px 0 0;
+    border: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    background: none;
+    color: inherit;
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+.bj-oznam span {
+    flex: 1;
+}
+.bj-oznam:disabled {
+    cursor: default;
+    opacity: 0.6;
 }

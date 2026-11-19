@@ -6,6 +6,7 @@
 import {
     ADRESA_SESSION_KEY,
     BEZI_STORAGE_KEY,
+    BOJLER_OZNAM_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
@@ -314,6 +315,16 @@ export function loadBezi() {
 /** @param {import('../shared/bezi.js').Zapis[]} list @returns {boolean} podarilo sa? */
 export function saveBezi(list) {
     return write(BEZI_STORAGE_KEY, JSON.stringify(list));
+}
+
+/** Oznámenia bojlera na tomto telefóne zapnuté (BOJLER_OZNAM_STORAGE_KEY); bez úložiska nie. */
+export function loadBojlerOznam() {
+    return readJson(BOJLER_OZNAM_STORAGE_KEY, (v) => v === true, false);
+}
+
+/** @param {boolean} on @returns {boolean} podarilo sa? */
+export function saveBojlerOznam(on) {
+    return write(BOJLER_OZNAM_STORAGE_KEY, JSON.stringify(on));
 }
 
 /** Prahy bojlera (BOJLER_STORAGE_KEY); bez úložiska či pokazené predvolené. @returns {import('../shared/bojler.js').Prahy} */

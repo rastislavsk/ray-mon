@@ -3,9 +3,18 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ZDIELANIE } from '../../shared/config.js';
-import { handleBojler, handleBojlerPecat, handleBojlerRezim, handlePripoj, handlePv, handleRequest } from '../src/index.js';
+import {
+    handleBojler,
+    handleBojlerOznam,
+    handleBojlerPecat,
+    handleBojlerRezim,
+    handlePripoj,
+    handlePv,
+    handleRequest,
+} from '../src/index.js';
 import { UcetHuawei } from '../src/ucet.js';
 import { otvor, pecatKey, zapecat } from '../src/pecat.js';
+import { odberTelefonu, rozsifruj, vapidTest } from './push-pomoc.js';
 
 const fixture = (/** @type {string} */ name) => readFileSync(new URL(`../../test/fixtures/${name}`, import.meta.url), 'utf8');
 const NOW = new Date('2026-09-05T11:00:00Z');
@@ -301,6 +310,24 @@ const nbReal = (sietW) => [
  * s platným tokenom (inak failCode 305). `tokeny` je poradie tokenov, ktoré prihlásenia vydajú.
  * @param {{ heslo?: string, tokeny?: string[], platne?: string[], realFail?: number }} [opts]
  */
+/**
+ * Podvrhnutý fetch, ktorý pushe na push službu (oznámenia bojlera) zapíše a odpovie im stavom `status()`, ostatné pošle ďalej.
+ * @param {typeof fetch} dalej @param {() => number} status
+ */
+function sPushom(dalej, status) {
+    /** @type {Array<{ url: string, init: any }>} */ const pushe = [];
+    const impl = /** @type {typeof fetch} */ (
+        /** @type {unknown} */ (
+            async (/** @type {string} */ url, /** @type {any} */ init) => {
+                if (!url.startsWith('https://fcm.googleapis.com/')) return dalej(url, init);
+                pushe.push({ url, init });
+                return new Response(null, { status: status() });
+            }
+        )
+    );
+    return { impl, pushe };
+}
+
 function northbound(
     {
         heslo = 'tajne',
@@ -1025,8 +1052,8 @@ function uloziste() {
     };
 }
 
-/** Menný priestor Durable Objects ako v Cloudflare: jeden objekt na meno. @param {typeof fetch} impl */
-function ucty(impl) {
+/** Menný priestor Durable Objects ako v Cloudflare: jeden objekt na meno. @param {typeof fetch} impl @param {object} [denv] */
+function ucty(impl, denv = {}) {
     /** @type {Map<string, { o: UcetHuawei, u: ReturnType<typeof uloziste> }>} */ const objekty = new Map();
     return {
         objekty,
@@ -1034,7 +1061,7 @@ function ucty(impl) {
         get: (/** @type {any} */ id) => {
             if (!objekty.has(id)) {
                 const u = uloziste();
-                objekty.set(id, { o: new UcetHuawei({ storage: u }, {}, impl), u });
+                objekty.set(id, { o: new UcetHuawei({ storage: u }, denv, impl), u });
             }
             const { o } = /** @type {{ o: UcetHuawei }} */ (objekty.get(id));
             return { fetch: (/** @type {string} */ url, /** @type {RequestInit} */ init) => o.fetch(new Request(url, init)) };
@@ -1046,9 +1073,10 @@ const po = (/** @type {number} */ min) => new Date(NOW.getTime() + min * 60000);
 const bojlerReq = (/** @type {object} */ body) => post('/bojler', JSON.stringify(body));
 
 /** Pripojí elektráreň s elektromerom a vráti pečať telefónu, pečať zásuvky a prostredie s objektmi. */
-async function sBojlerom(/** @type {object} */ opts = {}) {
-    const s = northbound({ elektromer: true, ...opts });
-    const env = { ...ENV, UCTY: ucty(s.impl) };
+async function sBojlerom(/** @type {any} */ opts = {}, /** @type {object} */ denv = {}) {
+    const nb = northbound({ elektromer: true, ...opts });
+    const s = { ...nb, ...sPushom(nb.impl, opts.pushStatus ?? (() => 201)) };
+    const env = { ...ENV, UCTY: ucty(s.impl, denv) };
     const { stanice } = await (
         await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), env, NOW, s.impl)
     ).json();
@@ -1117,6 +1145,60 @@ test('ručný režim: appka ho uloží, zásuvka dostane stav relé a rucne, tel
     assert.equal((await handleBojlerRezim(post('/bojler-rezim', 'nie json'), env, NOW)).status, 400);
     assert.equal((await handleBojlerRezim(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: true })), ENV, NOW)).status, 503);
     const cez = await handleRequest(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: false })), env, po(4));
+    assert.equal(cez.status, 200);
+});
+
+test('oznámenia bojlera: telefón si ich zapne, pri každej zmene ohrevu príde push s dôvodom; vypnuté či neplatné nechodia', async () => {
+    let status = 201;
+    const { s, env, telefon, zasuvka } = await sBojlerom({ sietW: () => 100, pushStatus: () => status }, { VAPID_JWK: await vapidTest() });
+    const { ua, keys } = await odberTelefonu();
+    const FCM = 'https://fcm.googleapis.com/fcm/send/bojler1';
+    const oznam = (/** @type {object} */ o) =>
+        handleBojlerOznam(post('/bojler-oznamenia', JSON.stringify({ pecat: telefon, endpoint: FCM, keys, on: true, ...o })), env, po(1));
+    assert.deepEqual(await (await oznam({})).json(), { ok: true });
+    const hlas = (/** @type {number} */ min, /** @type {boolean} */ rele, /** @type {number} */ w) =>
+        handleBojler(bojlerReq({ pecat: zasuvka, rele, w, e: min }), env, po(min));
+    /** Texty pushov, ktoré prišli od posledného volania. */
+    let videne = 0;
+    const nove = async () => {
+        const out = [];
+        for (const p of s.pushe.slice(videne)) out.push(JSON.parse(await rozsifruj(p.init.body, ua, keys.auth)).body);
+        videne = s.pushe.length;
+        return out;
+    };
+    await hlas(2, false, 0);
+    assert.deepEqual(await nove(), [], 'prvé hlásenie nič nemení');
+    await hlas(3, true, 2200);
+    assert.deepEqual(await nove(), ['Prebytok 2,3 kW · riadi appka']);
+    await hlas(4, true, 2200);
+    assert.deepEqual(await nove(), [], 'bez zmeny bez oznámenia');
+    await hlas(5, true, 10);
+    assert.deepEqual(await nove(), ['Voda je nahriata (termostat).']);
+    await hlas(6, true, 2100);
+    assert.deepEqual(await nove(), ['Voda chladne, termostat znova kúri.']);
+    await hlas(30, false, 0);
+    assert.deepEqual(await nove(), ['Zásuvka nemala spojenie, vypla sa pre istotu.']);
+    // Vypnuté: nechodia.
+    await oznam({ on: false });
+    await hlas(31, true, 2200);
+    assert.deepEqual(await nove(), []);
+    // Odber, ktorý push služba už nepozná, Worker zabudne.
+    await oznam({});
+    status = 410;
+    await hlas(32, false, 0);
+    assert.equal((await nove()).length, 1);
+    await hlas(33, true, 2200);
+    assert.deepEqual(await nove(), [], 'neplatný odber zmazaný');
+    // Zlé dopyty.
+    assert.equal((await oznam({ keys: null })).status, 400);
+    assert.equal((await oznam({ endpoint: 'https://zly.example/x' })).status, 400);
+    assert.equal((await oznam({ on: 'ano' })).status, 400);
+    assert.equal((await handleBojlerOznam(post('/bojler-oznamenia', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
+    const cez = await handleRequest(
+        post('/bojler-oznamenia', JSON.stringify({ pecat: telefon, endpoint: FCM, keys, on: false })),
+        env,
+        po(40),
+    );
     assert.equal(cez.status, 200);
 });
 

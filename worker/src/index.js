@@ -15,6 +15,8 @@
 // GET /radar/<snímka>?b=<bloky>: kúsky radarového súboru OPERA pre kartu Radar (worker/src/radar.js).
 // POST /bojler: skript v zásuvke Shelly s bojlerom sa každú minútu pýta, či ho má zapnúť
 // (docs/navrhy/bojler-prebytky.html). POST /bojler-pecat: pečať telefónu -> menšia pečať do skriptu.
+// POST /koniec: oznámenie o konci programu spotrebiča - budík v Durable Object (worker/src/budik.js).
+// POST /bojler-oznamenia: telefón si zapne či vypne oznámenia o zapnutí a vypnutí bojlera (worker/src/ucet.js).
 //
 // Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
 // navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
@@ -22,7 +24,9 @@
 import {
     WORKER_BOJLER_PATH,
     WORKER_BOJLER_PECAT_PATH,
+    WORKER_BOJLER_OZNAM_PATH,
     WORKER_BOJLER_REZIM_PATH,
+    WORKER_KONIEC_PATH,
     WORKER_OZNAMENIA_PATH,
     WORKER_PRIPOJ_PATH,
     WORKER_PRIPOMEN_PATH,
@@ -34,12 +38,15 @@ import {
 } from '../../shared/config.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
 import { isObj } from '../../shared/valid.js';
+import { ulozKoniec } from './budik.js';
 import { budenie, ulozOdber, ulozPripomienku } from './oznamenia.js';
 import { otvor, pecatKey, zapecat } from './pecat.js';
 import { handleRadar } from './radar.js';
 import { trasy } from './trasy.js';
+import { klucOdberu, platnyOdber } from './webpush.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
+export { Budik } from './budik.js';
 export { UcetHuawei } from './ucet.js';
 
 /**
@@ -47,7 +54,8 @@ export { UcetHuawei } from './ucet.js';
  * `UCTY`: Durable Objects účtov Huawei Northbound (worker/src/ucet.js). Bez nich (testy) Worker
  * meria priamo a bojler nevie riadiť.
  * @typedef {{ idFromName: (n: string) => unknown, get: (id: unknown) => { fetch: (url: string, init: RequestInit) => Promise<Response> } }} UctyNs
- * @typedef {{ PECAT_KLUC?: string, LIMIT?: { limit: (o: { key: string }) => Promise<{ success: boolean }> }, UCTY?: UctyNs } & import('./oznamenia.js').OznamEnv} Env
+ * `BUDIK`: Durable Objects budíkov konca programu (worker/src/budik.js), jeden na odber telefónu.
+ * @typedef {{ PECAT_KLUC?: string, LIMIT?: { limit: (o: { key: string }) => Promise<{ success: boolean }> }, UCTY?: UctyNs, BUDIK?: UctyNs } & import('./oznamenia.js').OznamEnv} Env
  */
 
 const HEADERS = {
@@ -313,6 +321,26 @@ export async function handleBojler(request, env, now) {
 }
 
 /**
+ * POST /bojler-oznamenia: `{ pecat, endpoint, keys, on }` od appky (pečať telefónu) -> `{ ok }`. Zapne (`on`) či vypne
+ * tomuto telefónu oznámenia o zapnutí a vypnutí bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html); posiela ich
+ * Durable Object účtu pri hlásení zásuvky.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleBojlerOznam(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    const keys = klucOdberu(req?.keys);
+    if (!obsah || !platnyOdber(req.endpoint) || typeof req.on !== 'boolean' || (req.on && !keys)) return json(400, { chyba: 'udaje' });
+    try {
+        await ucet(env.UCTY, obsah.pristup, '/oznam', now, { endpoint: req.endpoint, keys, on: req.on });
+        return json(200, { ok: true });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
  * POST /bojler-rezim: `{ pecat, rucne }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ ok, bojler }`.
  * V ručnom režime skript v zásuvke relé neprepína, len hlási (docs/navrhy/teraz-auto-tok.html).
  * @param {Request} request @param {Env} env @param {Date} now
@@ -356,6 +384,8 @@ const CESTY = {
     [WORKER_BOJLER_REZIM_PATH]: { limit: true, run: handleBojlerRezim },
     [WORKER_OZNAMENIA_PATH]: { limit: true, run: (request, env) => oznam((body) => ulozOdber(body, env), request) },
     [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
+    [WORKER_KONIEC_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozKoniec(body, env, now), request) },
+    [WORKER_BOJLER_OZNAM_PATH]: { limit: true, run: handleBojlerOznam },
     [WORKER_TRASY_PATH]: {
         limit: true,
         run: async (request, env, now, fetchImpl) => {

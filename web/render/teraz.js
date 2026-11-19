@@ -164,8 +164,7 @@ function dlazdiceCo(co, bojler) {
         podiel: r.podiel,
         odr: r.odr,
     }));
-    const { bezi, hotovo } = zapisane(co, dnes);
-    return [...bezi, ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie, ...hotovo];
+    return [...bezia(co, dnes), ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie];
 }
 
 /**
@@ -188,11 +187,11 @@ function dlazdiceHtml(veci) {
 }
 
 /**
- * Dlaždice toho, čo človek dnes zapol (docs/navrhy/teraz-bezi-spotrebic.html): čo beží, ide v stĺpci hore,
- * čo dobehlo, na koniec. Iný deň ich nemá. `?? []`: model zo starého shared/teraz.js z cache po nasadení tieto polia nemá.
+ * Dlaždice toho, čo človek zapol a ešte beží (docs/navrhy/teraz-bezi-spotrebic.html): idú v stĺpci hore. Iný deň ich
+ * nemá. `?? []`: model zo starého shared/teraz.js z cache po nasadení toto pole nemá.
  * @param {NonNullable<Model['co']>} co @param {boolean} dnes
  */
-const zapisane = (co, dnes) => (dnes ? { bezi: co.bezi ?? [], hotovo: co.hotovo ?? [] } : { bezi: [], hotovo: [] });
+const bezia = (co, dnes) => (dnes ? (co.bezi ?? []) : []);
 
 /** Malé slovo pred veľkým číslom („do 20:30“, „od 22:00“). @param {string | undefined} pred */
 const predHtml = (pred) => (pred ? `<span class="pred">${escapeHtml(pred)} </span>` : '');
@@ -253,7 +252,7 @@ function renderVecSheet(state, m, dom) {
         setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
         show(dom.tzVecPas, !!v.slot);
         setHtml(dom.tzVecPas, v.slot ? osHtml(m.os, v.slot) : '');
-        renderZapis(v, dom);
+        renderZapis(v, state.koniecOznam ?? null, dom);
         setText(dom.tzVecWhy, v.why);
     }
     const id = state.tzVec;
@@ -261,27 +260,77 @@ function renderVecSheet(state, m, dom) {
 }
 
 /**
- * Zápis v detaile spotrebiča (docs/navrhy/teraz-bezi-spotrebic.html): „Už beží“, a keď beží či dobehol, čas zapnutia
- * s − a + a „Nebeží“ (pri dobehnutom „Zrušiť zápis“). Spotrebič, ktorý sa zapísať nedá, ani iný deň zápis nemá.
- * Že naraz ide len toľko, koľko strecha utiahne, hovorí o pláne - nie o tom, čo už beží či dobehlo.
- * @param {object} v detail spotrebiča - iný deň (shared/tyzden.js) pole `zapis` nemá @param {Dom} dom
+ * Zápis v detaile spotrebiča (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-koniec-opakovanie.html):
+ * čo dnes už dobehlo, „Už beží“, a keď beží, pri práčke a sušičke zvyšok programu (hodiny a minúty s − a +), pri
+ * umývačke čas zapnutia s − a +, či príde oznámenie o konci a „Nebeží“. Spotrebič, ktorý sa zapísať nedá, ani iný
+ * deň zápis nemá. Že naraz ide len toľko, koľko strecha utiahne, hovorí o pláne - nie o tom, čo už beží.
+ * `?? []`, `?? null`: model zo starého shared/teraz.js z cache po nasadení tieto polia nemá.
+ * @param {object} v detail spotrebiča - iný deň (shared/tyzden.js) pole `zapis` nemá
+ * @param {import('../state.js').AppState['koniecOznam']} oznam @param {Dom} dom
  */
-function renderZapis(v, dom) {
-    /** @type {import('../../shared/teraz.js').VecDetail['zapis'] | null} */
+function renderZapis(v, oznam, dom) {
+    /** @type {import('../../shared/teraz.js').VecZapis | null} */
     const z = 'zapis' in v ? /** @type {any} */ (v.zapis) : null;
+    renderHotove(z?.hotove ?? [], dom);
     show(dom.tzVecZapis, !!z);
-    const zapisany = !!z && z.stav !== 'moze';
-    show(dom.tzVecNote, !zapisany);
-    setText(dom.tzVecNote, zapisany ? '' : PLAN_DNA_NOTE);
-    show(dom.tzVecZapol, !zapisany);
-    show(dom.tzVecPosun, zapisany);
-    show(dom.tzVecZrus, zapisany);
+    const bezi = z?.stav === 'bezi' ? z : null;
+    show(dom.tzVecNote, !bezi);
+    setText(dom.tzVecNote, bezi ? '' : PLAN_DNA_NOTE);
+    show(dom.tzVecZapol, !bezi);
     setText(dom.tzVecZapol, TERAZ_BEZI.zapol);
-    setText(dom.tzVecOd, zapisany ? z.od : '');
+    // Či príde oznámenie o konci, vie appka len o behu, ktorý v tejto chvíli objednala.
+    renderBezi(bezi, oznam && 'id' in v && oznam.id === v.id ? oznam.stav : null, dom);
+}
+
+/**
+ * Spotrebič, ktorý beží (`z`, inak null): zvyšok programu (práčka, sušička), alebo čas zapnutia s − a + (umývačka), či
+ * príde oznámenie o konci a „Nebeží“.
+ * @param {import('../../shared/teraz.js').VecZapis | null} z @param {'ok' | 'zakazane' | 'chyba' | null} oznam @param {Dom} dom
+ */
+function renderBezi(z, oznam, dom) {
+    const zv = z?.zvysok ?? null;
+    const posun = !!z && !zv;
+    show(dom.tzVecPosun, posun);
+    show(dom.tzVecZrus, !!z);
+    renderZvysok(zv, dom);
+    setText(dom.tzVecOd, posun ? /** @type {NonNullable<typeof z>} */ (z).od : '');
     dom.tzVecSkor.setAttribute('aria-label', TERAZ_BEZI.skor);
     dom.tzVecNeskor.setAttribute('aria-label', TERAZ_BEZI.neskor);
     dom.tzVecNeskor.disabled = !z?.neskor;
-    setText(dom.tzVecZrus, z?.stav === 'hotovo' ? TERAZ_BEZI.zrus : TERAZ_BEZI.nebezi);
+    const o = z && oznam ? TERAZ_BEZI.oznam[oznam] : '';
+    show(dom.tzVecOznam, !!o);
+    setText(dom.tzVecOznam, o);
+    setText(dom.tzVecZrus, TERAZ_BEZI.nebezi);
+}
+
+/** Čo dnes už dobehlo: riadok na beh, čas vpravo. @param {import('../../shared/teraz.js').VecZapis['hotove']} hotove @param {Dom} dom */
+function renderHotove(hotove, dom) {
+    show(dom.tzVecHotove, hotove.length > 0);
+    setHtml(dom.tzVecHotove, hotove.map((h) => `<li>${escapeHtml(h.text)}<span>${escapeHtml(h.cas)}</span></li>`).join(''));
+}
+
+/**
+ * Zvyšok programu práčky či sušičky: hodiny a minúty, každé s − a + (na kraji zvyšku sa stlačiť nedajú), a kedy skončí.
+ * Bez neho (umývačka, nebeží) je skrytý.
+ * @param {import('../../shared/teraz.js').VecZapis['zvysok']} zv @param {Dom} dom
+ */
+function renderZvysok(zv, dom) {
+    show(dom.tzVecZvysok, !!zv);
+    setText(dom.tzVecZostava, TERAZ_BEZI.zostava);
+    setText(dom.tzVecH, zv?.h ?? '');
+    setText(dom.tzVecM, zv?.min ?? '');
+    setText(dom.tzVecKonci, zv?.konci ?? '');
+    /** @type {Array<[HTMLButtonElement, string, boolean]>} */
+    const kroky = [
+        [dom.tzVecHMenej, TERAZ_BEZI.hodinaMenej, !!zv?.menejH],
+        [dom.tzVecHViac, TERAZ_BEZI.hodinaViac, !!zv?.viacH],
+        [dom.tzVecMMenej, TERAZ_BEZI.minMenej, !!zv?.menejM],
+        [dom.tzVecMViac, TERAZ_BEZI.minViac, !!zv?.viacM],
+    ];
+    for (const [btn, label, moze] of kroky) {
+        btn.setAttribute('aria-label', label);
+        btn.disabled = !moze;
+    }
 }
 
 /**
@@ -404,6 +453,7 @@ function renderBojlerSheet(state, dom) {
         setText(dom.tzBojlerRezimOkT, R.ulozene(d.rezim.rucne));
         show(dom.tzBojlerRezimChyba, state.bojlerRezim === 'chyba');
         setText(dom.tzBojlerRezimChyba, R.chyba);
+        renderBojlerOznam(state, dom);
         const teraz = d.pas.teraz === null ? '' : `<i class="os-teraz" style="left:${d.pas.teraz}%"></i>`;
         setHtml(
             dom.tzBojlerPas,
@@ -433,6 +483,22 @@ function renderBojlerSheet(state, dom) {
         );
     }
     dialog(dom.tzBojlerSheet, !!b, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="bojler"]') : null));
+}
+
+/**
+ * Vypínač oznámení o zapnutí a vypnutí bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html) a prečo sa nepodaril.
+ * `?? false`, `?? null`: starý web/state.js z cache po nasadení tieto polia nemá.
+ * @param {import('../state.js').AppState} state @param {Dom} dom
+ */
+function renderBojlerOznam(state, dom) {
+    const O = TERAZ_BOJLER_TEXTS.oznam;
+    const stav = state.bojlerOznamStav ?? null;
+    setText(dom.tzBojlerOznamT, O.nazov);
+    dom.tzBojlerOznam.setAttribute('aria-checked', String(state.bojlerOznam ?? false));
+    dom.tzBojlerOznam.disabled = stav === 'uklada';
+    const chyba = stav === 'zakazane' ? O.zakazane : stav === 'chyba' ? O.chyba : '';
+    show(dom.tzBojlerOznamChyba, !!chyba);
+    setText(dom.tzBojlerOznamChyba, chyba);
 }
 
 /** @param {import('../state.js').AppState} state @param {Dom} dom */

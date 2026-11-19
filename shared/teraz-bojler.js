@@ -57,6 +57,12 @@ export const TERAZ_BOJLER_TEXTS = {
         chyba: 'Režim sa nepodarilo uložiť, ostal pôvodný.',
         ulozene: (/** @type {boolean} */ rucne) => `Uložené · ${rucne ? 'zapínaš ručne' : 'riadi appka'}`,
     },
+    /** Vypínač oznámení o zapnutí a vypnutí bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html). */
+    oznam: {
+        nazov: 'Oznámiť zapnutie a vypnutie',
+        zakazane: 'Oznámenia appka nemá povolené.',
+        chyba: 'Nepodarilo sa to uložiť, skús znova.',
+    },
     tokNadpis: 'Elektrina teraz',
     tokPod: 'meranie elektromera o',
     panely: 'panely',

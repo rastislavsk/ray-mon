@@ -1,9 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, OZNAMENIA, PLAN_DNA, PLANT, SITE, TARIFF } from '../shared/config.js';
-import { oznameniaTexts, planNoticeText } from '../shared/messages.js';
+import { bojlerZmenaText, koniecText, oznameniaTexts, planNoticeText } from '../shared/messages.js';
 import {
     klikUrl,
+    koniecNotice,
     klikZAdresy,
     morningDue,
     odberTrebaObnovit,
@@ -143,6 +144,36 @@ test('pripomienka: teraz, keď je na rade; inak povie, čo sa zmenilo', () => {
     assert.match(teraz?.body ?? '', /^Oba ohrevy chytia slnko\. Dobehne o \d\d:\d\d\.$/);
     assert.equal(reminderNotice(input(at('19:50')), { id: 'susicka' })?.title, 'Sušička radšej zajtra');
     assert.equal(reminderNotice(input(at('19:50')), { id: 'auto' })?.title, 'Auto v lacnom pásme');
+});
+
+test('koniec programu: čo je hotové, pri praní aj sušička podľa plánu v chvíli zápisu', () => {
+    const d = '2026-09-05';
+    // Práčka beží od 10:00 do 12:00 - sušička ide hneď po nej, za jasného poludnia zo slnka.
+    const pranie = koniecNotice(input(at('10:00'), { bezi: [{ id: 'pracka', d, m: 600, k: 720 }] }), { id: 'pracka', devices: DEVICES });
+    assert.deepEqual(pranie, { title: 'Práčka dobehla', body: 'Pranie je hotové. Sušička má teraz slnko.' });
+    // Večer už slnko nie je.
+    const vecer = koniecNotice(input(at('19:00'), { bezi: [{ id: 'pracka', d, m: 1140, k: 1260 }] }), { id: 'pracka', devices: DEVICES });
+    assert.equal(vecer.body, 'Pranie je hotové. Sušička pôjde zo siete.');
+    // Bez sušičky doma či bez predpovede len to, čo je hotové.
+    assert.equal(koniecNotice(input(at('10:00')), { id: 'pracka', devices: ['pracka'] }).body, 'Pranie je hotové.');
+    assert.equal(koniecNotice(input(at('10:00'), { forecast: null }), { id: 'pracka', devices: DEVICES }).body, 'Pranie je hotové.');
+    assert.deepEqual(koniecNotice(input(at('10:00')), { id: 'umyvacka', devices: DEVICES }), {
+        title: 'Umývačka dobehla',
+        body: 'Riad je umytý.',
+    });
+    assert.equal(koniecText({ id: 'susicka', name: 'Sušička', caka: null }).body, 'Sušenie je hotové.');
+    assert.equal(koniecText({ id: 'iny', name: 'Iný', caka: null }).body, 'Program skončil.');
+});
+
+test('bojler: zapol sa či vypol sa a prečo', () => {
+    const t = (/** @type {any} */ z) => bojlerZmenaText(z);
+    assert.deepEqual(t({ zapol: true, dovod: 'appka', kw: 2.6 }), { title: 'Bojler sa zapol', body: 'Prebytok 2,6 kW · riadi appka' });
+    assert.deepEqual(t({ zapol: false, dovod: 'appka', kw: 1.8 }), { title: 'Bojler sa vypol', body: 'Prebytok klesol na 1,8 kW.' });
+    assert.equal(t({ zapol: false, dovod: 'appka', kw: null }).body, 'Prebytok klesol.');
+    assert.equal(t({ zapol: false, dovod: 'termostat', kw: 3 }).body, 'Voda je nahriata (termostat).');
+    assert.equal(t({ zapol: true, dovod: 'termostat', kw: 3 }).body, 'Voda chladne, termostat znova kúri.');
+    assert.equal(t({ zapol: true, dovod: 'rucne', kw: 0.4 }).body, 'Prepnutý ručne v Shelly.');
+    assert.equal(t({ zapol: false, dovod: 'spojenie', kw: null }).body, 'Zásuvka nemala spojenie, vypla sa pre istotu.');
 });
 
 test('swNotice: ranné oznámenie s tlačidlom Pripomeň, v čase pripomienky pripomienka', () => {

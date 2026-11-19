@@ -1,6 +1,6 @@
 // Texty karty Teraz: číslo a stav, čo zapnúť, panel štítka. Čisté funkcie bez DOM.
 
-import { MINUTES_PER_DAY, PLAN_DNA } from './config.js';
+import { BEZI, MINUTES_PER_DAY, PLAN_DNA } from './config.js';
 import { fmt1, kwpRoughText, weekDateLabel, weekDayName } from './format.js';
 import { HERO_SAY, MOZEM_SKY_TEXTS, PLAN_AFTER, countdownText, laterWhen, mozemTexts } from './messages-mozem.js';
 import { andList, cap, dniSlovo, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
@@ -127,39 +127,80 @@ export function terazDlazdicaText(r, voice = 'drzy') {
 }
 
 /**
- * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html): tlačidlá v detaile spotrebiča a čas zapnutia pod nimi.
+ * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-koniec-opakovanie.html): tlačidlá
+ * v detaile spotrebiča, zvyšok programu (práčka, sušička) či čas zapnutia (umývačka) a či príde oznámenie o konci.
  * Práčka, sušička aj umývačka sú „ona“ - „zapnutá“, „dobehla“.
  */
 export const TERAZ_BEZI = {
     zapol: 'Už beží',
     nebezi: 'Nebeží',
-    zrus: 'Zrušiť zápis',
-    skor: 'Zapnutá o 15 minút skôr',
-    neskor: 'Zapnutá o 15 minút neskôr',
+    skor: `Zapnutá o ${BEZI.posunMin} minút skôr`,
+    neskor: `Zapnutá o ${BEZI.posunMin} minút neskôr`,
+    zostava: 'Zostáva',
+    hodinaMenej: 'O hodinu menej',
+    hodinaViac: 'O hodinu viac',
+    minMenej: `O ${BEZI.krokMin} minút menej`,
+    minViac: `O ${BEZI.krokMin} minút viac`,
+    /** Či príde oznámenie o konci (web/koniec.js): objednané, zakázané v prehliadači, nepodarilo sa. */
+    oznam: {
+        ok: 'O konci ti dám vedieť.',
+        zakazane: 'Oznámenie o konci nepríde – appka ho nemá povolené.',
+        chyba: 'Oznámenie o konci sa nepodarilo objednať.',
+    },
 };
 
 /** „zapnutá 9:40“ - kedy ju človek zapol. @param {number} start minúta dňa */
 export const terazZapnutaText = (start) => `zapnutá ${hm(start)}`;
 
 /**
- * Dlaždica spotrebiča, ktorý človek zapol: beží - do kedy a koľko ešte -, alebo dnes dobehol - kedy a kedy
- * ho zapol. Tie isté prvky ako ostatné dlaždice (veľký čas, meno, dve odrážky), aby sedeli v rade.
- * @param {{ kind: 'run' | 'done', start: number, end: number }} r @param {number} nowMin
+ * Zvyšok programu v detaile spotrebiča: hodiny, minúty a kedy skončí („1 h“, „25 min“, „skončí o 14:25“).
+ * @param {number} zvysok minúty do konca @param {number} koniec minúta dňa konca
+ */
+export function terazZvysokText(zvysok, koniec) {
+    return { h: `${Math.floor(zvysok / 60)} h`, min: `${zvysok % 60} min`, konci: `skončí o ${hm(koniec % MINUTES_PER_DAY)}` };
+}
+
+/** Čo spotrebič robí - „Dnes už prala“. @type {Record<string, string>} */
+const ROBILA = { pracka: 'prala', susicka: 'sušila', umyvacka: 'umývala' };
+const KRAT = ['Druhýkrát', 'Tretíkrát', 'Štvrtýkrát', 'Piatykrát'];
+
+/**
+ * Behy, ktoré dnes dobehli, v detaile spotrebiča: „Dnes už prala 9:10 – 11:05“, ďalší „Druhýkrát …“.
+ * @param {string} id @param {Array<{ start: number, end: number }>} behy podľa začiatku
+ * @returns {Array<{ text: string, cas: string }>}
+ */
+export function terazHotoveText(id, behy) {
+    return behy.map((b, i) => ({
+        text: i === 0 ? `Dnes už ${ROBILA[id] ?? 'bežala'}` : (KRAT[i - 1] ?? `${i + 1}. raz`),
+        cas: `${hm(b.start)} – ${hm(b.end % MINUTES_PER_DAY)}`,
+    }));
+}
+
+/** Odrážka dlaždice spotrebiča, ktorý dnes už dobehol: „dnes už 1×“. @param {number} n */
+export const terazOpakText = (n) => `dnes už ${n}×`;
+
+/**
+ * Dlaždica spotrebiča, ktorý beží: do kedy a koľko ešte. Tie isté prvky ako ostatné dlaždice (veľký čas, meno,
+ * dve odrážky), aby sedeli v rade.
+ * @param {{ end: number }} r @param {number} nowMin
  * @returns {{ pred: string, velky: string, odr: string[] }}
  */
 export function terazBehText(r, nowMin) {
-    if (r.kind === 'run') return { pred: 'do', velky: hm(r.end), odr: ['beží', `ešte ${terazZaText(Math.max(1, r.end - nowMin))}`] };
-    return { pred: '', velky: hm(r.end), odr: ['dobehla', terazZapnutaText(r.start)] };
+    return { pred: 'do', velky: hm(r.end % MINUTES_PER_DAY), odr: ['beží', `ešte ${terazZaText(Math.max(1, r.end - nowMin))}`] };
 }
 
 /**
- * Detail spotrebiča, ktorý človek zapol: kedy, od-do a čo s tým plán robí.
- * @param {{ kind: 'run' | 'done', start: number, end: number }} r
+ * Detail spotrebiča, ktorý beží: od-do a pri zvyšku (práčka, sušička), čo s ním urobiť, inak čo s tým plán robí.
+ * @param {{ start: number, end: number }} r @param {string} name @param {boolean} zvysok
  */
-export function terazBehVecText(r) {
-    const cas = `${hm(r.start)} – ${hm(r.end)}`;
-    if (r.kind === 'run') return { kedy: 'Beží', cas, why: 'Plán dňa s ňou ráta: čo zo slnka zvýši, dostanú ostatné spotrebiče.' };
-    return { kedy: 'Dnes dobehla', cas, why: 'Dnes ju plán už neponúkne.' };
+export function terazBehVecText(r, name, zvysok) {
+    return {
+        kedy: 'Beží',
+        cas: `${hm(r.start)} – ${hm(r.end % MINUTES_PER_DAY)}`,
+        why: zvysok
+            ? `Nastav, koľko ukazuje ${name.toLowerCase()}.`
+            : 'Plán dňa s ňou ráta: čo zo slnka zvýši, dostanú ostatné spotrebiče.',
+    };
 }
 
 /**

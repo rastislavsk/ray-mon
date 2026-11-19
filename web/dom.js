@@ -110,6 +110,32 @@ function terazBojlerDom() {
         tzBojlerPas: byId('tz-bojler-pas'),
         tzBojlerCisla: byId('tz-bojler-cisla'),
         tzBojlerBehy: byId('tz-bojler-behy'),
+        tzBojlerOznam: /** @type {HTMLButtonElement} */ (byId('tz-bojler-oznam')),
+        tzBojlerOznamT: byId('tz-bojler-oznam-t'),
+        tzBojlerOznamChyba: byId('tz-bojler-oznam-chyba'),
+    };
+}
+
+/** Zápis v detaile spotrebiča na karte Teraz: „Už beží“, zvyšok programu či čas zapnutia, oznámenie o konci. */
+function terazZapisDom() {
+    return {
+        tzVecZapis: byId('tz-vec-zapis'),
+        tzVecZapol: /** @type {HTMLButtonElement} */ (byId('tz-vec-zapol')),
+        tzVecZvysok: byId('tz-vec-zvysok'),
+        tzVecZostava: byId('tz-vec-zostava'),
+        tzVecHMenej: /** @type {HTMLButtonElement} */ (byId('tz-vec-h-menej')),
+        tzVecH: byId('tz-vec-h'),
+        tzVecHViac: /** @type {HTMLButtonElement} */ (byId('tz-vec-h-viac')),
+        tzVecMMenej: /** @type {HTMLButtonElement} */ (byId('tz-vec-m-menej')),
+        tzVecM: byId('tz-vec-m'),
+        tzVecMViac: /** @type {HTMLButtonElement} */ (byId('tz-vec-m-viac')),
+        tzVecKonci: byId('tz-vec-konci'),
+        tzVecOznam: byId('tz-vec-oznam'),
+        tzVecPosun: byId('tz-vec-posun'),
+        tzVecSkor: /** @type {HTMLButtonElement} */ (byId('tz-vec-skor')),
+        tzVecOd: byId('tz-vec-od'),
+        tzVecNeskor: /** @type {HTMLButtonElement} */ (byId('tz-vec-neskor')),
+        tzVecZrus: /** @type {HTMLButtonElement} */ (byId('tz-vec-zrus')),
     };
 }
 
@@ -137,15 +163,9 @@ function terazDom() {
         tzVecIco: byId('tz-vec-ico'),
         tzVecName: byId('tz-vec-name'),
         tzVecKedy: byId('tz-vec-kedy'),
+        tzVecHotove: byId('tz-vec-hotove'),
         tzVecCas: byId('tz-vec-cas'),
         tzVecPas: byId('tz-vec-pas'),
-        tzVecZapis: byId('tz-vec-zapis'),
-        tzVecZapol: /** @type {HTMLButtonElement} */ (byId('tz-vec-zapol')),
-        tzVecPosun: byId('tz-vec-posun'),
-        tzVecSkor: /** @type {HTMLButtonElement} */ (byId('tz-vec-skor')),
-        tzVecOd: byId('tz-vec-od'),
-        tzVecNeskor: /** @type {HTMLButtonElement} */ (byId('tz-vec-neskor')),
-        tzVecZrus: /** @type {HTMLButtonElement} */ (byId('tz-vec-zrus')),
         tzVecWhy: byId('tz-vec-why'),
         tzVecNote: byId('tz-vec-note'),
         tzNote: byId('tz-note'),
@@ -498,6 +518,7 @@ export function collectDom() {
         ...mozemDom(),
         ...terazDom(),
         ...terazBojlerDom(),
+        ...terazZapisDom(),
         ...sedemDom(),
         ...statistikaDom(),
         ...nastavenieDom(),

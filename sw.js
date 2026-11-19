@@ -1,5 +1,6 @@
-// Service worker len na ranné oznámenie s plánom dňa - súbory appky necachuje, o tie sa stará
-// boot.js. Worker telefón zobudí prázdnym pushom (worker/src/oznamenia.js); obsah sa vypočíta
+// Service worker len na oznámenia - súbory appky necachuje, o tie sa stará boot.js. Koniec programu a zmenu
+// ohrevu bojlera pošle Worker s textom (zašifrovaným, docs/navrhy/spotrebic-koniec-opakovanie.html). Ranné
+// oznámenie s plánom dňa: Worker telefón zobudí prázdnym pushom (worker/src/oznamenia.js); obsah sa vypočíta
 // až tu, z čerstvej predpovede a nastavenia, ktoré appka odložila do Cache API (OZNAMENIA.mirror),
 // tou istou funkciou jadra, akou počíta Plán dňa na karte Môžem? (shared/oznamenia.js).
 // Appka ho registruje s updateViaCache: 'none', aby prehliadač bral
@@ -109,7 +110,27 @@ async function obnovOdber(e) {
 }
 
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('push', (e) => e.waitUntil(ukaz()));
+/**
+ * Push s obsahom (docs/navrhy/spotrebic-koniec-opakovanie.html): koniec programu či zmena ohrevu bojlera - text poslal
+ * Worker zašifrovaný, netreba nič počítať. Prázdny push je ranné oznámenie či pripomienka (ukaz). Ťuknutie otvorí appku.
+ * @param {{ title: string, body: string, tag: string }} d
+ */
+const ukazText = (d) => ukazOznamenie(d.tag, d, { data: { app: './' } });
+
+/** Obsah pushu ako JSON s nadpisom, textom a značkou, inak null. */
+function obsah(data) {
+    try {
+        const d = data?.json();
+        return d && typeof d.title === 'string' && typeof d.body === 'string' && typeof d.tag === 'string' ? d : null;
+    } catch {
+        return null;
+    }
+}
+
+self.addEventListener('push', (e) => {
+    const d = obsah(e.data);
+    e.waitUntil(d ? ukazText(d) : ukaz());
+});
 self.addEventListener('pushsubscriptionchange', (e) => e.waitUntil(obnovOdber(e).catch(() => null)));
 self.addEventListener('notificationclick', (e) => {
     e.notification.close();
