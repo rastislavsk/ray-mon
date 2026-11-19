@@ -390,6 +390,30 @@ export const DEVICES = [
 export const HOUSE_BASE_KW = 0.4;
 
 /**
+ * Plán dňa zo živých dát (docs/navrhy/plan-dna-zive-data.html, balík B, 19. 11. 2026).
+ * - Oprava predpovede: pomer meranie / predpoveď za posledných `oknoMin` minút pred posledným meraním (len keď
+ *   predpoveď v okne dáva v priemere aspoň `minKw` a meraní je aspoň `minBodov`), obmedzený na `kMin`–`kMax`.
+ *   Kým sa od 1 nelíši aspoň o `prah`, neplatí - plán by inak poskakoval pri každom meraní. Celý platí `plnaMin` minút
+ *   za meraním, do `doMin` sa vytratí k čistej predpovedi.
+ * - Meranie (výkon teraz, elektromer) staršie než `meranieMin` minút sa nepoužije.
+ * - Základ domu z elektromera (dom bez bežiacich spotrebičov a bojlera) v rozsahu `domMin`–`domMax` kW platí
+ *   `plnaMin` minút, do `doMin` sa vráti k HOUSE_BASE_KW.
+ */
+export const PLAN_ZIVE = {
+    oknoMin: 60,
+    minKw: 0.3,
+    minBodov: 3,
+    kMin: 0.3,
+    kMax: 1.5,
+    prah: 0.15,
+    plnaMin: 60,
+    doMin: 180,
+    meranieMin: 15,
+    domMin: 0.1,
+    domMax: 4,
+};
+
+/**
  * Karta Môžem?: veci, na ktoré sa rodina pýta. Spotrebič (`device`) berie z DEVICES príkon
  * a pravidlá; `runMin` a `runKwh` sú typický program - podľa nich karta radí, dokedy ho pustiť,
  * a koľko stojí zo siete. Auto program nemá, pri ňom sa ráta hodina nabíjania; `runMin` bojlera

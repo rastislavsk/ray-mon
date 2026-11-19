@@ -253,6 +253,62 @@ export function bojlerInfoZ(raw) {
     };
 }
 
+/**
+ * Čo urobí zásuvka s bojlerom do konca dňa (docs/navrhy/plan-dna-zive-data.html, krok 3): to isté rozhodovanie ako
+ * vo Workeri (rozhodni) nad voľným výkonom plánu `free` (kW po minútach dňa - výroba bez domu a ostatných spotrebičov,
+ * teda prebytok bez bojlera) s meraním raz za `krokMin` minút. Bojler hreje, kým nedostane `potrebaWh` bez toho, čo
+ * dnes už nahrial; nahriaty (termostat vypol) nepotrebuje nič. V ručnom režime appka relé neprepína - hreje len ten,
+ * čo práve hreje. Vráti odber po minútach, kedy zapne (keď teraz nehreje) a kedy dohreje (null, keď dnes nie).
+ * @param {number[]} free @param {BojlerInfo} b
+ * @param {{ nowMin: number, now: number, dnes: string, potrebaWh: number, kw: number, krokMin: number }} o
+ * @returns {{ odber: number[], zapne: number | null, dohreje: number | null, nahriaty: boolean }}
+ */
+export function simulujBojler(free, b, { nowMin, now, dnes, potrebaWh, kw, krokMin }) {
+    const odber = free.map(() => 0);
+    const zostava = zostavaBojlera(b, now, dnes, potrebaWh);
+    if (zostava === null) return { odber, zapne: null, dohreje: null, nahriaty: true };
+    const hreje = bojlerStav(b, now) === 'hreje';
+    const prikon = hreje ? b.w / 1000 : kw;
+    const zasuvka = { rele: hreje, pamat: { ...PAMAT_ZACIATOK, rele: hreje, zmenaAt: -Infinity } };
+    let ostava = zostava;
+    let zapne = /** @type {number | null} */ (null);
+    for (let m = nowMin; m < free.length; m += krokMin) {
+        const predtym = zasuvka.rele;
+        // V ručnom režime appka relé neprepína.
+        if (!b.rucne) krokZasuvky(zasuvka, (free[m] ?? 0) - (predtym ? prikon : 0), prikon, m * MIN, b.prahy);
+        if (zasuvka.rele && !predtym && zapne === null) zapne = m;
+        if (!zasuvka.rele) continue;
+        odber.fill(prikon, m, m + krokMin);
+        ostava -= (prikon * 1000 * krokMin) / 60;
+        if (ostava <= 0) return { odber, zapne, dohreje: Math.min(m + krokMin, free.length), nahriaty: false };
+    }
+    return { odber, zapne, dohreje: null, nahriaty: false };
+}
+
+/**
+ * Koľko Wh bojler dnes ešte potrebuje, alebo null, keď je voda nahriata: termostat vypol teraz, dnes už vypol a odvtedy
+ * bojler nehreje, alebo dnes dostal, čo potrebuje.
+ * @param {BojlerInfo} b @param {number} now @param {string} dnes @param {number} potrebaWh
+ */
+function zostavaBojlera(b, now, dnes, potrebaWh) {
+    const stav = bojlerStav(b, now);
+    const den = b.den && b.den.den === dnes ? b.den : null;
+    const zostava = potrebaWh - (den ? den.behy.reduce((sum, x) => sum + x.wh, 0) : 0);
+    const nahriaty = stav === 'hotovo' || (stav !== 'hreje' && den?.hotovo != null) || zostava <= 0;
+    return nahriaty ? null : zostava;
+}
+
+/**
+ * Jedno meranie zásuvky v simulácii: rozhodnutie Workera (rozhodni) pri dodávke `sietKw`, keď bojler (ak hreje) berie
+ * `prikon`. Mení stav `z`.
+ * @param {{ rele: boolean, pamat: Pamat }} z @param {number} sietKw @param {number} prikon @param {number} t @param {Prahy} prahy
+ */
+function krokZasuvky(z, sietKw, prikon, t, prahy) {
+    const r = rozhodni(z.pamat, { rele: z.rele, w: z.rele ? prikon * 1000 : 0, sietKw, meranieAt: t, now: t, prahy });
+    z.pamat = r.pamat;
+    z.rele = r.zapni;
+}
+
 /** Záznam dňa z odpovede Workera, alebo null. @param {unknown} raw @returns {Den | null} */
 function denZ(raw) {
     if (!isObj(raw)) return null;

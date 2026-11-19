@@ -77,6 +77,14 @@ v novom dni pripíše deň bojlera. Telefón si stiahne históriu cez `POST /his
 predpovede dňa (`predpoved-hist-v1`) a história behov z „Už beží“ (`behy-hist-v1`), lebo `bezi-v1` drží len dnešok.
 Odložené časti učenia majú termíny v `docs/to do later.md`.
 
+Plán dňa ráta so živými dátami (`PLAN_ZIVE`): predpoveď za posledným meraním opravuje pomer meranie / predpoveď
+za poslednú hodinu (`opravaPredpovede` v `shared/chart-model.js`, jediné miesto - `dayKwAt` aj graf dňa), štvrťhodina
+teraz je z výkonu teraz a spotreba domu z elektromera bez bežiacich spotrebičov a bojlera (`ziveMeranie`, `freeKw`
+v `shared/mozem-jadro.js`). Živé meranie platí len pre kontext teraz - kópie kontextu od polnoci (iné dni, trieda
+dňa) ho nevidia. Bojler, ktorý riadi zásuvka, ide v pláne pred všetkými: `simulujBojler` (`shared/bojler.js`) púšťa
+to isté `rozhodni` ako Worker nad rozpočtom plánu, práčka a sušička potom idú natvrdo a bojler sa odsimuluje znova
+(`bojlerPrvy` v `shared/plan-dna.js`). Potrebu bojlera zatiaľ berie z `MOZEM_ITEMS` (2 kWh).
+
 ## Scéna toku energie na karte Teraz
 
 Návrh a rozhodnutia: `docs/navrhy/teraz-tok-energie.html` (návrh 1). Namiesto veľkého čísla kW je hore scéna: dom

@@ -416,25 +416,27 @@ function renderTokSheet(state, dom) {
 /**
  * Dlaždica bojlera, ktorý riadi zásuvka (docs/navrhy/bojler-prebytky.html, variant A): stav namiesto rady.
  * Ťuknutie otvorí panel Bojler dnes (ten istý krok ako detail spotrebiča). Inak null.
- * @param {import('../state.js').AppState} state @param {Model['co']} co @returns {Dlazdica | null}
+ * @param {import('../state.js').AppState} state @param {Model['co']} co @param {Model['bojler']} plan @returns {Dlazdica | null}
  */
-function bojlerTeraz(state, co) {
+function bojlerTeraz(state, co, plan) {
     // Len pri dnešku - iný deň v hrebeni ukazuje plán, nie čo sa deje teraz.
     if (!co || co.den || !riadeny(state) || !state.bojler) return null;
-    return { id: 'bojler', ...bojlerDlazdica(state.bojler, state.now, state.site.timezone) };
+    return { id: 'bojler', ...bojlerDlazdica(state.bojler, state.now, state.site.timezone, plan) };
 }
 
 /**
  * Panel Bojler dnes: pás dňa, štyri čísla a behy. Otvorený, kým je v stave tzVec 'bojler' a bojler riadi zásuvka.
- * @param {import('../state.js').AppState} state @param {Dom} dom
+ * @param {import('../state.js').AppState} state @param {Dom} dom @param {Model['bojler']} plan
  */
-function renderBojlerSheet(state, dom) {
+function renderBojlerSheet(state, dom, plan) {
     const b = state.tzVec === 'bojler' && riadeny(state) ? state.bojler : null;
     if (b) {
-        const d = bojlerDetail(b, state.now, state.site.timezone);
+        const d = bojlerDetail(b, state.now, state.site.timezone, plan);
         setHtml(dom.tzBojlerIco, vecIcon('bojler'));
         setText(dom.tzBojlerTtl, d.nadpis);
         setText(dom.tzBojlerPod, d.pod);
+        setText(dom.tzBojlerPlan, d.plan);
+        show(dom.tzBojlerPlan, !!d.plan);
         const R = TERAZ_BOJLER_TEXTS.rezim;
         setText(dom.tzBojlerRezimN, R.nazov);
         // Biela plocha pod zvoleným tlačidlom prejde na druhú stranu (css/teraz.css, .bj-rezim::before).
@@ -539,13 +541,13 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskText, T.askText);
     setText(dom.tzAskBtn, T.askBtn);
     renderHreben(m.co ? m.hreben : null, dom);
-    renderCo(m.co, dom, bojlerTeraz(state, m.co));
+    renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler));
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
     renderChipSheet(state, m, dom, T);
     renderVecSheet(state, m, dom);
-    renderBojlerSheet(state, dom);
+    renderBojlerSheet(state, dom, m.bojler);
     renderTokSheet(state, dom);
 }
 

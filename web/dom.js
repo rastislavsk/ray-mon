@@ -101,6 +101,7 @@ function terazBojlerDom() {
         tzBojlerIco: byId('tz-bojler-ico'),
         tzBojlerTtl: byId('tz-bojler-ttl'),
         tzBojlerPod: byId('tz-bojler-pod'),
+        tzBojlerPlan: byId('tz-bojler-plan'),
         tzBojlerRezim: byId('tz-bojler-rezim'),
         tzBojlerRezimN: byId('tz-bojler-rezim-n'),
         tzBojlerRezimT: byId('tz-bojler-rezim-t'),

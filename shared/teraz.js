@@ -6,7 +6,7 @@
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { daSaZapisat, zoZvysku } from './bezi.js';
-import { interpolate, realCurveBoundary } from './chart-model.js';
+import { interpolate, opravenaPredpoved, realCurveBoundary } from './chart-model.js';
 import { BEZI, installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayChartModel, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
@@ -75,7 +75,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
     const plan = dayPlan(input);
     const note = estimate ? null : noteOf(input, now, voice);
     const m = mozemModel(input, { voice, devices });
-    const { rows, behy } = m.plan ?? { rows: [], behy: [] };
+    const { rows, behy, bojler } = m.plan ?? { rows: [], behy: [], bojler: null };
     const os = denOs(daylightSpan(input.site, localDateKey(input.now, input.site.timezone)), localMinutes(input.now, input.site.timezone));
     const teraz = {
         nowMin: now.minutes,
@@ -94,6 +94,8 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
         ...(m.plan ? tyzdenOf(input, rows, teraz, { span: os.span, devices: devices ?? PLAN_DNA.devices, den, voice }) : {}),
         os,
         pocasie: pocasieOf(input, now),
+        // Čo plán čaká od bojlera, ktorý riadi zásuvka - pre jeho dlaždicu a panel.
+        bojler,
     };
 }
 
@@ -308,6 +310,7 @@ function empty(kind, estimate) {
         hreben: /** @type {(NonNullable<ReturnType<typeof hrebenModel>> & { zvoleny: number }) | null} */ (null),
         os: /** @type {ReturnType<typeof denOs> | null} */ (null),
         pocasie: /** @type {import('./pocasie.js').Pocasie | null} */ (null),
+        bojler: /** @type {import('./plan-dna.js').BojlerPlan | null} */ (null),
     };
 }
 
@@ -338,7 +341,7 @@ function chartOf(input, plan, hero, now) {
     const geo = dayChartModel({
         span,
         plan,
-        hourly: input.forecast ? input.forecast.hourlyToday : [],
+        hourly: input.forecast ? opravenaPredpoved(curve, input.forecast.hourlyToday, now.minutes) : [],
         real: curve,
         boundary: realCurveBoundary(curve, now.minutes),
         nowMin: now.minutes,
