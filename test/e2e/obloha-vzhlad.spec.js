@@ -256,12 +256,12 @@ test.describe('zbaliteľné sekcie', () => {
             await expect(page.locator('#panel-nastavenie')).toBeVisible();
             await expect(page.locator(`#ns-body-${key}`)).toBeHidden();
         }
-        // Po zbalení nadpisom ďalšie Späť sekciu znovu nerozbalí, ale ide na Teraz.
+        // Zbalenie nadpisom ide cez históriu: ďalšie Späť už prepne kartu, sekciu znovu nerozbalí.
         await page.locator('#ns-fold-vzhlad').click();
         await page.locator('#ns-fold-vzhlad').click();
         await expect(page.locator('#ns-body-vzhlad')).toBeHidden();
         await page.goBack();
-        await expect(page.locator('#panel-terazky')).toBeVisible();
+        await expect(page.locator('#panel-7dni')).toBeVisible();
         // S kartou sa sekcia zbalí.
         await karta(page, 'nastavenie');
         await rozbal(page, 'doma');

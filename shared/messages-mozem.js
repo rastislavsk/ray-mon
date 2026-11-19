@@ -676,11 +676,14 @@ export const MOZEM_SKY_TEXTS_SLUSNE = {
     askBtn: 'Zadajte polohu',
 };
 
-/** Štítok v hlavičke bez zadaných panelov - otvorí Nastavenie. */
-export const HEADER_TEXTS = { setup: 'Zadaj panely ›' };
+/**
+ * Štítok v hlavičke bez zadaných panelov - otvorí Nastavenie - a bublina po tlačidle Späť na karte
+ * Teraz, keď ďalšie Späť appku zavrie (web/nav-history.js).
+ */
+export const HEADER_TEXTS = { setup: 'Zadaj panely ›', spat: 'Ďalším stlačením sa appka zatvorí' };
 
 /** @type {typeof HEADER_TEXTS} */
-export const HEADER_TEXTS_SLUSNE = { setup: 'Zadajte panely ›' };
+export const HEADER_TEXTS_SLUSNE = { setup: 'Zadajte panely ›', spat: 'Ďalším stlačením sa appka zatvorí' };
 
 /** Výzva pri odpovedi z typickej strechy: s čím appka počíta. Výkon zhruba („asi 5 kWp“) -
  * desatiny by tvrdili presnosť, ktorú typická strecha nemá. @param {number} kwp výkon typickej strechy @param {import('./messages-zaklad.js').Voice} [voice] */

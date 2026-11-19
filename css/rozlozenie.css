@@ -110,6 +110,28 @@
 :root:is([data-layout='medium'], [data-layout='wide']) .offer {
     bottom: calc(16px + env(safe-area-inset-bottom));
 }
+/* Bublina po tlačidle Späť na karte Teraz (web/nav-history.js): malá nad navigáciou, ako systémová
+   bublina na Androide. */
+.spat-bublina {
+    position: fixed;
+    inset: auto 16px calc(84px + env(safe-area-inset-bottom)) 16px;
+    z-index: 7;
+    width: fit-content;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(10, 16, 38, 0.94);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 0.9rem;
+    line-height: 1.35;
+    text-align: center;
+    animation: pripojene-in 0.3s ease-out;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .spat-bublina {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+}
 /* Bublina „Meranie pripojené“: dole už navigácia nie je. */
 :root:is([data-layout='medium'], [data-layout='wide']) .pripojene {
     bottom: calc(16px + env(safe-area-inset-bottom));

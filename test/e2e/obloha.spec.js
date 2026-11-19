@@ -16,6 +16,7 @@ import {
     SITE,
     SITE_STORAGE_KEY,
     SKY,
+    SPAT,
     TARIFF,
     WORKER_PV_URL,
     WORKER_TRASY_URL,
@@ -25,7 +26,7 @@ import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { stavMeraniaText, TERAZ_BEZI, TERAZ_TEXTS } from '../../shared/messages-core.js';
+import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI, TERAZ_TEXTS } from '../../shared/messages-core.js';
 import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
 import { grafModel, pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
@@ -115,12 +116,6 @@ const ocakavanaObloha = (time) => {
     const vstup = vstupTeraz(time, { pv });
     return skyNow(vstup, true, pocasieTeraz(vstup));
 };
-
-/**
- * Stojí prehliadač na strážnej položke tlačidla Späť (web/nav-history.js)? Bez nej Späť appku zavrie.
- * @param {import('@playwright/test').Page} page
- */
-const strazSpat = (page) => page.evaluate(() => history.state?.spat === true);
 
 /** @param {import('@playwright/test').Page} page @param {(typeof PANELS)[number]} panel */
 async function ocakavajKartu(page, panel) {
@@ -465,11 +460,10 @@ test('po prepnutí karty je stránka navrchu', async ({ page }) => {
     await page.locator('#nav-mozem').click();
     await ocakavajKartu(page, 'mozem');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-    // Späť vedie na kartu Teraz tiež navrch.
-    await page.locator('#nav-7dni').click();
+    // Späť vedie na kartu 7 dní tiež navrch.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await page.goBack();
-    await ocakavajKartu(page, 'terazky');
+    await ocakavajKartu(page, '7dni');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     expect(errors).toEqual([]);
 });
@@ -601,56 +595,72 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         expect(errors).toEqual([]);
     });
 
-    test('tlačidlo Späť z ktorejkoľvek karty vedie na Teraz, z Teraz appku zavrie', async ({ page }) => {
+    test('tlačidlo Späť vracia po kartách, Dopredu ich vráti', async ({ page }) => {
         const errors = await openObloha(page);
-        const start = await page.evaluate(() => history.length);
-        // Na Teraz po štarte nie je čo vrátiť - v histórii nič nepribudne a Späť appku zavrie.
-        expect(await strazSpat(page)).toBe(false);
         await page.locator('#nav-7dni').click();
-        await page.locator('#nav-radar').click();
         await page.locator('#nav-nastavenie').click();
         await ocakavajKartu(page, 'nastavenie');
-        // Koľko kariet človek prešiel, v histórii je nad štartom len jedna položka.
-        expect(await page.evaluate(() => history.length)).toBe(start + 1);
+        await page.goBack();
+        await ocakavajKartu(page, '7dni');
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
-        await expect.poll(() => strazSpat(page)).toBe(false);
-        // Návrat na Teraz navigáciou položku zoberie tiež - ďalšie Späť appku zavrie.
-        await page.locator('#nav-mozem').click();
-        await expect.poll(() => strazSpat(page)).toBe(true);
-        await page.locator('#nav-terazky').click();
-        await expect.poll(() => strazSpat(page)).toBe(false);
-        await ocakavajKartu(page, 'terazky');
+        await page.goForward();
+        await ocakavajKartu(page, '7dni');
         expect(errors).toEqual([]);
     });
 
-    test('tlačidlo Späť najprv zavrie, čo je otvorené, potom ide na Teraz', async ({ page }) => {
-        await page.setViewportSize({ width: 375, height: 812 });
+    test('Späť vráti posledných SPAT.krokov krokov, potom Teraz, potom bublinu a až ďalšie appku zavrie', async ({ page }) => {
         const errors = await openObloha(page);
-        // Iný deň v páse dní karty Teraz: Späť vráti dnešok, až potom appku zavrie.
-        await page.locator('#tz-hreben-dni [data-den="2"]').click();
-        await expect.poll(() => strazSpat(page)).toBe(true);
+        const app = page.url();
+        const karty = /** @type {const} */ (['7dni', 'mozem', 'statistika', 'nastavenie', '7dni', 'mozem', 'statistika']);
+        for (const k of karty) {
+            await page.locator(`#nav-${k}`).click();
+            await ocakavajKartu(page, k);
+        }
+        // Späť ide po krokoch od posledného, najviac SPAT.krokov ...
+        for (const k of karty.slice(0, -1).reverse().slice(0, SPAT.krokov)) {
+            await page.goBack();
+            await ocakavajKartu(page, k);
+        }
+        // ... ďalšie skočí na Teraz, nech bolo krokov koľkokoľvek.
         await page.goBack();
-        await expect(page.locator('#tz-hreben-dni [data-den="0"]')).toHaveAttribute('aria-pressed', 'true');
-        await expect.poll(() => strazSpat(page)).toBe(false);
-        // Bublina stavu merania.
-        await page.locator('#hdr-live').click();
-        await expect(page.locator('#hdr-tip')).toBeVisible();
-        await page.goBack();
-        await expect(page.locator('#hdr-tip')).toBeHidden();
         await ocakavajKartu(page, 'terazky');
-        await expect.poll(() => strazSpat(page)).toBe(false);
-        // Detail dňa v 7 dňoch: prvé Späť ho zavrie, druhé ide na Teraz.
+        const bublina = page.locator('#spat-bublina');
+        await expect(bublina).toBeHidden();
+        await page.goBack();
+        await ocakavajKartu(page, 'terazky');
+        await expect(bublina).toBeVisible();
+        await expect(bublina).toHaveText(HEADER_TEXTS.spat);
+        // Zmizne sama.
+        await expect(bublina).toBeHidden({ timeout: SPAT.bublinaMs + 2000 });
+        expect(errors).toEqual([]);
+        // Ďalšie Späť z appky odíde.
+        await page.goBack();
+        await expect.poll(() => page.url()).not.toBe(app);
+    });
+
+    test('z detailu dňa po listovaní: Späť do 7 dní, Teraz, bublina, odchod', async ({ page }) => {
+        const errors = await openObloha(page);
+        const app = page.url();
         await page.locator('#nav-7dni').click();
-        await page.locator('#sd-days [data-day="3"]').click();
+        await page.locator('#sd-days [data-day="1"]').click();
         await expect(page.locator('#sd-day')).toBeVisible();
+        // Listovanie dní nie je krok.
+        for (const den of ['2', '3']) {
+            await page.locator(`#sd-day-strip [data-day="${den}"]`).click();
+            await expect(page.locator('#sd-day-strip [aria-current="true"]')).toHaveAttribute('data-day', den);
+        }
         await page.goBack();
         await expect(page.locator('#sd-list')).toBeVisible();
         await ocakavajKartu(page, '7dni');
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
-        await expect.poll(() => strazSpat(page)).toBe(false);
+        await page.goBack();
+        await expect(page.locator('#spat-bublina')).toBeVisible();
+        await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
+        await page.goBack();
+        await expect.poll(() => page.url()).not.toBe(app);
     });
 });
 
@@ -1728,7 +1738,7 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#gr-chart')).toBeFocused();
 
         // Tlačidlo Späť v telefóne zavrie panel naraz, nech sa po grafe chodilo akokoľvek (posun aj
-        // „Späť na teraz“ nič nepridajú), a ďalšie ide na Teraz - graf sa znovu neotvorí.
+        // „Späť na teraz“ nie sú kroky), a ďalšie vráti predošlú kartu - graf sa znovu neotvorí.
         await page.mouse.click(z.x, z.y);
         await page.mouse.click(na.x, na.y);
         await expect(cas).toHaveText('15:30');
@@ -1739,8 +1749,8 @@ test.describe('karta Teraz', () => {
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
         await expect(page.locator('#gr-sheet')).toBeHidden();
-        // Na karte Dnes graf ostal zatvorený.
-        await page.locator('#nav-mozem').click();
+        // Graf sa otvorí znovu na teraz.
+        await page.goForward();
         await ocakavajKartu(page, 'mozem');
         await expect(page.locator('#gr-sheet')).toBeHidden();
         // Karta Teraz zvolený čas nepozná - číslo a riadok stavu sú teraz.
@@ -2289,7 +2299,7 @@ test.describe('karta 7 dní', () => {
         await expect(page.locator('#sd-list')).toBeVisible();
         await expect(page.locator('#sd-days [data-day="5"]')).toBeFocused();
         expect(await page.evaluate(() => window.scrollY)).toBe(y);
-        // Ďalšie Späť ide na Teraz.
+        // Ďalšie Späť sa správa ako doteraz: predošlá karta.
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
         await page.locator('#nav-7dni').click();
@@ -2303,7 +2313,7 @@ test.describe('karta 7 dní', () => {
         await page.locator('#sd-days [data-day="2"]').click();
         await page.locator('#sd-day-back').click();
         await expect(page.locator('#sd-days [data-day="2"]')).toBeFocused();
-        // Po šípke Späť detail znovu neotvorí, ale ide na Teraz.
+        // Šípka ide krokom v histórii: Späť potom detail znovu neotvorí, ale vráti predošlú kartu.
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);
@@ -2373,7 +2383,7 @@ test.describe('karta 7 dní prstom', () => {
         await page.locator('#sd-day-back').click();
         await expect(page.locator('#sd-list')).toBeVisible();
         await ocakavajKartu(page, '7dni');
-        // Listovanie dní Späť nevracia: z prehľadu ide na Teraz.
+        // Listovanie dní nebolo krokom navigácie: Späť z prehľadu ide na predošlú kartu.
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
         expect(errors).toEqual([]);

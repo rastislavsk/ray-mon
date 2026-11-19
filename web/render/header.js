@@ -1,5 +1,6 @@
 // Hlavička: RAY-MON a pod ním miesto elektrárne (shared/hlavicka.js).
 // Bez zadaných panelov je vpravo biely štítok „Zadaj panely ›“, ktorý otvorí kartu Nastavenie.
+// Patrí sem aj bublina po tlačidle Späť, keď ďalšie Späť appku zavrie.
 // Bodka a čas merania sú v riadku pod číslom karty Teraz (render/teraz.js).
 
 import { hlavickaModel, pripojenieBublina } from '../../shared/hlavicka.js';
@@ -12,6 +13,8 @@ export function renderHeader(state, dom) {
     dom.place.textContent = m.place;
     dom.setup.classList.toggle('hidden', !m.setup);
     dom.setup.textContent = voiceTexts(state.voice).HEADER_TEXTS.setup;
+    dom.spatBublina.classList.toggle('hidden', !state.spatBublina);
+    dom.spatBublina.textContent = voiceTexts(state.voice).HEADER_TEXTS.spat;
     renderPripojene(state, dom);
 }
 
