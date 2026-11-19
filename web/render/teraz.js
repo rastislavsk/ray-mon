@@ -9,6 +9,7 @@ import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts }
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
+import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { rezimIcon, tokIcon, vecIcon, weatherIcon } from './icons.js';
@@ -18,6 +19,10 @@ import { dialog, setHtml, setText, show } from './write.js';
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
+/**
+ * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
+ *   meno: string, podiel: number | null, odr: string[], potom?: { text: string, dlho: boolean } | null }} Dlazdica
+ */
 
 /** Texty bubliny, keď riadok bublinu nemá. */
 const BEZ_BUBLINY = { nadpis: '', text: '', tlacidlo: '' };
@@ -89,17 +94,17 @@ function renderHreben(h, dom) {
  * riadky mriežky, takže číslo aj pásik sú v nich na rovnakej výške, a odrážky majú vždy miesto na dva riadky,
  * takže sú všetky dlaždice rovnako vysoké. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
  * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `riadi` bodka stavu bojlera so zásuvkou,
- * `rezim` značka v rohu, kto bojler zapína.
- * @param {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
- *   meno: string, podiel: number | null, odr: string[], potom?: { text: string, dlho: boolean } | null }} d
+ * `rezim` značka v rohu, kto bojler zapína. `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
+ * (docs/navrhy/teraz-dlazdice-stlpce.html, B): ikona vedľa čísla a jedna odrážka, mriežku riadkov nezdieľa.
+ * @param {Dlazdica} d @param {string} [stlpec] @param {boolean} [pol]
  */
-const dlazdicaHtml = (d) =>
-    `<button type="button" class="dl" data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''} data-vec="${d.id}">` +
+const dlazdicaHtml = (d, stlpec = '', pol = false) =>
+    `<button type="button" class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''} data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''} data-vec="${d.id}">` +
     `<span class="dl-ico"${d.riadi ? ` data-riadi="${d.riadi}"` : ''} aria-hidden="true">${vecIcon(d.id)}</span>` +
     `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimHtml(d.rezim)}` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%"`}></i>` +
     `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
-    `${d.potom ? `<span class="sr">, </span><em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></button>`;
+    `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></button>`;
 
 /** Značka režimu bojlera v rohu dlaždice, pre čítačku slovom. @param {'appka' | 'rucne' | null | undefined} rezim */
 const rezimHtml = (rezim) =>
@@ -109,11 +114,12 @@ const rezimHtml = (rezim) =>
 
 /**
  * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri dnešku riadok nad dlaždicami (bodka, odkiaľ ide prúd, pri
- * ničom aj cena siete), pri inom dni jeho hlavička; pod tým jedna mriežka dlaždíc - pri dnešku najprv čo ide
- * teraz (alebo najbližšia vec) a Bojler, ktorý riadi zásuvka, potom ďalšie spotrebiče zvoleného dňa. Každá
- * dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa (bez predpovede, nič doma)
- * nie je. `bojler` je dlaždica bojlera (pri dnešku, inak prázdna).
- * @param {Model['co']} co @param {Dom} dom @param {string} bojler
+ * ničom aj cena siete), pri inom dni jeho hlavička; pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
+ * vľavo práčka so sušičkou ako dvojica polovičných dlaždíc a umývačka podľa času, vpravo bojler a pod ním auto.
+ * Poradie, z ktorého ľavý stĺpec vychádza: čo beží, čo ide teraz (alebo najbližšia vec), ďalšie spotrebiče
+ * zvoleného dňa, čo dobehlo. Každá dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
+ * (bez predpovede, nič doma) nie je. `bojler` je dlaždica bojlera, ktorý riadi zásuvka (pri dnešku, inak null).
+ * @param {Model['co']} co @param {Dom} dom @param {Dlazdica | null} bojler
  */
 function renderCo(co, dom, bojler) {
     show(dom.tzCo, !!co);
@@ -128,6 +134,19 @@ function renderCo(co, dom, bojler) {
     setHtml(dom.tzOkoT, `${escapeHtml(h.oko.text)}${h.oko.sub ? ` <span>· ${escapeHtml(h.oko.sub)}</span>` : ''}`);
     show(dom.tzOkoPod, dnes && !!h.bezSlnka);
     setText(dom.tzOkoPod, h.bezSlnka);
+    const html = dlazdiceHtml(dlazdiceCo(co, bojler));
+    setHtml(dom.tzDlazdice, html);
+    show(dom.tzDlazdice, html !== '');
+}
+
+/**
+ * Dlaždice Čo zapnúť v poradí karty: čo beží, čo ide teraz (alebo najbližšia vec), bojler riadený zásuvkou,
+ * ďalšie spotrebiče zvoleného dňa, čo dobehlo. Iný deň má len svoje spotrebiče.
+ * @param {NonNullable<Model['co']>} co @param {Dlazdica | null} bojler @returns {Dlazdica[]}
+ */
+function dlazdiceCo(co, bojler) {
+    const h = co.hore;
+    const dnes = !co.den;
     const p = h.dalsi;
     const hore = dnes
         ? [
@@ -146,13 +165,30 @@ function renderCo(co, dom, bojler) {
         odr: r.odr,
     }));
     const { bezi, hotovo } = zapisane(co, dnes);
-    const html = [...hore, ...bezi].map(dlazdicaHtml).join('') + (dnes ? bojler : '') + [...dalsie, ...hotovo].map(dlazdicaHtml).join('');
-    setHtml(dom.tzDlazdice, html);
-    show(dom.tzDlazdice, html !== '');
+    return [...bezi, ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie, ...hotovo];
 }
 
 /**
- * Dlaždice toho, čo človek dnes zapol (docs/navrhy/teraz-bezi-spotrebic.html): čo beží, ide hneď za tým, čo ide teraz,
+ * Dva stĺpce dlaždíc (shared/teraz-stlpce.js) v jednej mriežke: bloky idú striedavo ľavý a pravý, každý má svoj
+ * stĺpec (`data-stlpec`), takže sa rad zarovná, aj keď jednému stĺpcu blok chýba. Dvojica je jeden blok s dvoma
+ * polovičnými dlaždicami pod sebou.
+ * @param {Dlazdica[]} veci
+ */
+function dlazdiceHtml(veci) {
+    const { lavy, pravy } = stlpceDlazdic(veci);
+    /** @param {Dlazdica[]} b @param {string} s */
+    const blok = (b, s) =>
+        b.length === 1
+            ? dlazdicaHtml(b[0], s)
+            : `<div class="dl-par" data-stlpec="${s}">${b.map((d) => dlazdicaHtml(polovicaDlazdice(d), '', true)).join('')}</div>`;
+    let html = '';
+    for (let i = 0; i < Math.max(lavy.length, pravy.length); i++)
+        html += (lavy[i] ? blok(lavy[i], 'l') : '') + (pravy[i] ? blok(pravy[i], 'p') : '');
+    return html;
+}
+
+/**
+ * Dlaždice toho, čo človek dnes zapol (docs/navrhy/teraz-bezi-spotrebic.html): čo beží, ide v stĺpci hore,
  * čo dobehlo, na koniec. Iný deň ich nemá. `?? []`: model zo starého shared/teraz.js z cache po nasadení tieto polia nemá.
  * @param {NonNullable<Model['co']>} co @param {boolean} dnes
  */
@@ -330,14 +366,13 @@ function renderTokSheet(state, dom) {
 
 /**
  * Dlaždica bojlera, ktorý riadi zásuvka (docs/navrhy/bojler-prebytky.html, variant A): stav namiesto rady.
- * Ťuknutie otvorí panel Bojler dnes (ten istý krok ako detail spotrebiča). Inak prázdny text.
- * @param {import('../state.js').AppState} state @param {Model['co']} co
+ * Ťuknutie otvorí panel Bojler dnes (ten istý krok ako detail spotrebiča). Inak null.
+ * @param {import('../state.js').AppState} state @param {Model['co']} co @returns {Dlazdica | null}
  */
-function bojlerHtml(state, co) {
+function bojlerTeraz(state, co) {
     // Len pri dnešku - iný deň v hrebeni ukazuje plán, nie čo sa deje teraz.
-    if (!co || co.den || !riadeny(state) || !state.bojler) return '';
-    const t = bojlerDlazdica(state.bojler, state.now, state.site.timezone);
-    return dlazdicaHtml({ id: 'bojler', ...t });
+    if (!co || co.den || !riadeny(state) || !state.bojler) return null;
+    return { id: 'bojler', ...bojlerDlazdica(state.bojler, state.now, state.site.timezone) };
 }
 
 /**
@@ -438,7 +473,7 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskText, T.askText);
     setText(dom.tzAskBtn, T.askBtn);
     renderHreben(m.co ? m.hreben : null, dom);
-    renderCo(m.co, dom, bojlerHtml(state, m.co));
+    renderCo(m.co, dom, bojlerTeraz(state, m.co));
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);

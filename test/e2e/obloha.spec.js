@@ -30,6 +30,7 @@ import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI, TERAZ_TEXTS } from '../../sh
 import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
 import { grafModel, pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
+import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -1272,16 +1273,18 @@ const coVStranke = (page) =>
     });
 
 /**
- * Rozmery dlaždíc Čo zapnúť: rôzne výšky dlaždíc a koľko dlaždíc nemá číslo, pásik a odrážky na rovnakej výške
- * ako dlaždica vedľa nej (docs/navrhy/teraz-pasik-zdroje.html - všetky rovnako veľké, rady zarovnané).
+ * Rozmery dlaždíc Čo zapnúť: rôzne výšky dlaždíc (dvojica práčka + sušička ako jedna) a koľko dlaždíc nemá číslo,
+ * pásik a odrážky na rovnakej výške ako dlaždica vedľa nej (docs/navrhy/teraz-pasik-zdroje.html,
+ * teraz-dlazdice-stlpce.html - všetky rovnako veľké, rady zarovnané).
  * @param {import('@playwright/test').Page} page
  */
 const rozmeryDlazdic = (page) =>
     page.evaluate(() => {
-        const dl = [...document.querySelectorAll('#tz-dlazdice .dl')];
+        const bloky = [...document.querySelectorAll('#tz-dlazdice > *')];
+        const dl = bloky.filter((d) => d.matches('.dl'));
         const top = (/** @type {Element} */ d, /** @type {string} */ sel) =>
             Math.round(d.querySelector(sel)?.getBoundingClientRect().top ?? -1);
-        const vysky = new Set(dl.map((d) => Math.round(d.getBoundingClientRect().height)));
+        const vysky = new Set(bloky.map((d) => Math.round(d.getBoundingClientRect().height)));
         const vedla = dl.filter((d, i) => {
             const sused = dl[i - 1];
             if (!sused || top(sused, '.dl-ico') !== top(d, '.dl-ico')) return false;
@@ -1290,39 +1293,63 @@ const rozmeryDlazdic = (page) =>
         return { vysky: vysky.size, nezarovnane: vedla.length };
     });
 
-/** Dlaždice dneška, ktoré idú teraz, alebo najbližšia vec. @param {NonNullable<ReturnType<typeof terazModel>['co']>['hore']} h */
+/**
+ * Dlaždica tak, ako ju má v sebe render, a ako ju vidí coVStranke.
+ * @typedef {{ id: string, tone: string, kind: string, pred?: string, velky: string, meno: string, odr: string[],
+ *   podiel: number, potom?: { text: string } | null }} DlazdicaModelu
+ */
+/** @param {DlazdicaModelu} d */
+const dlazdicaVStranke = (d) => ({
+    id: d.id,
+    tone: d.tone,
+    kind: d.kind,
+    text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${[...d.odr, ...(d.potom ? [d.potom.text] : [])].join(', ')}`,
+    podiel: `${d.podiel}%`,
+    potom: d.potom?.text ?? '',
+});
+
+/** Dlaždice dneška, ktoré idú teraz, alebo najbližšia vec. @param {NonNullable<ReturnType<typeof terazModel>['co']>['hore']} h @returns {DlazdicaModelu[]} */
 const horeZModelu = (h) => [
-    ...h.dlazdice.map((d) => ({
-        id: d.id,
-        tone: d.tone,
-        kind: '',
-        text: `${d.pred ? `${d.pred} ` : ''}${d.velky} ${d.meno} ${[...d.odr, ...(d.potom ? [d.potom.text] : [])].join(', ')}`,
-        podiel: `${d.podiel}%`,
-        potom: d.potom?.text ?? '',
-    })),
+    ...h.dlazdice.map((d) => ({ ...d, kind: '' })),
     ...(h.dalsi
         ? [
               {
                   id: h.dalsi.id,
                   tone: 'tiche',
                   kind: h.dalsi.tone,
-                  text: `${h.dalsi.cas} ${h.dalsi.name} ${h.dalsi.odr.join(', ')}`,
-                  podiel: `${h.dalsi.podiel}%`,
-                  potom: '',
+                  velky: h.dalsi.cas,
+                  meno: h.dalsi.name,
+                  odr: h.dalsi.odr,
+                  podiel: h.dalsi.podiel,
               },
           ]
         : []),
 ];
 
-/** Ďalší spotrebič zvoleného dňa ako dlaždica na skle. @param {NonNullable<ReturnType<typeof terazModel>['co']>['riadky'][number]} r */
+/** Ďalší spotrebič zvoleného dňa ako dlaždica na skle. @param {NonNullable<ReturnType<typeof terazModel>['co']>['riadky'][number]} r @returns {DlazdicaModelu} */
 const riadokZModelu = (r) => ({
     id: r.id,
     tone: 'tiche',
     kind: r.kind,
-    text: `${r.pred ? `${r.pred} ` : ''}${r.cas} ${r.name} ${r.odr.join(', ')}`,
-    podiel: `${r.podiel}%`,
-    potom: '',
+    pred: r.pred,
+    velky: r.cas,
+    meno: r.name,
+    odr: r.odr,
+    podiel: r.podiel,
 });
+
+/**
+ * Poradie v stránke: dva stĺpce (shared/teraz-stlpce.js) striedavo po blokoch, v dvojici polovičné dlaždice.
+ * @param {DlazdicaModelu[]} veci
+ */
+const vStlpcoch = (veci) => {
+    const { lavy, pravy } = stlpceDlazdic(veci);
+    /** @param {DlazdicaModelu[] | undefined} b */
+    const blok = (b) => (!b ? [] : b.length === 1 ? b : b.map(polovicaDlazdice));
+    return Array.from({ length: Math.max(lavy.length, pravy.length) }, (_, i) => [...blok(lavy[i]), ...blok(pravy[i])])
+        .flat()
+        .map(dlazdicaVStranke);
+};
 
 /** To isté z modelu. @param {ReturnType<typeof terazModel>} m */
 const coZModelu = (m) => {
@@ -1332,7 +1359,7 @@ const coZModelu = (m) => {
     return {
         den: co.den ? `${co.den.nazov} ${co.den.pod}` : '',
         oko: `${h.oko.text}${h.oko.sub ? ` · ${h.oko.sub}` : ''}`,
-        dlazdice: [...(co.den ? [] : horeZModelu(h)), ...co.riadky.map(riadokZModelu)],
+        dlazdice: vStlpcoch([...(co.den ? [] : horeZModelu(h)), ...co.riadky.map(riadokZModelu)]),
     };
 };
 
@@ -1480,7 +1507,9 @@ test.describe('karta Teraz', () => {
         const dlazdica = page.locator('#tz-co [data-vec="pracka"]');
         await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
         await expect(dlazdica.locator('.velky')).toHaveText(`${t?.pred} ${t?.velky}`);
-        await expect(dlazdica.locator('.odr > span:not(.sr)')).toHaveText(t?.odr ?? []);
+        // Práčka je polovica dvojice so sušičkou: jedna odrážka.
+        await expect(dlazdica).toContainClass('dl-pol');
+        await expect(dlazdica.locator('.odr > span:not(.sr)')).toHaveText(t ? polovicaDlazdice(t).odr : []);
         expect(await rozmeryDlazdic(page)).toEqual({ vysky: 1, nezarovnane: 0 });
         // Zápis je v telefóne: po obnovení stránky práčka stále beží.
         await page.reload();
@@ -1541,7 +1570,7 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText('nabíjaj teraz, lacná elektrina');
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
         // Čo sa dnes na slnko už nezmestí, má núdzový čas a povie, kedy pôjde celé zo slnka.
-        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/, celá zajtra$/);
+        await expect(page.locator('#tz-dlazdice .dl:not(.dl-pol)[data-kind="nudza"] small').first()).toHaveText(/, celá zajtra$/);
         // Zajtrajšok: ťuknutie na deň v hrebeni ukáže jeho plán s hlavičkou, dnešné dlaždice zmiznú.
         await page.locator('#tz-hreben-dni [data-den="1"]').click();
         const zajtra = terazModel(vstupTeraz(time), { den: 1 });
@@ -1588,7 +1617,7 @@ test.describe('karta Teraz', () => {
         await expect(dni.nth(1)).toHaveAccessibleName('Ne – Zajtra, slnko na veľké spotrebiče nestačí');
         await expect(page.locator('#tz-hreben-dni .wi')).toHaveCount(h.dni.filter((d) => d.pocasie).length);
         await expect(page.locator('#tz-hreben-dni .pd-okna i')).toHaveCount(h.dni.reduce((n, d) => n + d.okna.length, 0));
-        await expect(page.locator('#tz-dlazdice [data-kind="nudza"] small').first()).toHaveText(/, celá v utorok$/);
+        await expect(page.locator('#tz-dlazdice .dl:not(.dl-pol)[data-kind="nudza"] small').first()).toHaveText(/, celá v utorok$/);
         expect(await vazneNalezy(page)).toEqual([]);
         await page.locator('#tz-oko').click();
         await expect(page.locator('#tz-chip-body .istota')).toHaveText('Predpoveď na viac dní dopredu je menej istá, ešte sa môže zmeniť.');

@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Dlaždice v stĺpcoch</title>
+        <style>
+            /* Návrh: práčka a sušička ako jedna dlaždica rozdelená na dve polovice, dlaždice v dvoch
+               stĺpcoch (práčka/sušička a umývačka vľavo, auto a bojler vpravo), v stĺpci podľa času.
+               Samostatný súbor, nič neimportuje z appky. Časy a texty v telefónoch sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --ink: #fff;
+                --dim: rgba(255, 255, 255, 0.68);
+                --line: rgba(255, 255, 255, 0.16);
+                --go: #b9f28c;
+                --go-ink: #14300c;
+                --cheap: #7cc4ff;
+                --cheap-text: #9ed3ff;
+                --glass: rgba(255, 255, 255, 0.09);
+                --run: #fff4d6;
+                --run-ink: #3a2a00;
+                --sun: #ffc24b;
+                --grid: rgba(255, 255, 255, 0.28);
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--ink);
+                font-family: var(--font);
+                font-size: 16px;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 48px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 44px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 23px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 17px;
+                font-weight: 800;
+            }
+            p,
+            ul,
+            ol {
+                margin: 0;
+                max-width: 72ch;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                width: min(360px, 100%);
+            }
+            figcaption {
+                font-size: 14px;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: var(--ink);
+            }
+            .phone {
+                border-radius: 32px;
+                padding: 18px 14px 22px;
+                background: linear-gradient(180deg, #24467e 0%, #2f5c9b 50%, #3d6ea8 100%);
+                border: 1px solid var(--line);
+            }
+            .oko {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+                font-weight: 700;
+                margin: 0 4px 12px;
+            }
+            .oko i {
+                width: 10px;
+                height: 10px;
+                border-radius: 50%;
+                background: var(--go);
+            }
+            /* Dva stĺpce, každý svoj: dlaždice v ňom idú za sebou podľa času. */
+            .stlpce {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+                align-items: start;
+            }
+            .stlpec {
+                display: grid;
+                gap: 10px;
+            }
+            /* Dlaždica ako dnes: veľká, s dvoma odrážkami. */
+            .dl {
+                position: relative;
+                display: grid;
+                min-height: 200px;
+                padding: 14px;
+                border-radius: 24px;
+                background: var(--glass);
+                align-content: start;
+            }
+            .dl[data-tone='go'] {
+                background: var(--go);
+                color: var(--go-ink);
+            }
+            .dl[data-tone='cheap'] {
+                background: var(--cheap);
+                color: #06233d;
+            }
+            .dl[data-tone='bezi'] {
+                background: var(--run);
+                color: var(--run-ink);
+            }
+            .ico {
+                width: 44px;
+                height: 44px;
+                margin-bottom: 22px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.12);
+            }
+            [data-tone] .ico {
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .ico svg {
+                width: 24px;
+                height: 24px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.7;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .velky {
+                font-size: 30px;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            [data-kind='cheap'] .velky {
+                color: var(--cheap-text);
+            }
+            .meno {
+                font-size: 21px;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 108;
+                line-height: 1.1;
+                margin-top: 2px;
+            }
+            .pas {
+                height: 6px;
+                border-radius: 3px;
+                margin: 10px 0 8px;
+                background: linear-gradient(90deg, var(--sun) 0 var(--s), var(--grid) var(--s));
+            }
+            [data-tone] .pas {
+                background: linear-gradient(90deg, rgba(20, 48, 12, 0.75) 0 var(--s), rgba(20, 48, 12, 0.2) var(--s));
+            }
+            .odr {
+                font-size: 14px;
+                font-weight: 600;
+                line-height: 1.3;
+            }
+            .odr span {
+                display: block;
+                position: relative;
+                padding-left: 0.8em;
+            }
+            .odr span::before {
+                content: '';
+                position: absolute;
+                left: 0.1em;
+                top: 0.55em;
+                width: 0.3em;
+                height: 0.3em;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            /* Polovičná dlaždica: ikona menšia a vľavo od času, meno pod časom, pásik a jedna odrážka.
+               Dve polovice s medzerou 10 px sú presne také vysoké ako jedna veľká dlaždica. */
+            .pol {
+                min-height: 0;
+                height: 95px;
+                padding: 11px 12px;
+                grid-template-columns: auto minmax(0, 1fr);
+                column-gap: 10px;
+                align-content: start;
+                border-radius: 20px;
+            }
+            .pol .ico {
+                width: 34px;
+                height: 34px;
+                margin: 0;
+                grid-row: span 2;
+                align-self: center;
+            }
+            .pol .ico svg {
+                width: 20px;
+                height: 20px;
+            }
+            .pol .velky {
+                font-size: 22px;
+            }
+            .pol .meno {
+                font-size: 15px;
+                margin-top: 0;
+            }
+            .pol .pas,
+            .pol .odr {
+                grid-column: 1 / -1;
+            }
+            .pol .pas {
+                margin: 8px 0 5px;
+                height: 5px;
+            }
+            .pol .odr {
+                font-size: 13px;
+                white-space: nowrap;
+                overflow: hidden;
+            }
+            /* Variant A: dve samostatné polovice s bežnou medzerou. */
+            .par {
+                display: grid;
+                gap: 10px;
+            }
+            /* Variant B: jedna dlaždica, polovice delí tenká čiara; vonkajšie rohy oblé, vnútorné rovné. */
+            .par[data-v='b'] {
+                gap: 3px;
+            }
+            .par[data-v='b'] .pol {
+                height: 98.5px;
+            }
+            .par[data-v='b'] .pol:first-child {
+                border-radius: 24px 24px 6px 6px;
+            }
+            .par[data-v='b'] .pol:last-child {
+                border-radius: 6px 6px 24px 24px;
+            }
+            /* Variant C: ako B, ale bez odrážky - len čas, meno a pásik, väčšie písmo. */
+            .par[data-v='c'] .odr {
+                display: none;
+            }
+            .par[data-v='c'] .pol {
+                align-content: center;
+            }
+            .par[data-v='c'] .velky {
+                font-size: 26px;
+            }
+            .par[data-v='c'] .meno {
+                font-size: 17px;
+            }
+            .poradie {
+                position: absolute;
+                top: 8px;
+                right: 10px;
+                font-size: 12px;
+                font-weight: 800;
+                opacity: 0.6;
+            }
+            .box {
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                padding: 16px 18px;
+                display: grid;
+                gap: 8px;
+                max-width: 900px;
+            }
+            .box ul,
+            .box ol {
+                padding-left: 1.2em;
+                display: grid;
+                gap: 6px;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 15px;
+                max-width: 900px;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 12px 8px 0;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 12px">
+                <h1>Dlaždice spotrebičov v stĺpcoch</h1>
+                <p class="dim">
+                    Karta Teraz, mriežka pod scénou. Návrh z 19. 11. 2026, zvolený variant B (rozhodnutia na konci). Časy, texty a pásiky v
+                    telefónoch sú ilustračné, nie z výpočtu appky.
+                </p>
+                <ol>
+                    <li>
+                        <b>Práčka a sušička</b> sú vždy pod sebou (práčka hore), každá v polovičnej výške. Spolu sú vysoké ako jedna dnešná
+                        dlaždica.
+                    </li>
+                    <li>
+                        <b>Dva stĺpce:</b> vľavo práčka + sušička a umývačka, vpravo auto a bojler. V stĺpci zhora nadol podľa času
+                        spustenia.
+                    </li>
+                </ol>
+            </header>
+
+            <section>
+                <h2>1. Ako vyzerá dvojica práčka + sušička</h2>
+                <p>
+                    Do polovice dlaždice sa celý dnešný obsah nezmestí (ikona, veľký čas, meno, pásik, dve odrážky). Vo všetkých troch
+                    variantoch je ikona menšia a vedľa času. Líšia sa tým, či sú to dve dlaždice, alebo jedna rozdelená, a koľko textu
+                    ostane.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="stlpce">
+                                <div class="stlpec">
+                                    <div class="par" data-v="a">
+                                        <div class="dl pol" data-tone="go">
+                                            <span class="ico" data-i="pracka"></span><span class="velky">teraz</span
+                                            ><span class="meno">Práčka</span> <i class="pas" style="--s: 100%"></i
+                                            ><span class="odr"><span>do 12:30</span></span>
+                                        </div>
+                                        <div class="dl pol">
+                                            <span class="ico" data-i="susicka"></span><span class="velky">12:30</span
+                                            ><span class="meno">Sušička</span> <i class="pas" style="--s: 80%"></i
+                                            ><span class="odr"><span>po praní</span></span>
+                                        </div>
+                                    </div>
+                                    <div class="dl">
+                                        <span class="ico" data-i="umyvacka"></span><span class="velky">14:00</span
+                                        ><span class="meno">Umývačka</span> <i class="pas" style="--s: 90%"></i
+                                        ><span class="odr"><span>na slnku</span><span>do 16:30</span></span>
+                                    </div>
+                                </div>
+                                <div class="stlpec">
+                                    <div class="dl" data-tone="go">
+                                        <span class="ico" data-i="auto"></span><span class="velky">teraz</span
+                                        ><span class="meno">Auto</span> <i class="pas" style="--s: 100%"></i
+                                        ><span class="odr"><span>do 14:00</span><span>3,1 kW</span></span>
+                                    </div>
+                                    <div class="dl">
+                                        <span class="ico" data-i="bojler"></span><span class="velky">15:00</span
+                                        ><span class="meno">Bojler</span> <i class="pas" style="--s: 70%"></i
+                                        ><span class="odr"><span>na slnku</span><span>hodinu</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>A – dve polovice s medzerou.</b> Dve samostatné dlaždice, medzera ako všade v mriežke. Každá má svoju farbu a
+                            ťuká sa zvlášť. Najjednoduchšie, ale ako „jedna dlaždica“ to pôsobí najmenej.
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="stlpce">
+                                <div class="stlpec">
+                                    <div class="par" data-v="b">
+                                        <div class="dl pol" data-tone="go">
+                                            <span class="ico" data-i="pracka"></span><span class="velky">teraz</span
+                                            ><span class="meno">Práčka</span> <i class="pas" style="--s: 100%"></i
+                                            ><span class="odr"><span>do 12:30</span></span>
+                                        </div>
+                                        <div class="dl pol">
+                                            <span class="ico" data-i="susicka"></span><span class="velky">12:30</span
+                                            ><span class="meno">Sušička</span> <i class="pas" style="--s: 80%"></i
+                                            ><span class="odr"><span>po praní</span></span>
+                                        </div>
+                                    </div>
+                                    <div class="dl">
+                                        <span class="ico" data-i="umyvacka"></span><span class="velky">14:00</span
+                                        ><span class="meno">Umývačka</span> <i class="pas" style="--s: 90%"></i
+                                        ><span class="odr"><span>na slnku</span><span>do 16:30</span></span>
+                                    </div>
+                                </div>
+                                <div class="stlpec">
+                                    <div class="dl" data-tone="go">
+                                        <span class="ico" data-i="auto"></span><span class="velky">teraz</span
+                                        ><span class="meno">Auto</span> <i class="pas" style="--s: 100%"></i
+                                        ><span class="odr"><span>do 14:00</span><span>3,1 kW</span></span>
+                                    </div>
+                                    <div class="dl">
+                                        <span class="ico" data-i="bojler"></span><span class="velky">15:00</span
+                                        ><span class="meno">Bojler</span> <i class="pas" style="--s: 70%"></i
+                                        ><span class="odr"><span>na slnku</span><span>hodinu</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>B – jedna dlaždica, deliaca čiara.</b> Vonkajšie rohy oblé ako pri veľkej dlaždici, vnútri tenká škára.
+                            Vyzerá ako jedna veľká dlaždica rozdelená na dve, každá polovica má stále svoju farbu a svoje ťuknutie.
+                            <b>Odporúčam</b> – najviac sedí na „spolu vytvoria jednu veľkú dlaždicu“.
+                        </figcaption>
+                    </figure>
+
+                    <figure>
+                        <div class="phone">
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="stlpce">
+                                <div class="stlpec">
+                                    <div class="par" data-v="c">
+                                        <div class="dl pol" data-tone="go">
+                                            <span class="ico" data-i="pracka"></span><span class="velky">teraz</span
+                                            ><span class="meno">Práčka</span> <i class="pas" style="--s: 100%"></i
+                                            ><span class="odr"><span>do 12:30</span></span>
+                                        </div>
+                                        <div class="dl pol">
+                                            <span class="ico" data-i="susicka"></span><span class="velky">12:30</span
+                                            ><span class="meno">Sušička</span> <i class="pas" style="--s: 80%"></i
+                                            ><span class="odr"><span>po praní</span></span>
+                                        </div>
+                                    </div>
+                                    <div class="dl">
+                                        <span class="ico" data-i="umyvacka"></span><span class="velky">14:00</span
+                                        ><span class="meno">Umývačka</span> <i class="pas" style="--s: 90%"></i
+                                        ><span class="odr"><span>na slnku</span><span>do 16:30</span></span>
+                                    </div>
+                                </div>
+                                <div class="stlpec">
+                                    <div class="dl" data-tone="go">
+                                        <span class="ico" data-i="auto"></span><span class="velky">teraz</span
+                                        ><span class="meno">Auto</span> <i class="pas" style="--s: 100%"></i
+                                        ><span class="odr"><span>do 14:00</span><span>3,1 kW</span></span>
+                                    </div>
+                                    <div class="dl">
+                                        <span class="ico" data-i="bojler"></span><span class="velky">15:00</span
+                                        ><span class="meno">Bojler</span> <i class="pas" style="--s: 70%"></i
+                                        ><span class="odr"><span>na slnku</span><span>hodinu</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>C – ako B, bez odrážky.</b> Len čas, meno a pásik, čas väčší. Najčistejšie, ale „do 12:30“, „po praní“ či
+                            odznak „slnko vo štvrtok“ sú až v detaile po ťuknutí.
+                        </figcaption>
+                    </figure>
+                </div>
+                <div class="box">
+                    <h3>Čo ostane v polovici (A a B)</h3>
+                    <ul>
+                        <li>Z dvoch odrážok len <b>prvá</b>; odznak „kedy bude slnko“ (dnes druhá odrážka) zaberie jej miesto.</li>
+                        <li>
+                            Pri väčšom písme v systéme sa odrážka nezalomí, ale skráti. To je proti dnešnému pravidlu odrážok („neskráti sa
+                            …“) – alternatíva je nechať polovicu narásť, potom by dvojica bola vyššia ako susedná dlaždica.
+                        </li>
+                        <li>Bežiaca a dobehnutá práčka či sušička je tiež polovica (krémová), na svojom mieste v dvojici.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2>2. Stĺpce a poradie</h2>
+                <p>
+                    Každý stĺpec má svoje poradie a dlaždice v ňom idú tesne za sebou (stĺpce sa navzájom nezarovnávajú). Dvojica práčka +
+                    sušička sa radí podľa práčky – sušička na ňu aj tak čaká.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="stlpce">
+                                <div class="stlpec">
+                                    <div class="dl" data-tone="bezi">
+                                        <span class="poradie">1</span>
+                                        <span class="ico" data-i="umyvacka"></span><span class="velky">beží</span
+                                        ><span class="meno">Umývačka</span> <i class="pas" style="--s: 60%"></i
+                                        ><span class="odr"><span>od 8:15</span><span>do 10:45</span></span>
+                                    </div>
+                                    <div class="par" data-v="b">
+                                        <div class="dl pol" data-tone="go">
+                                            <span class="ico" data-i="pracka"></span><span class="velky">teraz</span
+                                            ><span class="meno">Práčka</span> <i class="pas" style="--s: 100%"></i
+                                            ><span class="odr"><span>do 12:30</span></span>
+                                        </div>
+                                        <div class="dl pol">
+                                            <span class="ico" data-i="susicka"></span><span class="velky">12:30</span
+                                            ><span class="meno">Sušička</span> <i class="pas" style="--s: 80%"></i
+                                            ><span class="odr"><span>po praní</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="stlpec">
+                                    <div class="dl" data-tone="go">
+                                        <span class="poradie">1</span>
+                                        <span class="ico" data-i="auto"></span><span class="velky">teraz</span
+                                        ><span class="meno">Auto</span> <i class="pas" style="--s: 100%"></i
+                                        ><span class="odr"><span>do 14:00</span><span>3,1 kW</span></span>
+                                    </div>
+                                    <div class="dl">
+                                        <span class="ico" data-i="bojler"></span><span class="velky">15:00</span
+                                        ><span class="meno">Bojler</span> <i class="pas" style="--s: 70%"></i
+                                        ><span class="odr"><span>na slnku</span><span>hodinu</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Umývačka beží od 8:15</b>, práčka ide teraz: umývačka sa spustila skôr, preto je v ľavom stĺpci hore.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="phone">
+                            <div class="oko"><i></i>Teraz zo slnka</div>
+                            <div class="stlpce">
+                                <div class="stlpec">
+                                    <div class="dl" data-tone="go">
+                                        <span class="ico" data-i="umyvacka"></span><span class="velky">teraz</span
+                                        ><span class="meno">Umývačka</span> <i class="pas" style="--s: 100%"></i
+                                        ><span class="odr"><span>do 13:30</span><span>na slnku</span></span>
+                                    </div>
+                                    <div class="par" data-v="b">
+                                        <div class="dl pol" data-kind="cheap">
+                                            <span class="ico" data-i="pracka"></span><span class="velky">22:00</span
+                                            ><span class="meno">Práčka</span> <i class="pas" style="--s: 0%"></i
+                                            ><span class="odr"><span>lacná sieť</span></span>
+                                        </div>
+                                        <div class="dl pol" data-kind="cheap">
+                                            <span class="ico" data-i="susicka"></span><span class="velky">0:00</span
+                                            ><span class="meno">Sušička</span> <i class="pas" style="--s: 0%"></i
+                                            ><span class="odr"><span>po praní</span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="stlpec">
+                                    <div class="dl">
+                                        <span class="ico" data-i="bojler"></span><span class="velky">12:00</span
+                                        ><span class="meno">Bojler</span> <i class="pas" style="--s: 100%"></i
+                                        ><span class="odr"><span>na slnku</span><span>hodinu</span></span>
+                                    </div>
+                                    <div class="dl" data-kind="cheap">
+                                        <span class="ico" data-i="auto"></span><span class="velky">23:00</span
+                                        ><span class="meno">Auto</span> <i class="pas" style="--s: 0%"></i
+                                        ><span class="odr"><span>lacná sieť</span><span>do 6:00</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Slabší deň:</b> pranie až v lacnej sieti večer, preto je dvojica pod umývačkou; vpravo bojler pred autom.
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <div class="box">
+                    <h3>Poradie v stĺpci – návrh pravidla</h3>
+                    <ol>
+                        <li>Čo <b>beží</b> (zapísané „Už beží“) – podľa skutočného štartu, skoršie hore.</li>
+                        <li>Čo ide <b>teraz</b>, potom podľa <b>plánovaného času</b> dnes.</li>
+                        <li>Čo sa dnes nezmestí (núdzový čas iný deň) – podľa toho času.</li>
+                        <li>Čo <b>dobehlo</b> – na koniec stĺpca.</li>
+                    </ol>
+                </div>
+
+                <div class="box">
+                    <h3>Rozhodnuté 19. 11. 2026</h3>
+                    <table>
+                        <tr>
+                            <th>Prípad</th>
+                            <th>Rozhodnutie</th>
+                        </tr>
+                        <tr>
+                            <td>Dvojica práčka + sušička</td>
+                            <td>
+                                Variant <b>B</b> – jedna dlaždica rozdelená škárou. V appke má škára 8 px, nie 3 px ako tu: dve tlačidlá
+                                musia byť od seba aspoň 8 px (test dotykových plôch).
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Pravý stĺpec</td>
+                            <td>Bojler vždy hore (aj ten, ktorý riadi zásuvka), pod ním auto – pevne, nie podľa času.</td>
+                        </tr>
+                        <tr>
+                            <td>Poradie v dvojici</td>
+                            <td>
+                                Dvojica ostáva spolu. Hore to, čo beží, pod tým, čo je v pláne; inak čo je v pláne skôr. Práčka beží – je
+                                hore, sušička pod ňou.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Široké rozloženie</td>
+                            <td>Aj tam len dva stĺpce.</td>
+                        </tr>
+                        <tr>
+                            <td>Iný deň v páse dní</td>
+                            <td>Rovnaké stĺpce a dvojica, poradie podľa plánovaného času toho dňa.</td>
+                        </tr>
+                        <tr>
+                            <td>Výška</td>
+                            <td>
+                                Všetky dlaždice rovnako vysoké, dvojica ako jedna veľká. Dve veľké dlaždice vedľa seba majú čas, meno, pásik
+                                aj odrážky na rovnakej výške.
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Odrážka v polovici pri väčšom písme</td>
+                            <td>Zalomí sa, neskráti (ako všade v dlaždiciach) – dvojica sa vtedy natiahne aj s dlaždicou vedľa.</td>
+                        </tr>
+                    </table>
+                </div>
+            </section>
+        </main>
+        <script>
+            // Ikony spotrebičov ako vo web/render/icons.js (len pre tento návrh).
+            const VECI = {
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>',
+                umyvacka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 8h16M7.5 5.5h4M8 12.5h8M8 16.5h8"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>' +
+                    '<path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>',
+                auto:
+                    '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/>' +
+                    '<path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
+                bojler: '<rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
+            };
+            document.querySelectorAll('[data-i]').forEach((el) => {
+                el.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true">${VECI[el.dataset.i]}</svg>`;
+            });
+        </script>
+    </body>
+</html>

@@ -200,10 +200,10 @@ async function expectTextyKariet(page) {
     await expect(page.locator('#tz-dlazdice [data-vec]')).toHaveCount(
         co ? co.hore.dlazdice.length + (co.hore.dalsi ? 1 : 0) + co.riadky.length : 0,
     );
-    // V širokom stĺpci po troch.
+    // Aj v širokom stĺpci len dva stĺpce (docs/navrhy/teraz-dlazdice-stlpce.html).
     await expect
         .poll(() => page.locator('#tz-dlazdice').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length))
-        .toBe(3);
+        .toBe(2);
     const sedem = sedemModel(v);
     await expect(page.locator('#sd-title')).toHaveText(sedem.title);
     await expect(page.locator('#sd-days .day em')).toHaveText(sedem.rows.map((r) => r.kwh));

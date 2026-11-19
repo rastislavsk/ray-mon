@@ -438,8 +438,8 @@ const dnesny = (r) => r.kind === 'sun' || r.kind === 'cheap';
  * Riadky sú z Plánu dňa (planDnaModel), nič sa nepočíta znova. Vec v lacnom pásme ide teraz, keď v tom
  * pásme teraz sme. Čo ide zo slnka, nesie odznak, kedy bude slnko najbližšie (`potom`, podľa id veci).
  * Keď dnes zo slnka nejde nič a slnko príde až o viac dní, riadok hore to povie (`dlho`).
- * Čo človek dnes zapol (`behy`, docs/navrhy/teraz-bezi-spotrebic.html), má vlastné dlaždice: čo beží, hneď za tým,
- * čo ide teraz (`bezi`), čo dobehlo, na konci mriežky (`hotovo`).
+ * Čo človek dnes zapol (`behy`, docs/navrhy/teraz-bezi-spotrebic.html), má vlastné dlaždice: čo beží (`bezi`, podľa
+ * skutočného štartu - v stĺpci ide hore), čo dobehlo, na koniec stĺpca (`hotovo`).
  * @param {RiadokPlanu[]} rows
  * @param {{ nowMin: number, level: string, slnkoDnes: boolean, dni?: string[], nudza?: Riadok[], potom?: Record<string, Potom>, behy?: Beh[] }} teraz
  *   minúta dňa, úroveň siete teraz, či dnes slnko na veľké veci stačí aspoň chvíľu a dátumy dní predpovede
@@ -484,7 +484,10 @@ export function coZapnutModel(rows, { nowMin, level, slnkoDnes, dni = [], nudza 
         hore: oko ? { ...hore, oko, bod: /** @type {const} */ ('cloud'), bezSlnka: '' } : hore,
         dlho: !!oko,
         /** @type {Riadok[]} */ riadky: [...dnes.map(riadok), ...nudza],
-        bezi: behy.filter((b) => b.kind === 'run').map(beh),
+        bezi: behy
+            .filter((b) => b.kind === 'run')
+            .sort((a, b) => a.start - b.start)
+            .map(beh),
         hotovo: behy.filter((b) => b.kind === 'done').map(beh),
     };
 }
