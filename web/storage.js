@@ -5,6 +5,7 @@
 
 import {
     ADRESA_SESSION_KEY,
+    BEHY_HIST_STORAGE_KEY,
     BEZI_STORAGE_KEY,
     BOJLER_OZNAM_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
@@ -15,6 +16,7 @@ import {
     OLD_STORAGE_KEYS,
     ODBER_STORAGE_KEY,
     OZNAMENIA_STORAGE_KEY,
+    PREDPOVED_HIST_STORAGE_KEY,
     PRISTUP_STORAGE_KEY,
     RADAR,
     RADAR_MODEL_STORAGE_KEY,
@@ -31,6 +33,7 @@ import {
 import { parseBezi } from '../shared/bezi.js';
 import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
+import { parsePredpovedHist, pridajBehy, snimkaPredpovede } from '../shared/historia.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { parseRanna } from '../shared/den-trieda.js';
 import { parseOznamenia } from '../shared/oznamenia.js';
@@ -312,9 +315,29 @@ export function loadBezi() {
     return readJson(BEZI_STORAGE_KEY, parseBezi, []);
 }
 
-/** @param {import('../shared/bezi.js').Zapis[]} list @returns {boolean} podarilo sa? */
-export function saveBezi(list) {
+/**
+ * Uloží behy a pripíše ich do histórie behov pre učenie Plánu dňa (BEHY_HIST_STORAGE_KEY, shared/historia.js) -
+ * `bezi-v1` drží len dnešok.
+ * @param {import('../shared/bezi.js').Zapis[]} list @param {string} today @returns {boolean} podarilo sa?
+ */
+export function saveBezi(list, today) {
+    const hist = readJson(BEHY_HIST_STORAGE_KEY, parseBezi, /** @type {import('../shared/bezi.js').Zapis[]} */ ([]));
+    write(BEHY_HIST_STORAGE_KEY, JSON.stringify(pridajBehy(hist, list, today)));
     return write(BEZI_STORAGE_KEY, JSON.stringify(list));
+}
+
+/**
+ * Snímka dnešnej predpovede pre učenie Plánu dňa (PREDPOVED_HIST_STORAGE_KEY, shared/historia.js), keď ešte nie je.
+ * @param {import('../shared/solar.js').Forecast | null} forecast @param {string} date @param {number} nowMin
+ */
+export function zapisSnimkuPredpovede(forecast, date, nowMin) {
+    const hist = readJson(
+        PREDPOVED_HIST_STORAGE_KEY,
+        parsePredpovedHist,
+        /** @type {import('../shared/historia.js').SnimkaPredpovede[]} */ ([]),
+    );
+    const nova = snimkaPredpovede(hist, forecast, date, nowMin);
+    if (nova !== hist) write(PREDPOVED_HIST_STORAGE_KEY, JSON.stringify(nova));
 }
 
 /** Oznámenia bojlera na tomto telefóne zapnuté (BOJLER_OZNAM_STORAGE_KEY); bez úložiska nie. */

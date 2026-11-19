@@ -17,6 +17,7 @@ import {
     loadSettings,
     loadSucty,
     saveDayLog,
+    zapisSnimkuPredpovede,
     saveRanna,
     saveOdmietnutie,
     saveRytmus,
@@ -211,6 +212,8 @@ export function createRefresh(store) {
             ? recordDay(teraz.dayLog, localDateKey(now, site.timezone), localMinutes(now, site.timezone), result.pv.dailyEnergyKwh)
             : teraz.dayLog;
         if (dayLog !== teraz.dayLog) saveDayLog(dayLog);
+        // Snímka predpovede pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html) - raz za deň.
+        zapisSnimkuPredpovede(result.forecast, localDateKey(now, site.timezone), localMinutes(now, site.timezone));
         const pecat = result.pecat ? newPecat(teraz, result.pecat) : {};
         // Stav bojlera prichádza s čerstvým meraním; bez dopytu ho prinesie rytmus (bezDopytu).
         const bojler = result.pv && due ? { bojler: result.bojler } : {};

@@ -17,6 +17,7 @@
 // (docs/navrhy/bojler-prebytky.html). POST /bojler-pecat: pečať telefónu -> menšia pečať do skriptu.
 // POST /koniec: oznámenie o konci programu spotrebiča - budík v Durable Object (worker/src/budik.js).
 // POST /bojler-oznamenia: telefón si zapne či vypne oznámenia o zapnutí a vypnutí bojlera (worker/src/ucet.js).
+// POST /historia: pečať telefónu -> história elektrárne pre učenie Plánu dňa (worker/src/ucet.js, shared/historia.js).
 //
 // Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
 // navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
@@ -26,6 +27,7 @@ import {
     WORKER_BOJLER_PECAT_PATH,
     WORKER_BOJLER_OZNAM_PATH,
     WORKER_BOJLER_REZIM_PATH,
+    WORKER_HISTORIA_PATH,
     WORKER_KONIEC_PATH,
     WORKER_OZNAMENIA_PATH,
     WORKER_PRIPOJ_PATH,
@@ -358,6 +360,24 @@ export async function handleBojlerRezim(request, env, now) {
     }
 }
 
+/**
+ * POST /historia: `{ pecat }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ dni }`, história elektrárne
+ * pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html). Len Huawei Northbound - iné zdroje Durable Object nemajú.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleHistoria(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { obsah } = await dopytBojlera(request, key, now);
+    if (!obsah) return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/historia', now);
+        return json(200, { dni: r.dni });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
 /** Odpoveď na uloženie odberu či pripomienky podľa stavu. @param {number} status */
 const oznamOdpoved = (status) => json(status, status === 200 ? { ok: true } : { chyba: status === 400 ? 'udaje' : 'server' });
 
@@ -386,6 +406,7 @@ const CESTY = {
     [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
     [WORKER_KONIEC_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozKoniec(body, env, now), request) },
     [WORKER_BOJLER_OZNAM_PATH]: { limit: true, run: handleBojlerOznam },
+    [WORKER_HISTORIA_PATH]: { limit: true, run: handleHistoria },
     [WORKER_TRASY_PATH]: {
         limit: true,
         run: async (request, env, now, fetchImpl) => {

@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Plán dňa sa učí</title>
+        <style>
+            /* Návrh: Plán dňa sa učí z histórie domácnosti. Worker zbiera, telefón sa učí (C), tabuľky
+               s váhou podľa veku (M1), najprv oprava predpovede, spotreba domu a potreba bojlera (a, b, c).
+               Samostatný súbor, nič neimportuje z appky. Čísla v príkladoch sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --ink: #fff;
+                --dim: rgba(255, 255, 255, 0.68);
+                --line: rgba(255, 255, 255, 0.16);
+                --go: #b9f28c;
+                --go-ink: #14300c;
+                --card: rgba(255, 255, 255, 0.06);
+                --amber: #ffc24b;
+                --boil: #ff9f7a;
+                --cheap: #8fd3ff;
+                --sheet: #141d3a;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: var(--ink);
+                font-family: var(--font);
+                font-size: 16px;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1120px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 48px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+                text-wrap: balance;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 44px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 23px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 17px;
+                font-weight: 800;
+            }
+            p,
+            ul,
+            ol {
+                margin: 0;
+                max-width: 72ch;
+            }
+            ul,
+            ol {
+                padding-left: 22px;
+                display: grid;
+                gap: 6px;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .lead {
+                font-size: 18px;
+                color: var(--dim);
+            }
+            code {
+                font-size: 0.92em;
+                background: var(--card);
+                padding: 1px 5px;
+                border-radius: 5px;
+            }
+            .chart {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                padding: 12px;
+                overflow-x: auto;
+            }
+            .chart svg {
+                display: block;
+                width: 100%;
+                min-width: 680px;
+                height: auto;
+            }
+            .cards {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 12px;
+            }
+            .card {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 16px;
+                padding: 16px;
+                display: grid;
+                gap: 8px;
+                align-content: start;
+            }
+            .card .k {
+                display: inline-grid;
+                place-items: center;
+                width: 26px;
+                height: 26px;
+                border-radius: 50%;
+                background: var(--go);
+                color: var(--go-ink);
+                font-size: 14px;
+                font-weight: 800;
+                margin-right: 6px;
+            }
+            .tbl {
+                overflow-x: auto;
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 15px;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+                font-size: 13px;
+            }
+            .phones {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+                gap: 20px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                align-content: start;
+            }
+            figcaption {
+                font-size: 14px;
+                color: var(--dim);
+            }
+            .phone {
+                background: var(--sheet);
+                border-radius: 28px;
+                padding: 18px 14px;
+                display: grid;
+                gap: 10px;
+                border: 1px solid var(--line);
+                align-content: start;
+            }
+            .phone .hdr {
+                font-size: 20px;
+                font-weight: 850;
+            }
+            .row {
+                background: var(--card);
+                border-radius: 14px;
+                padding: 12px;
+                display: grid;
+                gap: 8px;
+            }
+            .row .top {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                gap: 8px;
+            }
+            .row .nm {
+                font-weight: 750;
+            }
+            .row .val {
+                color: var(--dim);
+                font-size: 14px;
+            }
+            .row.muted {
+                opacity: 0.55;
+            }
+            .btn {
+                justify-self: start;
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 4px 12px;
+                font-size: 14px;
+                color: var(--ink);
+                background: transparent;
+                font-family: inherit;
+            }
+            .mini {
+                display: grid;
+                gap: 4px;
+            }
+            .mini span {
+                font-size: 12.5px;
+                color: var(--dim);
+            }
+            .mini svg {
+                width: 100%;
+                height: auto;
+                display: block;
+            }
+            .q {
+                background: var(--card);
+                border-left: 4px solid var(--amber);
+                border-radius: 10px;
+                padding: 12px 14px;
+                display: grid;
+                gap: 6px;
+            }
+            .tag {
+                display: inline-block;
+                font-size: 12px;
+                font-weight: 800;
+                padding: 1px 8px;
+                border-radius: 999px;
+                background: var(--go);
+                color: var(--go-ink);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Plán dňa sa učí</h1>
+                <p class="lead">
+                    Doplnok k <code>plan-dna-zive-data.html</code>. Appka si pamätá, ako dni naozaj dopadli, a podľa toho opravuje
+                    predpoveď, spotrebu domu a potrebu bojlera. Worker zbiera, telefón sa učí (C), tabuľky s váhou podľa veku (M1), najprv a
+                    + b + c.
+                </p>
+                <p class="dim">
+                    Návrh 19. 11. 2026. Nie je to neurónová sieť, ale štatistika nad dátami jednej domácnosti: pár desiatok čísel, ktoré sa
+                    dajú ukázať aj vynulovať. Čísla v príkladoch sú ilustračné.
+                </p>
+            </section>
+
+            <section>
+                <h2>Ako idú dáta</h2>
+                <div class="chart">
+                    <svg
+                        viewBox="0 0 760 250"
+                        role="img"
+                        aria-label="Tok dát: Worker zbiera meranie a bojler, telefón pridá predpoveď a behy a z toho počíta tabuľky pre plán"
+                    >
+                        <g font-size="13" fill="#fff">
+                            <rect
+                                x="10"
+                                y="20"
+                                width="220"
+                                height="120"
+                                rx="14"
+                                fill="rgba(255,255,255,0.06)"
+                                stroke="rgba(255,255,255,0.2)"
+                            />
+                            <text x="24" y="44" font-weight="800">Worker (Durable Object)</text>
+                            <text x="24" y="68" fill="rgba(255,255,255,0.7)">meranie každých 5 min</text>
+                            <text x="24" y="88" fill="rgba(255,255,255,0.7)">→ hodinové súhrny výroby</text>
+                            <text x="24" y="108" fill="rgba(255,255,255,0.7)">→ spotreba domu bez bojlera</text>
+                            <text x="24" y="128" fill="rgba(255,255,255,0.7)">→ deň bojlera (Wh, dohrial?)</text>
+
+                            <rect
+                                x="270"
+                                y="20"
+                                width="220"
+                                height="120"
+                                rx="14"
+                                fill="rgba(255,255,255,0.06)"
+                                stroke="rgba(255,255,255,0.2)"
+                            />
+                            <text x="284" y="44" font-weight="800">Telefón</text>
+                            <text x="284" y="68" fill="rgba(255,255,255,0.7)">snímka predpovede dňa</text>
+                            <text x="284" y="88" fill="rgba(255,255,255,0.7)">história behov („Už beží“)</text>
+                            <text x="284" y="108" fill="rgba(255,255,255,0.7)">+ história z Workera</text>
+                            <text x="284" y="128" fill="rgba(255,255,255,0.7)">(raz denne, /historia)</text>
+
+                            <rect x="530" y="20" width="220" height="120" rx="14" fill="rgba(185,242,140,0.12)" stroke="#b9f28c" />
+                            <text x="544" y="44" font-weight="800">shared/ucenie.js</text>
+                            <text x="544" y="68" fill="rgba(255,255,255,0.7)">a) oprava predpovede</text>
+                            <text x="544" y="88" fill="rgba(255,255,255,0.7)">b) spotreba domu</text>
+                            <text x="544" y="108" fill="rgba(255,255,255,0.7)">c) potreba bojlera</text>
+                            <text x="544" y="128" fill="rgba(255,255,255,0.7)">čistá funkcia, bez stavu</text>
+                        </g>
+                        <g stroke="#b9f28c" stroke-width="2" fill="none">
+                            <path d="M230 80 L266 80" />
+                            <path d="M490 80 L526 80" />
+                            <path d="M640 140 L640 180 L120 180 L120 196" />
+                        </g>
+                        <g fill="#b9f28c">
+                            <path d="M266 75 L274 80 L266 85 Z" />
+                            <path d="M526 75 L534 80 L526 85 Z" />
+                            <path d="M115 196 L120 204 L125 196 Z" />
+                        </g>
+                        <rect x="10" y="206" width="740" height="36" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" />
+                        <text x="24" y="229" font-size="13" fill="#fff">
+                            Predpoveď všetkých kariet (graf dňa, 7 dní, Dnes, ranné oznámenie) · rozpočet Plánu dňa · potreba bojlera
+                        </text>
+                    </svg>
+                </div>
+                <ul>
+                    <li>
+                        Worker meria každých 5 minút, kým sa pýta zásuvka bojlera (každú minútu). Bez zásuvky len vtedy, keď je appka
+                        otvorená. Hodina s menej než 6 meraniami sa do učenia nepočíta.
+                    </li>
+                    <li>
+                        Predpoveď Worker nemá a nesťahuje (limity Open-Meteo). Telefón si raz denne uloží snímku predpovede na dnešok (výkon
+                        a oblačnosť po hodinách). Deň, keď appku nikto neotvorí, v učení chýba. To nevadí, len to ide pomalšie.
+                    </li>
+                    <li>
+                        Učenie nemá vlastný stav: tabuľky sa každý deň prepočítajú z posledných 60 dní. Novší deň má väčšiu váhu (polčas 14
+                        dní), takže sa model sám prispôsobí ročnému obdobiu. Vynulovať znamená brať dni až od dneška.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Čo sa učí</h2>
+                <div class="cards">
+                    <div class="card">
+                        <h3><span class="k">a</span>Oprava predpovede</h3>
+                        <p>
+                            Tabuľka <b>hodina × oblačnosť</b> (jasno do 30 %, polojasno do 70 %, zamračené). V každom políčku vážený priemer
+                            pomeru <i>meranie / predpoveď</i> z hodín s predpoveďou aspoň 0,3 kW.
+                        </p>
+                        <p class="dim">
+                            Zachytí to, čo predpoveď nevie: tieň stromu poobede, natočenie panelov, opar nad mestom. Pomer je obmedzený na
+                            0,5–1,5. Políčko s menej než 5 dňami platí ako 1 (bez opravy).
+                        </p>
+                        <p class="dim">
+                            Platí na jednom mieste pre všetky karty a dni dopredu. Krok 1 zo živých dát potom opravuje už opravenú predpoveď
+                            len na najbližšie hodiny.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3><span class="k">b</span>Spotreba domu</h3>
+                        <p>
+                            Tabuľka <b>hodina × pracovný deň / víkend</b>. Hodnota je medián 5-minútových meraní (výroba − dodávka −
+                            bojler), aby krátky ohrev nepohol celou hodinou.
+                        </p>
+                        <p class="dim">
+                            Hodiny, keď bežal spotrebič z „Už beží“, sa vynechajú, inak by sa jeho odber rátal dvakrát. Políčko s menej než
+                            5 dňami platí 0,4 kW. Rozsah 0,1–4 kW. Krok 2 zo živých dát to na najbližšiu hodinu nahradí meraním.
+                        </p>
+                    </div>
+                    <div class="card">
+                        <h3><span class="k">c</span>Potreba bojlera</h3>
+                        <p>
+                            Medián energie dní, keď termostat bojler vypol, zvlášť pre tri pásma teploty dňa (pod 5 °C, 5–15 °C, nad 15 °C).
+                            Teplota je zo snímky predpovede.
+                        </p>
+                        <p class="dim">
+                            Pásmo s menej než 3 dňami vezme medián všetkých dní, bez nich 2 kWh. Rozsah 0,5–6 kWh. Dni bez vypnutia
+                            termostatom sú len dolná hranica, preto sa nepočítajú.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Čo sa ukladá</h2>
+                <div class="tbl">
+                    <table>
+                        <tr>
+                            <th>Kde</th>
+                            <th>Kľúč</th>
+                            <th>Obsah</th>
+                            <th>Veľkosť</th>
+                        </tr>
+                        <tr>
+                            <td>Worker</td>
+                            <td><code>hh:&lt;elektráreň&gt;</code></td>
+                            <td>merania bežiacej hodiny (výroba, dom bez bojlera)</td>
+                            <td>najviac 12 dvojíc</td>
+                        </tr>
+                        <tr>
+                            <td>Worker</td>
+                            <td><code>hd:&lt;elektráreň&gt;</code></td>
+                            <td>60 dní: po hodinách priemer výroby, medián domu, počet meraní; deň bojlera (Wh, dohrial)</td>
+                            <td>~30 kB</td>
+                        </tr>
+                        <tr>
+                            <td>Telefón</td>
+                            <td><code>predpoved-hist-v1</code></td>
+                            <td>60 dní snímok predpovede: výkon, oblačnosť a teplota po hodinách</td>
+                            <td>~40 kB</td>
+                        </tr>
+                        <tr>
+                            <td>Telefón</td>
+                            <td><code>behy-hist-v1</code></td>
+                            <td>60 dní behov z „Už beží“ (dnes ich appka po dni zahodí)</td>
+                            <td>pár kB</td>
+                        </tr>
+                    </table>
+                </div>
+                <p class="dim">
+                    Do Workera sa zapisuje v tom istom zápise ako dnes pri každom meraní, takže pribudne len jeden zápis za hodinu. Výpočet
+                    je pár desiatok súčtov, ďaleko pod 10 ms. Nové sú: endpoint <code>/historia</code>
+                    (s pečaťou telefónu, adresa Workera už v CSP je), žiadna nová trieda ani migrácia. Dáta neodchádzajú nikam, kam už dnes
+                    nechodia.
+                </p>
+            </section>
+
+            <section>
+                <h2>Ako to uvidíš v Nastavení</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <div class="hdr">Nastavenie</div>
+                            <div class="row muted">
+                                <div class="top"><span class="nm">Elektráreň</span><span class="val">5,6 kWp</span></div>
+                            </div>
+                            <div class="row">
+                                <div class="top"><span class="nm">Učenie z histórie</span><span class="val">23 dní</span></div>
+                                <button class="btn" type="button">Začať odznova</button>
+                            </div>
+                        </div>
+                        <figcaption>A – jeden riadok: koľko dní a vynulovanie.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="phone">
+                            <div class="hdr">Nastavenie</div>
+                            <div class="row muted">
+                                <div class="top"><span class="nm">Elektráreň</span><span class="val">5,6 kWp</span></div>
+                            </div>
+                            <div class="row">
+                                <div class="top"><span class="nm">Učenie z histórie</span><span class="val">23 dní</span></div>
+                                <div class="mini">
+                                    <span>Strecha oproti predpovedi (jasno)</span>
+                                    <svg
+                                        viewBox="0 0 260 70"
+                                        aria-label="Oprava predpovede po hodinách od 7 do 17: ráno okolo predpovede, poobede nižšie"
+                                    >
+                                        <line x1="0" y1="35" x2="260" y2="35" stroke="rgba(255,255,255,0.35)" stroke-dasharray="3 3" />
+                                        <g fill="#b9f28c">
+                                            <rect x="4" y="31" width="18" height="4" />
+                                            <rect x="28" y="29" width="18" height="6" />
+                                            <rect x="52" y="27" width="18" height="8" />
+                                            <rect x="76" y="30" width="18" height="5" />
+                                            <rect x="100" y="33" width="18" height="2" />
+                                        </g>
+                                        <g fill="#ff9f7a">
+                                            <rect x="124" y="35" width="18" height="3" />
+                                            <rect x="148" y="35" width="18" height="9" />
+                                            <rect x="172" y="35" width="18" height="16" />
+                                            <rect x="196" y="35" width="18" height="20" />
+                                            <rect x="220" y="35" width="18" height="12" />
+                                        </g>
+                                        <text x="0" y="68" font-size="10" fill="rgba(255,255,255,0.6)">7</text>
+                                        <text x="120" y="68" font-size="10" fill="rgba(255,255,255,0.6)">12</text>
+                                        <text x="226" y="68" font-size="10" fill="rgba(255,255,255,0.6)">17</text>
+                                    </svg>
+                                </div>
+                                <div class="mini">
+                                    <span>Dom bez spotrebičov · pracovný deň</span>
+                                    <svg viewBox="0 0 260 50" aria-label="Spotreba domu po hodinách: v noci nízka, večer najvyššia">
+                                        <path
+                                            d="M0 40 L30 41 L60 38 L75 30 L90 34 L120 35 L150 33 L175 28 L195 14 L215 12 L235 22 L260 36"
+                                            fill="none"
+                                            stroke="#8fd3ff"
+                                            stroke-width="2.5"
+                                        />
+                                        <text x="196" y="9" font-size="10" fill="rgba(255,255,255,0.6)">večer 0,9 kW</text>
+                                    </svg>
+                                </div>
+                                <div class="top">
+                                    <span class="val">Bojler pri mraze ~3,4 kWh, pri 10 °C ~2,6 kWh</span>
+                                </div>
+                                <button class="btn" type="button">Začať odznova</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            B – riadok a pod ním, čo sa appka naučila: strecha oproti predpovedi, dom po hodinách, bojler.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="phone">
+                            <div class="hdr">Nastavenie</div>
+                            <div class="row muted">
+                                <div class="top"><span class="nm">Elektráreň</span><span class="val">5,6 kWp</span></div>
+                            </div>
+                            <div class="row muted">
+                                <div class="top"><span class="nm">Tarifa</span><span class="val">D2</span></div>
+                            </div>
+                            <button class="btn" type="button">Vynulovať naučené</button>
+                        </div>
+                        <figcaption>C – nič neukazovať, len tlačidlo na vynulovanie na konci Nastavenia.</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Poradie práce</h2>
+                <ol>
+                    <li>
+                        <b>Zber dát</b> (malý PR, čím skôr): Worker <code>hh:</code>, <code>hd:</code>, <code>/historia</code>; telefón
+                        snímka predpovede a história behov. Zatiaľ nič neovplyvní.
+                    </li>
+                    <li><b>Plán dňa zo živých dát</b> podľa <code>plan-dna-zive-data.html</code>, bojler s 2 kWh.</li>
+                    <li><b>Učenie a + b + c</b> a riadok v Nastavení. Kým sa nazbiera aspoň 5 dní, platia predvolené hodnoty.</li>
+                </ol>
+                <p class="dim">
+                    Golden testy ostanú: učenie dostane históriu ako parameter a bez histórie vráti presne dnešné hodnoty. Na neskôr (s
+                    termínom a pripomienkou v <code>docs/to do later.md</code>): kontrola plánu (f), programy spotrebičov (d), kedy spúšťaš
+                    (e), model M2.
+                </p>
+                <p class="dim">
+                    Bez Huawei Northbound (kiosk FusionSolar) nemá appka elektromer ani Worker s pamäťou: učí sa len a, z krivky dňa v
+                    telefóne, keď je appka otvorená po západe slnka.
+                </p>
+            </section>
+
+            <section>
+                <h2>Otvorené rozhodnutia</h2>
+                <div class="q">
+                    <h3>1. Čo ukázať v Nastavení?</h3>
+                    <p>
+                        <b>A</b> – jeden riadok. Najmenej miesta, ale nevidno, čo sa appka naučila.<br />
+                        <b>B</b> – riadok s dvoma malými grafmi a bojlerom. Dá sa overiť, či učenie dáva zmysel, a je to obraz, nie veta.
+                        Viac práce.<br />
+                        <b>C</b> – nič, len vynulovanie. Učenie je neviditeľné, ťažšie sa mu dôveruje.
+                    </p>
+                    <p><span class="tag">odporúčam B</span></p>
+                </div>
+                <div class="q">
+                    <h3>2. Spotreba domu po dňoch</h3>
+                    <p>
+                        <b>A</b> – pracovný deň a víkend. Dáta sa nazbierajú rýchlo.<br />
+                        <b>B</b> – každý deň v týždni zvlášť. Presnejšie pri pravidelnom týždni, ale každé políčko má päťkrát menej dát.
+                    </p>
+                    <p><span class="tag">odporúčam A</span></p>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>

@@ -67,6 +67,16 @@ Oznámenie o konci (`web/koniec.js`, `POST /koniec`) posiela Durable Object `Bud
 ohrevu (`zmenaOhrevu` v `shared/bojler.js`) telefónom, ktoré si to zaplí v paneli Bojler dnes (`POST /bojler-oznamenia`).
 Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull requestom (`worker/README.md`).
 
+## Plán dňa zo živých dát a učenie z histórie
+
+Návrhy a rozhodnutia: `docs/navrhy/plan-dna-zive-data.html` (balík B, bojler má prednosť pred práčkou, sušičkou
+a umývačkou) a `docs/navrhy/plan-dna-ucenie.html` (Worker zbiera, telefón sa učí, tabuľky s váhou podľa veku), 19. 11. 2026.
+Zatiaľ beží len zber (`shared/historia.js`, `HISTORIA`): Durable Object `UcetHuawei` skladá z každého nového merania
+hodinové súhrny výroby a spotreby domu bez bojlera (`hh:` bežiaca hodina, `hd:` dni) a pri prvom dopyte zásuvky
+v novom dni pripíše deň bojlera. Telefón si stiahne históriu cez `POST /historia`. V telefóne sa ukladá snímka
+predpovede dňa (`predpoved-hist-v1`) a história behov z „Už beží“ (`behy-hist-v1`), lebo `bezi-v1` drží len dnešok.
+Odložené časti učenia majú termíny v `docs/to do later.md`.
+
 ## Scéna toku energie na karte Teraz
 
 Návrh a rozhodnutia: `docs/navrhy/teraz-tok-energie.html` (návrh 1). Namiesto veľkého čísla kW je hore scéna: dom

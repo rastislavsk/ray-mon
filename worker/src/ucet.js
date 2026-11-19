@@ -9,13 +9,16 @@
 // krivku, časy dopytov - bez hesla), posledné meranie a pre bojler pamäť rozhodovania, posledný
 // kontakt zásuvky, záznam dňa a režim (ručne / riadi appka). Heslo neukladá: prichádza vždy
 // v pečati od telefónu či zásuvky. Pre oznámenia bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html) aj odbery
-// telefónov, ktoré si ich zapli - pri každej zmene ohrevu im pošle push s textom.
+// telefónov, ktoré si ich zapli - pri každej zmene ohrevu im pošle push s textom. Pre učenie Plánu dňa
+// (docs/navrhy/plan-dna-ucenie.html) históriu: z každého nového merania hodinové súhrny výroby a spotreby domu
+// bez bojlera a na konci dňa bojlera (shared/historia.js), najviac HISTORIA.dni dní. Telefón si ju stiahne cez /historia.
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
 
 import { BOJLER, PUSH_TEXT } from '../../shared/config.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zmenaOhrevu } from '../../shared/bojler.js';
+import { domBezBojlera, sBojlerom, zapisMeranie } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
 import { bojlerZmenaText } from '../../shared/messages-oznamenia.js';
 import { posliPush, vapidKlic } from './webpush.js';
@@ -23,6 +26,7 @@ import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
 /** @typedef {import('../../shared/kiosk.js').PvData} PvData */
 /** @typedef {import('../../shared/bojler.js').BojlerInfo} BojlerInfo */
+/** @typedef {import('../../shared/historia.js').DenHistorie} DenHistorie */
 /** Odber telefónu s oznámeniami bojlera. @typedef {{ e: string, keys: { p256dh: string, auth: string } }} OdberBojlera */
 /** @typedef {{ get: (k: string) => Promise<unknown>, put: (k: string | Record<string, unknown>, v?: unknown) => Promise<void> }} Uloziste */
 
@@ -67,7 +71,9 @@ export class UcetHuawei {
                       ? await this.rezim(req, now)
                       : path === '/oznam'
                         ? await this.oznam(req)
-                        : await this.pv(req.pristup, now);
+                        : path === '/historia'
+                          ? await this.historia(req)
+                          : await this.pv(req.pristup, now);
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -112,13 +118,51 @@ export class UcetHuawei {
         const res = await ZDROJE['huawei-northbound'].meraj(p, { now, fetchImpl: this.fetchImpl });
         const novy = res.pristup ?? p;
         const plant = String(p.plant ?? '');
-        /** @type {Record<string, unknown>} */ const zapis = { [`m:${plant}`]: { at: now.getTime(), pv: res.pv } };
+        /** @type {Record<string, unknown>} */ const zapis = {
+            [`m:${plant}`]: { at: now.getTime(), pv: res.pv },
+            ...(await this.doHistorie(plant, res.pv, now)),
+        };
         if (res.pristup) {
             zapis[`p:${plant}`] = bez(novy, BEZ_ULOZENIA);
             if (novy.tokenAt !== p.tokenAt) zapis.relacia = vyber(novy, RELACIA);
         }
         await this.storage.put(zapis);
         return { pv: res.pv, pristup: novy };
+    }
+
+    /**
+     * Nové meranie do histórie (shared/historia.js): čo treba zapísať - bežiacu hodinu vždy, dni len keď sa hodina
+     * uzavrela. Dom je bez bojlera podľa posledného hlásenia zásuvky.
+     * @param {string} plant @param {PvData} pv @param {Date} now @returns {Promise<Record<string, unknown>>}
+     */
+    async doHistorie(plant, pv, now) {
+        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        const hodina = /** @type {import('../../shared/historia.js').Hodina | undefined} */ (await this.storage.get(`hh:${plant}`));
+        const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`)) ?? [];
+        const domKw = domBezBojlera(pv.realTimePowerKw, pv.sietKw, bojler, now.getTime());
+        const r = zapisMeranie({ hodina: hodina ?? null, dni }, { at: now.getTime(), tz: NB.pasmo, vyrobaKw: pv.realTimePowerKw, domKw });
+        return { [`hh:${plant}`]: r.hodina, ...(r.dni !== dni ? { [`hd:${plant}`]: r.dni } : {}) };
+    }
+
+    /**
+     * Záznam dňa bojlera sa skončil (prvý dopyt zásuvky v novom dni): jeho energia ide do histórie. Vráti, čo zapísať.
+     * @param {string} plant @param {BojlerInfo | undefined} info predošlé hlásenie zásuvky @param {import('../../shared/bojler.js').Den} novy
+     * @returns {Promise<Record<string, unknown>>}
+     */
+    async koniecDna(plant, info, novy) {
+        const stary = info?.den;
+        if (!stary || stary.den === novy.den) return {};
+        const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`)) ?? [];
+        return { [`hd:${plant}`]: sBojlerom(dni, stary) };
+    }
+
+    /**
+     * História elektrárne pre telefón (učenie Plánu dňa): dni od najstaršieho. Bežiaca hodina v nej ešte nie je.
+     * @param {{ pristup: Record<string, unknown> }} req
+     */
+    async historia(req) {
+        const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${String(req.pristup.plant ?? '')}`));
+        return { dni: dni ?? [] };
     }
 
     /**
@@ -155,7 +199,11 @@ export class UcetHuawei {
         const energiaWh = cislo(req.e);
         const den = zaznamenaj(stary?.den ?? null, { now, tz: NB.pasmo, rele, w, energiaWh, sietKw });
         /** @type {BojlerInfo} */ const info = { kontaktAt: now.getTime(), rele, w, prebytokKw: r.prebytokKw, prahy, den, rucne };
-        await this.storage.put({ [`bp:${plant}`]: r.pamat, [`b:${plant}`]: info });
+        await this.storage.put({
+            [`bp:${plant}`]: r.pamat,
+            [`b:${plant}`]: info,
+            ...(await this.koniecDna(plant, stary, den)),
+        });
         const zmena = zmenaOhrevu(stary ?? null, info);
         if (zmena) await this.oznamZmenu(plant, bojlerZmenaText(zmena), now);
         return { zapni: r.zapni, rucne, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin };
