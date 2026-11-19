@@ -29,6 +29,11 @@ Odložené 22. 10. 2026. Zdieľanie nastavenia elektrárne musí v appke z obcho
 
 ## Funkcie na neskôr
 
+- **Porovnanie s FusionSolar – vyhodnotiť a zmazať** (19. 11. 2026): Worker dočasne zapisuje do logu riadky
+  `porovnanie:` (okamžitý menič a elektromer, história oboch s časom zberu) a pýta sa na históriu elektromera
+  (`elektromerAt`, `zalogujPorovnanie` vo `worker/src/zdroje.js`). Po 1–2 dňoch porovnať, či sú menič a elektromer
+  z rôznych chvíľ (18. 11. o 13:45 appka 2,7 kW a sieť 0, FusionSolar 2,89 kW a dodávka 0,9 kW o 13:40), rozhodnúť
+  o možnosti 2a (scéna z histórie) a dočasné riadky zmazať.
 - **Dážď a sneh v ikonách počasia** (18. 11. 2026): sada má len jasno / polojasno / zamračené.
   Predpoveď zrážky po hodinách už sťahuje. Treba nakresliť ikony a pravidlo, kedy je deň „daždivý“
   či „snežný“; naraz na karte 7 dní aj v páse dní na karte Teraz.

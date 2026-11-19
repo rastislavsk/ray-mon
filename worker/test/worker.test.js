@@ -441,6 +441,49 @@ test('Huawei Northbound: elektromer (47) do merania, staršej pečati sa doplní
     assert.equal(s.calls.filter((c) => c.path === '/thirdData/getDevList').length, zoznamy, 'druhý raz už nie');
 });
 
+test('Huawei Northbound: porovnanie s FusionSolar - história elektromera v inom meraní než krivka, oboje do logu', async (t) => {
+    const log = t.mock.method(console, 'log', () => {});
+    const s = northbound({ elektromer: true, platne: ['t1'] });
+    const { stanice } = await (
+        await handlePripoj(pripojRequest({ sposob: 'huawei-northbound', udaje: NB_UDAJE }), ENV, NOW, s.impl)
+    ).json();
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    assert.deepEqual((await otvor(await key, stanice[0].pecat, NOW))?.pristup.meterDns, { 47: ['NE=5'] });
+    const historie = () => s.calls.filter((c) => c.path === '/rest/openapi/pvms/nbi/v1/device/history').map((c) => c.body.devDn);
+    const o = (/** @type {number} */ min) => new Date(NOW.getTime() + min * 60 * 1000);
+    let pecat = stanice[0].pecat;
+    /** Meranie o `min` minút, pečať si zapamätá ako appka. @param {number} min */
+    const meraj = async (min) => {
+        const r = await (await handlePv(pvRequest(pecat), ENV, o(min), s.impl)).json();
+        pecat = r.pecat ?? pecat;
+    };
+    // Pripojenie: krivka meniča. O 5 minút elektromer (krivka ešte nie), o 15 krivka, o 20 elektromer:
+    // historické rozhranie nikdy dvakrát v jednom meraní (Huawei ho pri dvoch zariadeniach dovolí raz za 5 minút).
+    for (const min of [5, 10, 15, 20]) await meraj(min);
+    assert.deepEqual(historie(), ['NE=11', 'NE=5', 'NE=11', 'NE=5']);
+    const riadky = log.mock.calls.map((c) => String(c.arguments[0])).filter((r) => r.startsWith('porovnanie: '));
+    const zaznamy = riadky.map((r) => JSON.parse(r.slice('porovnanie: '.length)));
+    assert.equal(zaznamy.length, 4, 'každé meranie jeden riadok');
+    assert.deepEqual(zaznamy[0], {
+        t: o(5).toISOString(),
+        menic: 4.2,
+        siet: -1.409,
+        histElektromer: [
+            [480, 1.2],
+            [770, 4],
+        ],
+    });
+    assert.deepEqual(Object.keys(zaznamy[1]), ['t', 'menic', 'siet']);
+    assert.deepEqual(zaznamy[2].histMenic, [
+        [480, 1.2],
+        [770, 4],
+    ]);
+    assert.ok(
+        riadky.every((r) => !r.includes('tajne') && !r.includes('Dvorany')),
+        'bez prístupu a mena',
+    );
+});
+
 test('Huawei Northbound: priebeh dňa z device/history najviac raz za 15 minút, medzitým posledná krivka a aktuálny bod', async () => {
     const s = northbound({ platne: ['t1'] });
     const { stanice } = await (
@@ -1081,7 +1124,17 @@ test('pečať zásuvky: len Huawei Northbound, bez relácie a krivky, krátka; z
     const { env, telefon, zasuvka } = await sBojlerom();
     const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
     const obsah = await otvor(key, zasuvka, NOW);
-    assert.deepEqual(Object.keys(obsah?.pristup ?? {}).sort(), ['devs', 'dns', 'heslo', 'meno', 'meters', 'nazov', 'plant', 'server']);
+    assert.deepEqual(Object.keys(obsah?.pristup ?? {}).sort(), [
+        'devs',
+        'dns',
+        'heslo',
+        'meno',
+        'meterDns',
+        'meters',
+        'nazov',
+        'plant',
+        'server',
+    ]);
     assert.ok(zasuvka.length < 1500, `skript ju posiela každú minútu (${zasuvka.length} znakov)`);
     const kiosk = await zapecat(key, { sposob: 'huawei-kiosk', pristup: { odkaz: KIOSK_PAGE } });
     assert.equal((await handleBojlerPecat(post('/bojler-pecat', kiosk), env, NOW)).status, 400);

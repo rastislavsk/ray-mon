@@ -145,12 +145,24 @@ export const parseNbMeters = (json) => idsPodlaTypu(json, jeElektromer);
  * `{ plantCode: { 38: ['NE=…'] } }` - historické rozhranie ich chce namiesto číselných id.
  * @param {unknown} json @returns {Record<string, Record<string, string[]>>}
  */
-export function parseNbDevDns(json) {
+export const parseNbDevDns = (json) => dnsPodlaTypu(json, jeMenic);
+
+/**
+ * Textové id elektromerov (`devDn`) zo zoznamu zariadení, po elektrárňach a typoch: `{ plantCode: { 47: ['NE=…'] } }`.
+ * @param {unknown} json @returns {Record<string, Record<string, string[]>>}
+ */
+export const parseNbMeterDns = (json) => dnsPodlaTypu(json, jeElektromer);
+
+/**
+ * Textové id (`devDn`) zariadení vybraného druhu zo zoznamu zariadení, po elektrárňach a typoch.
+ * @param {unknown} json @param {(typ: unknown) => typ is number} druh @returns {Record<string, Record<string, string[]>>}
+ */
+function dnsPodlaTypu(json, druh) {
     const d = data(json);
     /** @type {Record<string, Record<string, string[]>>} */ const out = {};
     for (const dev of objs(d)) {
         const { devTypeId: typ, devDn } = dev;
-        if (!jeMenic(typ) || typeof devDn !== 'string' || !devDn) continue;
+        if (!druh(typ) || typeof devDn !== 'string' || !devDn) continue;
         const byType = (out[textOf(dev.stationCode)] ??= {});
         (byType[typ] ??= []).push(devDn);
     }

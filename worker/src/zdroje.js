@@ -24,6 +24,7 @@ import {
     parseNbDevices,
     parseNbDevReal,
     parseNbHistory,
+    parseNbMeterDns,
     parseNbMeters,
     parseNbSiet,
     parseNbStationReal,
@@ -217,7 +218,7 @@ async function solaxPv(token, sn, ctx) {
  * Elektráreň Northbound: id, meno a meniče po typoch - číselné id (`devs`, `{ 1: [id…] }`) pre
  * meranie a textové `devDn` (`dns`) pre priebeh dňa -, a elektromery (`meters`, `{ 47: [id] }`),
  * ako ich vrátil zoznam zariadení.
- * @typedef {{ plant: string, nazov: string, devs: Record<string, number[]>, dns: Record<string, string[]>, meters: Record<string, number[]> }} NbPlant
+ * @typedef {{ plant: string, nazov: string, devs: Record<string, number[]>, dns: Record<string, string[]>, meters: Record<string, number[]>, meterDns: Record<string, string[]> }} NbPlant
  */
 
 /**
@@ -349,7 +350,14 @@ async function nbNajdi(server, rel, udaje, ctx) {
     const devs = prevod(() => parseNbDevices(devJson), 'zariadenia');
     const dns = prevod(() => parseNbDevDns(devJson), 'zariadenia');
     const meters = prevod(() => parseNbMeters(devJson), 'zariadenia');
-    const plants = stanice.map((st) => ({ ...st, devs: devs[st.plant] ?? {}, dns: dns[st.plant] ?? {}, meters: meters[st.plant] ?? {} }));
+    const meterDns = prevod(() => parseNbMeterDns(devJson), 'zariadenia');
+    const plants = stanice.map((st) => ({
+        ...st,
+        devs: devs[st.plant] ?? {},
+        dns: dns[st.plant] ?? {},
+        meters: meters[st.plant] ?? {},
+        meterDns: meterDns[st.plant] ?? {},
+    }));
     const pv = await nbMeraj(sp, plants).catch(() => null);
     const rok = await nbRok(sp, plants);
     // Priebeh dňa hneď pri pripojení, nech je v grafe od prvého merania.
@@ -412,6 +420,7 @@ async function nbDoplnDevs(sp, plant) {
             devs: parseNbDevices(json)[plant.plant] ?? {},
             dns: parseNbDevDns(json)[plant.plant] ?? {},
             meters: parseNbMeters(json)[plant.plant] ?? {},
+            meterDns: parseNbMeterDns(json)[plant.plant] ?? {},
         };
     } catch {
         return plant;
@@ -424,12 +433,19 @@ async function nbDoplnDevs(sp, plant) {
  * vráti null a appka dostane poslednú zapečatenú krivku.
  * @param {NbSpoj} sp @param {NbPlant} plant @returns {Promise<Krivka | null>}
  */
-async function nbKrivka(sp, plant) {
+const nbKrivka = (sp, plant) => nbHistoria(sp, plant.dns);
+
+/**
+ * Dnešné 5-minútové body zariadení z `dns` (typ -> devDn) z historického rozhrania, `active_power` sčítaný
+ * cez zariadenia: u meničov kW, u elektromerov W (kladné dodávka). Pri zlyhaní null.
+ * @param {NbSpoj} sp @param {Record<string, string[]>} dnsPodlaTypu @returns {Promise<Krivka | null>}
+ */
+async function nbHistoria(sp, dnsPodlaTypu) {
     const now = sp.ctx.now.getTime();
     const startTime = polnoc(sp.ctx.now, NB.pasmo);
     try {
         const jsons = [];
-        for (const [typ, dns] of Object.entries(plant.dns))
+        for (const [typ, dns] of Object.entries(dnsPodlaTypu))
             for (const devDn of dns)
                 jsons.push(await nbPost(sp, NB.devHistory, { devDn, devTypeId: Number(typ), startTime, endTime: now }, 'krivka'));
         return parseNbHistory(jsons, sp.ctx.now);
@@ -442,16 +458,24 @@ async function nbKrivka(sp, plant) {
  * Čo si meranie elektrárne vypýta navyše: zoznam zariadení raz, keď v pečati chýbajú meniče či ich
  * devDn (nbDoplnDevs), rok najviac raz za NB.rokMs (nbRok) a priebeh dňa najviac raz za KRIVKA.ms
  * (nbKrivka). Hodnota je čas dopytu na zapečatenie, 0 = nepýta sa.
+ * Dočasne (porovnanie s FusionSolar, docs/to do later.md) aj históriu elektromera najviac raz za KRIVKA.ms, vždy
+ * v inom meraní než priebeh dňa: Huawei pri jednom meniči a elektromere dovolí historické rozhranie raz za 5 minút.
  * @param {Record<string, unknown>} pristup @param {NbPlant} plant @param {number} now
  */
 function nbPlan(pristup, plant, now) {
+    const uplynulo = (/** @type {string} */ at, /** @type {number} */ ms) => now - (Number(pristup[at]) || 0) >= ms;
     const chyba = (/** @type {'devs' | 'dns'} */ k, /** @type {string} */ at) => !Object.keys(plant[k]).length && !Number(pristup[at]);
-    // Elektromer: pečať spred 11/2026 ho nemá vôbec (prázdne `meters` znamená, že elektráreň žiadny nemá).
+    // Elektromer: pečať spred 11/2026 ho nemá vôbec (prázdne `meters` znamená, že elektráreň žiadny nemá),
+    // jeho devDn pečať spred porovnania s FusionSolar (11/2026).
     const bezElektromera = pristup.meters === undefined && !Number(pristup.metersAt);
+    const bezDnElektromera = pristup.meterDns === undefined && !Number(pristup.meterDnsAt);
+    const krivkaAt = uplynulo('krivkaAt', KRIVKA.ms) ? now : 0;
+    const elektromerNa = !krivkaAt && Object.keys(plant.meterDns).length && uplynulo('elektromerAt', KRIVKA.ms);
     return {
-        devsAt: chyba('devs', 'devsAt') || chyba('dns', 'dnsAt') || bezElektromera ? now : 0,
-        rokAt: now - (Number(pristup.rokAt) || 0) >= NB.rokMs ? now : 0,
-        krivkaAt: now - (Number(pristup.krivkaAt) || 0) >= KRIVKA.ms ? now : 0,
+        devsAt: chyba('devs', 'devsAt') || chyba('dns', 'dnsAt') || bezElektromera || bezDnElektromera ? now : 0,
+        rokAt: uplynulo('rokAt', NB.rokMs) ? now : 0,
+        krivkaAt,
+        elektromerAt: elektromerNa ? now : 0,
     };
 }
 
@@ -463,8 +487,26 @@ async function nbMerajPodlaPlanu(sp, plant, plan) {
     const pv = /** @type {PvData} */ ((await nbMeraj(sp, [plant])).get(plant.plant));
     const krivkaAt = Object.keys(plant.dns).length ? plan.krivkaAt : 0;
     const krivka = krivkaAt ? await nbKrivka(sp, plant) : null;
+    const elektromer = plan.elektromerAt ? await nbHistoria(sp, plant.meterDns) : null;
     if (plan.rokAt) pv.yearEnergyKwh = (await nbRok(sp, [plant])).get(plant.plant) ?? null;
-    return { pv, krivka, krivkaAt };
+    return { pv, krivka, krivkaAt, elektromer };
+}
+
+/** Koľko posledných 5-minútových bodov histórie ide do logu porovnania (20 minút). */
+const POROVNANIE_BODY = 4;
+
+/**
+ * Dočasné porovnanie s FusionSolar (docs/to do later.md): do logu Workera okamžitý výkon meniča (kW)
+ * a elektromera (kW, kladné dodávka) s časom dopytu a posledné body histórie meniča (kW) a elektromera (W)
+ * s časom zberu od Huawei (minúta dňa v pásme elektrárne). Bez prístupu a mena elektrárne.
+ * @param {PvData} pv @param {Krivka | null} krivka @param {Krivka | null} elektromer @param {Date} now
+ */
+function zalogujPorovnanie(pv, krivka, elektromer, now) {
+    const body = (/** @type {Krivka | null} */ k) => k?.body.slice(-POROVNANIE_BODY).map(([min, v]) => [min, v]);
+    const zaznam = { t: now.toISOString(), menic: pv.realTimePowerKw, siet: pv.sietKw ?? null };
+    console.log(
+        `porovnanie: ${JSON.stringify({ ...zaznam, ...(krivka ? { histMenic: body(krivka) } : {}), ...(elektromer ? { histElektromer: body(elektromer) } : {}) })}`,
+    );
 }
 
 /**
@@ -499,6 +541,7 @@ function nbPristup(p) {
     const devs = p.devs && typeof p.devs === 'object' ? /** @type {Record<string, number[]>} */ (p.devs) : {};
     const dns = p.dns && typeof p.dns === 'object' ? /** @type {Record<string, string[]>} */ (p.dns) : {};
     const meters = p.meters && typeof p.meters === 'object' ? /** @type {Record<string, number[]>} */ (p.meters) : {};
+    const meterDns = p.meterDns && typeof p.meterDns === 'object' ? /** @type {Record<string, string[]>} */ (p.meterDns) : {};
     return {
         server: nbServer(p.server),
         meno: str(p.meno),
@@ -506,7 +549,7 @@ function nbPristup(p) {
         token: str(p.token),
         cookie: str(p.cookie),
         tokenAt: Number(p.tokenAt) || 0,
-        plant: { plant: str(p.plant), nazov: str(p.nazov), devs, dns, meters },
+        plant: { plant: str(p.plant), nazov: str(p.nazov), devs, dns, meters, meterDns },
     };
 }
 
@@ -642,7 +685,8 @@ export const ZDROJE = {
                 plant ??= plan.devsAt ? await nbDoplnDevs(sp, p.plant) : p.plant;
                 return nbMerajPodlaPlanu(sp, plant, plan);
             });
-            const { pv, krivkaAt } = vysledok;
+            const { pv, krivkaAt, elektromer } = vysledok;
+            zalogujPorovnanie(pv, vysledok.krivka, elektromer, ctx.now);
             const zariadenia = /** @type {NbPlant} */ (/** @type {unknown} */ (plant));
             // Medzi dopytmi posledná zapečatená krivka a za ňou aktuálny výkon (krivkaDnes).
             const krivka = vysledok.krivka ?? /** @type {Krivka | undefined} */ (pristup.krivka) ?? null;
@@ -654,13 +698,16 @@ export const ZDROJE = {
                           devs: zariadenia.devs,
                           dns: zariadenia.dns,
                           meters: zariadenia.meters,
+                          meterDns: zariadenia.meterDns,
                           devsAt: plan.devsAt,
                           dnsAt: plan.devsAt,
                           metersAt: plan.devsAt,
+                          meterDnsAt: plan.devsAt,
                       }
                     : {}),
                 ...(plan.rokAt ? { rokAt: plan.rokAt } : {}),
                 ...(krivkaAt ? { krivkaAt, krivka } : {}),
+                ...(plan.elektromerAt ? { elektromerAt: plan.elektromerAt } : {}),
             };
             return Object.keys(zmeny).length ? { pv, pristup: { ...pristup, ...zmeny } } : { pv };
         },
