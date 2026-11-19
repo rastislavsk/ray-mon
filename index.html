@@ -1031,11 +1031,46 @@
                         <p id="tz-vec-kedy" class="vec-kedy"></p>
                     </div>
                 </div>
+                <!-- Čo dnes už dobehlo (docs/navrhy/spotrebic-koniec-opakovanie.html). -->
+                <ul id="tz-vec-hotove" class="vec-hotove hidden"></ul>
                 <p id="tz-vec-cas" class="vec-cas"></p>
                 <div id="tz-vec-pas" class="vec-pas" aria-hidden="true"></div>
-                <!-- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html): „Už beží“, potom čas zapnutia s − a + a „Nebeží“. -->
+                <!-- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-koniec-opakovanie.html): „Už beží“,
+                     potom zvyšok programu (práčka, sušička) či čas zapnutia (umývačka) s − a +, či príde oznámenie o konci a „Nebeží“. -->
                 <div id="tz-vec-zapis" class="vec-zapis hidden">
                     <button type="button" id="tz-vec-zapol" class="pbtn"></button>
+                    <div id="tz-vec-zvysok" class="vec-zvysok">
+                        <span id="tz-vec-zostava" class="vec-zost-ttl"></span>
+                        <div class="vec-zost">
+                            <div class="vec-posun">
+                                <button type="button" id="tz-vec-h-menej" class="vec-krok">
+                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M6 12h12"></path>
+                                    </svg>
+                                </button>
+                                <span id="tz-vec-h"></span>
+                                <button type="button" id="tz-vec-h-viac" class="vec-krok">
+                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M6 12h12M12 6v12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="vec-posun">
+                                <button type="button" id="tz-vec-m-menej" class="vec-krok">
+                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M6 12h12"></path>
+                                    </svg>
+                                </button>
+                                <span id="tz-vec-m"></span>
+                                <button type="button" id="tz-vec-m-viac" class="vec-krok">
+                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                        <path d="M6 12h12M12 6v12"></path>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                        <span id="tz-vec-konci" class="vec-konci" aria-live="polite"></span>
+                    </div>
                     <div id="tz-vec-posun" class="vec-posun">
                         <button type="button" id="tz-vec-skor" class="vec-krok" data-smer="-1">
                             <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12h12"></path></svg>
@@ -1047,6 +1082,7 @@
                             </svg>
                         </button>
                     </div>
+                    <p id="tz-vec-oznam" class="dim" aria-live="polite"></p>
                     <button type="button" id="tz-vec-zrus" class="pbtn ghost"></button>
                 </div>
                 <p id="tz-vec-why"></p>
@@ -1086,6 +1122,12 @@
                 <div id="tz-bojler-pas" aria-hidden="true"></div>
                 <div id="tz-bojler-cisla" class="bj-cisla"></div>
                 <div id="tz-bojler-behy" class="bj-behy"></div>
+                <!-- Oznámenia o zapnutí a vypnutí bojlera pre tento telefón (docs/navrhy/spotrebic-koniec-opakovanie.html). -->
+                <button type="button" id="tz-bojler-oznam" class="bj-oznam" role="switch" aria-checked="false">
+                    <span id="tz-bojler-oznam-t"></span>
+                    <i class="tg" aria-hidden="true"></i>
+                </button>
+                <p id="tz-bojler-oznam-chyba" class="wz-msg hidden" role="status"></p>
             </div>
         </dialog>
 

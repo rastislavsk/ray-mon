@@ -1,7 +1,7 @@
 // Bojler na prebytky: rozhodovanie s hysterézou a záznam dňa (shared/bojler.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bojlerStav, PAMAT_ZACIATOK, prahyZ, prebytokBezBojlera, rozhodni, suctyDna, zaznamenaj } from '../shared/bojler.js';
+import { bojlerStav, PAMAT_ZACIATOK, prahyZ, prebytokBezBojlera, rozhodni, suctyDna, zaznamenaj, zmenaOhrevu } from '../shared/bojler.js';
 import { BOJLER } from '../shared/config.js';
 
 const MIN = 60 * 1000;
@@ -143,6 +143,30 @@ test('záznam dňa: behy, energia z počítadla, podiel zo siete, nahriata voda 
     assert.deepEqual([noc.behy.length, noc.behy[0].od, noc.hotovo], [1, 0, null]);
     const noc2 = zaznamenaj({ ...den, behy: [] }, { ...v(0, { rele: false }), now: new Date(Date.UTC(2026, 10, 15, 23, 1)) });
     assert.deepEqual(noc2.behy, []);
+});
+
+test('zmena ohrevu pre oznámenie: zapol, vypol a prečo; bez zmeny či prvé hlásenie nič', () => {
+    /** @param {number} min @param {boolean} rele @param {number} w @param {boolean} [rucne] @returns {import('../shared/bojler.js').BojlerInfo} */
+    const b = (min, rele, w, rucne = false) => ({
+        kontaktAt: min * 60000,
+        rele,
+        w,
+        prebytokKw: 2.4,
+        prahy: { zapKw: 2.3, vypKw: 2 },
+        den: null,
+        rucne,
+    });
+    assert.equal(zmenaOhrevu(null, b(1, true, 2000)), null);
+    assert.equal(zmenaOhrevu(b(1, true, 2000), b(2, true, 1900)), null);
+    assert.equal(zmenaOhrevu(b(1, false, 0), b(2, true, 10)), null, 'relé zapnuté, ale voda nahriata - nehreje');
+    assert.deepEqual(zmenaOhrevu(b(1, false, 0), b(2, true, 2000)), { zapol: true, dovod: 'appka', kw: 2.4 });
+    assert.deepEqual(zmenaOhrevu(b(1, true, 2000), b(2, false, 0)), { zapol: false, dovod: 'appka', kw: 2.4 });
+    assert.equal(zmenaOhrevu(b(1, true, 2000), b(2, true, 20))?.dovod, 'termostat');
+    assert.equal(zmenaOhrevu(b(1, true, 20), b(2, true, 2000))?.dovod, 'termostat');
+    assert.equal(zmenaOhrevu(b(1, false, 0, true), b(2, true, 2000, true))?.dovod, 'rucne');
+    assert.equal(zmenaOhrevu(b(1, true, 2000, true), b(2, false, 0, true))?.dovod, 'rucne');
+    assert.equal(zmenaOhrevu(b(1, true, 2000), b(2 + BOJLER.tichoMin, false, 0))?.dovod, 'spojenie');
+    assert.equal(zmenaOhrevu(b(1, false, 0), b(2 + BOJLER.tichoMin, true, 2000))?.dovod, 'appka', 'zapnutie po výpadku je appka');
 });
 
 test('stav dlaždice: mlčí, hreje, nahriata, čaká', () => {

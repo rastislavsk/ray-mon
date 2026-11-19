@@ -55,11 +55,17 @@ Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má d
 
 ## Spotrebič beží
 
-Návrh a rozhodnutie: `docs/navrhy/teraz-bezi-spotrebic.html` (A + 1, 18. 11. 2026). „Už beží“ v detaile spotrebiča
-na karte Teraz zapíše práčku, sušičku či umývačku (`BEZI.veci`) do telefónu (`bezi-v1`, `shared/bezi.js`), len na ten deň.
-Plán dňa ju potom nerozvrhuje (`behy` v `shared/plan-dna.js`): jej odber si berie z rozpočtu od skutočného štartu a sušička
-čaká na skutočný koniec prania. Bežiaci a dobehnutý spotrebič majú vlastnú dlaždicu (`bezi`, `hotovo`), rovnako veľkú ako
-ostatné. Overiť to appka nevie – je to na slovo. Worker zápisy nevidí, ranné oznámenie sa nemení.
+Návrh a rozhodnutie: `docs/navrhy/teraz-bezi-spotrebic.html` (A + 1, 18. 11. 2026), koniec programu a opakovanie
+`docs/navrhy/spotrebic-koniec-opakovanie.html` (19. 11. 2026). „Už beží“ v detaile spotrebiča na karte Teraz zapíše beh
+práčky, sušičky či umývačky (`BEZI.veci`) do telefónu (`bezi-v1`, `shared/bezi.js`; beh má začiatok `m` aj koniec `k`), len
+na ten deň. Práčke a sušičke človek nastaví zvyšok programu z displeja (hodiny a minúty, `BEZI.zvysok`), umývačke čas zapnutia.
+Za deň môže spotrebič bežať viackrát: kým beží, plán ho nerozvrhuje (`behy` v `shared/plan-dna.js`) a jeho odber si berie
+z rozpočtu; čo dobehlo, plán ponúkne znova a sušička suší pranie, ktoré ešte nesušila (`mokre`). Bežiaci spotrebič má vlastnú
+dlaždicu (`bezi`), dobehnutý dlaždicu s ďalším časom a odrážkou „dnes už 1×“. Overiť to appka nevie – je to na slovo.
+Oznámenie o konci (`web/koniec.js`, `POST /koniec`) posiela Durable Object `Budik` alarmom presne v čase konca; text skladá appka
+(`koniecNotice`) a Worker ho šifruje pre telefón (RFC 8291, `zasifruj` vo `worker/src/webpush.js`). Bojler oznamuje každú zmenu
+ohrevu (`zmenaOhrevu` v `shared/bojler.js`) telefónom, ktoré si to zaplí v paneli Bojler dnes (`POST /bojler-oznamenia`).
+Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull requestom (`worker/README.md`).
 
 ## Scéna toku energie na karte Teraz
 

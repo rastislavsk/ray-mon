@@ -2,8 +2,9 @@
 
 Živé meranie pre appku. Prehliadač sa na servery výrobcov meničov priamo nedostane, preto sa
 ich za neho pýta tento Worker. Heslá ani nastavenie elektrárne neukladá. Pamätá si odbery ranného
-oznámenia (KV `ODBERY`, nižšie), ktoré každú štvrťhodinu budí plánovaným behom, a pri Huawei
-Northbound reláciu, posledné meranie a stav bojlera (Durable Object, nižšie). Tajomstvá má dve – kľúč na zapečatenie prístupu a súkromný kľúč VAPID. Predpoveď si appka počíta sama v prehliadači.
+oznámenia (KV `ODBERY`, nižšie), ktoré každú štvrťhodinu budí plánovaným behom, konce programov
+spotrebičov (Durable Object `Budik`) a pri Huawei Northbound reláciu, posledné meranie, stav bojlera
+a odbery jeho oznámení (Durable Object `UcetHuawei`, nižšie). Tajomstvá má dve – kľúč na zapečatenie prístupu a súkromný kľúč VAPID. Predpoveď si appka počíta sama v prehliadači.
 
 **Zdieľanie:** `POST /zdielaj` dostane zapečatený prístup a vráti ten istý prístup s platnosťou
 `ZDIELANIE.platiDni` dní (7). Len tá ide do odkazu Zdieľať appku – odkaz ostáva v správach
@@ -178,8 +179,31 @@ dní (180) po poslednom poslaní z appky. Appka ho pri štarte pošle znova, ke�
 `OZNAMENIA.obnovDni` dní (30) – telefón, na ktorom appku už nikto neotvára, tak v úložisku neostane
 navždy. Odbery uložené pred touto zmenou lehotu dostanú pri prvej obnove.
 
-Prečo nie Durable Object s alarmom: migráciu Durable Objectu nejde nahrať cez
-`wrangler versions upload`, ktorým sa nasadzujú pull requesty – každý taký PR by v CI spadol.
+Prečo ranné oznámenie nebudí Durable Object s alarmom: migráciu Durable Objectu nejde nahrať cez
+`wrangler versions upload`, ktorým sa nasadzujú pull requesty – každý taký PR by v CI spadol. Pre koniec
+programu (nižšie) to treba, preto sa Worker s novou migráciou nasadí ručne (`npx wrangler deploy`) ešte
+pred pull requestom; potom už migrácia nová nie je a `versions upload` prejde.
+
+## Koniec programu a bojler: push s textom
+
+Návrh: `docs/navrhy/spotrebic-koniec-opakovanie.html`. Tieto oznámenia nesú text – Worker ho zašifruje
+pre telefón podľa RFC 8291 (`zasifruj` v `src/webpush.js`, aes128gcm cez WebCrypto, bez knižnice), takže
+appka k nemu pošle aj kľúče odberu (`keys.p256dh`, `keys.auth`). Service worker text len ukáže.
+
+`POST /koniec` s `{ endpoint, keys, id, at, title, body }` objedná oznámenie o konci programu práčky, sušičky
+či umývačky (text skladá appka v chvíli zápisu, najviac `PUSH_TEXT.maxText` znakov, čas najviac
+`PUSH_TEXT.maxDopreduH` hodín dopredu); `at: null` ho zruší. Drží ho Durable Object `Budik` (`src/budik.js`,
+väzba `BUDIK`, migrácia `v2`, jeden objekt na odber) a alarmom ho pošle presne v čase konca – nie až pri
+štvrťhodinovom budení. Zápisy behov ani plán Worker nevidí.
+
+`POST /bojler-oznamenia` s `{ pecat, endpoint, keys, on }` (pečať telefónu) zapne či vypne telefónu oznámenia
+bojlera. Odbery (najviac `PUSH_TEXT.maxOdberov` na elektráreň) drží `UcetHuawei` pod `bo:<elektráreň>` a pri
+každom hlásení zásuvky, v ktorom sa zmení ohrev (`zmenaOhrevu` v `shared/bojler.js`: relé a príkon nad
+`BOJLER.hotovoW`), im pošle push s dôvodom – prebytok, termostat, ručne v Shelly, výpadok spojenia. Platí
+v oboch režimoch. Odber, ktorý push služba nepozná (404, 410), zmaže.
+
+Obe cesty sú v `CESTY` s obmedzením 10 volaní za minútu; appka pri ťukaní na − a + posiela koniec až po
+`PUSH_TEXT.cakajMs` bez ďalšej zmeny.
 
 ### Nastavenie (raz)
 
@@ -204,7 +228,8 @@ celý deň, alebo niekto úmyselne.
 Obmedzenie počtu požiadaviek vo Workeri (väzba `ratelimits`, `LIMIT` vo `wrangler.toml`) kvótu
 nechráni: aby Worker požiadavku odmietol, musí sa spustiť, a každé spustenie sa do limitu počíta.
 Chráni niečo iné – cesty, ktoré sa dajú zneužiť: `/pripoj` (skúšanie cudzích hesiel u výrobcov
-cez tento Worker), `/zdielaj`, `/oznamenia` a `/pripomen` (zapĺňanie KV). Tie majú 10 volaní za
+cez tento Worker), `/zdielaj`, `/oznamenia` a `/pripomen` (zapĺňanie KV), `/koniec` a `/bojler-oznamenia`
+(zapĺňanie Durable Objects). Tie majú 10 volaní za
 minútu na adresu a cestu (`CESTY` v `src/index.js`), nad to Worker vráti 429. Počítadlo je
 približné a zvlášť v každom mieste Cloudflare; keď zlyhá, požiadavka prejde. Meranie (`/pv`)
 obmedzené nie je: pýta sa každú minútu z každej otvorenej appky a bez platnej pečate nič nespraví.

@@ -2,10 +2,10 @@
 // funkcie bez DOM a siete - volá ich service worker (sw.js) v chvíli, keď ho Worker zobudí,
 // a appky v Nastavení. Plán počíta shared/plan-dna.js, vety skladá shared/messages-core.js.
 
-import { OZNAMENIA, TARIFF_LIMITS } from './config.js';
-import { oznameniaTexts, planNoticeText, reminderText } from './messages-core.js';
+import { OZNAMENIA, PLAN_DNA, TARIFF_LIMITS } from './config.js';
+import { koniecText, oznameniaTexts, planNoticeText, reminderText } from './messages-core.js';
 import { dayCtx, planWindows } from './mozem-jadro.js';
-import { planDna } from './plan-dna.js';
+import { planDna, vec } from './plan-dna.js';
 import { buildForecast, localMinutes } from './solar.js';
 import { isObj } from './valid.js';
 import { vyhladOznamenia } from './vyhlad.js';
@@ -91,6 +91,23 @@ export function planNotice(input, { devices, voice = 'drzy', posledny = null }) 
     if (!v.text) return { ...plan, remind, vyhlad: v.vyhlad };
     const body = [v.text.uvod, `${plan.title}.`, plan.body].filter(Boolean).join(' ');
     return { title: v.text.title, body, remind, vyhlad: v.vyhlad };
+}
+
+/**
+ * Oznámenie o konci programu spotrebiča `id` (docs/navrhy/spotrebic-koniec-opakovanie.html), zložené v chvíli zápisu
+ * z plánu dňa, ktorý s behom už ráta. Pri praní povie aj, čo sušička, ktorá naň čaká: plán ju dáva hneď po ňom
+ * a jej podiel slnka hovorí, či ju v tej chvíli utiahne slnko.
+ * @param {import('./day-plan.js').PlanInput} input @param {{ id: string, devices: readonly string[] }} o
+ */
+export function koniecNotice(input, { id, devices }) {
+    const rows = input.forecast ? planDna(dayCtx(input), input, devices) : [];
+    const caka = Object.keys(PLAN_DNA.after).find((k) => PLAN_DNA.after[k] === id);
+    const r = rows.find((x) => x.id === caka && x.kind === 'sun');
+    return koniecText({
+        id,
+        name: vec(id).device.name,
+        caka: r && r.kind === 'sun' ? { name: vec(r.id).device.name, slnko: r.podiel >= PLAN_DNA.zoSiete } : null,
+    });
 }
 
 /** @param {import('./plan-dna.js').PlanRow} r */

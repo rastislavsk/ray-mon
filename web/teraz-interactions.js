@@ -1,13 +1,16 @@
 // Poslucháče karty Teraz: scéna toku energie, „Skúsiť znova“, deň v hrebeni týždňa, vysvetlenie riadku nad dlaždicami
-// a detail spotrebiča aj so zápisom, že beží (docs/navrhy/teraz-bezi-spotrebic.html).
+// a detail spotrebiča aj so zápisom, že beží (docs/navrhy/teraz-bezi-spotrebic.html), a oznámením o konci
+// (docs/navrhy/spotrebic-koniec-opakovanie.html).
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/teraz.js. Graf dňa je v paneli
 // karty Dnes (mozem-interactions.js).
 
-import { posun, zapol, zrus } from '../shared/bezi.js';
-import { BOJLER_ULOZENE_MS, TERAZ_CISLA_MS } from '../shared/config.js';
+import { posun, zapol, zrus, zvysok } from '../shared/bezi.js';
+import { BEZI, BOJLER_ULOZENE_MS, TERAZ_CISLA_MS } from '../shared/config.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { rytmusSBojlerom } from '../shared/zdroje.js';
 import { ulozRezimBojlera } from './data.js';
+import { zmenOznamBojlera } from './bojler-oznam.js';
+import { objednajKoniec } from './koniec.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 import { loadRytmus, saveBezi, saveRytmus } from './storage.js';
@@ -35,16 +38,25 @@ export function initTeraz(store, dom, refresh) {
     });
     initSheet(dom.tzChipSheet, () => stepBack(store, { tzChip: null }));
     initSheet(dom.tzVecSheet, () => stepBack(store, { tzVec: null }));
-    dom.tzVecZapol.addEventListener('click', () => zapis(store, (list, id, d, m) => zapol(list, id, d, m)));
+    dom.tzVecZapol.addEventListener('click', () => zapis(store, zapol, { pytaj: true }));
     dom.tzVecSkor.addEventListener('click', () => zapis(store, (list, id, d, m) => posun(list, id, d, -1, m)));
     dom.tzVecNeskor.addEventListener('click', () => zapis(store, (list, id, d, m) => posun(list, id, d, 1, m)));
-    dom.tzVecZrus.addEventListener('click', () => zapis(store, (list, id, d) => zrus(list, id, d)));
+    /** @type {Array<[HTMLButtonElement, number]>} */
+    const kroky = [
+        [dom.tzVecHMenej, -60],
+        [dom.tzVecHViac, 60],
+        [dom.tzVecMMenej, -BEZI.krokMin],
+        [dom.tzVecMViac, BEZI.krokMin],
+    ];
+    for (const [btn, o] of kroky) btn.addEventListener('click', () => zapis(store, (list, id, d, m) => zvysok(list, id, d, o, m)));
+    dom.tzVecZrus.addEventListener('click', () => zapis(store, zrus, { hned: true }));
     // Bojler, ktorý riadi zásuvka, má namiesto detailu spotrebiča panel Bojler dnes - ten istý krok (tzVec).
     initSheet(dom.tzBojlerSheet, () => stepBack(store, { tzVec: null }));
     dom.tzBojlerRezim.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-bojler-rezim]') : null;
         if (btn instanceof HTMLElement) zmenRezim(store, btn.dataset.bojlerRezim === 'rucne');
     });
+    dom.tzBojlerOznam.addEventListener('click', () => zmenOznamBojlera(store, !store.get().bojlerOznam));
     initSheet(dom.tzTokSheet, () => stepBack(store, { tzChip: null }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
@@ -56,18 +68,22 @@ export function initTeraz(store, dom, refresh) {
 /**
  * Zápis spotrebiča otvoreného v detaile (shared/bezi.js): zmena dostane dnešný dátum a minútu dňa podľa elektrárne,
  * uloží sa v telefóne a appka hneď prepočíta plán - aj s teraz, aby čas zapnutia bol tá chvíľa, nie posledná obnova.
+ * Potom objedná či zruší oznámenie o konci (web/koniec.js, `o`).
  * @param {Store} store
  * @param {(list: import('../shared/bezi.js').Zapis[], id: string, d: string, m: number) => import('../shared/bezi.js').Zapis[]} zmena
+ * @param {{ pytaj?: boolean, hned?: boolean }} [o]
  */
-function zapis(store, zmena) {
+function zapis(store, zmena, o) {
     const s = store.get();
-    if (!s.tzVec) return;
+    const id = s.tzVec;
+    if (!id) return;
     const now = new Date();
     const tz = s.site.timezone;
     // `?? []`: starý web/state.js z cache po nasadení pole bezi nemá.
-    const bezi = zmena(s.bezi ?? [], s.tzVec, localDateKey(now, tz), localMinutes(now, tz));
+    const bezi = zmena(s.bezi ?? [], id, localDateKey(now, tz), localMinutes(now, tz));
     saveBezi(bezi);
     store.setState({ bezi, now });
+    objednajKoniec(store, id, o);
 }
 
 /** Čakanie na zhasnutie čísel v scéne. @type {ReturnType<typeof setTimeout> | undefined} */

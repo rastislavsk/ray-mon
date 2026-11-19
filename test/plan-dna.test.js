@@ -260,8 +260,8 @@ test('lacné pásmo má koniec: do konca pásma, cez polnoc podľa rozvrhu ďal�
 
 // ---- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html) -----------------------------
 const VELKE = ['pracka', 'umyvacka', 'susicka', 'auto'];
-/** Zápis „Už beží“ 5. 9. 2026. @param {string} id @param {number} m */
-const zapis = (id, m) => ({ id, d: '2026-09-05', m });
+/** Beh „Už beží“ 5. 9. 2026 od `m`, koniec `k` (bez neho po dĺžke programu). @param {string} id @param {number} m @param {number} [k] */
+const zapis = (id, m, k) => ({ id, d: '2026-09-05', m, k: k ?? m + (MOZEM_ITEMS.find((x) => x.id === id)?.runMin ?? 0) });
 
 test('práčka beží od 8:00: plán ju nerozvrhuje, sušička ide po jej skutočnom konci, model ju ukáže v behoch', () => {
     const i = input(at('09:00'), { bezi: [zapis('pracka', 480)] });
@@ -280,17 +280,49 @@ test('práčka beží od 8:00: plán ju nerozvrhuje, sušička ide po jej skuto�
     assert.equal(row(m?.rows ?? [], 'susicka').why, 'po práčke, celá zo strechy');
 });
 
-test('práčka dobehla: dnes ju plán neponúka, sušička od teraz', () => {
+test('práčka dobehla: plán ju ponúkne znova, sušička suší to pranie hneď, nie až ďalšie', () => {
     const i = input(at('11:00'), { bezi: [zapis('pracka', 480)] });
     const m = planDnaModel(i, { devices: VELKE });
     assert.deepEqual(
         m?.behy.map((b) => b.kind),
         ['done'],
     );
-    assert.equal(row(m?.rows ?? [], 'pracka'), undefined);
+    const pracka = row(m?.rows ?? [], 'pracka');
+    assert.ok(pracka, 'ďalšie pranie má miesto');
+    assert.ok(pracka.kind !== 'sun' || pracka.start >= 11 * 60);
     const susicka = row(m?.rows ?? [], 'susicka');
     assert.equal(susicka.start, 11 * 60);
     assert.equal(susicka.after, 'pracka');
+});
+
+test('pranie aj sušenie dobehli: sušička čaká na ďalšie pranie', () => {
+    const i = input(at('11:00'), { bezi: [zapis('pracka', 480), zapis('susicka', 600, 650)] });
+    const rows = planDnaAt(i, VELKE);
+    const pracka = row(rows, 'pracka');
+    const susicka = row(rows, 'susicka');
+    assert.equal(pracka.kind, 'sun');
+    assert.equal(susicka.after, 'pracka');
+    assert.equal(susicka.start, pracka.end, 'hneď po ďalšom praní');
+});
+
+test('druhé pranie beží, prvé sušička usušila: sušička po druhom, plán ráta s oboma behmi', () => {
+    const i = input(at('12:00'), { bezi: [zapis('pracka', 480), zapis('susicka', 600, 650), zapis('pracka', 660, 760)] });
+    const m = planDnaModel(i, { devices: VELKE });
+    assert.deepEqual(
+        m?.behy.map((b) => [b.id, b.kind, b.end]),
+        [
+            ['pracka', 'done', 600],
+            ['susicka', 'done', 650],
+            ['pracka', 'run', 760],
+        ],
+    );
+    assert.equal(row(m?.rows ?? [], 'pracka'), undefined, 'kým beží, nerozvrhuje sa');
+    assert.equal(row(m?.rows ?? [], 'susicka').start, 760);
+});
+
+test('zápis bez konca zo staršej appky skončí po dĺžke programu', () => {
+    const i = input(at('09:00'), { bezi: [/** @type {any} */ ({ id: 'pracka', d: '2026-09-05', m: 480 })] });
+    assert.equal(planDnaModel(i, { devices: VELKE })?.behy[0].end, 600);
 });
 
 test('bežiaci spotrebič si berie z rozpočtu: počas ohrevov nič neprekročí výrobu nad spotrebou domu', () => {

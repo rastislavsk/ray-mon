@@ -8,18 +8,22 @@
 // Ukladá: reláciu (token a cookies, platia 30 minút), čo meranie zistilo o elektrárni (zariadenia,
 // krivku, časy dopytov - bez hesla), posledné meranie a pre bojler pamäť rozhodovania, posledný
 // kontakt zásuvky, záznam dňa a režim (ručne / riadi appka). Heslo neukladá: prichádza vždy
-// v pečati od telefónu či zásuvky.
+// v pečati od telefónu či zásuvky. Pre oznámenia bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html) aj odbery
+// telefónov, ktoré si ich zapli - pri každej zmene ohrevu im pošle push s textom.
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
 
-import { BOJLER } from '../../shared/config.js';
-import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj } from '../../shared/bojler.js';
+import { BOJLER, PUSH_TEXT } from '../../shared/config.js';
+import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zmenaOhrevu } from '../../shared/bojler.js';
 import { NB } from '../../shared/huawei-nb.js';
+import { bojlerZmenaText } from '../../shared/messages-oznamenia.js';
+import { posliPush, vapidKlic } from './webpush.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
 /** @typedef {import('../../shared/kiosk.js').PvData} PvData */
 /** @typedef {import('../../shared/bojler.js').BojlerInfo} BojlerInfo */
+/** Odber telefónu s oznámeniami bojlera. @typedef {{ e: string, keys: { p256dh: string, auth: string } }} OdberBojlera */
 /** @typedef {{ get: (k: string) => Promise<unknown>, put: (k: string | Record<string, unknown>, v?: unknown) => Promise<void> }} Uloziste */
 
 // Polia relácie: spoločné pre všetky elektrárne účtu. Heslo sa neukladá nikde.
@@ -40,9 +44,10 @@ const bez = (o, kluce) => Object.fromEntries(Object.entries(o).filter(([k]) => !
  */
 
 export class UcetHuawei {
-    /** @param {{ storage: Uloziste }} state @param {unknown} _env @param {typeof fetch} [fetchImpl] */
-    constructor(state, _env, fetchImpl) {
+    /** @param {{ storage: Uloziste }} state @param {{ VAPID_JWK?: string }} env @param {typeof fetch} [fetchImpl] */
+    constructor(state, env, fetchImpl) {
         this.storage = state.storage;
+        this.env = env ?? {};
         /** @type {typeof fetch} */
         this.fetchImpl = fetchImpl ?? ((u, i) => fetch(u, i));
         /** Meranie, ktoré práve beží, po elektrárňach - druhý dopyt naň počká. @type {Map<string, Promise<{ pv: PvData, pristup: Record<string, unknown> }>>} */
@@ -60,7 +65,9 @@ export class UcetHuawei {
                     ? await this.bojler(req, now)
                     : path === '/rezim'
                       ? await this.rezim(req, now)
-                      : await this.pv(req.pristup, now);
+                      : path === '/oznam'
+                        ? await this.oznam(req)
+                        : await this.pv(req.pristup, now);
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -149,7 +156,43 @@ export class UcetHuawei {
         const den = zaznamenaj(stary?.den ?? null, { now, tz: NB.pasmo, rele, w, energiaWh, sietKw });
         /** @type {BojlerInfo} */ const info = { kontaktAt: now.getTime(), rele, w, prebytokKw: r.prebytokKw, prahy, den, rucne };
         await this.storage.put({ [`bp:${plant}`]: r.pamat, [`b:${plant}`]: info });
+        const zmena = zmenaOhrevu(stary ?? null, info);
+        if (zmena) await this.oznamZmenu(plant, bojlerZmenaText(zmena), now);
         return { zapni: r.zapni, rucne, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin };
+    }
+
+    /**
+     * Oznámenia bojlera od appky: odber telefónu pridá (`on`) či odoberie. Najviac PUSH_TEXT.maxOdberov na elektráreň,
+     * najstarší ide preč.
+     * @param {{ pristup: Record<string, unknown>, endpoint: string, keys: OdberBojlera['keys'] | null, on: boolean }} req
+     */
+    async oznam(req) {
+        const plant = String(req.pristup.plant ?? '');
+        const stare = /** @type {OdberBojlera[]} */ ((await this.storage.get(`bo:${plant}`)) ?? []).filter((o) => o.e !== req.endpoint);
+        const odbery = req.on && req.keys ? [...stare, { e: req.endpoint, keys: req.keys }].slice(-PUSH_TEXT.maxOdberov) : stare;
+        await this.storage.put(`bo:${plant}`, odbery);
+        return { ok: true };
+    }
+
+    /**
+     * Push s textom o zmene ohrevu všetkým odberom elektrárne. Odber, ktorý push služba už nepozná (404, 410), zmaže.
+     * @param {string} plant @param {{ title: string, body: string }} text @param {Date} now
+     */
+    async oznamZmenu(plant, text, now) {
+        const odbery = /** @type {OdberBojlera[]} */ ((await this.storage.get(`bo:${plant}`)) ?? []);
+        if (!odbery.length || !this.env.VAPID_JWK) return;
+        const klic = await vapidKlic(this.env.VAPID_JWK);
+        const data = { ...text, tag: 'bojler' };
+        /** @type {string[]} */ const neplatne = [];
+        for (const o of odbery) {
+            const status = await posliPush(o.e, klic, now, this.fetchImpl, { data, keys: o.keys }).catch(() => 0);
+            if (status === 404 || status === 410) neplatne.push(o.e);
+        }
+        if (neplatne.length)
+            await this.storage.put(
+                `bo:${plant}`,
+                odbery.filter((o) => !neplatne.includes(o.e)),
+            );
     }
 
     /**

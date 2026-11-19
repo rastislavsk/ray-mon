@@ -1,5 +1,6 @@
 // Texty ranného oznámenia a pripomienky (shared/oznamenia.js). Čisté funkcie bez DOM.
 
+import { fmt1 } from './format.js';
 import { autoSunWhy, mozemTexts, planDnaRowText } from './messages-mozem.js';
 import { andList, cap, dniSlovo, hm, onDay, polite } from './messages-zaklad.js';
 
@@ -207,4 +208,40 @@ export function oznameniaTexts(voice = 'drzy') {
             chyba: p ? 'Oznámenia sa nepodarilo nastaviť. Skúste znova.' : 'Oznámenia sa nepodarilo nastaviť. Skús znova.',
         },
     };
+}
+
+// ---- Koniec programu a bojler (docs/navrhy/spotrebic-koniec-opakovanie.html) ----------------
+// Oznámenie príde s obsahom: text o konci skladá appka pri zápise (koniecNotice), o bojleri Worker
+// pri zmene ohrevu (worker/src/ucet.js).
+
+/** Čo je po programe hotové. @type {Record<string, string>} */
+const HOTOVE = { pracka: 'Pranie je hotové.', susicka: 'Sušenie je hotové.', umyvacka: 'Riad je umytý.' };
+
+/**
+ * Oznámenie o konci programu: „Práčka dobehla“ a čo je hotové, pri praní aj čo sušička - podľa plánu dňa
+ * v čase zápisu (`caka`: sušička a či ju v tej chvíli utiahne slnko).
+ * @param {{ id: string, name: string, caka: { name: string, slnko: boolean } | null }} k
+ */
+export function koniecText({ id, name, caka }) {
+    const veta = caka ? (caka.slnko ? `${caka.name} má teraz slnko.` : `${caka.name} pôjde zo siete.`) : '';
+    return { title: `${name} dobehla`, body: [HOTOVE[id] ?? 'Program skončil.', veta].filter(Boolean).join(' ') };
+}
+
+/**
+ * Zmena ohrevu bojlera: zapol sa, vypol sa a prečo.
+ * `appka` - prepla ho appka podľa prebytku (`kw`), `termostat` - voda je nahriata či znova chladne,
+ * `rucne` - prepnutý v Shelly pri ručnom režime, `spojenie` - zásuvka nemala spojenie a vypla sa sama.
+ * @param {{ zapol: boolean, dovod: 'appka' | 'termostat' | 'rucne' | 'spojenie', kw: number | null }} z
+ */
+export function bojlerZmenaText({ zapol, dovod, kw }) {
+    const title = zapol ? 'Bojler sa zapol' : 'Bojler sa vypol';
+    const prebytok = kw === null ? '' : `${fmt1(kw)} kW`;
+    /** @type {Record<typeof dovod, string>} */
+    const body = {
+        appka: zapol ? `Prebytok ${prebytok} · riadi appka` : prebytok ? `Prebytok klesol na ${prebytok}.` : 'Prebytok klesol.',
+        termostat: zapol ? 'Voda chladne, termostat znova kúri.' : 'Voda je nahriata (termostat).',
+        rucne: 'Prepnutý ručne v Shelly.',
+        spojenie: 'Zásuvka nemala spojenie, vypla sa pre istotu.',
+    };
+    return { title, body: body[dovod] };
 }

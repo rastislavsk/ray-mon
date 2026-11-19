@@ -608,13 +608,24 @@ export const DOMA_STORAGE_KEY = 'doma-v1';
 export const BOJLER_STORAGE_KEY = 'bojler-v1';
 
 /**
- * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1): „Zapol som“ v detaile spotrebiča na karte
- * Teraz zapíše, kedy človek spotrebič zapol, a Plán dňa s tým ráta (shared/bezi.js). Len `veci` - bojler
- * riadi zásuvka a auto zatiaľ nie. `posunMin`: o koľko posunie čas zapnutia jedno ťuknutie na − či +.
+ * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1; docs/navrhy/spotrebic-koniec-opakovanie.html):
+ * „Už beží“ v detaile spotrebiča na karte Teraz zapíše beh a Plán dňa s ním ráta (shared/bezi.js). Len `veci` -
+ * bojler riadi zásuvka a auto zatiaľ nie. Pri `zvysok` (práčka, sušička - ukazujú ho na displeji) sa appka pýta, koľko
+ * programu zostáva: hodiny po jednej, minúty po `krokMin`, zvyšok od `minZvysokMin` do `maxZvysokMin`. Umývačka
+ * zvyšok neukazuje: `posunMin` je, o koľko posunie čas zapnutia jedno ťuknutie na − či +.
  * Zápis patrí telefónu a platí len v ten deň; do odkazu s nastavením nejde.
  */
-export const BEZI = { veci: ['pracka', 'umyvacka', 'susicka'], posunMin: 15 };
+export const BEZI = {
+    veci: ['pracka', 'umyvacka', 'susicka'],
+    zvysok: ['pracka', 'susicka'],
+    posunMin: 15,
+    krokMin: 5,
+    minZvysokMin: 5,
+    maxZvysokMin: 360,
+};
 export const BEZI_STORAGE_KEY = 'bezi-v1';
+/** Oznámenia bojlera na tomto telefóne zapnuté (vypínač v paneli Bojler dnes). */
+export const BOJLER_OZNAM_STORAGE_KEY = 'bojler-oznam-v1';
 
 /**
  * Všetky kľúče, pod ktorými appka niečo ukladá v localStorage - toľko zmaže „Vymazať údaje“
@@ -637,6 +648,7 @@ export const STORAGE_KEYS = [
     DOMA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
     BEZI_STORAGE_KEY,
+    BOJLER_OZNAM_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
 ];
@@ -710,6 +722,18 @@ export const WORKER_OZNAMENIA_PATH = '/oznamenia';
 export const WORKER_OZNAMENIA_URL = new URL(WORKER_OZNAMENIA_PATH, WORKER_URL).href;
 export const WORKER_PRIPOMEN_PATH = '/pripomen';
 export const WORKER_PRIPOMEN_URL = new URL(WORKER_PRIPOMEN_PATH, WORKER_URL).href;
+// Oznámenie o konci programu (`/koniec`, docs/navrhy/spotrebic-koniec-opakovanie.html): telefón objedná push s textom
+// na čas konca behu, bez času ho zruší. Oznámenia bojlera (`/bojler-oznamenia`): telefón sa prihlási či odhlási.
+export const WORKER_KONIEC_PATH = '/koniec';
+export const WORKER_KONIEC_URL = new URL(WORKER_KONIEC_PATH, WORKER_URL).href;
+export const WORKER_BOJLER_OZNAM_PATH = '/bojler-oznamenia';
+export const WORKER_BOJLER_OZNAM_URL = new URL(WORKER_BOJLER_OZNAM_PATH, WORKER_URL).href;
+/**
+ * Push s textom (docs/navrhy/spotrebic-koniec-opakovanie.html). `cakajMs`: appka objedná koniec až po toľkých ms bez
+ * ďalšieho ťuknutia na − a + (Worker má limit volaní). `maxText`: najdlhší nadpis a text v znakoch. `maxDopreduH`: koniec
+ * najviac toľko hodín dopredu. `maxOdberov`: koľko telefónov si oznámenia bojlera jednej elektrárne zapne najviac.
+ */
+export const PUSH_TEXT = { cakajMs: 1500, maxText: 200, maxDopreduH: 8, maxOdberov: 10 };
 // Pečať do odkazu Zdieľať appku (`/zdielaj`): prístup k meraniu s platnosťou `platiDni` dní. Odkaz
 // ostáva v správach natrvalo, prístup v ňom nie - kto ho otvorí neskôr, pripojí si meranie sám.
 export const WORKER_ZDIELAJ_PATH = '/zdielaj';

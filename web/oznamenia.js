@@ -100,18 +100,62 @@ export async function zapniOznamenia({ app, hour, timeZone }) {
         const perm = await Notification.requestPermission();
         if (perm === 'denied') return 'zakazane';
         if (perm !== 'granted') return 'zatvorene';
-        const url = swUrl(app);
-        // Na tú istú registráciu, ktorú zapisuje - nie `ready`, to sa riadi stránkou, nie appkou.
-        const reg = await navigator.serviceWorker.register(url, { type: 'module', updateViaCache: 'none', scope: new URL('./', url).href });
-        await doLimitu(cakajNaAktivny(reg));
-        const sub =
-            (await reg.pushManager.getSubscription()) ??
-            (await doLimitu(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes() })));
+        const sub = await prihlas(app);
         if (!(await posliOdber(sub, hour, timeZone))) return 'chyba';
         for (const ine of await odbery()) if (ine.app !== app) await zrusOdber(ine.sub).catch(() => null);
         return 'ok';
     } catch {
         return 'chyba';
+    }
+}
+
+/**
+ * Service worker appky `app` a jeho odber Web Push (nový, keď ešte nie je). Povolenie už musí byť.
+ * @param {Appka} app @returns {Promise<PushSubscription>}
+ */
+async function prihlas(app) {
+    const url = swUrl(app);
+    // Na tú istú registráciu, ktorú zapisuje - nie `ready`, to sa riadi stránkou, nie appkou.
+    const reg = await navigator.serviceWorker.register(url, { type: 'module', updateViaCache: 'none', scope: new URL('./', url).href });
+    await doLimitu(cakajNaAktivny(reg));
+    return (
+        (await reg.pushManager.getSubscription()) ??
+        (await doLimitu(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: vapidKeyBytes() })))
+    );
+}
+
+/**
+ * Odber pre oznámenia s textom (koniec programu, bojler - docs/navrhy/spotrebic-koniec-opakovanie.html), aj bez ranného
+ * oznámenia: ten, čo telefón už má, inak s `pytaj` vypýta povolenie a prihlási sa. Ranné oznámenie tým nezapne -
+ * Worker ho nepozná. Bez `pytaj` a bez odberu null.
+ * @param {boolean} pytaj
+ * @returns {Promise<{ endpoint: string, keys: { p256dh: string, auth: string } } | 'zakazane' | 'chyba' | null>}
+ */
+export async function odberSTextom(pytaj) {
+    if (oznamStav() !== 'ok') return 'zakazane';
+    try {
+        let sub = Notification.permission === 'granted' ? await odber() : null;
+        if (!sub && !pytaj) return null;
+        if (!sub) {
+            if ((await Notification.requestPermission()) !== 'granted') return 'zakazane';
+            sub = await prihlas('./');
+        }
+        const keys = sub.toJSON().keys;
+        return keys?.p256dh && keys.auth ? { endpoint: sub.endpoint, keys: { p256dh: keys.p256dh, auth: keys.auth } } : 'chyba';
+    } catch {
+        return 'chyba';
+    }
+}
+
+/**
+ * Pošle Workeru požiadavku s odberom (oznámenia s textom). Vráti, či ju prijal.
+ * @param {string} url @param {object} body
+ */
+export async function posliSOdberom(url, body) {
+    try {
+        return (await doLimitu(fetch(url, { method: 'POST', body: JSON.stringify(body) }))).ok;
+    } catch {
+        return false;
     }
 }
 

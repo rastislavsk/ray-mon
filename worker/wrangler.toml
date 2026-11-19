@@ -39,3 +39,13 @@ class_name = "UcetHuawei"
 [[migrations]]
 tag = "v1"
 new_sqlite_classes = ["UcetHuawei"]
+
+# Budíky konca programu (worker/src/budik.js, docs/navrhy/spotrebic-koniec-opakovanie.html): jeden objekt na odber
+# telefónu, alarmom pošle oznámenie presne v čase konca. Len SQLite (bezplatný plán).
+[[durable_objects.bindings]]
+name = "BUDIK"
+class_name = "Budik"
+
+[[migrations]]
+tag = "v2"
+new_sqlite_classes = ["Budik"]

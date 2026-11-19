@@ -507,7 +507,7 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo, deň a úsek na osi 
             cas: '13:00 – 15:00',
             why: 'Ohrev chytí slnko.',
             slot: undefined,
-            zapis: { stav: 'moze', od: '', neskor: false },
+            zapis: { stav: 'moze', od: '', neskor: false, hotove: [], zvysok: null },
         },
     );
     assert.ok(pracka?.slot && pracka.slot.left > 0 && pracka.slot.width > 0);
@@ -1043,10 +1043,10 @@ test('graf dňa a dlaždice sa zhodnú: čo ide teraz, aj v grafe dňa beží (t
     assert.equal(casti(denModel(i, rows, minuta('19:45')).citanie.veta).at(-1), 'potom bojler o 20:00');
 });
 
-/** Zápisy „Už beží“ 5. 9. 2026: umývačka od 12:00 (beží o 13:00), práčka od 9:30 (dobehla). */
+/** Behy „Už beží“ 5. 9. 2026: umývačka od 12:00 (beží o 13:00), práčka od 9:30 (dobehla). */
 const ZAPISY = [
-    { id: 'umyvacka', d: '2026-09-05', m: hm(12) },
-    { id: 'pracka', d: '2026-09-05', m: hm(9, 30) },
+    { id: 'umyvacka', d: '2026-09-05', m: hm(12), k: hm(14, 30) },
+    { id: 'pracka', d: '2026-09-05', m: hm(9, 30), k: hm(11, 30) },
 ];
 /** Detail spotrebiča z modelu, ktorý tam musí byť. @param {ReturnType<typeof terazModel>} m @param {string} id */
 function detail(m, id) {
@@ -1055,19 +1055,20 @@ function detail(m, id) {
     return v;
 }
 
-test('spotrebič beží: dlaždica „beží“ za tým, čo ide teraz, dobehnutý na konci, nie medzi tým, čo zapnúť', () => {
+test('spotrebič beží: dlaždica „beží“ hore; dobehnutý má dlaždicu s ďalším časom a odrážkou „dnes už 1×“', () => {
     const co = terazModel(input(at('13:00'), { bezi: ZAPISY })).co;
     if (!co) throw new Error('bez Čo zapnúť');
     assert.deepEqual(
         co.bezi.map((t) => ({ ...t, podiel: t.podiel > 0 })),
         [{ id: 'umyvacka', tone: 'bezi', meno: 'Umývačka', pred: 'do', velky: '14:30', odr: ['beží', 'ešte 1 h 30 min'], podiel: true }],
     );
-    assert.deepEqual(
-        co.hotovo.map((t) => [t.id, t.tone, t.pred, t.velky, t.odr]),
-        [['pracka', 'hotovo', '', '11:30', ['dobehla', 'zapnutá 09:30']]],
-    );
-    const ids = [...co.hore.dlazdice.map((t) => t.id), ...co.riadky.map((r) => r.id)];
-    assert.ok(!ids.includes('pracka') && !ids.includes('umyvacka'), ids.join());
+    assert.equal('hotovo' in co, false, 'dobehnutý vlastnú dlaždicu nemá');
+    const dlazdice = [...co.hore.dlazdice, ...(co.hore.dalsi ? [co.hore.dalsi] : []), ...co.riadky];
+    assert.ok(!dlazdice.some((t) => t.id === 'umyvacka'), 'čo beží, sa nerozvrhuje');
+    const pracka = dlazdice.find((t) => t.id === 'pracka');
+    if (!pracka) throw new Error('práčka nemá ďalší čas');
+    assert.equal(pracka.odr[1], 'dnes už 1×');
+    assert.equal(pracka.odr.length, 2);
 });
 
 test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať sa dajú len práčka, sušička a umývačka', () => {
@@ -1084,21 +1085,41 @@ test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať s
             cas: '12:00 – 14:30',
             why: undefined,
             slot: undefined,
-            zapis: { stav: 'bezi', od: 'zapnutá 12:00', neskor: true },
+            zapis: { stav: 'bezi', od: 'zapnutá 12:00', neskor: true, hotove: [], zvysok: null },
         },
     );
     assert.equal(umyvacka.slot && umyvacka.slot.tone, 'bezi');
     const pracka = detail(m, 'pracka');
-    assert.deepEqual(
-        [pracka.kedy, 'zapis' in pracka && pracka.zapis],
-        ['Dnes dobehla', { stav: 'hotovo', od: 'zapnutá 09:30', neskor: true }],
-    );
+    assert.deepEqual('zapis' in pracka && pracka.zapis, {
+        stav: 'moze',
+        od: '',
+        neskor: false,
+        hotove: [{ text: 'Dnes už prala', cas: '09:30 – 11:30' }],
+        zvysok: null,
+    });
     const susicka = detail(m, 'susicka');
     assert.equal('zapis' in susicka && susicka.zapis && susicka.zapis.stav, 'moze');
     assert.equal('zapis' in detail(terazModel(input(at('13:00')), { devices: ['bojler'] }), 'bojler'), false);
-    // Zapnutá práve teraz: neskôr sa posunúť nedá.
-    const prave = detail(terazModel(input(at('13:00'), { bezi: [{ id: 'pracka', d: '2026-09-05', m: hm(13) }] })), 'pracka');
-    assert.equal('zapis' in prave && prave.zapis && prave.zapis.neskor, false);
+    // Práčka zapnutá práve teraz: zvyšok programu, prvý beh dňa v hotových.
+    const prave = detail(
+        terazModel(input(at('13:00'), { bezi: [ZAPISY[1], { id: 'pracka', d: '2026-09-05', m: hm(13), k: hm(15) }] })),
+        'pracka',
+    );
+    assert.equal(prave.why, 'Nastav, koľko ukazuje práčka.');
+    assert.deepEqual('zapis' in prave && prave.zapis, {
+        stav: 'bezi',
+        od: '',
+        neskor: false,
+        hotove: [{ text: 'Dnes už prala', cas: '09:30 – 11:30' }],
+        zvysok: { h: '2 h', min: '0 min', konci: 'skončí o 15:00', menejH: true, viacH: true, menejM: true, viacM: true },
+    });
+    // Na kraji zvyšku sa − či + stlačiť nedá.
+    const kratko = detail(
+        terazModel(input(at('13:00'), { bezi: [{ id: 'susicka', d: '2026-09-05', m: hm(11, 35), k: hm(13, 5) }] })),
+        'susicka',
+    );
+    const zv = 'zapis' in kratko && kratko.zapis ? kratko.zapis.zvysok : null;
+    assert.deepEqual(zv && [zv.min, zv.menejH, zv.menejM, zv.viacM], ['5 min', false, false, true]);
 });
 
 test('spotrebič beží: graf dňa ho vidí - o 13:00 beží aj umývačka, ktorú človek zapol', () => {

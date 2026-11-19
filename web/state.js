@@ -79,10 +79,13 @@ import { setupInit } from '../shared/setup-flow.js';
  *   oznamStav: import('./oznamenia.js').OznamStav,
  *   doma: string[],
  *   bezi: import('../shared/bezi.js').Zapis[],
+ *   koniecOznam: { id: string, stav: 'ok' | 'zakazane' | 'chyba' } | null,
  *   bojler: import('../shared/bojler.js').BojlerInfo | null,
  *   bojlerPrahy: import('../shared/bojler.js').Prahy,
  *   bojlerSkript: import('../shared/nastavenie-bojler.js').BojlerSkript,
  *   bojlerRezim: 'uklada' | 'chyba' | 'ulozene' | null,
+ *   bojlerOznam: boolean,
+ *   bojlerOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
  *   trasy: import('../shared/trasy.js').UlozeneTrasy | null,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
@@ -115,7 +118,7 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
  * spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie -, prahy
  * bojlera na prebytky (do skriptu zásuvky) a čo človek zapol („Už beží“ v detaile spotrebiča, shared/bezi.js).
  * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[],
- *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[] }} o
+ *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
@@ -123,17 +126,23 @@ const telefon = ({
     doma = domaDefault(),
     bojlerPrahy = { zapKw: BOJLER.zapKw, vypKw: BOJLER.vypKw },
     bezi = [],
+    bojlerOznam = false,
 }) => ({
     oznamenia,
     oznamStav,
     doma,
     bojlerPrahy,
     bezi,
+    // Či príde oznámenie o konci behu, ktorý človek práve zapísal (web/koniec.js) - len do obnovenia stránky.
+    koniecOznam: /** @type {{ id: string, stav: 'ok' | 'zakazane' | 'chyba' } | null} */ (null),
     // Stav bojlera hlási Worker pri meraní; skript do zásuvky appka pripraví až na požiadanie.
     bojler: null,
     bojlerSkript: /** @type {import('../shared/nastavenie-bojler.js').BojlerSkript} */ ({ stav: 'nic', text: '', schranka: false }),
     // Prepínač režimu v paneli Bojler dnes: ukladá sa, alebo sa uložiť nepodarilo.
     bojlerRezim: /** @type {'uklada' | 'chyba' | 'ulozene' | null} */ (null),
+    // Oznámenia bojlera na tomto telefóne (web/bojler-oznam.js) a či sa práve ukladajú, alebo prečo nie.
+    bojlerOznam,
+    bojlerOznamStav: /** @type {'uklada' | 'zakazane' | 'chyba' | null} */ (null),
 });
 
 /**
@@ -161,7 +170,7 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy,
- *   bezi?: import('../shared/bezi.js').Zapis[] }} start
+ *   bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)
