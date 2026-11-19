@@ -19,10 +19,11 @@ import { loadRytmus, saveRytmus, saveSettings, saveSite } from './storage.js';
 /** @typedef {import('../shared/settings.js').Settings} Settings */
 /** @typedef {{ get: () => SetupState, setState: (patch: SetupPatch) => void }} SetupStore */
 /**
- * Čo sprievodca potrebuje od appky. `refresh` stiahne dáta pre novú elektráreň, `skip` je zmena stavu pri odložení panelov („Teraz nie,
+ * Čo sprievodca potrebuje od appky. `back` je krok späť (cez históriu, ak sa dá), `refresh`
+ * stiahne dáta pre novú elektráreň, `skip` je zmena stavu pri odložení panelov („Teraz nie,
  * ukáž predpoveď“ - kam appka prejde).
  * „Skúsiť znova“ pri odmietnutom prístupe je `refresh({ skus: true })` - na meranie sa opýta hneď.
- * @typedef {{ refresh: (opts?: { skus?: boolean }) => Promise<void>, skip: () => object }} SetupApp
+ * @typedef {{ back: (patch: SetupPatch) => void, refresh: (opts?: { skus?: boolean }) => Promise<void>, skip: () => object }} SetupApp
  */
 /**
  * Polia sprievodcu, ktoré appka v stránke má. Kruh tarify je `<svg>`, ktoré sa pri prekreslení
@@ -106,7 +107,8 @@ function applySite(store, site, refresh, extra) {
 /** Vykoná, čo rozhodol shared/setup-flow.js. @param {SetupStore} store @param {SetupApp} app @param {import('../shared/setup-flow.js').SetupAction | null} action */
 export function runSetupAction(store, app, action) {
     if (!action) return;
-    if (action.type === 'patch') store.setState(action.patch);
+    if (action.type === 'back') app.back(action.patch);
+    else if (action.type === 'patch') store.setState(action.patch);
     else if (action.type === 'site') applySite(store, action.site, app.refresh, action.extra);
     else applySettings(store, action.settings, app.refresh, action.extra);
 }

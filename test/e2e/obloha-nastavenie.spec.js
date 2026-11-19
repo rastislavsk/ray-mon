@@ -739,15 +739,11 @@ test.describe('len poloha', () => {
         expect(await pulz(page)).toEqual([]);
     });
 
-    test('„Zadaj panely ›“ v hlavičke otvorí krok s panelmi, Späť ide ako Späť sprievodcu a potom na Teraz', async ({ page }) => {
+    test('„Zadaj panely ›“ v hlavičke otvorí krok s panelmi, Späť vráti do prehľadu Nastavenia', async ({ page }) => {
         const errors = await openObloha(page, { settings: null, site: SITE });
         await page.locator('#hdr-setup').click();
         await ocakavajKartu(page, 'nastavenie');
         await obrazovka(page, 'panel');
-        for (const krok of ['lokalita', 'start']) {
-            await page.goBack();
-            await obrazovka(page, krok);
-        }
         await page.goBack();
         await expect(page.locator('#ns-cta')).toBeVisible();
         await page.goBack();
@@ -806,9 +802,6 @@ test.describe('pohyb v sprievodcovi', () => {
         await tah(page, '#wz-title', 150);
         await ocakavajKartu(page, 'nastavenie');
         await obrazovka(page, 'panel');
-        await page.goBack();
-        await obrazovka(page, 'lokalita');
-        await page.goBack();
         await page.goBack();
         await expect(page.locator('#ns-cta')).toBeVisible();
         await expect(page.locator('#wizard')).toBeHidden();

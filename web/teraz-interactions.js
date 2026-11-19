@@ -8,6 +8,7 @@ import { BOJLER_ULOZENE_MS, TERAZ_CISLA_MS } from '../shared/config.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { rytmusSBojlerom } from '../shared/zdroje.js';
 import { ulozRezimBojlera } from './data.js';
+import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 import { loadRytmus, saveBezi, saveRytmus } from './storage.js';
 
@@ -18,10 +19,11 @@ import { loadRytmus, saveBezi, saveRytmus } from './storage.js';
  * @param {Store} store @param {Dom} dom @param {(opts?: { skus?: boolean }) => Promise<void>} refresh obnova dát, tá istá ako pri štarte
  */
 export function initTeraz(store, dom, refresh) {
-    // Vysvetlenie aj detail spotrebiča robia z Teraz aktívny stĺpec prehľadu.
+    // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
+    // zatvorenie (Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
     dom.tzOko.addEventListener('click', () => store.setState({ tzChip: 'stav', panel: 'terazky' }));
     dom.tzScena.addEventListener('click', () => tukniNaScenu(store, dom));
-    // Pás dní: ťuknutie na deň ukáže jeho plán. Späť vráti dnešok (spatZmena vo web/state.js).
+    // Hrebeň týždňa: ťuknutie na deň ukáže jeho plán. Nie je to krok navigácie - Späť z karty odíde.
     dom.tzHrebenDni.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-den]') : null;
         if (btn instanceof HTMLElement) store.setState({ tzDen: Number(btn.dataset.den), panel: 'terazky' });
@@ -31,19 +33,19 @@ export function initTeraz(store, dom, refresh) {
         // Hláška o neuloženom režime bojlera patrí len k ťuknutiu, po ktorom vznikla.
         if (btn instanceof HTMLElement && btn.dataset.vec) store.setState({ tzVec: btn.dataset.vec, panel: 'terazky', bojlerRezim: null });
     });
-    initSheet(dom.tzChipSheet, () => store.setState({ tzChip: null }));
-    initSheet(dom.tzVecSheet, () => store.setState({ tzVec: null }));
+    initSheet(dom.tzChipSheet, () => stepBack(store, { tzChip: null }));
+    initSheet(dom.tzVecSheet, () => stepBack(store, { tzVec: null }));
     dom.tzVecZapol.addEventListener('click', () => zapis(store, (list, id, d, m) => zapol(list, id, d, m)));
     dom.tzVecSkor.addEventListener('click', () => zapis(store, (list, id, d, m) => posun(list, id, d, -1, m)));
     dom.tzVecNeskor.addEventListener('click', () => zapis(store, (list, id, d, m) => posun(list, id, d, 1, m)));
     dom.tzVecZrus.addEventListener('click', () => zapis(store, (list, id, d) => zrus(list, id, d)));
-    // Bojler, ktorý riadi zásuvka, má namiesto detailu spotrebiča panel Bojler dnes - to isté pole tzVec.
-    initSheet(dom.tzBojlerSheet, () => store.setState({ tzVec: null }));
+    // Bojler, ktorý riadi zásuvka, má namiesto detailu spotrebiča panel Bojler dnes - ten istý krok (tzVec).
+    initSheet(dom.tzBojlerSheet, () => stepBack(store, { tzVec: null }));
     dom.tzBojlerRezim.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-bojler-rezim]') : null;
         if (btn instanceof HTMLElement) zmenRezim(store, btn.dataset.bojlerRezim === 'rucne');
     });
-    initSheet(dom.tzTokSheet, () => store.setState({ tzChip: null }));
+    initSheet(dom.tzTokSheet, () => stepBack(store, { tzChip: null }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).

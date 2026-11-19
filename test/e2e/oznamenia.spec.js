@@ -158,7 +158,7 @@ async function obrysPrebehol(page) {
 }
 
 test.describe('ťuknutie na oznámenie', () => {
-    test('appka beží na inej karte: Teraz s obrysom okolo toho, čo zapnúť, Späť appku zavrie', async ({ page }) => {
+    test('appka beží na inej karte: Teraz s obrysom okolo toho, čo zapnúť, Späť sa vráti na kartu', async ({ page }) => {
         await sledujAnimacie(page);
         await otvor(page);
         await expect(page.locator('#tz-co')).toBeVisible();
@@ -169,8 +169,8 @@ test.describe('ťuknutie na oznámenie', () => {
         await ukazuje(page, 'terazky');
         await expect(page.locator('#tz-co')).toBeVisible();
         await obrysPrebehol(page);
-        // Na Teraz nie je čo vrátiť: strážna položka tlačidla Späť (web/nav-history.js) zmizla.
-        await expect.poll(() => page.evaluate(() => history.state?.spat === true)).toBe(false);
+        await page.goBack();
+        await ukazuje(page, 'mozem');
     });
 
     test('appka je zatvorená: adresa so značkou ukáže obrys, značka zmizne a obnovenie nič nezopakuje', async ({ page }) => {

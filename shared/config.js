@@ -900,6 +900,12 @@ export const VYROBCA_RETRY = { attempts: 2, delayMs: 500, timeoutMs: 5 * 1000 };
 // aj pre posledné meranie z meniča.
 export const STALE_PV_MS = 20 * 60 * 1000;
 
+/**
+ * Tlačidlo Späť (web/nav-history.js): koľko posledných krokov navigácie vráti, kým skočí na kartu
+ * Teraz, a ako dlho svieti bublina pred zatvorením appky (ms). Rozhodnuté 19. 11. 2026.
+ */
+export const SPAT = { krokov: 5, bublinaMs: 2000 };
+
 /** Ako dlho svieti bublina „Meranie pripojené“ nad navigáciou, kým sama zmizne (ms). */
 export const PRIPOJENIE_BUBLINA_MS = 5000;
 

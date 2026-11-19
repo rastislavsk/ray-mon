@@ -80,12 +80,12 @@ pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru. Bodka stavu
 
 ## Tlačidlo Späť
 
-Späť najprv zavrie, čo je otvorené (vždy jednu vec, zvnútra von), potom ide na Teraz a až z nej appka odíde –
-rozhodnuté 18. 11. 2026. Kroky navigácie sa do histórie nezapisujú: `web/nav-history.js` drží len jednu strážnu
-položku, kým je čo vrátiť, a čo Späť urobí, počíta `spatZmena` vo `web/state.js` (zoznam `ZATVARA`). Nová vec, ktorá
-sa otvára (bublina, panel, okno), patrí do `ZATVARA`, inak ju Späť preskočí. Zatváranie krížikom je obyčajný
-`setState`, `history.back()` v ňom nepíš. Strážna položka smie pribudnúť len po ťuknutí: Chrome položku pridanú bez
-neho pri Späť preskočí.
+Späť vráti posledných 5 krokov navigácie (`SPAT.krokov`), ďalšie ide rovno na Teraz, na Teraz ukáže bublinu
+„Ďalším stlačením sa appka zatvorí“ a až ďalšie appku zavrie – rozhodnuté 19. 11. 2026. Každý krok (`navStep`
+vo `web/state.js`) je položka histórie s poradím `i` (`web/nav-history.js`); 0 je štart (bublina), 1 Teraz.
+**Položka histórie smie pribudnúť len pri ťuknutí** – Chrome položku pridanú bez neho pri ďalšom Späť preskočí.
+Riešenie so strážnou položkou vracanou pri Späť (#501) preto na S22 zatváralo appku priskoro. Zatváranie krížikom
+ide cez `stepBack` (`web/nav-back.js`), nie cez nový krok, inak by Späť zatvorené znovu otvorilo.
 
 ## Verzia odkazu s nastavením
 

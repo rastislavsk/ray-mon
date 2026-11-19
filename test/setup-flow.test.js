@@ -151,14 +151,14 @@ test('meranie: značka s jedným spôsobom rovno formulár, nedostupná vysvetle
     assert.deepEqual(victron?.setupUdaje, {});
     const form = apply(s, victron);
     assert.equal(flow.setupReady(form), false);
-    assert.deepEqual(flow.backAction(form), { type: 'patch', patch: { setupStep: 'znacka' } });
+    assert.deepEqual(flow.backAction(form), { type: 'back', patch: { setupStep: 'znacka' } });
     // Huawei má dva spôsoby: najprv výber, z formulára sa Späť vracia naň.
     assert.deepEqual(flow.pickZnacka(s, 'huawei'), { setupZnacka: 'huawei', setupStep: 'sposob' });
     const kiosk = apply(apply(s, { setupZnacka: 'huawei' }), flow.pickSposob(apply(s, { setupZnacka: 'huawei' }), 'huawei-kiosk'));
-    assert.deepEqual(flow.backAction(kiosk), { type: 'patch', patch: { setupStep: 'sposob' } });
-    assert.deepEqual(flow.backAction(apply(form, { setupStep: 'znacka' })), { type: 'patch', patch: { setupStep: 'meranie' } });
+    assert.deepEqual(flow.backAction(kiosk), { type: 'back', patch: { setupStep: 'sposob' } });
+    assert.deepEqual(flow.backAction(apply(form, { setupStep: 'znacka' })), { type: 'back', patch: { setupStep: 'meranie' } });
     assert.deepEqual(flow.pickZnacka(s, 'fronius'), { setupZnacka: 'fronius', setupStep: 'sposob' });
-    assert.deepEqual(flow.backAction(apply(s, { setupStep: 'sposob' })), { type: 'patch', patch: { setupStep: 'znacka' } });
+    assert.deepEqual(flow.backAction(apply(s, { setupStep: 'sposob' })), { type: 'back', patch: { setupStep: 'znacka' } });
     assert.equal(flow.pickZnacka(s, 'neznama'), null);
     assert.equal(flow.pickSposob(apply(s, { setupZnacka: 'fronius' }), 'huawei-kiosk'), null, 'spôsob inej značky');
     assert.equal(flow.pickSposob(apply(s, { setupZnacka: 'huawei' }), 'huawei-kiosk')?.setupStep, 'pripoj');
@@ -369,7 +369,7 @@ test('restartSetup, openLink a stepEdit', () => {
 
 test('closeAction: bez polohy späť na otázku, úprava z prehľadu sa zahodí', () => {
     assert.deepEqual(flow.closeAction(state({ known: 'nic', setupStep: 'odkaz' })), {
-        type: 'patch',
+        type: 'back',
         patch: { setupStep: 'lokalita', setupReturn: null },
     });
     assert.deepEqual(flow.closeAction(state({ setupStep: 'panel' })), { type: 'patch', patch: { setupStep: null, setupReturn: null } });
@@ -385,7 +385,7 @@ test('nextAction: poradie, uloženie polohy, uloženie celku, odkaz a zhrnutie',
         patch: { setupStep: 'pocet', setupRoof: 1 },
     });
     assert.deepEqual(flow.nextAction(state({ setupStep: 'panel', setupReturn: 'suhrn' })), {
-        type: 'patch',
+        type: 'back',
         patch: { setupStep: 'suhrn', setupReturn: null },
     });
     const welcome = state({ known: 'nic', setupStep: 'lokalita', settingsDraft: { ...emptySettings(SITE) } });
@@ -402,12 +402,12 @@ test('nextAction: poradie, uloženie polohy, uloženie celku, odkaz a zhrnutie',
 
 test('backAction: o obrazovku späť, z prvej zavrie sprievodcu', () => {
     assert.deepEqual(flow.backAction(state({ setupStep: 'smer', setupRoof: 1 })), {
-        type: 'patch',
+        type: 'back',
         patch: { setupStep: 'pocet', setupRoof: 0 },
     });
     assert.deepEqual(flow.backAction(state({ setupStep: 'start' })), { type: 'patch', patch: { setupStep: null, setupReturn: null } });
     assert.equal(flow.backAction(state({ setupStep: 'tarifa', setupReturn: 'prehlad' }))?.type, 'patch');
-    assert.equal(flow.backAction(state({ known: 'nic', setupStep: 'odkaz' }))?.type, 'patch');
+    assert.equal(flow.backAction(state({ known: 'nic', setupStep: 'odkaz' }))?.type, 'back');
 });
 
 test('skipAction: len pri prvom otvorení s vybranou polohou', () => {

@@ -526,6 +526,7 @@ export function collectDom() {
         pripojene: byId('pripojene'),
         pripojeneTitle: byId('pripojene-title'),
         pripojeneText: byId('pripojene-text'),
+        spatBublina: byId('spat-bublina'),
         panels: perPanel('panel'),
         // Nadpisy kariet a spoločný nadpis prehľadu so stĺpcami na širokej obrazovke.
         titles: perPanel('ttl'),

@@ -1,6 +1,6 @@
 // Poslucháče karty Nastavenie. Sprievodcu (aj riadky prehľadu, ktoré otvárajú jeho
 // kroky) obsluhuje web/setup-wiring.js. Tu je len to, čím sa
-// appka líši: karta po odložení panelov, Escape a ponuka
+// appka líši: krok späť cez jej históriu, karta po odložení panelov, Escape a ponuka
 // prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Čo máš doma, Oznámenia,
 // Vzhľad a Appka: spotrebiče, ranný plán dňa, tón hlášok, živá obloha, Zdieľať appku a Vymazať údaje.
 
@@ -13,6 +13,7 @@ import { prepniSpotrebic } from '../shared/doma.js';
 import { bojlerPecat, zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
 import { clearStored, saveBojlerPrahy, saveDoma, saveLook } from './storage.js';
+import { stepBack } from './nav-back.js';
 import { NS_FOLDS, panelChange } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -23,6 +24,7 @@ import { NS_FOLDS, panelChange } from './state.js';
  */
 export function initNastavenie(store, dom, refresh) {
     const app = {
+        back: (/** @type {import('../shared/setup-flow.js').SetupPatch} */ patch) => stepBack(store, patch),
         refresh,
         // „Teraz nie, ukáž predpoveď“ otvorí kartu 7 dní.
         skip: () => panelChange(store.get().panel, '7dni'),
@@ -51,7 +53,8 @@ export function initNastavenie(store, dom, refresh) {
 }
 
 /**
- * Zbaliteľné sekcie (Elektráreň, Čo máš doma, Oznámenia, Vzhľad): nadpis sekciu rozbalí aj zbalí, Späť ju zbalí.
+ * Zbaliteľné sekcie (Elektráreň, Čo máš doma, Oznámenia, Vzhľad). Rozbalenie je krok navigácie, zbalenie
+ * nadpisom ten istý krok ako tlačidlo Späť - inak by sekcia ostala v histórii a Späť by ju znovu rozbalilo.
  * @param {Store} store @param {Dom} dom
  */
 function initFolds(store, dom) {
@@ -59,7 +62,7 @@ function initFolds(store, dom) {
         const key = NS_FOLDS.find((k) => k === f.key);
         if (!key) continue;
         f.head.addEventListener('click', () => {
-            if (store.get().nsOpen === key) store.setState({ nsOpen: null });
+            if (store.get().nsOpen === key) stepBack(store, { nsOpen: null });
             else store.setState({ nsOpen: key });
         });
     }
@@ -157,12 +160,13 @@ function initLook(store, dom) {
 }
 
 /**
- * Okná sekcie Appka: zatvára ich krížik, Escape, ťuknutie vedľa, Nechať tak aj tlačidlo Späť. Vymazať údaje po potvrdení zmaže všetko uložené
+ * Okná sekcie Appka. Otvorenie je krok navigácie, zatvorenie (krížik, Escape, ťuknutie vedľa, Nechať
+ * tak) ten istý krok ako tlačidlo Späť. Vymazať údaje po potvrdení zmaže všetko uložené
  * a obnoví stránku - appka naštartuje ako pri prvom otvorení. Adresu treba vyčistiť tiež: nesie uložené nastavenie a appka by ho po obnovení ponúkla prevziať.
  * @param {Store} store @param {Dom} dom
  */
 function initAppSheets(store, dom) {
-    const close = () => store.setState({ appSheet: null });
+    const close = () => stepBack(store, { appSheet: null });
     // Pečať do odkazu platí len pár dní, preto si ju okno pri každom otvorení pýta nanovo.
     const bezMerania = { shareKiosk: false, sharePecat: null, shareKioskFail: false };
     dom.nsShare.addEventListener('click', () => store.setState({ appSheet: 'share', ...bezMerania }));
