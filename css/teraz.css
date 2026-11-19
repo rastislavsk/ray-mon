@@ -183,12 +183,74 @@
     font-weight: 700;
     color: var(--dim);
 }
-/* Čo zapnúť (docs/navrhy/teraz-dlazdice.html): jedna mriežka polovičných dlaždíc, aj pri nepárnom počte;
-   v širokom stĺpci po troch (nižšie, za veľkosťami písma). */
+/* Čo zapnúť (docs/navrhy/teraz-dlazdice-stlpce.html): dva stĺpce, aj v širokom rozložení. Každá dlaždica či dvojica
+   má svoj stĺpec (`data-stlpec`) a rad, ktorému jeden stĺpec chýba, ostane v druhom prázdny. */
 .mriezka {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
+}
+[data-stlpec='l'] {
+    grid-column: 1;
+}
+[data-stlpec='p'] {
+    grid-column: 2;
+}
+/* Dvojica práčka + sušička (B): jedna dlaždica rozdelená škárou na dve polovice, spolu presne taká vysoká ako
+   dlaždica vedľa nej (zaberie tých istých päť riadkov mriežky). Vonkajšie rohy oblé, vnútorné rovné. Škára má
+   8 px - menej dotykové plochy nedovolia (od suseda aspoň 8 px). */
+.dl-par {
+    grid-row: span 5;
+    display: grid;
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    min-width: 0;
+}
+.dl.dl-pol {
+    grid-row: auto;
+    grid-template-rows: none;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 10px;
+    align-content: center;
+    /* Dvojica bez suseda v rade (napr. bez bojlera) je pri bežnom písme rovnako vysoká ako veľká dlaždica. */
+    padding: 12.75px 12px;
+    border-radius: 24px 24px 6px 6px;
+}
+.dl.dl-pol + .dl-pol {
+    border-radius: 6px 6px 24px 24px;
+}
+.dl-pol .dl-ico {
+    grid-row: span 2;
+    align-self: center;
+    width: 34px;
+    height: 34px;
+    margin: 0;
+}
+.dl-pol .dl-ico .vi {
+    width: 20px;
+    height: 20px;
+}
+.dl-pol .velky,
+.dl-pol b {
+    grid-column: 2;
+}
+.dl.dl-pol b {
+    margin-top: 0;
+    font-size: min(1rem, 4.6cqi);
+}
+.dl.dl-pol .velky {
+    font-size: min(1.375rem, 7cqi);
+}
+.dl-pol .podiel,
+.dl-pol .odr {
+    grid-column: 1 / -1;
+}
+.dl-pol .podiel {
+    margin: 6px 0 3px;
+}
+/* Jedna odrážka (alebo odznak); pri väčšom písme v systéme sa zalomí, neskráti. */
+.dl.dl-pol .odr {
+    min-height: calc(0.875rem * 1.3);
 }
 /* Dlaždica: plná zelená (ide teraz zo slnka) či modrá (z lacnej siete), ostatné na skle. Ploché, bez lemu.
    Dlaždice v rade zdieľajú päť riadkov mriežky (subgrid): ikona, číslo, meno, pásik, odrážky s odznakom -
@@ -351,11 +413,8 @@
 .dl[data-tone='cheap'] .podiel {
     --pas-siet: #2f7fd0;
 }
-/* Široký stĺpec (prehľad so stĺpcami, tablet): dlaždice po troch, meno a číslo sa zmenšia s ich šírkou. */
+/* Široký stĺpec (prehľad so stĺpcami, tablet): meno a číslo sa zmenšia so šírkou. */
 @container (min-width: 420px) {
-    .mriezka {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
     .dl b {
         font-size: min(1.375rem, 4.3cqi);
     }

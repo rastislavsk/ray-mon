@@ -921,6 +921,16 @@ export const TERAZ_PRICHOD_MS = 5000;
 /** Okná domu v scéne karty Teraz svietia v tme, okrem času na spánok (miestne minúty dňa, od vrátane, do bez). */
 export const TERAZ_OKNA_SPANOK = { od: 0, do: 5 * 60 };
 
+/**
+ * Dlaždice spotrebičov na karte Teraz v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html, B): každý blok
+ * je jedna dlaždica, blok s dvoma vecami je dvojica polovičných pod sebou. Ľavý stĺpec ide podľa času spustenia,
+ * pravý v tomto pevnom poradí. Spotrebič, ktorý tu nie je, ide na koniec ľavého stĺpca.
+ */
+export const TERAZ_STLPCE = {
+    lavy: [['pracka', 'susicka'], ['umyvacka']],
+    pravy: [['bojler'], ['auto']],
+};
+
 // Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.
 // Pod ňou - ráno, večer a v noci - je bez merania normálne a "zastarané" by bol planý poplach.
 export const STALE_PV_SUN_DEG = 5;
