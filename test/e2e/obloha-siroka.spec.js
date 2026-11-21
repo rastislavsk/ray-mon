@@ -194,7 +194,6 @@ async function expectTextyKariet(page) {
     await expect(page.locator('#tz-scena')).toHaveAccessibleName(
         scenaModel({ vyrobaKw: teraz.vykon, odhad: teraz.odhadVykonu, sietKw: null }).popis,
     );
-    await expect(page.locator('#tz-oko-t')).toHaveText(teraz.co?.hore.oko.text ?? '');
     // Jedna mriežka: čo ide teraz (alebo najbližšia vec) a za tým ďalšie spotrebiče dňa.
     const co = teraz.co;
     await expect(page.locator('#tz-dlazdice [data-vec]')).toHaveCount(

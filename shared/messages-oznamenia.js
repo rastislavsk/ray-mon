@@ -131,7 +131,7 @@ function sunParts(rows, low, voice) {
 }
 
 /**
- * Čo počká na iný deň a čo pôjde v lacnom pásme.
+ * Čo pôjde zo siete hneď po inej veci (sušička po práčke), čo počká na iný deň a čo pôjde v lacnom pásme.
  * @param {import('./plan-dna.js').PlanRow[]} rows @param {(id: string) => string} low @param {import('./messages-zaklad.js').Voice} voice
  */
 function elsewhereParts(rows, low, voice) {
@@ -139,6 +139,7 @@ function elsewhereParts(rows, low, voice) {
     /** @type {Map<string, string[]>} */ const later = new Map();
     for (const r of rows) if (r.kind === 'later') later.set(r.day.name, [...(later.get(r.day.name) ?? []), low(r.id)]);
     for (const [day, list] of later) parts.push(`${cap(andList(list))} radšej ${onDay(day)}.`);
+    for (const r of rows) if (r.kind === 'siet') parts.push(`${cap(low(r.id))} ${hm(r.start)} zo siete.`);
     const cheap = rows.flatMap((r) => (r.kind === 'cheap' && r.id !== 'auto' ? [r] : []));
     if (cheap.length)
         parts.push(`${cap(andList(cheap.map((r) => low(r.id))))} v lacnom pásme od ${hm(Math.min(...cheap.map((r) => r.start)))}.`);
@@ -163,6 +164,11 @@ export function reminderText(row, nowMin, voice = 'drzy') {
     if (row.kind === 'sun' && row.start <= nowMin + 15)
         return { title: `${name} · teraz`, body: `${cap(planDnaRowText(row, voice).why)}. Dobehne o ${hm(row.end)}.` };
     if (row.kind === 'sun') return { title: `${name} až o ${hm(row.start)}`, body: 'Slnko sa posunulo, skôr by to išlo zo siete.' };
+    if (row.kind === 'siet')
+        return {
+            title: row.start <= nowMin + 15 ? `${name} · teraz` : `${name} o ${hm(row.start)}`,
+            body: `${planDnaRowText(row, voice).why} Dobehne o ${hm(row.end)}.`,
+        };
     if (row.kind === 'later') return { title: `${name} radšej ${onDay(row.day.name)}`, body: 'Zatiahlo sa a dnes by to išlo zo siete.' };
     if (row.kind === 'cheap')
         return { title: `${name} v lacnom pásme`, body: `Slnko dnes nestačí, od ${hm(row.start)} je elektrina lacná.` };

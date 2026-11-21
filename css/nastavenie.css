@@ -467,33 +467,6 @@
     font-size: 0.8125rem;
     color: var(--dim);
 }
-/* Panel štítka karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html): to isté tmavé sklo, štítok
-   nad nadpisom, vysvetlenie tlmené. */
-.chip-info {
-    display: grid;
-    gap: 6px;
-    justify-items: start;
-}
-.chip-info + .chip-info {
-    margin-top: 10px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
-}
-.chip-info h3 {
-    margin: 0;
-    font-size: 1.125rem;
-}
-.chip-info p {
-    margin: 0;
-}
-/* Pod vysvetlením, keď je na karte pás dní: predpoveď o niekoľko dní je menej istá. */
-.istota {
-    margin: 14px 0 0;
-    padding-top: 14px;
-    border-top: 1px solid rgba(255, 255, 255, 0.14);
-    font-size: 0.8125rem;
-    color: var(--dim);
-}
 .vec-top {
     display: flex;
     align-items: center;
@@ -507,14 +480,6 @@
     place-items: center;
     border-radius: 50%;
     background: rgba(255, 255, 255, 0.12);
-}
-.vec-sheet[data-tone='go'] .vec-ico {
-    background: var(--yes);
-    color: #14300c;
-}
-.vec-sheet[data-tone='cheap'] .vec-ico {
-    background: var(--cheap);
-    color: #06233d;
 }
 .vec-sheet .vec-kedy {
     font-size: 0.8125rem;
@@ -538,15 +503,6 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
     color: var(--amber-text);
-}
-.chip-sheet .chip {
-    justify-self: start;
-}
-.chip-sheet .dim {
-    color: var(--dim);
-}
-.chip-sheet .q {
-    margin-top: 6px;
 }
 
 /* ===== Nastavenie › Oznámenia ===== */

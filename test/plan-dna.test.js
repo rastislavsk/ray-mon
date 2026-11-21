@@ -190,7 +190,9 @@ test('slnko len na práčku: obe dnes, sušička hneď po nej zo siete', () => {
     const m2 = planDnaModel(input(at('16:30')), { devices: ALL });
     const [p2, s2] = [row(m2?.rows ?? [], 'pracka'), row(m2?.rows ?? [], 'susicka')];
     assert.equal(p2.kind, 'sun');
-    assert.equal(s2.kind, 'sun');
+    // Nie je na slnku, hoci má presný čas: Teraz, Dnes aj oznámenia ju tak nesmú volať „zo slnka“.
+    assert.equal(s2.kind, 'siet');
+    assert.equal(s2.now, false);
     assert.equal(s2.start, p2.end, 'sušička hneď po práčke');
     assert.ok(s2.podiel < PLAN_DNA.zoSiete, `${s2.podiel}`);
     assert.equal(s2.why, PLAN_ZO_SIETE);

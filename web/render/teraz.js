@@ -1,11 +1,11 @@
-// Karta Teraz (docs/navrhy/teraz-navrh-2.html): scéna toku energie (docs/navrhy/teraz-tok-energie.html), čo zapnúť (riadok nad dlaždicami
-// a mriežka dlaždíc, docs/navrhy/teraz-dlazdice.html), panel s vysvetlením, detail spotrebiča a výzvy. Graf
+// Karta Teraz (docs/navrhy/teraz-navrh-2.html): scéna toku energie (docs/navrhy/teraz-tok-energie.html), čo zapnúť (mriežka
+// dlaždíc, docs/navrhy/teraz-dlazdice.html), detail spotrebiča a výzvy. Graf
 // dňa je v paneli karty Dnes (render/graf.js). Všetko počíta shared/teraz.js a texty sú v
 // shared/messages.js - tu sa len zapisuje do DOM.
 
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
-import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, TERAZ_PAS_ISTOTA, voiceTexts } from '../../shared/messages-core.js';
+import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
@@ -113,8 +113,7 @@ const rezimHtml = (rezim) =>
         : '';
 
 /**
- * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri dnešku riadok nad dlaždicami (bodka, odkiaľ ide prúd, pri
- * ničom aj cena siete), pri inom dni jeho hlavička; pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
+ * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri inom dni jeho hlavička, pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
  * vľavo práčka so sušičkou ako dvojica polovičných dlaždíc a umývačka podľa času, vpravo bojler a pod ním auto.
  * Poradie, z ktorého ľavý stĺpec vychádza: čo beží, čo ide teraz (alebo najbližšia vec), ďalšie spotrebiče
  * zvoleného dňa, čo dobehlo. Každá dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
@@ -124,16 +123,9 @@ const rezimHtml = (rezim) =>
 function renderCo(co, dom, bojler) {
     show(dom.tzCo, !!co);
     if (!co) return;
-    const h = co.hore;
-    const dnes = !co.den;
-    show(dom.tzDen, !dnes);
+    show(dom.tzDen, !!co.den);
     setText(dom.tzDenNazov, co.den?.nazov ?? '');
     setText(dom.tzDenPod, co.den?.pod ?? '');
-    show(dom.tzOko, dnes);
-    dom.tzOkoBod.dataset.tone = h.bod;
-    setHtml(dom.tzOkoT, `${escapeHtml(h.oko.text)}${h.oko.sub ? ` <span>· ${escapeHtml(h.oko.sub)}</span>` : ''}`);
-    show(dom.tzOkoPod, dnes && !!h.bezSlnka);
-    setText(dom.tzOkoPod, h.bezSlnka);
     const html = dlazdiceHtml(dlazdiceCo(co, bojler));
     setHtml(dom.tzDlazdice, html);
     show(dom.tzDlazdice, html !== '');
@@ -149,10 +141,7 @@ function dlazdiceCo(co, bojler) {
     const dnes = !co.den;
     const p = h.dalsi;
     const hore = dnes
-        ? [
-              ...h.dlazdice,
-              ...(p ? [{ id: p.id, tone: 'tiche', kind: p.tone, velky: p.cas, meno: p.name, podiel: p.podiel, odr: p.odr }] : []),
-          ]
+        ? [...h.dlazdice, ...(p ? [{ id: p.id, tone: 'tiche', velky: p.cas, meno: p.name, podiel: p.podiel, odr: p.odr }] : [])]
         : [];
     const dalsie = co.riadky.map((r) => ({
         id: r.id,
@@ -209,30 +198,6 @@ function osHtml(os, slot) {
         `<div class="os"><i class="os-ciara"></i>` +
         `<i class="os-usek" data-tone="${slot.tone}" style="left:${slot.left}%;width:${slot.width}%"></i>${now}${ticks}</div>`
     );
-}
-
-/**
- * Vysvetlenie riadku nad dlaždicami (docs/navrhy/teraz-odznaky-vysvetlenie.html): pre odpoveď aj cenu
- * siete štítok, nadpis, čo platí teraz a čo to znamená. Otvorené, kým je v stave a karta má čo vysvetliť.
- * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom @param {Texts['TERAZ_TEXTS']} T
- */
-function renderChipSheet(state, m, dom, T) {
-    const chips = state.tzChip && state.tzChip !== 'tok' && m ? m.chips.filter((c) => c.info) : [];
-    if (chips.length) {
-        setText(dom.tzChipTitle, m?.co?.hore.oko.text ?? chips[0].info.title);
-        setHtml(
-            dom.tzChipBody,
-            chips
-                .map(
-                    (c) =>
-                        `<section class="chip-info"><span class="chip" data-tone="${c.tone}">${escapeHtml(c.text)}</span>` +
-                        `<h3>${escapeHtml(c.info.title)}</h3>${c.info.now ? `<p>${escapeHtml(c.info.now)}</p>` : ''}` +
-                        `<p class="q">${escapeHtml(T.chipWhy)}</p><p class="dim">${escapeHtml(c.info.why)}</p></section>`,
-                )
-                .join('') + (m?.co?.dlho ? `<p class="istota">${escapeHtml(TERAZ_PAS_ISTOTA)}</p>` : ''),
-        );
-    }
-    dialog(dom.tzChipSheet, chips.length > 0, () => (shows(state, 'terazky') ? dom.tzOko : null));
 }
 
 /**
@@ -508,7 +473,6 @@ export function renderTeraz(state, dom) {
     const T = voiceTexts(state.voice).TERAZ_TEXTS;
     renderStav(state, dom);
     if (!shows(state, 'terazky')) {
-        renderChipSheet(state, null, dom, T);
         renderVecSheet(state, null, dom);
         dialog(dom.tzBojlerSheet, false, () => null);
         dialog(dom.tzTokSheet, false, () => null);
@@ -545,7 +509,6 @@ export function renderTeraz(state, dom) {
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
-    renderChipSheet(state, m, dom, T);
     renderVecSheet(state, m, dom);
     renderBojlerSheet(state, dom, m.bojler);
     renderTokSheet(state, dom);

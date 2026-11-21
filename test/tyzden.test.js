@@ -264,10 +264,8 @@ test('karta Teraz pred dňami bez slnka: odznak „potom až v utorok“ na dla�
     assert.deepEqual(terazModel(input({ '2026-09-06': ZAMRACENE })).co?.hore.dlazdice[0].potom, { text: 'potom v pondelok', dlho: false });
 });
 
-test('karta Teraz počas dní bez slnka: núdzové časy namiesto „o 3 dni“, veta hore a detail s dňom slnka', () => {
+test('karta Teraz počas dní bez slnka: núdzové časy namiesto „o 3 dni“ a detail s dňom slnka', () => {
     const m = terazModel(input({ '2026-09-05': ZAMRACENE, ...DVA_DNI }), { devices: VSETKO });
-    assert.deepEqual(m.co?.hore.oko, { text: 'Slnko až v utorok', sub: '2 dni zamračené' });
-    assert.equal(m.co?.dlho, true);
     assert.deepEqual(
         m.co?.riadky.map((r) => [r.id, r.kind, r.cas, r.odr, r.podiel]),
         [
