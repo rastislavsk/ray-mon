@@ -102,16 +102,12 @@ export function planNotice(input, { devices, voice = 'drzy', posledny = null }) 
 export function koniecNotice(input, { id, devices }) {
     const rows = input.forecast ? planDna(dayCtx(input), input, devices) : [];
     const caka = Object.keys(PLAN_DNA.after).find((k) => PLAN_DNA.after[k] === id);
-    const r = rows.find((x) => x.id === caka && x.kind === 'sun');
-    return koniecText({
-        id,
-        name: vec(id).device.name,
-        caka: r && r.kind === 'sun' ? { name: vec(r.id).device.name, slnko: r.podiel >= PLAN_DNA.zoSiete } : null,
-    });
+    const r = rows.find((x) => x.id === caka && (x.kind === 'sun' || x.kind === 'siet'));
+    return koniecText({ id, name: vec(id).device.name, caka: r ? { name: vec(r.id).device.name, slnko: r.kind === 'sun' } : null });
 }
 
 /** @param {import('./plan-dna.js').PlanRow} r */
-const sortStart = (r) => (r.kind === 'sun' || r.kind === 'cheap' ? r.start : Infinity);
+const sortStart = (r) => (r.kind === 'sun' || r.kind === 'siet' || r.kind === 'cheap' ? r.start : Infinity);
 
 /**
  * Pripomienka spotrebiča `id`, o ktorú človek ráno požiadal: jeho miesto sa prepočíta z čerstvej

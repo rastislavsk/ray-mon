@@ -11,11 +11,9 @@ import {
     denWord,
     dnesDayText,
     MOZEM_GROUP_NAMES,
-    mozemChipInfo,
     mozemHeroText,
     mozemItemText,
     mozemListTitle,
-    mozemNetInfo,
     mozemStripText,
     mozemTileNote,
     mozemTileValue,
@@ -23,8 +21,7 @@ import {
     planTileText,
     voiceTexts,
 } from './messages-core.js';
-import { addDays, localDateKey, sunUp } from './solar.js';
-import { bandById, scheduleFor, slotsOf } from './tariff.js';
+import { localDateKey, sunUp } from './solar.js';
 import { planDnaModel } from './plan-dna.js';
 import { denFaza, denSlovo, denTrieda, rannaFor } from './den-trieda.js';
 import { dayCtx, itemAnswer, itemCost, laterDay, planWindows } from './mozem-jadro.js';
@@ -116,8 +113,6 @@ function emptyHead(loading, noPanels, voice) {
         hero,
         say: hero.lead,
         strip: null,
-        stavInfo: mozemChipInfo(state, null, voice),
-        net: null,
     };
 }
 
@@ -131,7 +126,7 @@ function emptyHead(loading, noPanels, voice) {
  * ako pás dňa v dlaždici), živý výkon (null bez merania) a výkon z plánu dňa. `list` je nadpis dlaždíc
  * vecí (null, kým sa načítava) a `groups` dlaždice skupín.
  * Stav, veta pod veľkým slovom aj dlaždice sa riadia Plánom dňa (`plan`), takže karta nikde
- * nepovie nič iné než plán. Karta Teraz z neho skladá, čo zapnúť, a vysvetľuje štítky (`chips`);
+ * nepovie nič iné než plán. Karta Teraz z neho skladá, čo zapnúť;
  * `say` je len tá časť vety, ktorá plán neopakuje. Karta Dnes ukazuje, čo dá
  * strecha za celý deň (`day`, null bez predpovede na dnešok).
  * @param {PlanInput & { loading: boolean, known?: import('./settings.js').Known }} input
@@ -151,10 +146,8 @@ export function mozemModel(input, { voice = 'drzy', devices = PLAN_DNA.devices, 
     const head = ctx
         ? dayHead(input, ctx, voice, estimate ? installedKw(input.plant) : null, { rows, den: denOf(input, devices, ranna) })
         : { ...emptyHead(input.loading, noPanels, voice), facts: null, den: null };
-    const { stavInfo, net, ...rest } = head;
     return {
-        ...rest,
-        chips: chipsOf(head.state, head.facts, voice, { stavInfo, net }),
+        ...head,
         day: dnesDayModel(input, ctx),
         estimate,
         items,
@@ -303,8 +296,6 @@ function dayHead(input, ctx, voice, typicalKwp, { rows, den }) {
         hero: mozemHeroText(state, data, voice),
         // Tá istá veta bez spotrebičov a časov - tie povie Plán dňa hneď pod ňou.
         say: mozemHeroText(state, { ...data, plan: null }, voice).lead,
-        stavInfo: mozemChipInfo(state, data, voice),
-        net: netRun(input, ctx),
         strip: { ...stripGeometry(window, ctx.nowMin, ctx.span), text: mozemStripText(sun.state, { ctx, window, nextDay }) },
         facts: {
             level: slot.level,
@@ -345,53 +336,6 @@ function todayFacts({ pv, forecast }) {
     const kwh = pv ? pv.dailyEnergyKwh : null;
     if (Number.isFinite(kwh)) return { measured: true, todayKwh: /** @type {number} */ (kwh) };
     return { measured: false, todayKwh: forecast?.days[0]?.kwhTotal ?? null };
-}
-
-/**
- * Štítok pod číslom na karte Teraz. `key` hovorí, ktorý to je (stav dňa, alebo cena siete) - podľa
- * neho appka vie, ktorý panel je otvorený; `info` je obsah panelu, ktorý ťuknutie otvorí.
- * @typedef {{ key: 'stav' | 'siet', text: string, tone: 'go' | 'plain' | 'cheap' | 'costly',
- *   info: import('./messages-core.js').ChipInfo }} Chip
- */
-/** @typedef {{ to: number, next: { level: import('./config.js').PriceLevel, to: number } | null }} NetRun */
-
-/**
- * Pásmo siete teraz podľa plánu dňa: dokedy trvá a čo príde po ňom (aj s koncom), v minútach od
- * dnešnej polnoci. Za polnocou pokračuje zajtrajším rozvrhom tarify - lacná noc trvá do rána,
- * nie do 24:00. Na konci zajtrajška sa končí aj pásmo (`next` null).
- * @param {PlanInput} input @param {DayCtx} ctx @returns {NetRun}
- */
-function netRun(input, ctx) {
-    const step = TARIFF_LIMITS.stepMin;
-    const tomorrow = addDays(localDateKey(input.now, input.site.timezone), 1);
-    const later = slotsOf(scheduleFor(input.tariff, tomorrow)).map((id) => bandById(input.tariff, id).level);
-    const levels = [...ctx.plan.map((s) => s.level), ...later];
-    const runEnd = (/** @type {number} */ i) => {
-        let j = i;
-        while (j < levels.length && levels[j] === levels[i]) j++;
-        return j;
-    };
-    const end = runEnd(Math.floor(ctx.nowMin / step));
-    return { to: end * step, next: end < levels.length ? { level: levels[end], to: runEnd(end) * step } : null };
-}
-
-/**
- * Štítky k odpovedi: stav (ÁNO, NESKÔR…) a lacná či drahá sieť teraz, každý s obsahom svojho
- * panelu. Bez údajov dňa len stav.
- * @param {MozemState} state @param {{ level: import('./config.js').PriceLevel } | null} facts @param {Voice} voice
- * @param {{ stavInfo: import('./messages-core.js').ChipInfo, net: NetRun | null }} info panel stavu a pásmo siete teraz
- * @returns {Chip[]}
- */
-function chipsOf(state, facts, voice, { stavInfo, net }) {
-    const MOZEM_CHIPS = voiceTexts(voice).MOZEM_CHIPS;
-    /** @type {Chip[]} */ const chips = [];
-    if (MOZEM_CHIPS[state]) chips.push({ key: 'stav', text: MOZEM_CHIPS[state], tone: state === 'go' ? 'go' : 'plain', info: stavInfo });
-    const level = facts?.level;
-    if (net && (level === 'lacna' || level === 'draha')) {
-        const tone = level === 'lacna' ? 'cheap' : 'costly';
-        chips.push({ key: 'siet', text: MOZEM_CHIPS[level], tone, info: mozemNetInfo(level, net, voice) });
-    }
-    return chips;
 }
 
 /**

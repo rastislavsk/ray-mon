@@ -24,7 +24,6 @@ import { loadRytmus, saveBezi, saveRytmus } from './storage.js';
 export function initTeraz(store, dom, refresh) {
     // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
     // zatvorenie (Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
-    dom.tzOko.addEventListener('click', () => store.setState({ tzChip: 'stav', panel: 'terazky' }));
     dom.tzScena.addEventListener('click', () => tukniNaScenu(store, dom));
     // Hrebeň týždňa: ťuknutie na deň ukáže jeho plán. Nie je to krok navigácie - Späť z karty odíde.
     dom.tzHrebenDni.addEventListener('click', (e) => {
@@ -36,7 +35,6 @@ export function initTeraz(store, dom, refresh) {
         // Hláška o neuloženom režime bojlera patrí len k ťuknutiu, po ktorom vznikla.
         if (btn instanceof HTMLElement && btn.dataset.vec) store.setState({ tzVec: btn.dataset.vec, panel: 'terazky', bojlerRezim: null });
     });
-    initSheet(dom.tzChipSheet, () => stepBack(store, { tzChip: null }));
     initSheet(dom.tzVecSheet, () => stepBack(store, { tzVec: null }));
     dom.tzVecZapol.addEventListener('click', () => zapis(store, zapol, { pytaj: true }));
     dom.tzVecSkor.addEventListener('click', () => zapis(store, (list, id, d, m) => posun(list, id, d, -1, m)));

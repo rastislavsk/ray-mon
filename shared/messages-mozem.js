@@ -1,6 +1,6 @@
 // Texty karty Dnes (kódové meno mozem), Plánu dňa a dlaždíc. Čisté funkcie bez DOM.
 
-import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS, PLAN_DNA } from './config.js';
+import { DEVICES, EVERYDAY, MINUTES_PER_DAY, MOZEM_ITEMS } from './config.js';
 import { fmt1, fmtSum, kwpRoughText } from './format.js';
 import { andList, cap, endHm, hm, money, polite, spanText } from './messages-zaklad.js';
 
@@ -594,13 +594,13 @@ export function planDnaRowText(row, voice = 'drzy') {
     if (row.kind === 'cheap') return { name, time: `od ${hm(row.start)}`, why: 'v lacnom pásme', tone: 'cheap' };
     if (row.kind === 'none') return { name, time: 'tento týždeň nie', why: 'slnko podľa predpovede nestačí', tone: 'no' };
     if (row.kind === 'later') return { name, ...laterRowText(row) };
+    if (row.kind === 'siet') return { name, time: hm(row.start), why: PLAN_ZO_SIETE, tone: 'wait' };
     const item = /** @type {MozemItem} */ (MOZEM_ITEMS_BY_ID[row.id]);
     if (item.runMin === null) return { name, time: `${hm(row.start)}–${hm(row.end)}`, why: autoSunWhy(row, voice), tone: 'go' };
     const p = profileOf(item);
     const why = { start: 'ohrev chytí slnko', twice: 'oba ohrevy chytia slnko', whole: `${t.pron === 'ju' ? 'celá' : 'celý'} zo strechy` }[
         p.shape
     ];
-    if (row.after && row.podiel < PLAN_DNA.zoSiete) return { name, time: hm(row.start), why: PLAN_ZO_SIETE, tone: 'wait' };
     const after = row.after ? `${PLAN_AFTER[row.after] ?? ''}, ` : row.poBojleri ? `${PLAN_PO_BOJLERI}, ` : '';
     return { name, time: hm(row.start), why: `${after}${why}`, tone: 'go' };
 }
@@ -637,23 +637,6 @@ export function autoSunWhy({ km, save, currency }, voice) {
 // súčasná v páse pod hlavičkou. Veľké písmená robí štýl, texty sú v bežnom tvare - čítačka
 // ich tak nehláskuje.
 
-/**
- * Štítky nad veľkým slovom: odpoveď slovom podľa stavu karty a cena siete teraz (bežná cena
- * štítok nemá). Kým sa načítava, štítok nie je - pokojný stav nemá čo tvrdiť.
- * @type {Record<import('./mozem.js').MozemState | 'lacna' | 'draha', string>}
- */
-export const MOZEM_CHIPS = {
-    go: 'Áno',
-    wait: 'Počkaj',
-    slabo: 'Dnes nie',
-    none: 'Dnes nie',
-    offline: 'Neviem',
-    bezpanelov: 'Neviem',
-    loading: '',
-    lacna: 'Lacná sieť',
-    draha: 'Drahá sieť',
-};
-
 /** Pevné texty karty: nadpisy panelu veci, tlačidlá a výzvy. */
 export const MOZEM_SKY_TEXTS = {
     retry: 'Skúsiť znova',
@@ -665,9 +648,6 @@ export const MOZEM_SKY_TEXTS = {
     askText: 'Bez polohy neviem, kedy u teba svieti slnko. Zadaj ju v Nastavení a poviem ti, čo môžeš.',
     askBtn: 'Zadaj polohu',
 };
-
-/** @type {typeof MOZEM_CHIPS} */
-export const MOZEM_CHIPS_SLUSNE = { ...MOZEM_CHIPS, wait: 'Počkajte' };
 
 /** @type {typeof MOZEM_SKY_TEXTS} */
 export const MOZEM_SKY_TEXTS_SLUSNE = {
@@ -745,6 +725,11 @@ export function planTileText(row) {
         return { value: at, short: at, tone: 'wait', note: row.poBojleri ? PLAN_PO_BOJLERI : sunNote };
     }
     if (row.kind === 'cheap') return { value: row.time, short: row.time, tone: 'cheap', note: 'lacná sieť' };
+    // Sušička hneď po praní, ktorú slnko neutiahne: čas ako vec na slnku, ale zo siete.
+    if (row.kind === 'siet') {
+        const at = `o ${hm(row.start ?? 0)}`;
+        return { value: at, short: at, tone: 'wait', note: 'zo siete' };
+    }
     return { value: row.time, short: row.time, tone: row.tone, note: '' };
 }
 
@@ -804,13 +789,12 @@ export function mozemOfflineText({ online, zdroj, pvOk, pvSince }, voice = 'drzy
 }
 
 /** Pevné texty karty Dnes v drzom tóne, ktoré čítajú aj vety iných kariet. */
-const MOZEM_DRZY = { DEN_WORDS, MOZEM_ITEM_TEXTS, MOZEM_UNKNOWN, MOZEM_CHIPS };
+const MOZEM_DRZY = { DEN_WORDS, MOZEM_ITEM_TEXTS, MOZEM_UNKNOWN };
 /** @type {typeof MOZEM_DRZY} */
 const MOZEM_SLUSNE = {
     DEN_WORDS: DEN_WORDS_SLUSNE,
     MOZEM_ITEM_TEXTS: MOZEM_ITEM_TEXTS_SLUSNE,
     MOZEM_UNKNOWN: MOZEM_UNKNOWN_SLUSNE,
-    MOZEM_CHIPS: MOZEM_CHIPS_SLUSNE,
 };
 
 /**

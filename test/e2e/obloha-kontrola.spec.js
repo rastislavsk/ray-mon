@@ -113,10 +113,6 @@ async function rozbal(page, key) {
 async function kazdaKarta(page, check) {
     await karta(page, 'terazky');
     await check('Teraz');
-    await page.locator('#tz-oko').click();
-    await expect(page.locator('#tz-chip-sheet')).toBeVisible();
-    await check('Teraz › vysvetlenie');
-    await page.keyboard.press('Escape');
     await page.locator('#tz-dlazdice [data-vec]').first().click();
     await expect(page.locator('#tz-vec-sheet')).toBeVisible();
     await check('Teraz › detail spotrebiča');

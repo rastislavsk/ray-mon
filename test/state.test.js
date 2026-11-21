@@ -208,7 +208,7 @@ test('detail spotrebiča na karte Teraz: otvorený je krok navigácie, Späť a 
 });
 
 test('ťuknutie na oznámenie: Teraz s obrysom okolo toho, čo zapnúť, inak sa všetko zavrie', () => {
-    const s = stateWith({ panel: '7dni', weekDetail: 'day', terazPreview: 600, tzChip: 'stav', tzVec: 'pracka', stavTip: true });
+    const s = stateWith({ panel: '7dni', weekDetail: 'day', terazPreview: 600, tzChip: 'tok', tzVec: 'pracka', stavTip: true });
     const po = { ...s, ...zOznamenia(s) };
     assert.equal(po.panel, 'terazky');
     assert.equal(po.panelDir, -1);
@@ -224,20 +224,21 @@ test('ťuknutie na oznámenie: Teraz s obrysom okolo toho, čo zapnúť, inak sa
     assert.equal(stateWith().tzObrys, false);
 });
 
-test('panel štítka na karte Teraz: otvorený je krok navigácie, Späť a iná karta ho zavrú', () => {
+test('panel Elektrina teraz na karte Teraz: otvorený je krok navigácie, Späť a iná karta ho zavrú', () => {
     assert.equal(stateWith().tzChip, null);
-    const open = stateWith({ panel: 'terazky', tzChip: 'stav' });
-    assert.equal(navStep(open).chip, 'stav');
+    const open = stateWith({ panel: 'terazky', tzChip: 'tok' });
+    assert.equal(navStep(open).chip, 'tok');
     assert.deepEqual(navStepOf(navStep(open)), navStep(open));
     assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzChip: null })));
-    assert.ok(!sameNavStep(navStep(open), navStep({ ...open, tzChip: 'siet' })));
-    // Patrí karte Teraz, v prehľade so stĺpcami ktorémukoľvek stĺpcu; cudzia hodnota panel nemá.
-    assert.equal(field({ panel: 'mozem', chip: 'stav' }, 'chip'), null);
-    assert.equal(field({ panel: 'mozem', chip: 'stav', dash: true }, 'chip'), 'stav');
-    assert.equal(field({ panel: 'terazky', chip: 'iny' }, 'chip'), null);
+    // Patrí karte Teraz, v prehľade so stĺpcami ktorémukoľvek stĺpcu; cudzia hodnota panel nemá - ani panel
+    // vysvetlenia riadku nad dlaždicami (`stav`, `siet`) z histórie staršej appky.
+    assert.equal(field({ panel: 'mozem', chip: 'tok' }, 'chip'), null);
+    assert.equal(field({ panel: 'mozem', chip: 'tok', dash: true }, 'chip'), 'tok');
+    assert.equal(field({ panel: 'terazky', chip: 'stav' }, 'chip'), null);
+    assert.equal(field({ panel: 'terazky', chip: 'siet' }, 'chip'), null);
     assert.equal(field({ panel: 'terazky' }, 'chip'), null);
     assert.equal(navChange(open, step({ panel: 'terazky' })).tzChip, null);
-    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', chip: 'siet' })).tzChip, 'siet');
+    assert.equal(navChange(stateWith({ panel: 'terazky' }), step({ panel: 'terazky', chip: 'tok' })).tzChip, 'tok');
     assert.equal(panelChange('terazky', 'mozem').tzChip, null);
 });
 

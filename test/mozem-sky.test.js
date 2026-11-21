@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { installedKw, MOZEM_GROUPS, MOZEM_ITEMS, PLANT, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
 import { kwpRoughText } from '../shared/format.js';
 import {
-    MOZEM_CHIPS,
     MOZEM_GROUP_NAMES,
     mozemGuessText,
     mozemItemText,
@@ -148,13 +147,6 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta, odpovede aj deň v číslach 
         m.items.map((x) => [x.id, x.short, x.tone]),
         base.items.map((x) => [x.id, x.short, x.tone]),
     );
-    assert.deepEqual(
-        base.chips.map(({ key, text, tone }) => ({ key, text, tone })),
-        [
-            { key: 'stav', text: MOZEM_CHIPS.go, tone: 'go' },
-            { key: 'siet', text: MOZEM_CHIPS.lacna, tone: 'cheap' },
-        ],
-    );
     assert.deepEqual(m.day, base.day);
     assert.equal(m.day?.label, 'Dnes zo strechy');
     assert.match(m.day?.value ?? '', /^~\d+ kWh$/);
@@ -162,15 +154,6 @@ test('mozemSkyModel: o 13:00 to isté slovo, veta, odpovede aj deň v číslach 
     assert.equal(m.retry, false);
     assert.equal(m.guess, '');
     assert.equal(m.items.find((x) => x.id === 'pracka')?.title, `Práčka: ${base.items[0].short}`);
-});
-
-test('mozemModel: večer štítky povedia drahú sieť', () => {
-    const vecer = mozemModel(input(at('21:00')));
-    assert.equal(vecer.state, 'none');
-    assert.deepEqual(
-        vecer.chips.map((c) => c.tone),
-        ['plain', 'costly'],
-    );
 });
 
 test('mozemSkyModel: bez dát veta s príčinou, Skúsiť znova, otáznik v nadpise a „neviem“ pri spotrebičoch', () => {
@@ -192,10 +175,6 @@ test('mozemSkyModel: bez dát veta s príčinou, Skúsiť znova, otáznik v nadp
     assert.equal(m.items.find((x) => x.id === 'pracka')?.short, 'neviem');
     assert.equal(m.day, null);
     assert.equal(m.arc?.win, null);
-    assert.deepEqual(
-        mozemModel(input(FIXED_NOW, { forecast: null, pv: null })).chips.map((c) => c.text),
-        [MOZEM_CHIPS.offline],
-    );
     assert.match(mozemSkyModel(input(FIXED_NOW, { forecast: null }), { online: false }).lead, /^Nie je internet/);
     // Meranie z fixtures o 17:00 mlčí od 13:00.
     assert.match(mozemSkyModel(input(at('17:00'), { forecast: null })).lead, /Meranie zo strechy neodpovedá od \d\d:\d\d\./);
@@ -206,7 +185,6 @@ test('mozemSkyModel: kým sa načítava, karta nič netvrdí', () => {
     assert.equal(m.state, 'loading');
     assert.equal(m.list, null);
     assert.equal(m.day, null);
-    assert.deepEqual(mozemModel(input(FIXED_NOW, { forecast: null, pv: null, loading: true })).chips, []);
     assert.equal(m.retry, false);
 });
 

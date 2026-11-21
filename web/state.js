@@ -14,7 +14,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * zvolený čas v ňom (minúta dňa, null = teraz; meno ostalo z čias, keď bol graf na karte Teraz), `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
  * `tzDen` deň zvolený v hrebeni týždňa karty Teraz (poradie od dneška, 0 = dnes; docs/navrhy/teraz-vyhlad-alternativy.html),
  * `tzObrys` čaká alebo beží jednorazový obrys toho, čo zapnúť, po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, web/oznamenia-klik.js),
- * `tzChip` otvorený panel s vysvetlením riadku nad dlaždicami karty Teraz (docs/navrhy/teraz-odznaky-vysvetlenie.html),
+ * `tzChip` otvorený panel Elektrina teraz zo scény toku energie karty Teraz (`tok`),
  * `tzCisla` čísla v scéne toku energie karty Teraz, ukázané po ťuknutí na scénu (`tuk`) alebo samy po príchode na kartu
  * z navigácie (`prichod`; docs/navrhy/teraz-tok-energie.html),
  * `mzChip` otvorené vysvetlenie odznaku triedy dňa na karte Dnes - dnešného, alebo večer zajtrajšieho (docs/navrhy/dnes-upravy.html),
@@ -34,7 +34,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * @typedef {'nacitavam' | 'ok' | 'chyba' | 'mimo' | 'bezpolohy'} RadarStav
  * @typedef {'day' | 'week'} WeekDetail
  * @typedef {'share' | 'reset'} AppSheet
- * @typedef {import('../shared/mozem.js').Chip['key'] | 'tok'} TzChip
+ * @typedef {'tok'} TzChip
  * @typedef {'dnes' | 'zajtra'} MzChip
  * @typedef {(typeof NS_FOLDS)[number]} NsFold
  * @typedef {import('./refresh.js').RefreshState & import('../shared/setup-flow.js').SetupState & {
@@ -398,11 +398,11 @@ const nsFoldOf = (panel, fold) => (panel === 'nastavenie' && NS_FOLDS.find((f) =
 const tzVecOf = (panel, dash, vec) => ((panel === 'terazky' || dash) && MOZEM_ITEMS.find((i) => i.id === vec)?.id) || null;
 
 /**
- * Otvorený panel štítka z položky histórie. Patrí karte Teraz ako Plán dňa; položka zo skoršej verzie
- * ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} chip @returns {TzChip | null}
+ * Otvorený panel Elektrina teraz z položky histórie. Patrí karte Teraz ako Plán dňa; položka zo skoršej verzie
+ * ho nemá a panel vysvetlenia riadku nad dlaždicami (`stav`, `siet`) už nie je. @param {Panel} panel @param {boolean} dash
+ * @param {unknown} chip @returns {TzChip | null}
  */
-const tzChipOf = (panel, dash, chip) =>
-    (panel === 'terazky' || dash) && (chip === 'stav' || chip === 'siet' || chip === 'tok') ? chip : null;
+const tzChipOf = (panel, dash, chip) => ((panel === 'terazky' || dash) && chip === 'tok' ? chip : null);
 
 /**
  * Otvorené vysvetlenie odznaku karty Dnes z položky histórie. Patrí karte Dnes (v prehľade ktorémukoľvek

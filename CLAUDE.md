@@ -67,6 +67,17 @@ Oznámenie o konci (`web/koniec.js`, `POST /koniec`) posiela Durable Object `Bud
 ohrevu (`zmenaOhrevu` v `shared/bojler.js`) telefónom, ktoré si to zaplí v paneli Bojler dnes (`POST /bojler-oznamenia`).
 Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull requestom (`worker/README.md`).
 
+## Dlaždice bez farby stavu
+
+Rozhodnuté 21. 11. 2026: dlaždice spotrebičov na karte Teraz sú všetky na skle s bielym textom - farba nehovorí,
+či slnko stačí, z akej siete ide prúd, ani že spotrebič beží (aj krémová bežiaceho zmizla). Riadok nad dlaždicami
+(bodka + „Teraz zo slnka“) aj jeho panel s vysvetlením sú preč. `data-tone` na dlaždici ostáva ako údaj, štýl ho
+nefarbí; jedinou výnimkou je jantárový rám zásuvky bez spojenia (`chyba`). Úsek na osi v detaile a pás dní sú graf, tie farby majú.
+
+Druh riadku plánu `sun` znamená naozaj „na slnku“. Vec, ktorá ide natvrdo po inej (sušička po práčke) a slnko jej
+nedá ani `PLAN_DNA.zoSiete`, má druh `siet` (`zoSieteNatvrdo` v `shared/plan-dna.js`) - predtým bola `sun` a appka
+v tme hlásila „Teraz zo slnka“ a na karte Dnes ÁNO.
+
 ## Plán dňa zo živých dát a učenie z histórie
 
 Návrhy a rozhodnutia: `docs/navrhy/plan-dna-zive-data.html` (balík B, bojler má prednosť pred práčkou, sušičkou

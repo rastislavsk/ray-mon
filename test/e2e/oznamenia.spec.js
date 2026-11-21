@@ -240,7 +240,7 @@ test.describe('ťuknutie na oznámenie', () => {
         expect(await obrysov(page)).toBe(0);
     });
 
-    test('čo zapnúť mimo obrazovky: stránka sa k nemu posunie, riadok nad dlaždicami nad spodnú navigáciu', async ({ page }) => {
+    test('čo zapnúť mimo obrazovky: stránka sa k nemu posunie, prvá dlaždica nad spodnú navigáciu', async ({ page }) => {
         await page.setViewportSize({ width: 360, height: 480 });
         await otvor(page);
         await expect(page.locator('#tz-co')).toBeVisible();
@@ -253,9 +253,9 @@ test.describe('ťuknutie na oznámenie', () => {
         await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
         await expect(page.locator('#tz-co')).not.toBeInViewport();
         await tukni(sw);
-        await expect(page.locator('#tz-oko')).toBeInViewport({ ratio: 1 });
+        await expect(page.locator('#tz-dlazdice [data-vec]').first()).toBeInViewport({ ratio: 1 });
         const hranice = await page.evaluate(() => [
-            /** @type {Element} */ (document.querySelector('#tz-oko')).getBoundingClientRect().bottom,
+            /** @type {Element} */ (document.querySelector('#tz-dlazdice [data-vec]')).getBoundingClientRect().bottom,
             /** @type {Element} */ (document.querySelector('.tabs')).getBoundingClientRect().top,
         ]);
         expect(hranice[0]).toBeLessThanOrEqual(hranice[1]);

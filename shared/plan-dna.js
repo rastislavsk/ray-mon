@@ -34,8 +34,11 @@ import { potrebaBojlera } from './ucenie.js';
  * od `day.start` do `end` (`after`: po čom v ten deň ide), alebo tento týždeň nie. `podiel`: koľko
  * energie programu v tom čase dá slnko, 0 až 1 (podielSlnka) - na slnku nemusí byť celý, stačí, keď
  * slnko pokryje ohrevy. `poBojleri`: domáci spotrebič na slnku, ktorý by bez bojlera riadeného zásuvkou išiel skôr.
+ * Zo siete (`siet`) ide dnes vec, ktorá ide natvrdo po inej (`after`, sušička po práčke) a slnko jej nedá ani
+ * PLAN_DNA.zoSiete - nie je „na slnku“, hoci má presný čas.
  * @typedef {{ id: string, kind: 'sun', start: number, end: number, after: string | null,
  *     km: number | null, save: number | null, currency: string, podiel: number, poBojleri?: boolean }
+ *   | { id: string, kind: 'siet', start: number, end: number, after: string, podiel: number }
  *   | { id: string, kind: 'cheap', start: number, end: number, podiel: number }
  *   | { id: string, kind: 'later', day: LaterDay, end: number, after: string | null, podiel: number }
  *   | { id: string, kind: 'none' }} PlanRow
@@ -224,6 +227,13 @@ export function planDna(ctx, input, devices) {
 }
 
 /**
+ * Vec, ktorá ide natvrdo po inej (sušička po práčke) a slnko jej nedá ani PLAN_DNA.zoSiete, ide zo siete - nie na slnku.
+ * @param {SunRow} r @returns {PlanRow}
+ */
+const zoSieteNatvrdo = (r) =>
+    r.after && r.podiel < PLAN_DNA.zoSiete ? { id: r.id, kind: 'siet', start: r.start, end: r.end, after: r.after, podiel: r.podiel } : r;
+
+/**
  * Plán dňa (planDna) a k nemu bojler, ktorý riadi zásuvka (bojlerPlanu) - ten riadok nemá, ide pred všetkými.
  * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices
  * @returns {{ rows: PlanRow[], bojler: BojlerPlan | null }}
@@ -240,7 +250,7 @@ function planDnaCely(ctx, input, devices) {
     const { slnko, boj } = sim
         ? bojlerPrvy(ctx, input.tariff.currency, list, { pred, cakaj }, sim)
         : { slnko: najlepsiDen(ctx, input.tariff.currency, list, { pred, cakaj }), boj: null };
-    for (const r of slnko) rows.set(r.id, r);
+    for (const r of slnko) rows.set(r.id, zoSieteNatvrdo(r));
     const rest = list.filter(({ item, device }) => {
         if (rows.has(item.id)) return false;
         const cheap = device.cheapGrid ? cheapRow(item.id, cheapFrom(ctx, from0), ctx, input) : null;
@@ -502,8 +512,8 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
     return { rows, note: PLAN_DNA_NOTE, behy: beh, bojler: cely.bojler };
 }
 
-/** Poradie riadkov v bloku: dnes podľa času (slnko aj lacné pásmo), potom iné dni, nakoniec „nie“. @param {PlanRow} row */
+/** Poradie riadkov v bloku: dnes podľa času (slnko, sieť aj lacné pásmo), potom iné dni, nakoniec „nie“. @param {PlanRow} row */
 function rowOrder(row) {
-    if (row.kind === 'sun' || row.kind === 'cheap') return row.start;
+    if (row.kind === 'sun' || row.kind === 'siet' || row.kind === 'cheap') return row.start;
     return row.kind === 'later' ? DAY_MIN * (1 + row.day.index) + row.day.start : DAY_MIN * 99;
 }
