@@ -1,37 +1,22 @@
-// Oznámenie o konci programu (docs/navrhy/spotrebic-koniec-opakovanie.html): po zápise „Už beží“, zmene zvyšku či času
-// zapnutia a po „Nebeží“ objedná vo Workeri push s textom na čas konca behu, alebo ho zruší. Text skladá jadro
+// Oznámenie o konci programu (docs/navrhy/spotrebic-koniec-opakovanie.html): po „Nastaviť“, „Nebeží“ a „Vrátiť“
+// (docs/navrhy/spotrebic-cas-nastavenie.html) objedná vo Workeri push s textom na čas konca behu, alebo ho zruší. Text skladá jadro
 // (koniecNotice) z plánu dňa v chvíli objednania. Či oznámenie príde, povie stav `koniecOznam`.
 
 import { beziaci } from '../shared/bezi.js';
-import { PUSH_TEXT, WORKER_KONIEC_URL } from '../shared/config.js';
+import { WORKER_KONIEC_URL } from '../shared/config.js';
 import { koniecNotice } from '../shared/oznamenia.js';
 import { localDateKey, localMinutes, localToUtc } from '../shared/solar.js';
 import { odberSTextom, posliSOdberom } from './oznamenia.js';
 
 /** @typedef {import('./state.js').Store} Store */
 
-/** Objednávky, ktoré čakajú na koniec ťukania na − a +, podľa spotrebiča. @type {Map<string, ReturnType<typeof setTimeout>>} */
-const cakaju = new Map();
-
 /**
- * Objedná oznámenie o konci behu spotrebiča `id` (alebo ho zruší, keď nebeží). Po „Už beží“ (`pytaj`) hneď a s otázkou
- * na povolenie - ide z ťuknutia. Po − a + až po PUSH_TEXT.cakajMs bez ďalšej zmeny, po „Nebeží“ hneď (`hned`).
- * @param {Store} store @param {string} id @param {{ pytaj?: boolean, hned?: boolean }} [o]
+ * Objedná oznámenie o konci behu spotrebiča `id` (alebo ho zruší, keď nebeží) po „Nastaviť“, „Nebeží“ či „Vrátiť“.
+ * Po prvom nastavení behu (`pytaj`) s otázkou na povolenie - ide z ťuknutia.
+ * @param {Store} store @param {string} id @param {boolean} [pytaj]
  */
-export function objednajKoniec(store, id, { pytaj = false, hned = false } = {}) {
-    clearTimeout(cakaju.get(id));
-    cakaju.delete(id);
-    if (pytaj || hned) {
-        void posli(store, id, pytaj);
-        return;
-    }
-    cakaju.set(
-        id,
-        setTimeout(() => {
-            cakaju.delete(id);
-            void posli(store, id, false);
-        }, PUSH_TEXT.cakajMs),
-    );
+export function objednajKoniec(store, id, pytaj = false) {
+    void posli(store, id, pytaj);
 }
 
 /**

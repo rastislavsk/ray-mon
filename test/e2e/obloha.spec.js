@@ -1472,45 +1472,72 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('„Už beží“: práčka so zvyškom v hodinách a minútach, dlaždica beží s textami z modelu, ostane po obnovení, „Nebeží“ ju vráti; umývačka s časom zapnutia', async ({
+    test('„Už beží“: kolieska zvyšku práčky, „Nastaviť“ zavrie panel s bublinou a „Vrátiť“, beh ostane po obnovení, „Nebeží“ ho zruší; umývačka s výberom času', async ({
         page,
     }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         const time = at('13:00');
         const errors = await openTeraz(page, { time });
         const panel = page.locator('#tz-vec-sheet');
-        await page.locator('#tz-co [data-vec="pracka"]').click();
-        await page.locator('#tz-vec-zapol').click();
+        const dlazdica = page.locator('#tz-co [data-vec="pracka"]');
+        const bublina = page.locator('#vec-bublina');
+        const kh = page.locator('#tz-vec-kh');
+        const km = page.locator('#tz-vec-km');
         const d = '2026-09-05';
-        const m = terazModel(vstupTeraz(time, { bezi: [{ id: 'pracka', d, m: 13 * 60, k: 15 * 60 }] }));
-        const v = m.veci.find((x) => x.id === 'pracka');
-        // Detail ostane otvorený a povie, že beží; zvyšok je celý program.
-        await expect(page.locator('#tz-vec-kedy')).toHaveText(v?.kedy ?? '');
-        await expect(page.locator('#tz-vec-cas')).toHaveText(v?.cas ?? '');
-        await expect(page.locator('#tz-vec-why')).toHaveText(v?.why ?? '');
-        await expect(page.locator('#tz-vec-zostava')).toHaveText(TERAZ_BEZI.zostava);
-        await expect(page.locator('#tz-vec-h')).toHaveText('2 h');
-        await expect(page.locator('#tz-vec-m')).toHaveText('0 min');
-        await expect(page.locator('#tz-vec-konci')).toHaveText('skončí o 15:00');
-        await expect(page.locator('#tz-vec-h-menej')).toHaveAttribute('aria-label', TERAZ_BEZI.hodinaMenej);
+        await dlazdica.click();
+        await page.locator('#tz-vec-zapol').click();
+        // „Už beží“ len ukáže kolieska s celým programom - uloží až „Nastaviť“.
         await expect(page.locator('#tz-vec-zapol')).toBeHidden();
-        await expect(page.locator('#tz-vec-posun')).toBeHidden();
-        await expect(page.locator('#tz-vec-zrus')).toHaveText(TERAZ_BEZI.nebezi);
-        await expect(page.locator('#tz-vec-note')).toBeHidden();
-        // Či oznámenie o konci príde, povie riadok pod zvyškom (v testovacom prehliadači ho appka nemá povolené).
-        await expect(page.locator('#tz-vec-oznam')).toHaveText(new RegExp(`^(${Object.values(TERAZ_BEZI.oznam).join('|')})$`));
+        await expect(page.locator('#tz-vec-ttl')).toHaveText(TERAZ_BEZI.zostava);
+        await expect(kh).toHaveAttribute('aria-valuenow', '2');
+        await expect(km).toHaveAttribute('aria-valuenow', '0');
+        await expect(kh).toHaveAttribute('aria-label', TERAZ_BEZI.hodiny);
+        await expect(page.locator('#tz-vec-konci')).toHaveText('skončí o 15:00');
+        await expect(page.locator('#tz-vec-od')).toBeHidden();
+        await expect(panel.locator('button:visible')).toHaveText([TERAZ_BEZI.nastav]);
+        await expect(dlazdica).not.toHaveAttribute('data-tone', 'bezi');
         expect(await vazneNalezy(page)).toEqual([]);
-        await page.locator('#tz-vec-h-menej').click();
-        for (let i = 0; i < 5; i++) await page.locator('#tz-vec-m-viac').click();
-        await expect(page.locator('#tz-vec-h')).toHaveText('1 h');
-        await expect(page.locator('#tz-vec-m')).toHaveText('25 min');
+        // Koliesko otočené na stred (2 h) a minúty ťahom - posúva ich prehliadač, appka si prečíta, kde zastali.
+        expect(await kh.evaluate((e) => Math.round(e.scrollTop / /** @type {HTMLElement} */ (e.firstElementChild).offsetHeight))).toBe(2);
+        await km.evaluate((e) => e.scrollTo({ top: 35 * /** @type {HTMLElement} */ (e.firstElementChild).offsetHeight }));
+        await expect(km).toHaveAttribute('aria-valuenow', '35');
+        await expect(page.locator('#tz-vec-konci')).toHaveText('skončí o 15:35');
+        // Klávesnica: šípka hore ubere hodinu, ťuknutie na číslo ho dá do stredu.
+        await kh.focus();
+        await page.keyboard.press('ArrowUp');
+        await expect(kh).toHaveAttribute('aria-valuenow', '1');
+        await km.locator('div').nth(25).click();
+        await expect(km).toHaveAttribute('aria-valuenow', '25');
         await expect(page.locator('#tz-vec-konci')).toHaveText('skončí o 14:25');
-        await expect(page.locator('#tz-vec-h-menej')).toBeEnabled();
-        await page.keyboard.press('Escape');
+        expect(await page.evaluate((k) => localStorage.getItem(k), BEZI_STORAGE_KEY)).toBeNull();
+        // „Nastaviť“ uloží, zavrie panel a bublina povie, čo sa nastavilo.
+        await page.locator('#tz-vec-ok').click();
+        await expect(panel).toBeHidden();
+        await expect(bublina).toBeVisible();
+        await expect(page.locator('#vec-bublina-text')).toHaveText(/^Práčka skončí o 14:25( · .+)?$/);
+        await expect(page.locator('#vec-bublina-vrat')).toHaveText(TERAZ_BEZI.vratit);
+        await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
+        // „Vrátiť“ zmenu vráti - pred ňou práčka nebežala.
+        await page.locator('#vec-bublina-vrat').click();
+        await expect(bublina).toBeHidden();
+        await expect(dlazdica).not.toHaveAttribute('data-tone', 'bezi');
+        expect(await page.evaluate((k) => localStorage.getItem(k), BEZI_STORAGE_KEY)).toBe('[]');
+        // Znova, tentoraz to ostane.
+        await dlazdica.click();
+        await page.locator('#tz-vec-zapol').click();
+        await kh.focus();
+        await page.keyboard.press('ArrowUp');
+        await km.focus();
+        await page.keyboard.press('PageDown');
+        await page.keyboard.press('PageDown');
+        await page.keyboard.press('PageDown');
+        await page.keyboard.press('PageDown');
+        await page.keyboard.press('PageDown');
+        await expect(page.locator('#tz-vec-konci')).toHaveText('skončí o 14:25');
+        await page.locator('#tz-vec-ok').click();
         await expect(panel).toBeHidden();
         const posunuty = terazModel(vstupTeraz(time, { bezi: [{ id: 'pracka', d, m: 12 * 60 + 25, k: 14 * 60 + 25 }] }));
         const t = posunuty.co?.bezi[0];
-        const dlazdica = page.locator('#tz-co [data-vec="pracka"]');
         await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
         // Bežiaci spotrebič má zelenú ikonu a obrys (docs/navrhy/teraz-pole-noc-bezi.html, 3A), sušička nie.
         await expect(dlazdica).toHaveAttribute('data-zapnuty', '');
@@ -1521,27 +1548,40 @@ test.describe('karta Teraz', () => {
         await expect(dlazdica).toContainClass('dl-pol');
         await expect(dlazdica.locator('.odr > span:not(.sr)')).toHaveText(t ? polovicaDlazdice(t).odr : []);
         expect(await rozmeryDlazdic(page)).toEqual({ vysky: 1, nezarovnane: 0 });
-        // Zápis je v telefóne: po obnovení stránky práčka stále beží.
+        // Zápis je v telefóne: po obnovení stránky práčka stále beží a detail ukáže jej zvyšok.
         await page.reload();
         await page.locator('#nav-terazky').click();
         await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
         await dlazdica.click();
+        const v = terazModel(vstupTeraz(time, { bezi: [{ id: 'pracka', d, m: 12 * 60 + 25, k: 14 * 60 + 25 }] })).veci.find(
+            (x) => x.id === 'pracka',
+        );
+        await expect(page.locator('#tz-vec-kedy')).toHaveText(v?.kedy ?? '');
+        await expect(page.locator('#tz-vec-why')).toHaveText(v?.why ?? '');
+        await expect(kh).toHaveAttribute('aria-valuenow', '1');
+        await expect(km).toHaveAttribute('aria-valuenow', '25');
+        await expect(page.locator('#tz-vec-note')).toBeHidden();
+        await expect(panel.locator('button:visible')).toHaveText([TERAZ_BEZI.nastav, TERAZ_BEZI.nebezi]);
+        // „Nebeží“ tiež zavrie panel s bublinou.
         await page.locator('#tz-vec-zrus').click();
-        await expect(page.locator('#tz-vec-zapol')).toBeVisible();
-        await expect(page.locator('#tz-vec-zvysok')).toBeHidden();
-        await page.keyboard.press('Escape');
+        await expect(panel).toBeHidden();
+        await expect(page.locator('#vec-bublina-text')).toHaveText('Práčka nebeží');
         await expect(dlazdica).not.toHaveAttribute('data-tone', 'bezi');
         await expect(dlazdica).not.toHaveAttribute('data-zapnuty');
         expect(await page.evaluate((k) => localStorage.getItem(k), BEZI_STORAGE_KEY)).toBe('[]');
-        // Umývačka zvyšok na displeji nemá: čas zapnutia s − a +, neskôr než teraz nie.
+        // Umývačka zvyšok na displeji nemá: čas zapnutia výberom času telefónu, neskôr než teraz nie.
         await page.locator('#tz-co [data-vec="umyvacka"]').click();
         await page.locator('#tz-vec-zapol').click();
-        await expect(page.locator('#tz-vec-zvysok')).toBeHidden();
-        await expect(page.locator('#tz-vec-od')).toHaveText('zapnutá 13:00');
-        await expect(page.locator('#tz-vec-neskor')).toBeDisabled();
-        await page.locator('#tz-vec-skor').click();
-        await expect(page.locator('#tz-vec-od')).toHaveText('zapnutá 12:45');
-        await expect(page.locator('#tz-vec-neskor')).toBeEnabled();
+        await expect(page.locator('#tz-vec-kolesa')).toBeHidden();
+        await expect(page.locator('#tz-vec-ttl')).toHaveText(TERAZ_BEZI.zapnuta);
+        await expect(page.locator('#tz-vec-od')).toHaveValue('13:00');
+        await expect(page.locator('#tz-vec-od')).toHaveAttribute('max', '13:00');
+        await page.locator('#tz-vec-od').fill('12:45');
+        await expect(page.locator('#tz-vec-konci')).toHaveText('skončí o 15:15');
+        await page.locator('#tz-vec-ok').click();
+        await expect(panel).toBeHidden();
+        await expect(page.locator('#vec-bublina-text')).toHaveText(/^Umývačka skončí o 15:15( · .+)?$/);
+        await expect(page.locator('#tz-co [data-vec="umyvacka"]')).toHaveAttribute('data-zapnuty', '');
         expect(errors).toEqual([]);
     });
 

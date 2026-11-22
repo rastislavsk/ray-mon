@@ -6,14 +6,14 @@ import {
     beziaci,
     daSaZapisat,
     parseBezi,
+    nastav,
+    navrhBehu,
     parseCaka,
-    posun,
     prevezmi,
+    vratBehy,
     zapisZmeny,
-    zapol,
     zoZvysku,
     zrus,
-    zvysok,
 } from '../shared/bezi.js';
 
 const D = '2026-09-05';
@@ -62,28 +62,67 @@ test('daSaZapisat a zoZvysku: zapísať práčku, sušičku a umývačku, zvyšo
     );
 });
 
-test('zapol: nový beh po dĺžke programu, dobehnuté behy dňa nechá, bežiaci nahradí, iné dni zahodí', () => {
+test('nastav bez zmeny času: nový beh od teraz po dĺžke programu, dobehnuté behy dňa nechá, bežiaci nahradí, iné dni zahodí', () => {
     const list = [
         { id: 'pracka', d: '2026-09-04', m: 600, k: 720 },
         { id: 'pracka', d: D, m: 420, k: 540 },
         { id: 'umyvacka', d: D, m: 500, k: 650 },
     ];
-    const z = zapol(list, 'pracka', D, 560);
+    const z = nastav(list, 'pracka', D, 560, null);
     assert.deepEqual(z, [
         { id: 'pracka', d: D, m: 420, k: 540 },
         { id: 'umyvacka', d: D, m: 500, k: 650 },
         { id: 'pracka', d: D, m: 560, k: 680 },
     ]);
     assert.deepEqual(
-        zapol(z, 'pracka', D, 570).filter((x) => x.id === 'pracka'),
+        nastav(z, 'pracka', D, 570, null).filter((x) => x.id === 'pracka'),
         [
             { id: 'pracka', d: D, m: 420, k: 540 },
-            { id: 'pracka', d: D, m: 570, k: 690 },
+            { id: 'pracka', d: D, m: 560, k: 680 },
         ],
+        'bežiaci beh bez zmeny ostane, ako je',
     );
     assert.deepEqual(beziaci(z, 'pracka', D, 600), { id: 'pracka', d: D, m: 560, k: 680 });
     assert.equal(beziaci(z, 'pracka', D, 680), null, 'v minúte konca už dobehla');
     assert.equal(beziaci(z, 'susicka', D, 600), null);
+});
+
+test('navrhBehu: práčka a sušička zo zvyšku programu v hraniciach, začiatok podľa dĺžky programu, nie pred polnoc', () => {
+    assert.deepEqual(navrhBehu([], 'pracka', D, 600), { id: 'pracka', d: D, m: 600, k: 720 }, 'nebeží: od teraz po dĺžke programu');
+    assert.deepEqual(navrhBehu([], 'pracka', D, 600, 60), { id: 'pracka', d: D, m: 540, k: 660 }, 'kratší zvyšok: začala skôr');
+    assert.deepEqual(navrhBehu([], 'pracka', D, 600, 180), { id: 'pracka', d: D, m: 600, k: 780 }, 'dlhší program začal teraz');
+    assert.equal(navrhBehu([], 'pracka', D, 600, 0).k, 600 + BEZI.minZvysokMin, 'najmenej minZvysokMin');
+    assert.equal(navrhBehu([], 'pracka', D, 600, 999).k, 600 + BEZI.maxZvysokMin, 'najviac maxZvysokMin');
+    assert.equal(navrhBehu([], 'pracka', D, 50, 10).m, 0, 'nie pred polnoc');
+    const list = [{ id: 'susicka', d: D, m: 500, k: 650 }];
+    assert.equal(navrhBehu(list, 'susicka', D, 600).k, 650, 'bežiaci beh bez zmeny: jeho koniec');
+});
+
+test('navrhBehu: umývačka od času zapnutia, nie pred polnoc ani po teraz, koniec po dĺžke programu či bežiaceho behu', () => {
+    const dlzka = navrhBehu([], 'umyvacka', D, 600).k - 600;
+    assert.deepEqual(navrhBehu([], 'umyvacka', D, 600), { id: 'umyvacka', d: D, m: 600, k: 600 + dlzka }, 'nebeží: od teraz');
+    assert.deepEqual(navrhBehu([], 'umyvacka', D, 600, 540), { id: 'umyvacka', d: D, m: 540, k: 540 + dlzka });
+    assert.equal(navrhBehu([], 'umyvacka', D, 600, 700).m, 600, 'najviac teraz');
+    assert.equal(navrhBehu([], 'umyvacka', D, 600, -30).m, 0, 'najmenej polnoc');
+    const list = [{ id: 'umyvacka', d: D, m: 560, k: 660 }];
+    assert.deepEqual(navrhBehu(list, 'umyvacka', D, 600), list[0], 'bežiaci beh bez zmeny');
+    assert.deepEqual(navrhBehu(list, 'umyvacka', D, 600, 500), { id: 'umyvacka', d: D, m: 500, k: 600 }, 'dĺžka bežiaceho behu');
+});
+
+test('nastav: nastavený čas nahradí bežiaci beh, dobehnuté nechá', () => {
+    const list = [
+        { id: 'pracka', d: D, m: 300, k: 420 },
+        { id: 'pracka', d: D, m: 560, k: 680 },
+    ];
+    assert.deepEqual(nastav(list, 'pracka', D, 600, 155), [list[0], { id: 'pracka', d: D, m: 600, k: 755 }]);
+    assert.deepEqual(nastav(list, 'umyvacka', D, 600, 540).at(-1), navrhBehu([], 'umyvacka', D, 600, 540));
+});
+
+test('vratBehy: behy spotrebiča v ten deň budú zas tie pred zmenou, ostatné ostanú', () => {
+    const pred = [{ id: 'pracka', d: D, m: 420, k: 540 }];
+    const po = nastav([...pred, { id: 'umyvacka', d: D, m: 500, k: 650 }], 'pracka', D, 600, 60);
+    assert.deepEqual(vratBehy(po, 'pracka', D, pred), [pred[0], { id: 'umyvacka', d: D, m: 500, k: 650 }]);
+    assert.deepEqual(vratBehy(po, 'pracka', D, []), [{ id: 'umyvacka', d: D, m: 500, k: 650 }], 'pred zmenou nebežala');
 });
 
 test('zrus: zmizne len beh, ktorý ešte beží', () => {
@@ -94,31 +133,6 @@ test('zrus: zmizne len beh, ktorý ešte beží', () => {
     assert.deepEqual(zrus(list, 'pracka', D, 600), [list[0]]);
     assert.deepEqual(zrus(list, 'pracka', '2026-09-06', 600), list);
     assert.deepEqual(zrus(list, 'pracka', D, 700), list);
-});
-
-test('posun: čas zapnutia bežiaceho behu o BEZI.posunMin, koniec ide s ním, nie pred polnoc ani po teraz', () => {
-    const list = [
-        { id: 'umyvacka', d: D, m: 300, k: 450 },
-        { id: 'umyvacka', d: D, m: 540, k: 690 },
-        { id: 'pracka', d: D, m: 10, k: 130 },
-    ];
-    assert.deepEqual(posun(list, 'umyvacka', D, -1, 600)[1], { id: 'umyvacka', d: D, m: 540 - BEZI.posunMin, k: 690 - BEZI.posunMin });
-    assert.deepEqual(posun(list, 'umyvacka', D, 1, 600)[1], { id: 'umyvacka', d: D, m: 540 + BEZI.posunMin, k: 690 + BEZI.posunMin });
-    assert.equal(posun(list, 'umyvacka', D, 1, 545)[1].m, 545, 'najviac teraz');
-    assert.equal(posun(list, 'pracka', D, -1, 60)[2].m, 0, 'najmenej polnoc');
-    assert.deepEqual(posun(list, 'umyvacka', D, -1, 600)[0], list[0], 'dobehnutý beh ostane');
-    assert.deepEqual(posun(list, 'susicka', D, -1, 600), list);
-});
-
-test('zvysok: koniec bežiaceho behu o hodinu či BEZI.krokMin, zvyšok v hraniciach, začiatok podľa dĺžky programu', () => {
-    const list = [{ id: 'pracka', d: D, m: 600, k: 720 }];
-    assert.deepEqual(zvysok(list, 'pracka', D, 60, 600), [{ id: 'pracka', d: D, m: 600, k: 780 }], 'dlhší program začal teraz');
-    assert.deepEqual(zvysok(list, 'pracka', D, -60, 600), [{ id: 'pracka', d: D, m: 540, k: 660 }], 'kratší začal skôr');
-    assert.equal(zvysok(list, 'pracka', D, -BEZI.krokMin, 600)[0].k, 720 - BEZI.krokMin);
-    assert.equal(zvysok(list, 'pracka', D, -600, 600)[0].k, 600 + BEZI.minZvysokMin, 'najmenej minZvysokMin');
-    assert.equal(zvysok(list, 'pracka', D, 600, 600)[0].k, 600 + BEZI.maxZvysokMin, 'najviac maxZvysokMin');
-    assert.equal(zvysok([{ id: 'pracka', d: D, m: 30, k: 100 }], 'pracka', D, -60, 50)[0].m, 0, 'nie pred polnoc');
-    assert.deepEqual(zvysok(list, 'pracka', D, 60, 800), list, 'dobehnutý beh nemení');
 });
 
 test('parseCaka: len platný spotrebič a deň, každý raz', () => {

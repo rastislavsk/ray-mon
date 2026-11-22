@@ -635,8 +635,9 @@ export const BOJLER_STORAGE_KEY = 'bojler-v1';
  * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1; docs/navrhy/spotrebic-koniec-opakovanie.html):
  * „Už beží“ v detaile spotrebiča na karte Teraz zapíše beh a Plán dňa s ním ráta (shared/bezi.js). Len `veci` -
  * bojler riadi zásuvka a auto zatiaľ nie. Pri `zvysok` (práčka, sušička - ukazujú ho na displeji) sa appka pýta, koľko
- * programu zostáva: hodiny po jednej, minúty po `krokMin`, zvyšok od `minZvysokMin` do `maxZvysokMin`. Umývačka
- * zvyšok neukazuje: `posunMin` je, o koľko posunie čas zapnutia jedno ťuknutie na − či +.
+ * programu zostáva - kolieskami hodín a minút, od `minZvysokMin` do `maxZvysokMin`. Umývačka zvyšok neukazuje: pýta sa,
+ * kedy ju človek zapol, výberom času telefónu (docs/navrhy/spotrebic-cas-nastavenie.html, A + D). Uloží až „Nastaviť“,
+ * ktoré zavrie panel a ukáže na `bublinaMs` bublinu s tým, čo sa nastavilo, a s „Vrátiť“ (P1).
  * Zápis platí len v ten deň a do odkazu s nastavením nejde. Pri Huawei Northbound ho telefóny domácnosti zdieľajú cez
  * Durable Object účtu (WORKER_BEZI_PATH, docs/navrhy/bezi-spolocne.html); zmenu, ktorú Worker ešte nepotvrdil, si telefón
  * pamätá v BEZI_CAKA_STORAGE_KEY a pošle ju znova.
@@ -644,10 +645,9 @@ export const BOJLER_STORAGE_KEY = 'bojler-v1';
 export const BEZI = {
     veci: ['pracka', 'umyvacka', 'susicka'],
     zvysok: ['pracka', 'susicka'],
-    posunMin: 15,
-    krokMin: 5,
     minZvysokMin: 5,
     maxZvysokMin: 360,
+    bublinaMs: 6000,
 };
 export const BEZI_STORAGE_KEY = 'bezi-v1';
 export const BEZI_CAKA_STORAGE_KEY = 'bezi-caka-v1';
@@ -797,11 +797,10 @@ export const WORKER_KONIEC_URL = new URL(WORKER_KONIEC_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_OZNAM_PATH = '/bojler-oznamenia';
 export const WORKER_BOJLER_OZNAM_URL = new URL(WORKER_BOJLER_OZNAM_PATH, WORKER_URL).href;
 /**
- * Push s textom (docs/navrhy/spotrebic-koniec-opakovanie.html). `cakajMs`: appka objedná koniec až po toľkých ms bez
- * ďalšieho ťuknutia na − a + (Worker má limit volaní). `maxText`: najdlhší nadpis a text v znakoch. `maxDopreduH`: koniec
+ * Push s textom (docs/navrhy/spotrebic-koniec-opakovanie.html). `maxText`: najdlhší nadpis a text v znakoch. `maxDopreduH`: koniec
  * najviac toľko hodín dopredu. `maxOdberov`: koľko telefónov si oznámenia bojlera jednej elektrárne zapne najviac.
  */
-export const PUSH_TEXT = { cakajMs: 1500, maxText: 200, maxDopreduH: 8, maxOdberov: 10 };
+export const PUSH_TEXT = { maxText: 200, maxDopreduH: 8, maxOdberov: 10 };
 // Pečať do odkazu Zdieľať appku (`/zdielaj`): prístup k meraniu s platnosťou `platiDni` dní. Odkaz
 // ostáva v správach natrvalo, prístup v ňom nie - kto ho otvorí neskôr, pripojí si meranie sám.
 export const WORKER_ZDIELAJ_PATH = '/zdielaj';

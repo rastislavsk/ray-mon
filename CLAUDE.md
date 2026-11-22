@@ -61,7 +61,11 @@ ohrevu (`OZNAMENIA.bojler`) pošle `sw.js` aj otvoreným oknám, ktoré si stav 
 Návrh a rozhodnutie: `docs/navrhy/teraz-bezi-spotrebic.html` (A + 1, 18. 11. 2026), koniec programu a opakovanie
 `docs/navrhy/spotrebic-koniec-opakovanie.html` (19. 11. 2026). „Už beží“ v detaile spotrebiča na karte Teraz zapíše beh
 práčky, sušičky či umývačky (`BEZI.veci`) do telefónu (`bezi-v1`, `shared/bezi.js`; beh má začiatok `m` aj koniec `k`), len
-na ten deň. Práčke a sušičke človek nastaví zvyšok programu z displeja (hodiny a minúty, `BEZI.zvysok`), umývačke čas zapnutia.
+na ten deň. Práčke a sušičke človek nastaví zvyšok programu z displeja kolieskami hodín a minút (`BEZI.zvysok`), umývačke
+čas zapnutia výberom času telefónu (`docs/navrhy/spotrebic-cas-nastavenie.html`, A + D + P1, 22. 11. 2026). „Už beží“ nič
+neuloží, len ukáže nastavenie s návrhom (`vecNavrh` v stave); uloží až „Nastaviť“, ktoré zavrie panel a ukáže bublinu
+`#vec-bublina` s „Vrátiť“ - aj po „Nebeží“. Kolieska posúva prehliadač (scroll-snap), appka si hodnotu prečíta, keď zastanú;
+koliesko, ktoré sa práve točí (`data-toci`), prekreslenie nevráti.
 Za deň môže spotrebič bežať viackrát: kým beží, plán ho nerozvrhuje (`behy` v `shared/plan-dna.js`) a jeho odber si berie
 z rozpočtu; čo dobehlo, plán ponúkne znova a sušička suší pranie, ktoré ešte nesušila (`mokre`). Bežiaci spotrebič má vlastnú
 dlaždicu (`bezi`), dobehnutý dlaždicu s ďalším časom a odrážkou „dnes už 1×“. Overiť to appka nevie – je to na slovo.

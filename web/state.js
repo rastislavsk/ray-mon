@@ -33,6 +33,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * @typedef {'day' | 'week'} WeekDetail
  * @typedef {'share' | 'reset'} AppSheet
  * @typedef {'tok'} TzChip
+ * @typedef {{ id: string, d: string, behy: import('../shared/bezi.js').Zapis[], k: number | null }} VecBublina
  * @typedef {'dnes' | 'zajtra'} MzChip
  * @typedef {(typeof NS_FOLDS)[number]} NsFold
  * @typedef {import('./refresh.js').RefreshState & import('../shared/setup-flow.js').SetupState & {
@@ -77,6 +78,8 @@ import { setupInit } from '../shared/setup-flow.js';
  *   doma: string[],
  *   bezi: import('../shared/bezi.js').Zapis[],
  *   koniecOznam: { id: string, stav: 'ok' | 'zakazane' | 'chyba' } | null,
+ *   vecNavrh: { id: string, min: number } | null,
+ *   vecBublina: VecBublina | null,
  *   bojler: import('../shared/bojler.js').BojlerInfo | null,
  *   bojlerPrahy: import('../shared/bojler.js').Prahy,
  *   bojlerSkript: import('../shared/nastavenie-bojler.js').BojlerSkript,
@@ -133,6 +136,11 @@ const telefon = ({
     bezi,
     // Či príde oznámenie o konci behu, ktorý človek práve zapísal (web/koniec.js) - len do obnovenia stránky.
     koniecOznam: /** @type {{ id: string, stav: 'ok' | 'zakazane' | 'chyba' } | null} */ (null),
+    // Čas, ktorý človek nastavil v detaile spotrebiča a ešte neuložil (docs/navrhy/spotrebic-cas-nastavenie.html, A + D):
+    // zvyšok programu v minútach (práčka, sušička) či minúta dňa zapnutia (umývačka). Platí len pre otvorený detail.
+    vecNavrh: /** @type {{ id: string, min: number } | null} */ (null),
+    // Bublina po „Nastaviť“ a „Nebeží“ (P1): spotrebič, deň, jeho behy pred zmenou (pre „Vrátiť“) a koniec po nej.
+    vecBublina: /** @type {VecBublina | null} */ (null),
     // Stav bojlera hlási Worker pri meraní; skript do zásuvky appka pripraví až na požiadanie.
     bojler: null,
     // Čo sa appka naučila z histórie (web/ucenie.js, shared/ucenie.js) - prepočíta sa raz za deň.

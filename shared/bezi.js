@@ -1,4 +1,5 @@
-// Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1; docs/navrhy/spotrebic-koniec-opakovanie.html):
+// Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1; docs/navrhy/spotrebic-koniec-opakovanie.html;
+// docs/navrhy/spotrebic-cas-nastavenie.html):
 // zápisy „Už beží“ z detailu spotrebiča na karte Teraz. Zápis je jeden beh: deň, spotrebič, minúta dňa
 // začiatku a konca. Spotrebič môže mať za deň viac behov, beží však vždy najviac jeden. Práčke a sušičke
 // človek povie, koľko programu zostáva (BEZI.zvysok), umývačke, kedy ju zapol. Platí len v ten deň.
@@ -54,14 +55,36 @@ export function parseBezi(raw) {
 /** Beh spotrebiča `id` v deň `d`, ktorý o minúte `nowMin` ešte beží, alebo null. @param {Zapis[]} list @param {string} id @param {string} d @param {number} nowMin */
 export const beziaci = (list, id, d, nowMin) => list.find((z) => z.id === id && z.d === d && nowMin < z.k) ?? null;
 
+/** Číslo v rozsahu. @param {number} x @param {number} od @param {number} po */
+const medzi = (x, od, po) => Math.max(od, Math.min(po, x));
+
 /**
- * „Už beží“: spotrebič `id` beží od `nowMin` v deň `d` a skončí po dĺžke programu. Beh, ktorý ešte beží, nahradí,
- * dobehnuté behy dňa nechá a zápisy iných dní zahodí - už nič neznamenajú. Vracia nový zoznam.
- * @param {Zapis[]} list @param {string} id @param {string} d @param {number} nowMin
+ * Beh, ktorý by uložilo „Nastaviť“ v detaile spotrebiča (docs/navrhy/spotrebic-cas-nastavenie.html, A + D) v deň `d`
+ * o minúte `nowMin`. `min` je to, čo človek nastavil: pri práčke a sušičke zvyšok programu v minútach (od
+ * BEZI.minZvysokMin do BEZI.maxZvysokMin, začiatok je koniec bez dĺžky programu), pri umývačke minúta dňa zapnutia
+ * (nie pred polnoc ani po teraz - zapol ju, nie zapne; koniec po dĺžke programu, pri bežiacom behu po jeho dĺžke).
+ * Bez `min` vráti bežiaci beh, a keď nebeží, beh od teraz po dĺžke programu.
+ * @param {Zapis[]} list @param {string} id @param {string} d @param {number} nowMin @param {number | null} [min]
+ * @returns {Zapis}
  */
-export function zapol(list, id, d, nowMin) {
-    const ostane = list.filter((z) => z.d === d && !(z.id === id && nowMin < z.k));
-    return [...ostane, { id, d, m: nowMin, k: nowMin + dlzka(id) }];
+export function navrhBehu(list, id, d, nowMin, min = null) {
+    const b = beziaci(list, id, d, nowMin);
+    if (zoZvysku(id)) {
+        const k = nowMin + medzi(min ?? (b ? b.k - nowMin : dlzka(id)), BEZI.minZvysokMin, BEZI.maxZvysokMin);
+        return { id, d, m: medzi(k - dlzka(id), 0, nowMin), k };
+    }
+    const m = medzi(min ?? (b ? b.m : nowMin), 0, nowMin);
+    return { id, d, m, k: m + (b ? b.k - b.m : dlzka(id)) };
+}
+
+/**
+ * „Nastaviť“: beh spotrebiča `id` podľa navrhBehu - bežiaci nahradí, dobehnuté behy dňa nechá a zápisy iných dní
+ * zahodí, už nič neznamenajú. Vracia nový zoznam.
+ * @param {Zapis[]} list @param {string} id @param {string} d @param {number} nowMin @param {number | null} min
+ */
+export function nastav(list, id, d, nowMin, min) {
+    const b = beziaci(list, id, d, nowMin);
+    return [...list.filter((z) => z.d === d && z !== b), navrhBehu(list, id, d, nowMin, min)];
 }
 
 /** „Nebeží“: beh spotrebiča `id`, ktorý v deň `d` ešte beží, zmizne. @param {Zapis[]} list @param {string} id @param {string} d @param {number} nowMin */
@@ -70,32 +93,11 @@ export function zrus(list, id, d, nowMin) {
 }
 
 /**
- * − či + pri umývačke: čas zapnutia bežiaceho behu o BEZI.posunMin skôr (`smer` -1) či neskôr (1), koniec ide s ním.
- * Nikdy nie pred polnoc ani po teraz (`nowMin`) - zapol ho, nie zapne. Bez bežiaceho behu zoznam nezmení.
- * @param {Zapis[]} list @param {string} id @param {string} d @param {-1 | 1} smer @param {number} nowMin
+ * „Vrátiť“ v bubline po nastavení: behy spotrebiča `id` v deň `d` budú zas `behy` (tie, ktoré mal pred zmenou).
+ * @param {Zapis[]} list @param {string} id @param {string} d @param {Zapis[]} behy
  */
-export function posun(list, id, d, smer, nowMin) {
-    const b = beziaci(list, id, d, nowMin);
-    return list.map((z) => {
-        if (z !== b) return z;
-        const m = Math.max(0, Math.min(nowMin, z.m + smer * BEZI.posunMin));
-        return { ...z, m, k: m + (z.k - z.m) };
-    });
-}
-
-/**
- * − či + pri práčke a sušičke: zvyšok programu bežiaceho behu o `o` minút (hodina či BEZI.krokMin). Zvyšok ostane
- * medzi BEZI.minZvysokMin a BEZI.maxZvysokMin od teraz. Začiatok je koniec bez dĺžky programu, nie pred polnoc
- * ani po teraz. Bez bežiaceho behu zoznam nezmení.
- * @param {Zapis[]} list @param {string} id @param {string} d @param {number} o @param {number} nowMin
- */
-export function zvysok(list, id, d, o, nowMin) {
-    const b = beziaci(list, id, d, nowMin);
-    return list.map((z) => {
-        if (z !== b) return z;
-        const k = Math.max(nowMin + BEZI.minZvysokMin, Math.min(nowMin + BEZI.maxZvysokMin, z.k + o));
-        return { ...z, k, m: Math.max(0, Math.min(nowMin, k - dlzka(id))) };
-    });
+export function vratBehy(list, id, d, behy) {
+    return parseBezi([...list.filter((z) => !(z.id === id && z.d === d)), ...behy]);
 }
 
 // Spoločné behy telefónov domácnosti (docs/navrhy/bezi-spolocne.html): telefón po zmene pošle Workeru behy toho
