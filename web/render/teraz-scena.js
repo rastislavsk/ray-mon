@@ -1,13 +1,14 @@
 // Scéna toku energie na karte Teraz (docs/navrhy/teraz-tok-energie.html, návrh 1): slnko a elektráreň vľavo,
 // náš dom vpravo na kopci (čiarová kresba img/dom.png s výplňou img/dom-vypln.png), medzi nimi stĺp
 // s transformátorom, stožiar a vedenie. Zo slnka padajú do panelov zlaté čiarky, po vedení bežia impulzy -
-// zlaté von do siete, modrobiele dnu. Čísla (po ťuknutí) sú priamo v scéne, bez slov. Čo kresliť, počíta
+// zlaté von do siete, modrobiele dnu. Čísla sú v poli toku pod pásom dní (tokPoleHtml). Čo kresliť, počíta
 // shared/teraz-scena.js; tu sa len skladá SVG. Zem, dom aj elektráreň sú plné, takže zakryjú dážď, sneh
 // a oblaky živej oblohy za sebou (docs/navrhy/teraz-scena-zem.html).
 // Pohyb je v CSS (lúče, para) a SMIL (impulzy); pri obmedzenom pohybe CSS impulzy skryje a ukáže šípku.
 // V tme svietia okná na štíte pod panelmi (img/dom-okna.png so žiarou), kedy, rozhoduje shared/teraz-scena.js.
 
 import { escapeHtml } from '../../shared/format.js';
+import { tokIcon } from './icons.js';
 
 /** @typedef {ReturnType<typeof import('../../shared/teraz-scena.js').scenaModel>} Scena */
 
@@ -169,25 +170,31 @@ function body(s, d) {
     return g;
 }
 
-/** Otvorenie SVG scény: rovnaké pre kresbu aj vrstvu čísel, aby ležali presne na sebe. */
+/** Otvorenie SVG scény. */
 const SVG = `<svg viewBox="0 0 ${SCENA.w} ${SCENA.h}" preserveAspectRatio="xMidYMax slice" aria-hidden="true" focusable="false"`;
 
 /**
- * Čísla v scéne (po ťuknutí): pod slnkom výroba, nad domom spotreba, nad vedením sieť. Bez slov. Sú vo vlastnej
- * vrstve nad kresbou - ich ukázanie tak kresbu neprepíše a pohyb v nej nezačne odznova. Skryté sú prázdny text.
- * @param {Scena} s @param {boolean} ukaz
+ * Pole toku energie pod pásom dní (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť, pri každom
+ * číslo v kW a medzi nimi vedenie s impulzom smerom toku - zo slnka do domu zlatý, do siete zlatý, zo siete
+ * modrobiely. Čísla sú tie isté ako predtým v scéne (`cisla` v modeli), bez slov; čítačka dostane namiesto nich vetu
+ * (`popis`) - je to meno tlačidla.
+ * Bez elektromera je tam len slnko, bez toku zo siete či do nej vedenie bez impulzu. Impulz je CSS, pri obmedzenom
+ * pohybe ho CSS skryje a ukáže šípku smeru.
+ * @param {Scena} s
  */
-export function cislaSvg(s, ukaz) {
-    if (!ukaz) return '';
-    /** @param {string} k @param {number[]} p @param {string} v */
-    const c = (k, p, v) =>
-        `<text class="sc-cislo" data-k="${k}" x="${p[0]}" y="${p[1]}"><tspan>${escapeHtml(v)}</tspan><tspan class="sc-kw" dx="1">kW</tspan></text>`;
-    let o = '';
+export function tokPoleHtml(s) {
     const { slnko, dom, siet } = s.cisla;
-    if (slnko) o += c('slnko', [64, 54], slnko);
-    if (dom) o += c('dom', [292, 104], dom);
-    if (siet) o += c(siet.k, [96, 120], siet.kw);
-    return `${SVG}>${o}</svg>`;
+    /** @param {'slnko' | 'dom' | 'stlp'} id @param {string} v @param {string} k */
+    const uzol = (id, v, k) => `<span class="tp-u" data-k="${k}">${tokIcon(id)}<b>${escapeHtml(v)}</b><small>kW</small></span>`;
+    /** @param {'von' | 'dnu' | null} smer */
+    const ved = (smer) =>
+        smer
+            ? `<span class="tp-v" data-smer="${smer}"><i class="tp-imp"></i><i class="tp-sipka"></i></span>`
+            : '<span class="tp-v"></span>';
+    let o = slnko ? uzol('slnko', slnko, 'slnko') : '';
+    if (dom) o += ved(s.luce ? 'von' : null) + uzol('dom', dom, 'dom');
+    if (siet) o += ved(siet.k === 'von' || siet.k === 'dnu' ? siet.k : null) + uzol('stlp', siet.kw, siet.k);
+    return `<span class="sr">${escapeHtml(s.popis)}</span><span class="tp" aria-hidden="true">${o}</span>`;
 }
 
 /**

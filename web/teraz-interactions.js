@@ -5,7 +5,7 @@
 // karty Dnes (mozem-interactions.js).
 
 import { posun, zapol, zrus, zvysok } from '../shared/bezi.js';
-import { BEZI, BOJLER_ULOZENE_MS, TERAZ_CISLA_MS } from '../shared/config.js';
+import { BEZI, BOJLER_ULOZENE_MS } from '../shared/config.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { rytmusSBojlerom } from '../shared/zdroje.js';
 import { ulozRezimBojlera } from './data.js';
@@ -24,7 +24,8 @@ import { loadRytmus, saveBezi, saveRytmus } from './storage.js';
 export function initTeraz(store, dom, refresh) {
     // Vysvetlenie aj detail spotrebiča sú krok navigácie (robia z Teraz aktívny stĺpec prehľadu),
     // zatvorenie (Escape, ťuknutie vedľa) ten istý krok ako tlačidlo Späť.
-    dom.tzScena.addEventListener('click', () => tukniNaScenu(store, dom));
+    dom.tzScena.addEventListener('click', () => otvorTok(store, dom));
+    dom.tzTok.addEventListener('click', () => otvorTok(store, dom));
     // Hrebeň týždňa: ťuknutie na deň ukáže jeho plán. Nie je to krok navigácie - Späť z karty odíde.
     dom.tzHrebenDni.addEventListener('click', (e) => {
         const btn = e.target instanceof Element ? e.target.closest('[data-den]') : null;
@@ -85,36 +86,14 @@ function zapis(store, zmena, o) {
     objednajKoniec(store, id, o);
 }
 
-/** Čakanie na zhasnutie čísel v scéne. @type {ReturnType<typeof setTimeout> | undefined} */
-let cislaTimer;
-
 /**
- * Ťuknutie na scénu toku energie (docs/navrhy/teraz-tok-energie.html): prvé ukáže čísla v scéne na TERAZ_CISLA_MS.
- * Ďalšie, kým svietia, otvorí panel Elektrina teraz - ten istý krok ako vysvetlenie (tzChip) -, keď meranie
- * elektromera hovorí, kam tečie sieť (data-tok, render/teraz.js); bez neho čísla skryje.
+ * Ťuknutie na scénu toku energie alebo na pole toku pod pásom dní (docs/navrhy/teraz-pole-noc-bezi.html, 1A): otvorí
+ * panel Elektrina teraz - ten istý krok ako vysvetlenie (tzChip) -, keď meranie elektromera hovorí, kam tečie sieť
+ * (data-tok, render/teraz.js). Bez neho len urobí z Teraz aktívny stĺpec prehľadu.
  * @param {Store} store @param {Dom} dom
  */
-function tukniNaScenu(store, dom) {
-    // Čísla, ktoré sa ukázali samy po príchode, ťuknutie len predĺži ako prvé ťuknutie.
-    if (store.get().tzCisla === 'tuk') {
-        clearTimeout(cislaTimer);
-        store.setState(dom.tzScena.hasAttribute('data-tok') ? { tzCisla: null, tzChip: 'tok', panel: 'terazky' } : { tzCisla: null });
-        return;
-    }
-    store.setState({ panel: 'terazky' });
-    ukazCisla(store, 'tuk', TERAZ_CISLA_MS);
-}
-
-/**
- * Ukáže čísla v scéne na `ms` a potom ich zhasne. Volá ho aj príchod na kartu Teraz z navigácie (interactions.js).
- * @param {Store} store @param {'tuk' | 'prichod'} druh @param {number} ms
- */
-export function ukazCisla(store, druh, ms) {
-    clearTimeout(cislaTimer);
-    store.setState({ tzCisla: druh });
-    cislaTimer = setTimeout(() => {
-        if (store.get().tzCisla) store.setState({ tzCisla: null });
-    }, ms);
+function otvorTok(store, dom) {
+    store.setState(dom.tzScena.hasAttribute('data-tok') ? { tzChip: 'tok', panel: 'terazky' } : { panel: 'terazky' });
 }
 
 /** Čakanie na zhasnutie „Uložené“ pod prepínačom režimu bojlera. @type {ReturnType<typeof setTimeout> | undefined} */

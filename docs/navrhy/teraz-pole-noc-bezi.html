@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Teraz – pole, noc, beží</title>
+        <style>
+            /* Návrh (22. 11. 2026): karta Teraz – (1) dnešné dlaždice o 44 px nižšie ako v iných dňoch a čo dať do
+               uvoľneného pásu, (2) dlaždice viditeľnejšie v noci, (3) malá ikona spotrebiča zelená, keď beží.
+               Samostatný súbor, nič neimportuje z appky. Čísla a časy v telefónoch sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --sun: #ffd166;
+                --siet: rgba(124, 196, 255, 0.75);
+                --zelena: #8fe36f;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 17px;
+                font-weight: 800;
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 74ch;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                width: 300px;
+                max-width: 100%;
+            }
+            figcaption {
+                font-size: 14px;
+            }
+            figcaption b {
+                display: block;
+                font-size: 16px;
+            }
+            .plus,
+            .minus {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--zelena);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+
+            /* ===== telefón ===== */
+            .phone {
+                --glass: rgba(8, 16, 40, 0.3);
+                position: relative;
+                width: 300px;
+                max-width: 100%;
+                height: 590px;
+                overflow: hidden;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f62b5, #5d8fd8 60%, #6f9cdc);
+                font-size: 13px;
+            }
+            .phone[data-noc] {
+                background: linear-gradient(180deg, #050a1a, #0b1430 60%, #101b3a);
+            }
+            .scena {
+                position: relative;
+                height: 210px;
+                padding: 14px 16px;
+            }
+            .scena .app {
+                font-weight: 900;
+                letter-spacing: 0.04em;
+            }
+            .scena .miesto {
+                font-size: 11px;
+            }
+            .scena .zem {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 58px;
+                background: #2e4a7c;
+                border-radius: 60% 60% 0 0 / 30px 30px 0 0;
+            }
+            .phone[data-noc] .scena .zem {
+                background: #121c38;
+            }
+            .scena .dom {
+                position: absolute;
+                right: 24px;
+                bottom: 34px;
+                width: 70px;
+                height: 52px;
+                border: 2px solid rgba(255, 255, 255, 0.85);
+                border-radius: 4px;
+                background: #3b578a;
+            }
+            .phone[data-noc] .scena .dom {
+                background: #1c2848;
+            }
+            .scena .dom::before {
+                content: '';
+                position: absolute;
+                left: -8px;
+                right: -8px;
+                top: -26px;
+                height: 26px;
+                background:
+                    linear-gradient(to top right, transparent 49%, rgba(255, 255, 255, 0.85) 50%, transparent 53%),
+                    linear-gradient(to top left, transparent 49%, rgba(255, 255, 255, 0.85) 50%, transparent 53%);
+                background-size: 50% 100%;
+                background-position:
+                    0 0,
+                    100% 0;
+                background-repeat: no-repeat;
+            }
+            .scena .slnko {
+                position: absolute;
+                left: 22px;
+                top: 46px;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: #fff3c4;
+                box-shadow: 0 0 30px 10px rgba(255, 230, 150, 0.55);
+            }
+            .phone[data-noc] .scena .slnko {
+                left: 120px;
+                top: 50px;
+                width: 20px;
+                height: 20px;
+                background: #e9edf6;
+                box-shadow: 0 0 18px 4px rgba(220, 230, 255, 0.25);
+            }
+            .scena .stlp {
+                position: absolute;
+                left: 60px;
+                bottom: 36px;
+                width: 2px;
+                height: 54px;
+                background: rgba(255, 255, 255, 0.85);
+            }
+            .scena .vedenie {
+                position: absolute;
+                left: 60px;
+                right: 94px;
+                bottom: 84px;
+                border-top: 1.5px solid rgba(255, 255, 255, 0.6);
+            }
+            .obsah {
+                padding: 0 12px;
+            }
+            .pas {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+                margin: 0 -4px 10px;
+            }
+            .pas div {
+                height: 60px;
+                padding: 7px 7px 9px;
+                border-radius: 12px;
+                background: rgba(10, 20, 50, 0.38);
+                display: grid;
+                grid-template-rows: 1fr auto;
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+            }
+            .pas div[data-dnes] {
+                background: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)), rgba(10, 20, 50, 0.38);
+                box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+            }
+            .pas i {
+                display: block;
+                height: 7px;
+                border-radius: 4px;
+                background: linear-gradient(90deg, rgba(180, 195, 220, 0.35) 0 25%, var(--sun) 25% 75%, rgba(180, 195, 220, 0.35) 75%);
+            }
+
+            /* Pole 44 px (miesto hlavičky iného dňa). */
+            .pole {
+                height: 44px;
+                margin-bottom: 0;
+                display: flex;
+                align-items: center;
+            }
+            .pole[data-prazdne] {
+                height: 0;
+            }
+            .pole-den {
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 6px 6px 0;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+            }
+            .pole-den b {
+                font-size: 20px;
+                font-weight: 900;
+            }
+            .pole-den span {
+                font-size: 12px;
+                font-weight: 700;
+            }
+            /* 1A: kompaktný tok - slnko → dom → stĺp, impulzy na vedeniach. */
+            .pole-tok {
+                gap: 6px;
+                padding: 0 4px;
+            }
+            .tok-u {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-weight: 800;
+                font-variant-numeric: tabular-nums;
+                white-space: nowrap;
+            }
+            .tok-u .vi {
+                width: 20px;
+                height: 20px;
+            }
+            .tok-u[data-von] b {
+                color: var(--sun);
+            }
+            .tok-v {
+                flex: 1;
+                height: 10px;
+                position: relative;
+                min-width: 20px;
+            }
+            .tok-v::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 4.5px;
+                border-top: 1.5px solid rgba(255, 255, 255, 0.35);
+            }
+            .tok-v::after {
+                content: '';
+                position: absolute;
+                top: 2px;
+                width: 14px;
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, transparent, var(--sun));
+                animation: impulz 1.4s linear infinite;
+            }
+            .tok-v[data-spat]::after {
+                background: linear-gradient(270deg, transparent, var(--siet));
+                animation-direction: reverse;
+            }
+            .tok-v[data-ticho]::after {
+                display: none;
+            }
+            @keyframes impulz {
+                from {
+                    left: -14px;
+                }
+                to {
+                    left: 100%;
+                }
+            }
+            /* 1C: voľné zo slnka. */
+            .pole-volne {
+                gap: 10px;
+                padding: 0 6px;
+                font-weight: 800;
+            }
+            .pole-volne .bar {
+                flex: 1;
+                height: 8px;
+                border-radius: 4px;
+                background: rgba(180, 195, 220, 0.35);
+                overflow: hidden;
+            }
+            .pole-volne .bar i {
+                display: block;
+                height: 100%;
+                background: var(--sun);
+            }
+            .pole-volne small {
+                font-size: 11px;
+                font-weight: 700;
+            }
+
+            /* ===== dlaždice ===== */
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                align-items: start;
+            }
+            .dl {
+                position: relative;
+                padding: 11px;
+                border-radius: 20px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                min-height: 152px;
+            }
+            .par {
+                display: grid;
+                gap: 6px;
+            }
+            .par .dl {
+                min-height: 0;
+                display: grid;
+                grid-template-columns: 30px 1fr;
+                column-gap: 8px;
+                border-radius: 20px 20px 4px 4px;
+            }
+            .par .dl + .dl {
+                border-radius: 4px 4px 20px 20px;
+            }
+            .ico {
+                position: relative;
+                width: 36px;
+                height: 36px;
+                margin-bottom: 14px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .par .ico {
+                width: 30px;
+                height: 30px;
+                margin: 0;
+            }
+            .vi {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .par .ico .vi {
+                width: 17px;
+                height: 17px;
+            }
+            .velky {
+                display: block;
+                font-size: 22px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .velky small {
+                font-size: 12px;
+                font-weight: 800;
+            }
+            .meno {
+                display: block;
+                font-size: 15px;
+                font-weight: 800;
+                margin-top: 2px;
+            }
+            .podiel {
+                display: block;
+                height: 5px;
+                margin: 6px 0 3px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, var(--sun) 0 70%, var(--siet) 70%);
+            }
+            .odr {
+                display: block;
+                font-size: 11.5px;
+                font-weight: 600;
+            }
+            .par .text {
+                min-width: 0;
+            }
+
+            /* ===== 2: noc ===== */
+            .phone[data-n='2a'] {
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            .phone[data-n='2a'] .dl {
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+            }
+            .phone[data-n='2b'] {
+                --glass: rgba(255, 255, 255, 0.1);
+            }
+            .phone[data-n='2c'] {
+                --glass: rgba(255, 255, 255, 0.06);
+            }
+            .phone[data-n='2c'] .dl {
+                box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.13);
+            }
+
+            /* ===== 3: beží ===== */
+            /* 3A: tá istá ikona, zelená čiara a zelený nádych kruhu. */
+            [data-b='3a'] .dl[data-bezi] .ico {
+                color: var(--zelena);
+                background: rgba(143, 227, 111, 0.18);
+            }
+            /* 3B: plný zelený kruh, tmavá ikona. */
+            [data-b='3b'] .dl[data-bezi] .ico {
+                color: #14300c;
+                background: var(--zelena);
+            }
+            /* 3C: malá ikona v rohu dlaždice - sivá kým stojí, zelená keď beží; kruh vľavo ostáva. */
+            .roh {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 18px;
+                height: 18px;
+                color: rgba(255, 255, 255, 0.4);
+            }
+            .roh .vi {
+                width: 18px;
+                height: 18px;
+            }
+            .dl[data-bezi] .roh {
+                color: var(--zelena);
+            }
+            .phone:not([data-b='3c']) .roh {
+                display: none;
+            }
+            .par [data-b] .roh,
+            .par .roh {
+                top: 8px;
+                right: 8px;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .tok-v::after {
+                    animation: none;
+                    display: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 12px">
+                <h1>Karta Teraz: pole nad dlaždicami, noc a bežiaci spotrebič</h1>
+                <p class="dim">
+                    Návrh 22. 11. 2026. Telefóny sú zjednodušené (scéna je len náznak), dlaždice a pás dní majú rozmery a farby ako v appke.
+                    Čísla sú ilustračné. Animácia v 1A ide len tu v návrhu, v appke by bola SMIL ako impulzy v scéne.
+                </p>
+            </header>
+
+            <section>
+                <h2>1. Dnešné dlaždice nižšie a čo do uvoľneného miesta</h2>
+                <p>
+                    V inom dni je medzi pásom dní a dlaždicami hlavička „Zajtra · nedeľa 6. 9.“, vysoká
+                    <b>44 px</b>. V dnešku chýba, preto dlaždice skočia o 44 px vyššie (zmerané v náhľade appky: dlaždice dnes 428 px,
+                    zajtra 472 px). Pole bude teda jeden riadok, nie veľká plocha.
+                </p>
+                <div class="phones" id="p1"></div>
+                <div class="odpor">
+                    <b>Odporúčam 1A s presunom čísel.</b> Scéna hore by ostala čistým obrázkom a čísla slnko / dom / sieť by boli v poli
+                    stále, bez ťuknutia a bez odpočtu <code>TERAZ_CISLA_MS</code>. Ťuknutie na pole otvorí panel Elektrina teraz (ten so
+                    šípkami a popisom). Tok energie by tak bol na jednom mieste. 1C by bolo druhé najlepšie, ak chceš v poli novú
+                    informáciu, nie presun.
+                </div>
+            </section>
+
+            <section>
+                <h2>2. Dlaždice v noci</h2>
+                <p>
+                    Sklo dlaždíc je tmavé (<code>rgba(8, 16, 40, 0.3)</code>). Cez deň je na modrej oblohe vidno, v noci je obloha skoro
+                    taká istá ako sklo, a tak ostane len biely text bez obrysu. Všetky tri návrhy menia dlaždice <b>len v noci</b> (podľa
+                    toho istého <code>data-noc</code>, ktorým appka kreslí nočnú oblohu). Cez deň ostáva všetko ako teraz.
+                </p>
+                <div class="phones" id="p2"></div>
+                <div class="odpor">
+                    <b>Odporúčam 2C.</b> Tenký obrys povie, kde dlaždica končí, slabé svetlé sklo ju jemne odlíši od oblohy a ani jedno
+                    nekričí. 2B je viditeľnejšie, ale v tme pôsobí sivo, 2A má okolo bieleho textu stále takmer čiernu plochu.
+                </div>
+            </section>
+
+            <section>
+                <h2>3. Bežiaci spotrebič: zelená ikona</h2>
+                <p>
+                    Práčka beží (tvoje „Už beží“), sušička a auto nie. Dlaždica už ikonu spotrebiča má (kruh vľavo hore), preto 3A a 3B
+                    menia ju a 3C pridáva novú malú do rohu.
+                </p>
+                <p class="dim">
+                    Pozor na rozhodnutie z 21. 11. 2026: dlaždice sú bez farby stavu, aj krémová bežiaceho zmizla. Zelená ikona je výnimka z
+                    neho. Zapíšem ju do <code>CLAUDE.md</code> ako druhú výnimku popri jantárovom ráme zásuvky bez spojenia.
+                </p>
+                <div class="phones" id="p3"></div>
+                <div class="odpor">
+                    <b>Odporúčam 3A.</b> Nepribudne žiadny prvok, len farba toho, čo tam už je. Zelená čiara na priesvitnom zelenom kruhu je
+                    dobre vidno cez deň aj v noci a stále to nie je farba celej dlaždice.
+                </div>
+                <p>
+                    <b>Otvorená otázka:</b> Má zelenať aj <b>bojler</b>, keď zásuvka naozaj hreje (relé zapnuté)? Pri práčke, sušičke a
+                    umývačke je „beží“ len na tvoje slovo, pri bojleri je to zmerané.
+                </p>
+            </section>
+        </main>
+
+        <script>
+            // Telefóny skladá tento skript, aby sa dlaždice v návrhu neopakovali ručne. Len pre návrh, appka ho nemá.
+            const I = {
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle cx="12" cy="14" r="4"/><path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>',
+                auto: '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
+                umyvacka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 8h16M7.5 5.5h4M8 12.5h8M8 16.5h8"/>',
+                slnko: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+                dom: '<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+                stlp: '<path d="M12 2.5 7.5 21.5M12 2.5l4.5 19"/><path d="M5 7h14M6.5 11.5h11M9 16.5h6"/><path d="M5 7v2M19 7v2"/>',
+            };
+            const vi = (id) => `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true">${I[id]}</svg>`;
+            const scena =
+                '<div class="scena"><div class="app">RAY-MON</div><div class="miesto">Dvorany nad Nitrou</div><div class="slnko"></div><div class="vedenie"></div><div class="stlp"></div><div class="zem"></div><div class="dom"></div></div>';
+            const pas = (den) =>
+                '<div class="pas">' +
+                ['SO', 'NE', 'PO', 'UT'].map((d, i) => `<div${i === den ? ' data-dnes' : ''}>${d}<i></i></div>`).join('') +
+                '</div>';
+            const pol = (id, cas, meno, odr, bezi) =>
+                `<div class="dl"${bezi ? ' data-bezi' : ''}><span class="ico">${vi(id)}</span><span class="text"><span class="velky">${cas}</span><span class="meno">${meno}</span><span class="podiel"></span><span class="odr">• ${odr}</span></span><span class="roh">${vi(id)}</span></div>`;
+            const dl = (id, cas, meno, odr, bezi) =>
+                `<div class="dl"${bezi ? ' data-bezi' : ''}><span class="ico">${vi(id)}</span><span class="velky">${cas}</span><span class="meno">${meno}</span><span class="podiel"></span><span class="odr">• ${odr}</span><span class="roh">${vi(id)}</span></div>`;
+            const dlazdice = (bezi) =>
+                '<div class="mriezka"><div class="par">' +
+                pol('pracka', bezi ? '<small>do </small>12:20' : '13:00', 'Práčka', bezi ? 'beží' : 'zapni teraz', bezi) +
+                pol('susicka', bezi ? '12:20' : '15:00', 'Sušička', 'po práčke', false) +
+                '</div>' +
+                dl('auto', '13:15', 'Auto', '~50 km zo slnka', false) +
+                dl('umyvacka', '14:30', 'Umývačka', 'zo slnka', false) +
+                '</div>';
+            const phone = ({ noc, n, b, pole, bezi, den = 0 }) =>
+                `<div class="phone"${noc ? ' data-noc' : ''}${n ? ` data-n="${n}"` : ''}${b ? ` data-b="${b}"` : ''}>${scena}<div class="obsah">${pas(den)}${pole}${dlazdice(bezi)}</div></div>`;
+            const fig = (cap, opts) => `<figure>${phone(opts)}<figcaption>${cap}</figcaption></figure>`;
+
+            const poleDen = (l, r) => `<div class="pole pole-den"><b>${l}</b><span class="dim">${r}</span></div>`;
+            const tok = (s, d, n, smer) =>
+                `<div class="pole pole-tok"><span class="tok-u">${vi('slnko')}<b>${s}</b></span><span class="tok-v"${s === '0,0' ? ' data-ticho' : ''}></span><span class="tok-u">${vi('dom')}<b>${d}</b></span><span class="tok-v"${smer === 'dnu' ? ' data-spat' : ''}></span><span class="tok-u"${smer === 'von' ? ' data-von' : ''}>${vi('stlp')}<b>${n}</b></span></div>`;
+            const volne = (kw, pct, pod) =>
+                `<div class="pole pole-volne"><span>${kw}</span><span class="bar"><i style="width:${pct}%"></i></span><small class="dim">${pod}</small></div>`;
+            const prazdne = '<div class="pole" data-prazdne></div>';
+
+            document.getElementById('p1').innerHTML =
+                fig('<b>Teraz</b>Dnes bez poľa, dlaždice hneď pod pásom. Pre porovnanie.', { pole: prazdne }) +
+                fig('<b>Iný deň (dnes v appke)</b>Hlavička 44 px, podľa nej sa zarovná dnešok.', {
+                    pole: poleDen('Zajtra', 'nedeľa 6. 9.'),
+                    den: 1,
+                }) +
+                fig(
+                    '<b>1A Tok energie v poli</b>Slnko → dom → sieť, impulzy smerom toku, čísla stále viditeľné; dodávka do siete jantárová. V noci slnko 0,0 a impulz ide zo siete do domu.' +
+                        '<span class="plus">to, čo navrhuješ; vidno smer bez ťuknutia</span>' +
+                        '<span class="plus">s presunom čísel zo scény ubudne mechanika „ťukni, ukáž, zhasni“</span>' +
+                        '<span class="minus">bez presunu je to isté dvakrát nad sebou (scéna aj pole)</span>',
+                    { pole: tok('3,2', '0,8', '2,4', 'von') },
+                ) +
+                fig('<b>1A v noci</b>', { noc: true, pole: tok('0,0', '0,4', '0,4', 'dnu') }) +
+                fig(
+                    '<b>1B Hlavička ako v iných dňoch</b>„Dnes“ a vpravo kratučká veta: do kedy slnko stačí, v noci kedy vyjde.' +
+                        '<span class="plus">najjednoduchšie, rovnaká stavba ako iné dni</span>' +
+                        '<span class="minus">málo novej informácie a je to text, nie obraz</span>',
+                    { pole: poleDen('Dnes', 'slnko stačí do 15:40') },
+                ) +
+                fig(
+                    '<b>1C Voľné zo slnka</b>Koľko kW zo slnka teraz nikto neberie (to isté <code>freeKw</code>, s ktorým ráta Plán dňa), pásik voči výkonu panelov. V noci „0,0 · slnko o 6:52“.' +
+                        '<span class="plus">odpovedá na „môžem niečo zapnúť hneď?“, karta to ako číslo zatiaľ nemá</span>' +
+                        '<span class="minus">v noci a v zamračený deň je to stále nula</span>',
+                    { pole: volne('2,4 kW', 55, 'voľné zo slnka') },
+                ) +
+                fig(
+                    '<b>1D Vyrobené dnes</b>kWh od rána a pásik voči predpovedi celého dňa; v noci včerajšok.' +
+                        '<span class="plus">dobrý pocit, súhrn dňa jedným pohľadom</span>' +
+                        '<span class="minus">nič nerozhoduje, patrí skôr do karty Dnes či Štatistiky</span>',
+                    { pole: volne('12,4 kWh', 68, 'z ~18 kWh') },
+                );
+
+            document.getElementById('p2').innerHTML =
+                fig('<b>Teraz</b>Tmavé sklo na tmavej oblohe.', { noc: true, pole: prazdne }) +
+                fig(
+                    '<b>2A Tenký obrys</b>Sklo ako teraz, okolo 1 px biely na 20 %.' +
+                        '<span class="plus">najmenšia zmena, jeden riadok CSS</span>' +
+                        '<span class="minus">vnútri dlaždice ostáva čierna plocha</span>',
+                    { noc: true, n: '2a', pole: prazdne },
+                ) +
+                fig(
+                    '<b>2B Svetlé sklo</b>Namiesto tmavého skla biele na 10 %.' +
+                        '<span class="plus">dlaždice najlepšie vidno</span>' +
+                        '<span class="minus">v tme pôsobí sivo a trochu „rozsvieti“ kartu</span>',
+                    { noc: true, n: '2b', pole: prazdne },
+                ) +
+                fig(
+                    '<b>2C Slabé svetlé sklo a obrys</b>Biele sklo na 6 % a obrys 1 px na 13 %.' +
+                        '<span class="plus">jasný okraj aj plocha, stále tlmené</span>' +
+                        '<span class="minus">dve hodnoty na vyladenie namiesto jednej</span>',
+                    { noc: true, n: '2c', pole: prazdne },
+                );
+
+            document.getElementById('p3').innerHTML =
+                fig(
+                    '<b>3A Tá istá ikona zelená</b>Čiara ikony zelená, kruh za ňou zelený nádych.' +
+                        '<span class="plus">nič nepribudne, len farba</span>' +
+                        '<span class="minus">menej nápadné ako plný kruh</span>',
+                    { b: '3a', bezi: true, pole: prazdne },
+                ) +
+                fig('<b>3A v noci</b>(so sklom 2C)', { noc: true, n: '2c', b: '3a', bezi: true, pole: prazdne }) +
+                fig(
+                    '<b>3B Plný zelený kruh</b>Kruh celý zelený, ikona tmavá.' +
+                        '<span class="plus">najnápadnejšie, vidno aj z diaľky</span>' +
+                        '<span class="minus">jediná sýta plocha na karte, ťahá oko viac ako čas</span>',
+                    { b: '3b', bezi: true, pole: prazdne },
+                ) +
+                fig(
+                    '<b>3C Malá ikona v rohu</b>Nová 18 px ikona vpravo hore: sivá kým stojí, zelená keď beží. Kruh vľavo ostáva biely.' +
+                        '<span class="plus">doslova „malá ikona“, stav má vlastné miesto</span>' +
+                        '<span class="minus">tá istá ikona v dlaždici dvakrát; v polovici dvojice je málo miesta</span>',
+                    { b: '3c', bezi: true, pole: prazdne },
+                );
+        </script>
+    </body>
+</html>

@@ -1512,6 +1512,10 @@ test.describe('karta Teraz', () => {
         const t = posunuty.co?.bezi[0];
         const dlazdica = page.locator('#tz-co [data-vec="pracka"]');
         await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
+        // Bežiaci spotrebič má zelenú ikonu a obrys (docs/navrhy/teraz-pole-noc-bezi.html, 3A), sušička nie.
+        await expect(dlazdica).toHaveAttribute('data-zapnuty', '');
+        await expect(dlazdica.locator('.dl-ico')).toHaveCSS('color', 'rgb(185, 242, 140)');
+        await expect(page.locator('#tz-co [data-vec="susicka"]')).not.toHaveAttribute('data-zapnuty');
         await expect(dlazdica.locator('.velky')).toHaveText(`${t?.pred} ${t?.velky}`);
         // Práčka je polovica dvojice so sušičkou: jedna odrážka.
         await expect(dlazdica).toContainClass('dl-pol');
@@ -1527,6 +1531,7 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-vec-zvysok')).toBeHidden();
         await page.keyboard.press('Escape');
         await expect(dlazdica).not.toHaveAttribute('data-tone', 'bezi');
+        await expect(dlazdica).not.toHaveAttribute('data-zapnuty');
         expect(await page.evaluate((k) => localStorage.getItem(k), BEZI_STORAGE_KEY)).toBe('[]');
         // Umývačka zvyšok na displeji nemá: čas zapnutia s − a +, neskôr než teraz nie.
         await page.locator('#tz-co [data-vec="umyvacka"]').click();
@@ -2603,6 +2608,7 @@ test.describe('počasie v pozadí karty Teraz', () => {
         if (den.dazd) await expect(page.locator('#wx')).toHaveAttribute('data-dazd', den.dazd);
         else await expect(page.locator('#wx')).not.toHaveAttribute('data-dazd');
         await expect(page.locator('#wx')).not.toHaveAttribute('data-noc');
+        await expect(page.locator('#tz-co')).not.toHaveAttribute('data-noc');
         // Kresba je dekorácia: čítačka ju nevidí a dotyk prejde cez ňu.
         await expect(page.locator('#wx')).toHaveAttribute('aria-hidden', 'true');
         expect(await page.locator('#wx').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
@@ -2663,6 +2669,9 @@ test.describe('počasie v pozadí karty Teraz', () => {
         const errors = await openTeraz(page, { time: vecer });
         expect(terazModel(vstupTeraz(vecer)).pocasie?.mesiac, 'o 22:30 ešte nevyšiel do poľa').toBeNull();
         await expect(page.locator('#wx')).toHaveAttribute('data-noc', '');
+        // Dlaždice v noci na svetlom skle (docs/navrhy/teraz-pole-noc-bezi.html, 2B).
+        await expect(page.locator('#tz-co')).toHaveAttribute('data-noc', '');
+        await expect(page.locator('#tz-dlazdice .dl').first()).toHaveCSS('background-image', /rgba\(255, 255, 255, 0\.1\)/);
         await expect(page.locator('#wx .wx-moon svg')).toHaveCount(0);
         await expect(page.locator('#wx .wx-moonglow svg')).toHaveCount(0);
         await expect(page.locator('#wx .wx-halo')).toBeHidden();

@@ -1066,17 +1066,19 @@ test.describe('bojler na prebytky', () => {
             bojler: info,
             pvNavyse: { sietKw: 0.4, measuredAt: FIXED_NOW.toISOString() },
         });
-        // Scéna toku energie (docs/navrhy/teraz-tok-energie.html): vetu dostane čítačka, prvé ťuknutie ukáže čísla
-        // v scéne bez slov, druhé otvorí panel Elektrina teraz.
+        // Scéna toku energie (docs/navrhy/teraz-tok-energie.html) je len kresba, čísla sú v poli toku pod pásom dní
+        // (docs/navrhy/teraz-pole-noc-bezi.html, 1A): bez slov, vetu dostane čítačka. Ťuknutie na pole aj na scénu
+        // otvorí panel Elektrina teraz.
         const s = scenaModel({ vyrobaKw: pv.realTimePowerKw, odhad: false, sietKw: 0.4 });
         const scena = page.locator('#tz-scena');
+        const pole = page.locator('#tz-tok');
         await expect(scena).toHaveAccessibleName(s.popis);
         await expect(scena.locator('.sc-bod[data-smer="von"]')).toHaveCount(s.body);
-        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveCount(0);
-        await scena.click();
-        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveText([`${s.vyroba}kW`, `${s.dom}kW`, `${s.siet?.kw}kW`]);
-        await scena.click();
-        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveCount(0);
+        await expect(pole).toHaveAccessibleName(s.popis);
+        await expect(pole.locator('.tp-u b')).toHaveText([`${s.vyroba}`, `${s.dom}`, `${s.siet?.kw}`]);
+        await expect(pole.locator('.tp-v[data-smer]')).toHaveCount(2);
+        await expect(pole.locator('.tp-v').last()).toHaveAttribute('data-smer', 'von');
+        await pole.click();
         const tokSheet = page.locator('#tz-tok-sheet');
         await expect(tokSheet).toBeVisible();
         const td = /** @type {NonNullable<ReturnType<typeof tokDetail>>} */ (
@@ -1090,10 +1092,18 @@ test.describe('bojler na prebytky', () => {
         await page.keyboard.press('Escape');
         await expect(tokSheet).toBeHidden();
         await expect(scena).toBeFocused();
-        // Príchod na Teraz z inej karty ťuknutím v navigácii ukáže tie isté čísla aj bez ťuknutia na scénu.
-        await page.locator('#nav-mozem').click();
-        await page.locator('#nav-terazky').click();
-        await expect(page.locator('#tz-scena-cisla .sc-cislo')).toHaveText([`${s.vyroba}kW`, `${s.dom}kW`, `${s.siet?.kw}kW`]);
+        await scena.click();
+        await expect(tokSheet).toBeVisible();
+        await page.keyboard.press('Escape');
+        await expect(tokSheet).toBeHidden();
+        // Pole stojí na mieste hlavičky iného dňa: dlaždice sú dnes aj zajtra na tej istej výške.
+        const hore = () => page.locator('#tz-dlazdice').evaluate((el) => Math.round(el.getBoundingClientRect().top + scrollY));
+        const dnes = await hore();
+        await page.locator('#tz-hreben-dni [data-den="1"]').click();
+        await expect(pole).toBeHidden();
+        expect(await hore()).toBe(dnes);
+        await page.locator('#tz-hreben-dni [data-den="0"]').click();
+        await expect(pole).toBeVisible();
         // Všetky dlaždice v tvare Bojlera (A3): s veľkým číslom.
         await expect(page.locator('#tz-dlazdice .dl .velky')).toHaveCount(await page.locator('#tz-dlazdice .dl').count());
         const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);
@@ -1101,8 +1111,10 @@ test.describe('bojler na prebytky', () => {
         await expect(dl).toHaveAttribute('data-tone', t.tone);
         await expect(dl).toContainText(t.meno);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
-        // Značka v rohu: riadi appka (docs/navrhy/teraz-dlazdice-odrazky.html, A).
-        await expect(dl.locator('.dl-rz')).toHaveAttribute('data-rezim', 'appka');
+        // Značka pri ikone: riadi appka. Bojler hreje, preto má zelenú ikonu a obrys (docs/navrhy/teraz-pole-noc-bezi.html, 3A).
+        await expect(dl.locator('.dl-ico .dl-rz')).toHaveAttribute('data-rezim', 'appka');
+        await expect(dl).toHaveAttribute('data-zapnuty', '');
+        await expect(dl.locator('.dl-ico')).toHaveCSS('color', 'rgb(185, 242, 140)');
         await expect(page.locator('#tz-co [data-vec="bojler"]'), 'bojler, ktorý riadi zásuvka, appka neradí').toHaveCount(1);
         await dl.click();
         const sheet = page.locator('#tz-bojler-sheet');

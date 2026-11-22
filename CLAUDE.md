@@ -72,7 +72,12 @@ Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull reques
 Rozhodnuté 21. 11. 2026: dlaždice spotrebičov na karte Teraz sú všetky na skle s bielym textom - farba nehovorí,
 či slnko stačí, z akej siete ide prúd, ani že spotrebič beží (aj krémová bežiaceho zmizla). Riadok nad dlaždicami
 (bodka + „Teraz zo slnka“) aj jeho panel s vysvetlením sú preč. `data-tone` na dlaždici ostáva ako údaj, štýl ho
-nefarbí; jedinou výnimkou je jantárový rám zásuvky bez spojenia (`chyba`). Úsek na osi v detaile a pás dní sú graf, tie farby majú.
+nefarbí; výnimkou je jantárový rám zásuvky bez spojenia (`chyba`). Úsek na osi v detaile a pás dní sú graf, tie farby majú.
+
+Druhá výnimka (22. 11. 2026, `docs/navrhy/teraz-pole-noc-bezi.html`, 3A): zapnutý spotrebič - beží („Už beží“), alebo
+bojleru zásuvka zapla relé - má zelenú ikonu (`--yes`) a jemný biely obrys dlaždice (`data-zapnuty`). Kto bojler zapína
+(ruka / slnko, `.dl-rz`), je na kraji kruhu s ikonou; bodka stavu bojlera pri ikone je preč. V noci (`data-noc` na
+`#tz-co`) sú dlaždice na svetlom skle (2B), tmavé na nočnej oblohe nebolo vidno.
 
 Druh riadku plánu `sun` znamená naozaj „na slnku“. Vec, ktorá ide natvrdo po inej (sušička po práčke) a slnko jej
 nedá ani `PLAN_DNA.zoSiete`, má druh `siet` (`zoSieteNatvrdo` v `shared/plan-dna.js`) - predtým bola `sun` a appka
@@ -114,10 +119,13 @@ elektráreň sú plné, aby za nimi nebolo vidno dážď, sneh ani oblaky (`docs
 farbu zeme berie z oblohy (`--s2`). Elektráreň a vedenie kreslí
 `web/render/teraz-scena.js`, čo kresliť (čísla, lúče, body), počíta `shared/teraz-scena.js`. Panely na kresbe
 hľadia doľava, preto slnko živej oblohy svieti z ľavého horného rohu (`--wx-sx` v `css/zaklad.css`) a krajina je
-zrkadlová. Čísla v scéne sú bez slov (význam dáva miesto) a biele ako všetok text na holej oblohe; ťuknutie ich
-ukáže na `TERAZ_CISLA_MS`, ďalšie otvorí panel Elektrina teraz (s elektromerom). Príchod na kartu ťuknutím v navigácii
-ich ukáže na `TERAZ_PRICHOD_MS`. Číslo, ktoré appka pozná, je tam vždy, aj nulové („0,0“; `cisla` v modeli scény). Impulzy na vedení (výboj s chvostom) sú SMIL, nie CSS -
-pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru. Bodka stavu merania je v hlavičke za miestom (na stred riadku),
+zrkadlová. Scéna čísla nemá: sú v poli toku `#tz-tok` pod pásom dní, len pri dnešku (`tokPoleHtml`, 22. 11. 2026,
+`docs/navrhy/teraz-pole-noc-bezi.html`, 1A) - slnko → dom → sieť, bez slov, biele ako všetok text na holej oblohe,
+medzi nimi vedenie s impulzom smerom toku. Pole je presne také vysoké ako hlavička iného dňa (44 px), aby dlaždice
+stáli v každom dni na tej istej výške. Ťuknutie na pole aj na scénu otvorí panel Elektrina teraz (s elektromerom).
+Číslo, ktoré appka pozná, je tam vždy, aj nulové („0,0“; `cisla` v modeli scény). Impulzy na vedení scény (výboj s chvostom) sú SMIL, nie CSS -
+pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru; v poli toku je impulz CSS a pri obmedzenom pohybe
+tiež ustúpi šípke. Bodka stavu merania je v hlavičke za miestom (na stred riadku),
 ťuknutie ukáže len bublinu, ktorej nadpis začína tou istou bodkou; `#tz-stav` je do prvého prekreslenia skrytý a `boot.js` ho pri chybe odkryje.
 
 ## Tlačidlo Späť

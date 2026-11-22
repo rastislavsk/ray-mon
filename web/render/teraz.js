@@ -13,7 +13,7 @@ import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { rezimIcon, tokIcon, vecIcon, weatherIcon } from './icons.js';
-import { cislaSvg, scenaSvg } from './teraz-scena.js';
+import { scenaSvg, tokPoleHtml } from './teraz-scena.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
 /** @typedef {import('../../shared/teraz.js').TerazModel} Model */
@@ -93,24 +93,35 @@ function renderHreben(h, dom) {
  * idú vždy v tomto poradí a pásik je aj tam, kde nie je čo ukázať (prázdny, drží miesto): dlaždice v rade zdieľajú
  * riadky mriežky, takže číslo aj pásik sú v nich na rovnakej výške, a odrážky majú vždy miesto na dva riadky,
  * takže sú všetky dlaždice rovnako vysoké. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
- * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `riadi` bodka stavu bojlera so zásuvkou,
- * `rezim` značka v rohu, kto bojler zapína. `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
+ * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `rezim` značka pri ikone, kto bojler zapína.
+ * Zapnutý spotrebič (beží, alebo bojler, ktorému zásuvka zapla relé) má zelenú ikonu a jemný obrys (`data-zapnuty`,
+ * docs/navrhy/teraz-pole-noc-bezi.html, 3A). `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
  * (docs/navrhy/teraz-dlazdice-stlpce.html, B): ikona vedľa čísla a jedna odrážka, mriežku riadkov nezdieľa.
  * @param {Dlazdica} d @param {string} [stlpec] @param {boolean} [pol]
  */
 const dlazdicaHtml = (d, stlpec = '', pol = false) =>
-    `<button type="button" class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''} data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''} data-vec="${d.id}">` +
-    `<span class="dl-ico"${d.riadi ? ` data-riadi="${d.riadi}"` : ''} aria-hidden="true">${vecIcon(d.id)}</span>` +
-    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimHtml(d.rezim)}` +
+    `<button type="button" class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''} data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''}` +
+    `${zapnuty(d) ? ' data-zapnuty' : ''} data-vec="${d.id}">` +
+    `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${rezimHtml(d.rezim)}</span>` +
+    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimSr(d.rezim)}` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%"`}></i>` +
     `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
     `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></button>`;
 
-/** Značka režimu bojlera v rohu dlaždice, pre čítačku slovom. @param {'appka' | 'rucne' | null | undefined} rezim */
-const rezimHtml = (rezim) =>
-    rezim
-        ? `<i class="dl-rz" data-rezim="${rezim}">${rezimIcon(rezim)}<span class="sr">, ${escapeHtml(TERAZ_BOJLER_TEXTS.rezim[rezim])}</span></i>`
-        : '';
+/**
+ * Zapnutý spotrebič: beží (zapísaný „Už beží“), alebo bojler, ktorému zásuvka zapla relé (to je zmerané).
+ * @param {Dlazdica} d
+ */
+const zapnuty = (d) => d.tone === 'bezi' || d.riadi === 'bezi';
+
+/**
+ * Značka režimu bojlera na kraji kruhu s ikonou (docs/navrhy/teraz-pole-noc-bezi.html): ruka (ručne), slnko (riadi appka).
+ * @param {'appka' | 'rucne' | null | undefined} rezim
+ */
+const rezimHtml = (rezim) => (rezim ? `<i class="dl-rz" data-rezim="${rezim}">${rezimIcon(rezim)}</i>` : '');
+
+/** Režim bojlera pre čítačku slovom - kruh s ikonou čítačka nečíta. @param {'appka' | 'rucne' | null | undefined} rezim */
+const rezimSr = (rezim) => (rezim ? `<span class="sr">, ${escapeHtml(TERAZ_BOJLER_TEXTS.rezim[rezim])}</span>` : '');
 
 /**
  * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri inom dni jeho hlavička, pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
@@ -321,27 +332,40 @@ function meranieToku(state) {
 }
 
 /**
- * Scéna toku energie (docs/navrhy/teraz-tok-energie.html): kresba, a po ťuknutí čísla v nej. Výkon panelov je
- * číslo karty (meranie, inak predpoveď), sieť a dom len z čerstvého merania elektromera. Bez predpovede scéna
- * nie je. `data-tok` hovorí obsluhe ťuknutia, že je čo ukázať v paneli Elektrina teraz.
+ * Scéna toku energie (docs/navrhy/teraz-tok-energie.html): len kresba, čísla sú v poli toku (renderTokPole). Výkon
+ * panelov je číslo karty (meranie, inak predpoveď), sieť a dom len z čerstvého merania elektromera. Bez predpovede
+ * scéna nie je (null). `data-tok` hovorí obsluhe ťuknutia, že je čo ukázať v paneli Elektrina teraz.
  * @param {import('../state.js').AppState} state @param {Model} m @param {Dom} dom
  */
 function renderScena(state, m, dom) {
     const ok = m.kind === 'ok';
     show(dom.tzScena, ok);
-    if (!ok) return;
+    if (!ok) return null;
     const siet = meranieToku(state)?.sietKw;
     const s = scenaModel({ vyrobaKw: m.vykon, odhad: m.odhadVykonu, sietKw: typeof siet === 'number' ? siet : null });
-    // `!!`: starý web/state.js z cache po nasadení pole tzCisla nemá (CLAUDE.md, Nasadenie a cache).
     const noc = m.pocasie?.noc === true;
     setHtml(dom.tzScenaKresba, scenaSvg(s, noc, oknaSvietia(noc, state.now, state.site.timezone)));
-    setHtml(dom.tzScenaCisla, cislaSvg(s, !!state.tzCisla));
     dom.tzScena.setAttribute('aria-label', s.popis);
     dom.tzScena.toggleAttribute('data-tok', !!s.siet);
+    return s;
 }
 
 /**
- * Panel Elektrina teraz (T3, otvorí ho druhé ťuknutie na scénu): panely → dom → stĺp, po vedeniach tečú bodky (rýchlosť podľa kW, pri odbere
+ * Pole toku energie pod pásom dní, len pri dnešku (docs/navrhy/teraz-pole-noc-bezi.html, 1A): stojí na mieste
+ * hlavičky iného dňa, takže dlaždice sú v každom dni na tej istej výške. Ťuknutie otvorí panel Elektrina teraz,
+ * keď je čo ukázať (meranie elektromera hovorí, kam tečie sieť), inak je tlačidlo vypnuté.
+ * @param {ReturnType<typeof scenaModel> | null} s @param {Model['co']} co @param {Dom} dom
+ */
+function renderTokPole(s, co, dom) {
+    const ukaz = !!s && !!co && !co.den;
+    show(dom.tzTok, ukaz);
+    if (!s || !ukaz) return;
+    setHtml(dom.tzTok, tokPoleHtml(s));
+    dom.tzTok.disabled = !s.siet;
+}
+
+/**
+ * Panel Elektrina teraz (T3, otvorí ho ťuknutie na scénu alebo na pole toku): panely → dom → stĺp, po vedeniach tečú bodky (rýchlosť podľa kW, pri odbere
  * od stĺpu k domu). Otvorený, kým je v stave tzChip 'tok' a meranie je čerstvé.
  * @param {import('../state.js').AppState} state @param {Dom} dom
  */
@@ -484,7 +508,7 @@ export function renderTeraz(state, dom) {
         { online: state.online, voice: state.voice, devices: spotrebice(state), den: state.tzDen ?? 0 },
     );
     renderPocasie(state, m, dom);
-    renderScena(state, m, dom);
+    const s = renderScena(state, m, dom);
     // Svitanie (index.html): krivka dňa beží, kým appka čaká na prvú predpoveď.
     show(dom.tzSvitanie, m.kind === 'loading');
     show(dom.tzSub, m.sub !== '');
@@ -506,6 +530,9 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskBtn, T.askBtn);
     renderHreben(m.co ? m.hreben : null, dom);
     renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler));
+    renderTokPole(s, m.co, dom);
+    // Dlaždice v noci na svetlom skle (docs/navrhy/teraz-pole-noc-bezi.html, 2B): tmavé sklo by na nočnej oblohe zmizlo.
+    dom.tzCo.toggleAttribute('data-noc', m.pocasie?.noc === true);
     // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
     // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
     dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
