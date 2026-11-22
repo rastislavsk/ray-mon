@@ -52,6 +52,9 @@ Ručný režim (prepínač v paneli Bojler dnes, `/bojler-rezim`, kľúč `br:` 
 ale relé neprepne ani pri tichu; Worker mu vtedy vráti `zapni` rovné stavu relé, aby nič neprepol ani starší skript.
 Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má dlaždicu so stavom a panel Bojler dnes
 (`shared/teraz-bojler.js`), otvorený tým istým krokom `tzVec` ako detail spotrebiča.
+Stav bojlera chodí s meraním Huawei len raz za 5 minút, preto sa appka medzi meraniami pýta každú minútu na
+`/bojler-stav` (len stav z objektu, na Huawei nejde nič; `cerstvyBojler` vo `web/refresh.js`) a push o zmene
+ohrevu (`OZNAMENIA.bojler`) pošle `sw.js` aj otvoreným oknám, ktoré si stav stiahnu hneď.
 
 ## Spotrebič beží
 

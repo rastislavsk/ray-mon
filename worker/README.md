@@ -19,8 +19,10 @@ inak navzájom odhlasovali. Objekt drží reláciu (token platí 30 minút), čo
 posledné meranie a stav bojlera; heslo nie, to prichádza vždy v pečati. `POST /bojler-pecat` vydá
 z pečate telefónu menšiu pečať do skriptu zásuvky Shelly, `POST /bojler` je dopyt toho skriptu
 každú minútu (`{ pecat, rele, w, e, zapKw, vypKw }` → `{ zapni }`). Rozhodnutie je v `shared/bojler.js`,
-skript v `shared/bojler-skript.js`, návrh v `docs/navrhy/bojler-prebytky.html`. Bezplatný plán
-Durable Objects dovolí 100 000 dopytov denne; zásuvka a telefón ich minú asi 3 000.
+skript v `shared/bojler-skript.js`, návrh v `docs/navrhy/bojler-prebytky.html`. `POST /bojler-stav` s `{ pecat }`
+vráti appke posledné hlásenie zásuvky (`{ bojler }`) bez merania – otvorená appka sa pýta každú minútu, aby dlaždica
+Bojler nečakala na meranie Huawei (raz za 5 minút). Bezplatný plán Durable Objects dovolí 100 000 dopytov denne;
+zásuvka a telefón ich minú asi 3 000, každá hodina otvorenej appky pridá 60.
 
 **Radar:** `GET /radar/<snímka>?b=<bloky>` prepošle kúsky súboru OPERA pre kartu Radar (`src/radar.js`). Nič nepočíta
 ani neukladá, odpovede drží cache Cloudflare. Bezplatný plán má 10 ms procesora na požiadavku.

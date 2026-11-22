@@ -2,15 +2,16 @@
 // appka, takže dáta, meranie aj denník výroby
 // idú v oboch tou istou cestou.
 
-import { REFRESH, STALE_PV_MS } from '../shared/config.js';
+import { OZNAMENIA, REFRESH, STALE_PV_MS } from '../shared/config.js';
 import { recordDay } from '../shared/daylog.js';
 import { denFaza, denTrieda, recordRanna } from '../shared/den-trieda.js';
 import { minutesToTimeStr } from '../shared/format.js';
 import { neplati, odmietnute, znovaDue } from '../shared/pristup.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { doplnSucty, suctyZdroj } from '../shared/sucty.js';
-import { dalsiRytmus, pvDue, rytmusOf } from '../shared/zdroje.js';
-import { keptForecast, loadData } from './data.js';
+import { bojlerRiadeny } from '../shared/teraz-bojler.js';
+import { dalsiRytmus, pvDue, rytmusOf, rytmusSBojlerom } from '../shared/zdroje.js';
+import { keptForecast, loadData, stavBojlera } from './data.js';
 import {
     loadOdmietnutie,
     loadRytmus,
@@ -178,7 +179,24 @@ async function stiahni(s, settings, skus) {
     if (due && zdroj) saveRytmus(dalsiRytmus(rytmus, zdroj, new Date(), null));
     const result = await loadData({ ...settings, zdroj: due ? zdroj : null }, new Date());
     if (due && zdroj && result.pv) saveRytmus(dalsiRytmus(rytmus, zdroj, new Date(), result.pv, result.bojler));
-    return { due, rytmus, result };
+    const cerstvy = due ? {} : await cerstvyBojler(zdroj, s.bojler ?? rytmus?.bojler, new Date());
+    return { due, rytmus, result, cerstvy };
+}
+
+/**
+ * Stav bojlera, keď sa appka na meranie nepýtala. Zásuvka sa Workeru hlási každú minútu a oznámenie o zmene ohrevu
+ * ide hneď, meranie Huawei (aj so stavom bojlera) len raz za 5 minút - dlaždica Bojler by inak za oznámením meškala.
+ * Len kým zásuvka bojler riadi; nový stav ide aj do rytmu, aby ho videla druhá appka a obnovená stránka.
+ * @param {import('../shared/zdroje.js').Zdroj | null} zdroj @param {import('../shared/bojler.js').BojlerInfo | null | undefined} bojler
+ * @param {Date} now @returns {Promise<Partial<Pick<RefreshState, 'bojler'>>>}
+ */
+async function cerstvyBojler(zdroj, bojler, now) {
+    if (!zdroj || !bojlerRiadeny(bojler ?? null, now)) return {};
+    const novy = (await stavBojlera(zdroj.pecat))?.bojler;
+    if (!novy) return {};
+    const rytmus = rytmusSBojlerom(loadRytmus(), zdroj, novy);
+    if (rytmus) saveRytmus(rytmus);
+    return { bojler: novy };
 }
 
 /**
@@ -201,7 +219,7 @@ export function createRefresh(store) {
             if (forecast) store.setState({ forecast });
         }
         const stiahnute = await stiahni(store.get(), { site, plant, zdroj }, skus);
-        const { due, rytmus } = stiahnute;
+        const { due, rytmus, cerstvy } = stiahnute;
         const result = { ...stiahnute.result, pv: sSuctami(stiahnute.result.pv, zdroj, site) };
         // Kým sa dáta sťahovali, používateľ mohol uložiť inú elektráreň. Tieto patria k starej.
         const teraz = store.get();
@@ -217,8 +235,8 @@ export function createRefresh(store) {
         // Snímka predpovede pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html) - raz za deň.
         zapisSnimkuPredpovede(result.forecast, localDateKey(now, site.timezone), localMinutes(now, site.timezone));
         const pecat = result.pecat ? newPecat(teraz, result.pecat) : {};
-        // Stav bojlera prichádza s čerstvým meraním; bez dopytu ho prinesie rytmus (bezDopytu).
-        const bojler = result.pv && due ? { bojler: result.bojler } : {};
+        // Stav bojlera prichádza s čerstvým meraním; bez dopytu z /bojler-stav (cerstvyBojler), inak z rytmu (bezDopytu).
+        const bojler = result.pv && due ? { bojler: result.bojler } : cerstvy;
         // Čas dokončeného pokusu: podľa neho sa posudzuje, či meranie mlčí (pvFreshness) - kým sa
         // appka po návrate z pozadia neopýta, výpadok nehlási.
         store.setState({ forecast: result.forecast, loading: false, now, pokusAt: now.getTime(), dayLog, ...pecat, ...meranie, ...bojler });
@@ -259,11 +277,13 @@ function zapamatajRannu(store) {
 
 /**
  * Hodiny každú minútu, obnova dát a návrat z pozadia. V skrytej karte sa nerobí nič -
- * po návrate ju dobehne visibilitychange.
+ * po návrate ju dobehne visibilitychange. Oznámenie o zmene ohrevu bojlera (správa zo sw.js) obnoví
+ * dáta hneď, aby dlaždica Bojler nečakala na ďalšiu minútu.
  * @param {RefreshStore} store @param {() => Promise<void>} refresh
  */
 export function startTicks(store, refresh) {
     setInterval(() => !document.hidden && store.setState({ now: new Date() }), REFRESH.clockMs);
     setInterval(() => !document.hidden && refresh(), REFRESH.dataMs);
     document.addEventListener('visibilitychange', () => !document.hidden && refresh());
+    navigator.serviceWorker?.addEventListener('message', (e) => e.data === OZNAMENIA.bojler && !document.hidden && refresh());
 }

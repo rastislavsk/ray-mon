@@ -10,6 +10,7 @@ import {
     WEATHER_KEEP_MS,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_REZIM_URL,
+    WORKER_BOJLER_STAV_URL,
     WORKER_HISTORIA_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
@@ -126,6 +127,22 @@ export async function ulozRezimBojlera(pecat, rucne, fetchImpl = fetch) {
         const res = await postWorker(WORKER_BOJLER_REZIM_URL, JSON.stringify({ pecat, rucne }), fetchImpl);
         const body = res.ok ? await res.json() : null;
         return isObj(body) && body.ok === true ? { bojler: bojlerInfoZ(body.bojler) } : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Posledné hlásenie zásuvky s bojlerom (Worker `/bojler-stav`) bez merania: `{ bojler }` (null, keď sa zásuvka ešte
+ * neozvala), alebo null, keď ho Worker nedá.
+ * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ bojler: import('../shared/bojler.js').BojlerInfo | null } | null>}
+ */
+export async function stavBojlera(pecat, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_BOJLER_STAV_URL, JSON.stringify({ pecat }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) && 'bojler' in body ? { bojler: bojlerInfoZ(body.bojler) } : null;
     } catch {
         return null;
     }

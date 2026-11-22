@@ -127,9 +127,18 @@ function obsah(data) {
     }
 }
 
+/**
+ * Zmena ohrevu bojlera: okrem oznámenia aj správa každému oknu appky (aj tomu, ktoré tento service worker neovláda) -
+ * otvorená appka si hneď stiahne stav a dlaždica Bojler sa prekreslí spolu s oznámením (web/refresh.js).
+ */
+async function povedzOknam() {
+    const okna = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const okno of okna) okno.postMessage(OZNAMENIA.bojler);
+}
+
 self.addEventListener('push', (e) => {
     const d = obsah(e.data);
-    e.waitUntil(d ? ukazText(d) : ukaz());
+    e.waitUntil(d ? Promise.all([ukazText(d), d.tag === OZNAMENIA.bojler ? povedzOknam() : null]) : ukaz());
 });
 self.addEventListener('pushsubscriptionchange', (e) => e.waitUntil(obnovOdber(e).catch(() => null)));
 self.addEventListener('notificationclick', (e) => {
