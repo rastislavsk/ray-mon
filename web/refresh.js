@@ -26,6 +26,7 @@ import {
     saveSucty,
 } from './storage.js';
 import { obnovUcenie } from './ucenie.js';
+import { zladBehy } from './bezi-spolocne.js';
 
 /**
  * Polia stavu, ktoré obnova číta a zapisuje.
@@ -46,6 +47,7 @@ import { obnovUcenie } from './ucenie.js';
  *   ranna: import('../shared/den-trieda.js').RannaTrieda | null,
  *   bojler: import('../shared/bojler.js').BojlerInfo | null,
  *   ucenie: import('../shared/ucenie.js').Naucene | null,
+ *   bezi: import('../shared/bezi.js').Zapis[],
  * }} RefreshState
  * @typedef {{ get: () => RefreshState, setState: (patch: Partial<RefreshState>) => void }} RefreshStore
  */
@@ -243,6 +245,8 @@ export function createRefresh(store) {
         zapamatajRannu(store);
         // Učenie z histórie (web/ucenie.js): históriu z Workera stiahne raz za deň, model prepočíta.
         void obnovUcenie(store);
+        // Behy „Už beží“ z ostatných telefónov domácnosti (web/bezi-spolocne.js).
+        void zladBehy(store);
     };
     return ({ skus = false } = {}) => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.

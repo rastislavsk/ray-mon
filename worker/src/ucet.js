@@ -12,12 +12,14 @@
 // telefónov, ktoré si ich zapli - pri každej zmene ohrevu im pošle push s textom. Pre učenie Plánu dňa
 // (docs/navrhy/plan-dna-ucenie.html) históriu: z každého nového merania hodinové súhrny výroby a spotreby domu
 // bez bojlera a na konci dňa bojlera (shared/historia.js), najviac HISTORIA.dni dní. Telefón si ju stiahne cez /historia.
+// Behy „Už beží“ dneška, ktoré si telefóny domácnosti zdieľajú (docs/navrhy/bezi-spolocne.html, shared/bezi.js), cez /bezi.
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
 
 import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zmenaOhrevu } from '../../shared/bojler.js';
+import { zapisZmeny } from '../../shared/bezi.js';
 import { domBezBojlera, sBojlerom, zapisMeranie } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
 import { bojlerZmenaText } from '../../shared/messages-oznamenia.js';
@@ -75,7 +77,9 @@ export class UcetHuawei {
                           ? await this.oznam(req)
                           : path === '/historia'
                             ? await this.historia(req)
-                            : await this.pv(req.pristup, now);
+                            : path === '/bezi'
+                              ? await this.behy(req)
+                              : await this.pv(req.pristup, now);
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -165,6 +169,19 @@ export class UcetHuawei {
     async historia(req) {
         const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${String(req.pristup.plant ?? '')}`));
         return { dni: dni ?? [] };
+    }
+
+    /**
+     * Spoločné behy „Už beží“ (shared/bezi.js): zmeny od telefónu zapíše, dni pred `d` zahodí a vráti dnešné behy
+     * všetkých telefónov. Bez zmien len číta - zapisuje sa, len keď sa niečo zmenilo.
+     * @param {{ pristup: Record<string, unknown>, d: string, zmeny: unknown }} req
+     */
+    async behy(req) {
+        const kluc = `bz:${String(req.pristup.plant ?? '')}`;
+        const stare = await this.storage.get(kluc);
+        const bezi = zapisZmeny(stare, req.zmeny, req.d);
+        if (JSON.stringify(bezi) !== JSON.stringify(stare ?? [])) await this.storage.put(kluc, bezi);
+        return { bezi };
     }
 
     /**

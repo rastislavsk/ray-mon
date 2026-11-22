@@ -52,6 +52,10 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 - **Učenie aj bez Huawei Northbound** (19. 11. 2026): návrh `docs/navrhy/plan-dna-ucenie.html` počítal s tým, že pri
   kiosku FusionSolar sa appka naučí aspoň opravu predpovede z krivky dňa v telefóne. Zatiaľ sa učí len z histórie
   z Workera, ktorú má iba Northbound. Doplniť: telefón si k snímke predpovede pripíše výrobu po hodinách z krivky dňa.
+- **Spoločné behy spotrebičov aj bez Huawei Northbound** (22. 11. 2026): „Už beží“ sa medzi telefónmi
+  domácnosti zdieľa cez objekt účtu Huawei (`UcetHuawei`, možnosť A). Pri inom zdroji merania (kiosk FusionSolar,
+  iné meniče) taký objekt nie je a každý telefón si behy drží sám. Doplniť, napr. samostatnú „domácnosť“
+  s kódom na spárovanie (možnosť B: vlastný Durable Object, párovanie cez QR).
 - **Ranné oznámenie nepozná učenie ani bojler** (19. 11. 2026): service worker nemá prístup k úložisku telefónu,
   plán v rannom oznámení ide bez naučenej predpovede a bez bojlera.
 

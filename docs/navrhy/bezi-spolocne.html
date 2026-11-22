@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Spoločné behy spotrebičov na telefónoch domácnosti</title>
+        <style>
+            /* Zmrazený snímok rozhodnutia (viď README v tomto priečinku). Zmena v appke nie je vidieť (2a), preto bez snímok. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 860px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+            }
+            h2 {
+                margin-top: 36px;
+            }
+            .moznost {
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 4px 18px;
+                margin: 14px 0;
+            }
+            .zvolene {
+                border-color: var(--green);
+            }
+            .zvolene h3::after {
+                content: ' – zvolené';
+                color: var(--green);
+            }
+            p.dim,
+            li.dim {
+                color: var(--dim);
+            }
+            code {
+                font-size: 0.92em;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Spoločné behy spotrebičov na telefónoch domácnosti</h1>
+            <p class="dim">22. 11. 2026. Karta Teraz, „Už beží“ (docs/navrhy/teraz-bezi-spotrebic.html).</p>
+
+            <h2>Otázka</h2>
+            <p>
+                Keď na svojom telefóne zapíšem, že práčka beží, má sa to dozvedieť aj druhý telefón v tej istej domácnosti a prepočítať si
+                Plán dňa. Doteraz bol zápis len v telefóne (<code>bezi-v1</code>).
+            </p>
+            <p>
+                Plán dňa netreba synchronizovať ako taký: počíta sa deterministicky (<code>shared/plan-dna.js</code>), takže z tých istých
+                behov vyjde ten istý plán. Zdieľajú sa vstupy, nie výsledok.
+            </p>
+
+            <h2>Kde</h2>
+            <div class="moznost zvolene">
+                <h3>A – Durable Object účtu Huawei</h3>
+                <p>
+                    Telefóny prihlásené na ten istý účet Huawei Northbound sa už stretávajú v objekte <code>UcetHuawei</code>. Behy dneška
+                    tam ležia pod kľúčom <code>bz:</code>. Druhý telefón dostane prístup cez odkaz Zdieľať appku s meraním.
+                </p>
+                <p class="dim">Zadarmo, bez novej migrácie. Len pre Huawei Northbound; ostatné zdroje sú v docs/to do later.md.</p>
+            </div>
+            <div class="moznost">
+                <h3>B – Samostatná domácnosť s kódom</h3>
+                <p class="dim">Nový Durable Object, párovanie cez QR. Nezávisí od zdroja merania, ale je to najviac práce. Odložené.</p>
+            </div>
+            <div class="moznost">
+                <h3>C – Poslať beh odkazom</h3>
+                <p class="dim">Bez servera, ale ručne a bez zrušenia či posunu. Zamietnuté.</p>
+            </div>
+            <div class="moznost">
+                <h3>D – Rozpoznať beh z elektromera</h3>
+                <p class="dim">Bez ťukania, ale nespoľahlivé (meranie raz za 5 minút, podobné odbery). Zamietnuté.</p>
+            </div>
+
+            <h2>Ako rýchlo</h2>
+            <div class="moznost zvolene">
+                <h3>1a – pri obnove dát a po návrate do appky</h3>
+                <p>
+                    Appka sa pýta <code>POST /bezi</code> pri každej obnove dát: každú minútu, kým je otvorená, a hneď po návrate do
+                    popredia. Pri ťuknutí na „Už beží“, „Nebeží“ či zmene času pošle zmenu hneď.
+                </p>
+            </div>
+            <div class="moznost">
+                <h3>1b – push</h3>
+                <p class="dim">
+                    Tichý push Chrome nedovolí (<code>userVisibleOnly: true</code>), každý push musí ukázať oznámenie. Pribudol by prepínač
+                    a oznámenie pri každom ťuknutí. Zamietnuté; pôvodná ponuka „tichý push“ bola chybná.
+                </p>
+            </div>
+
+            <h2>Viditeľnosť</h2>
+            <div class="moznost zvolene">
+                <h3>2a – nič nové</h3>
+                <p>Dlaždica druhého telefónu začne ukazovať, že spotrebič beží, a plán sa posunie. Appka nevie, kto ťukol.</p>
+            </div>
+
+            <h2>Pravidlá zladenia</h2>
+            <ul>
+                <li>
+                    Telefón posiela behy spotrebiča v ten deň celé (<code>Zmena</code>). Worker nimi nahradí behy toho spotrebiča a dni pred
+                    dneškom zahodí (<code>zapisZmeny</code> v <code>shared/bezi.js</code>).
+                </li>
+                <li>
+                    Zmenu, ktorú Worker nepotvrdil (bez siete), si telefón pamätá (<code>bezi-caka-v1</code>) a pošle ju s ďalším dopytom.
+                    Dovtedy ju odpoveď Workera neprepíše (<code>prevezmi</code>).
+                </li>
+                <li>Odpoveď staršieho dopytu, ktorá príde po novšom, sa zahodí.</li>
+                <li class="dim">Keď dva telefóny zmenia ten istý spotrebič v tej istej minúte, platí neskoršia zmena.</li>
+                <li class="dim">
+                    Oznámenie o konci programu objednáva telefón, ktorý ťukol. Keď beh zruší či predĺži druhý telefón, oznámenie prvého
+                    ostane v pôvodnom čase.
+                </li>
+                <li class="dim">Časy behov ležia v objekte nešifrované, ako meranie a stav bojlera.</li>
+            </ul>
+        </main>
+    </body>
+</html>

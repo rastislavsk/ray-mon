@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { ZDIELANIE } from '../../shared/config.js';
 import {
+    handleBezi,
     handleBojler,
     handleBojlerOznam,
     handleBojlerPecat,
@@ -1308,4 +1309,35 @@ test('história: Durable Object skladá hodiny z meraní a deň bojlera, telefó
     assert.equal((await handleHistoria(post('/historia', 'nie json'), env, NOW)).status, 400);
     assert.equal((await handleHistoria(post('/historia', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
     assert.equal((await handleRequest(post('/historia', JSON.stringify({ pecat: telefon })), env, po(14 * 60))).status, 200);
+});
+
+test('spoločné behy: telefón zapíše „Už beží“, druhý telefón ho dostane cez /bezi, staršie dni zmiznú', async () => {
+    const { env, telefon } = await sBojlerom();
+    const D = '2026-09-05';
+    const bezi = async (/** @type {object} */ telo) => handleBezi(post('/bezi', JSON.stringify({ pecat: telefon, ...telo })), env, po(1));
+    assert.deepEqual(await (await bezi({ d: D })).json(), { bezi: [] }, 'zatiaľ nič');
+    const beh = { id: 'pracka', d: D, m: 600, k: 720 };
+    const vcera = { id: 'umyvacka', d: '2026-09-04', m: 600, k: 720 };
+    assert.deepEqual(await (await bezi({ d: '2026-09-04', zmeny: [{ id: 'umyvacka', d: '2026-09-04', behy: [vcera] }] })).json(), {
+        bezi: [vcera],
+    });
+    assert.deepEqual(
+        await (await bezi({ d: D, zmeny: [{ id: 'pracka', d: D, behy: [beh] }] })).json(),
+        { bezi: [beh] },
+        'včerajšok zmizol',
+    );
+    // Druhý telefón (iná pečať toho istého účtu) len číta.
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = /** @type {any} */ (await otvor(key, telefon, NOW));
+    const druhy = await zapecat(key, { sposob: 'huawei-northbound', pristup: { ...obsah.pristup, tokenAt: 0 } });
+    const r = await handleRequest(post('/bezi', JSON.stringify({ pecat: druhy, d: D })), env, po(2));
+    assert.deepEqual(await r.json(), { bezi: [beh] });
+    // „Nebeží“ z druhého telefónu.
+    await handleBezi(post('/bezi', JSON.stringify({ pecat: druhy, d: D, zmeny: [{ id: 'pracka', d: D, behy: [] }] })), env, po(3));
+    assert.deepEqual(await (await bezi({ d: D })).json(), { bezi: [] });
+    // Bez dňa, so zdieľaným odkazom či bez Durable Objects nie.
+    assert.equal((await bezi({ d: '5. 9.' })).status, 400);
+    const zdielana = await zapecat(key, { sposob: 'huawei-northbound', pristup: obsah.pristup, platiDo: po(60).getTime() });
+    assert.equal((await handleBezi(post('/bezi', JSON.stringify({ pecat: zdielana, d: D })), env, po(1))).status, 400);
+    assert.equal((await handleBezi(post('/bezi', JSON.stringify({ pecat: telefon, d: D })), ENV, NOW)).status, 503);
 });
