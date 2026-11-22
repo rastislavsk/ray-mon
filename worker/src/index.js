@@ -19,6 +19,7 @@
 // POST /bojler-stav: pečať telefónu -> posledné hlásenie zásuvky s bojlerom, bez merania (worker/src/ucet.js).
 // POST /bojler-oznamenia: telefón si zapne či vypne oznámenia o zapnutí a vypnutí bojlera (worker/src/ucet.js).
 // POST /historia: pečať telefónu -> história elektrárne pre učenie Plánu dňa (worker/src/ucet.js, shared/historia.js).
+// POST /bezi: pečať telefónu, dnešok a zmeny „Už beží“ -> dnešné behy všetkých telefónov domácnosti (worker/src/ucet.js).
 //
 // Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
 // navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
@@ -28,6 +29,7 @@ import {
     WORKER_BOJLER_PECAT_PATH,
     WORKER_BOJLER_OZNAM_PATH,
     WORKER_BOJLER_REZIM_PATH,
+    WORKER_BEZI_PATH,
     WORKER_BOJLER_STAV_PATH,
     WORKER_HISTORIA_PATH,
     WORKER_KONIEC_PATH,
@@ -398,6 +400,28 @@ export async function handleHistoria(request, env, now) {
     }
 }
 
+/** Dátum YYYY-MM-DD. */
+const DATUM = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * POST /bezi: `{ pecat, d, zmeny }` od appky (pečať telefónu) -> `{ bezi }`, dnešné behy „Už beží“ všetkých telefónov
+ * domácnosti (docs/navrhy/bezi-spolocne.html). `d` je dnešok telefónu, `zmeny` behy spotrebičov, ktoré sa na ňom zmenili
+ * (shared/bezi.js). Len Huawei Northbound - iné zdroje Durable Object nemajú.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleBezi(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    if (!obsah || typeof req.d !== 'string' || !DATUM.test(req.d)) return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/bezi', now, { d: req.d, zmeny: req.zmeny ?? [] });
+        return json(200, { bezi: r.bezi });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
 /** Odpoveď na uloženie odberu či pripomienky podľa stavu. @param {number} status */
 const oznamOdpoved = (status) => json(status, status === 200 ? { ok: true } : { chyba: status === 400 ? 'udaje' : 'server' });
 
@@ -429,6 +453,8 @@ const CESTY = {
     [WORKER_KONIEC_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozKoniec(body, env, now), request) },
     [WORKER_BOJLER_OZNAM_PATH]: { limit: true, run: handleBojlerOznam },
     [WORKER_HISTORIA_PATH]: { limit: true, run: handleHistoria },
+    // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
+    [WORKER_BEZI_PATH]: { limit: false, run: handleBezi },
     [WORKER_TRASY_PATH]: {
         limit: true,
         run: async (request, env, now, fetchImpl) => {

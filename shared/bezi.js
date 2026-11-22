@@ -97,3 +97,61 @@ export function zvysok(list, id, d, o, nowMin) {
         return { ...z, k, m: Math.max(0, Math.min(nowMin, k - dlzka(id))) };
     });
 }
+
+// Spoločné behy telefónov domácnosti (docs/navrhy/bezi-spolocne.html): telefón po zmene pošle Workeru behy toho
+// spotrebiča v ten deň (Zmena), Worker ich zapíše do spoločného zoznamu (zapisZmeny) a vráti ho. Telefón ho prevezme
+// (prevezmi) okrem spotrebičov, ktorých zmenu Worker ešte nepotvrdil (Caka) - tie ostanú z telefónu a pôjdu znova.
+
+/**
+ * Zmena jedného spotrebiča: všetky jeho behy v deň `d` tak, ako ich má telefón.
+ * @typedef {{ id: string, d: string, behy: Zapis[] }} Zmena
+ */
+
+/** Spotrebič, ktorého zmenu Worker ešte nepotvrdil. @typedef {{ id: string, d: string }} Caka */
+
+/** Behy spotrebiča `id` v deň `d`. @param {Zapis[]} list @param {string} id @param {string} d */
+export const behyVeci = (list, id, d) => list.filter((z) => z.id === id && z.d === d);
+
+/** Je to spotrebič a deň, ktoré sa dajú zapísať? @param {unknown} id @param {unknown} d @returns {boolean} */
+const vecDna = (id, d) => typeof id === 'string' && daSaZapisat(id) && typeof d === 'string' && DATUM.test(d);
+
+/**
+ * Nepotvrdené zmeny z úložiska telefónu; čo nesedí, vypadne, každý spotrebič a deň raz.
+ * @param {unknown} raw @returns {Caka[]}
+ */
+export function parseCaka(raw) {
+    if (!Array.isArray(raw)) return [];
+    /** @type {Caka[]} */ const out = [];
+    for (const x of raw) {
+        if (!isObj(x) || !vecDna(x.id, x.d) || out.some((c) => c.id === x.id && c.d === x.d)) continue;
+        out.push({ id: /** @type {string} */ (x.id), d: /** @type {string} */ (x.d) });
+    }
+    return out;
+}
+
+/**
+ * Worker: zmeny od telefónu (nedôveryhodné) do spoločného zoznamu. Behy spotrebiča v deň zmeny nahradí behmi zo zmeny,
+ * dni pred `d` (dnešok telefónu) zahodí. Najviac jedna zmena na spotrebič - viac ich telefón neposiela.
+ * @param {unknown} list doterajší spoločný zoznam @param {unknown} zmeny @param {string} d @returns {Zapis[]}
+ */
+export function zapisZmeny(list, zmeny, d) {
+    let out = parseBezi(list);
+    for (const z of Array.isArray(zmeny) ? zmeny.slice(0, BEZI.veci.length) : []) {
+        if (!isObj(z) || !vecDna(z.id, z.d)) continue;
+        const id = /** @type {string} */ (z.id);
+        const den = /** @type {string} */ (z.d);
+        out = [...out.filter((b) => !(b.id === id && b.d === den)), ...behyVeci(parseBezi(z.behy), id, den)];
+    }
+    return parseBezi(out.filter((b) => b.d >= d));
+}
+
+/**
+ * Telefón: spoločné behy dňa `d` od Workera (nedôveryhodné). Spotrebiče, ktorých zmenu Worker ešte nepotvrdil (`caka`),
+ * ostanú tak, ako ich má telefón.
+ * @param {Zapis[]} lokalne @param {unknown} spolocne @param {Caka[]} caka @param {string} d @returns {Zapis[]}
+ */
+export function prevezmi(lokalne, spolocne, caka, d) {
+    const moje = new Set(caka.filter((c) => c.d === d).map((c) => c.id));
+    const zWorkera = parseBezi(spolocne).filter((z) => z.d === d && !moje.has(z.id));
+    return parseBezi([...zWorkera, ...lokalne.filter((z) => z.d === d && moje.has(z.id))]);
+}

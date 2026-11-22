@@ -65,6 +65,10 @@ na ten deň. Práčke a sušičke človek nastaví zvyšok programu z displeja (
 Za deň môže spotrebič bežať viackrát: kým beží, plán ho nerozvrhuje (`behy` v `shared/plan-dna.js`) a jeho odber si berie
 z rozpočtu; čo dobehlo, plán ponúkne znova a sušička suší pranie, ktoré ešte nesušila (`mokre`). Bežiaci spotrebič má vlastnú
 dlaždicu (`bezi`), dobehnutý dlaždicu s ďalším časom a odrážkou „dnes už 1×“. Overiť to appka nevie – je to na slovo.
+Pri Huawei Northbound si behy telefóny domácnosti zdieľajú (`docs/navrhy/bezi-spolocne.html`, A + 1a + 2a, 22. 11. 2026):
+zmena ide hneď na `POST /bezi` do objektu `UcetHuawei` (kľúč `bz:`), dnešné behy všetkých telefónov si appka berie pri každej
+obnove dát (`web/bezi-spolocne.js`). Zmena, ktorú Worker nepotvrdil, čaká v `bezi-caka-v1` a odpoveď ju neprepíše.
+Tichý push Chrome nedovolí (každý push ukáže oznámenie), preto žiadny push. Ostatné zdroje: `docs/to do later.md`.
 Oznámenie o konci (`web/koniec.js`, `POST /koniec`) posiela Durable Object `Budik` alarmom presne v čase konca; text skladá appka
 (`koniecNotice`) a Worker ho šifruje pre telefón (RFC 8291, `zasifruj` vo `worker/src/webpush.js`). Bojler oznamuje každú zmenu
 ohrevu (`zmenaOhrevu` v `shared/bojler.js`) telefónom, ktoré si to zaplí v paneli Bojler dnes (`POST /bojler-oznamenia`).

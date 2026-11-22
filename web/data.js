@@ -8,6 +8,7 @@ import {
     TIMEOUT,
     WEATHER_CACHE_MS,
     WEATHER_KEEP_MS,
+    WORKER_BEZI_URL,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_REZIM_URL,
     WORKER_BOJLER_STAV_URL,
@@ -111,6 +112,22 @@ export async function stiahniHistoriu(pecat, fetchImpl = fetch) {
         const res = await postWorker(WORKER_HISTORIA_URL, JSON.stringify({ pecat }), fetchImpl);
         const body = res.ok ? await res.json() : null;
         return isObj(body) && Array.isArray(body.dni) ? parseHistoria(body.dni) : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Spoločné behy „Už beží“ domácnosti (Worker `/bezi`, docs/navrhy/bezi-spolocne.html): pošle zmeny tohto telefónu
+ * a vráti dnešné behy všetkých telefónov (nedôveryhodné, prečistí shared/bezi.js), alebo null, keď to nevyšlo.
+ * @param {string} pecat zapečatený prístup tejto appky @param {string} d dnešok @param {import('../shared/bezi.js').Zmena[]} zmeny
+ * @param {typeof fetch} [fetchImpl] @returns {Promise<unknown[] | null>}
+ */
+export async function spolocneBehy(pecat, d, zmeny, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_BEZI_URL, JSON.stringify({ pecat, d, zmeny }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) && Array.isArray(body.bezi) ? body.bezi : null;
     } catch {
         return null;
     }

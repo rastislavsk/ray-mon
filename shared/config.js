@@ -637,7 +637,9 @@ export const BOJLER_STORAGE_KEY = 'bojler-v1';
  * bojler riadi zásuvka a auto zatiaľ nie. Pri `zvysok` (práčka, sušička - ukazujú ho na displeji) sa appka pýta, koľko
  * programu zostáva: hodiny po jednej, minúty po `krokMin`, zvyšok od `minZvysokMin` do `maxZvysokMin`. Umývačka
  * zvyšok neukazuje: `posunMin` je, o koľko posunie čas zapnutia jedno ťuknutie na − či +.
- * Zápis patrí telefónu a platí len v ten deň; do odkazu s nastavením nejde.
+ * Zápis platí len v ten deň a do odkazu s nastavením nejde. Pri Huawei Northbound ho telefóny domácnosti zdieľajú cez
+ * Durable Object účtu (WORKER_BEZI_PATH, docs/navrhy/bezi-spolocne.html); zmenu, ktorú Worker ešte nepotvrdil, si telefón
+ * pamätá v BEZI_CAKA_STORAGE_KEY a pošle ju znova.
  */
 export const BEZI = {
     veci: ['pracka', 'umyvacka', 'susicka'],
@@ -648,6 +650,7 @@ export const BEZI = {
     maxZvysokMin: 360,
 };
 export const BEZI_STORAGE_KEY = 'bezi-v1';
+export const BEZI_CAKA_STORAGE_KEY = 'bezi-caka-v1';
 
 /**
  * Zber histórie pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html, shared/historia.js). Worker si v Durable
@@ -708,6 +711,7 @@ export const STORAGE_KEYS = [
     DOMA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
     BEZI_STORAGE_KEY,
+    BEZI_CAKA_STORAGE_KEY,
     BOJLER_OZNAM_STORAGE_KEY,
     PREDPOVED_HIST_STORAGE_KEY,
     BEHY_HIST_STORAGE_KEY,
@@ -821,6 +825,12 @@ export const WORKER_BOJLER_STAV_URL = new URL(WORKER_BOJLER_STAV_PATH, WORKER_UR
 /** História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. */
 export const WORKER_HISTORIA_PATH = '/historia';
 export const WORKER_HISTORIA_URL = new URL(WORKER_HISTORIA_PATH, WORKER_URL).href;
+/**
+ * Spoločné behy „Už beží“ telefónov domácnosti (docs/navrhy/bezi-spolocne.html), v Durable Objecte účtu Huawei.
+ * Appka sa pýta pri každej obnove dát (každú minútu a po návrate do appky) a pošle aj nepotvrdené zmeny.
+ */
+export const WORKER_BEZI_PATH = '/bezi';
+export const WORKER_BEZI_URL = new URL(WORKER_BEZI_PATH, WORKER_URL).href;
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 

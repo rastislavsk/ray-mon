@@ -7,6 +7,7 @@ import {
     ADRESA_SESSION_KEY,
     BEHY_HIST_STORAGE_KEY,
     BEZI_STORAGE_KEY,
+    BEZI_CAKA_STORAGE_KEY,
     BOJLER_OZNAM_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     DOMA_STORAGE_KEY,
@@ -32,7 +33,7 @@ import {
     VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
-import { parseBezi } from '../shared/bezi.js';
+import { parseBezi, parseCaka } from '../shared/bezi.js';
 import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parsePredpovedHist, pridajBehy, snimkaPredpovede } from '../shared/historia.js';
@@ -328,6 +329,16 @@ export function saveBezi(list, today) {
     const hist = readJson(BEHY_HIST_STORAGE_KEY, parseBezi, /** @type {import('../shared/bezi.js').Zapis[]} */ ([]));
     write(BEHY_HIST_STORAGE_KEY, JSON.stringify(pridajBehy(hist, list, today)));
     return write(BEZI_STORAGE_KEY, JSON.stringify(list));
+}
+
+/** Spotrebiče, ktorých zmenu „Už beží“ Worker ešte nepotvrdil (shared/bezi.js); bez úložiska nič. @returns {import('../shared/bezi.js').Caka[]} */
+export function loadBeziCaka() {
+    return readJson(BEZI_CAKA_STORAGE_KEY, parseCaka, []);
+}
+
+/** @param {import('../shared/bezi.js').Caka[]} caka @returns {boolean} podarilo sa? */
+export function saveBeziCaka(caka) {
+    return write(BEZI_CAKA_STORAGE_KEY, JSON.stringify(caka));
 }
 
 /**

@@ -1,7 +1,20 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BEZI } from '../shared/config.js';
-import { beziaci, daSaZapisat, parseBezi, posun, zapol, zoZvysku, zrus, zvysok } from '../shared/bezi.js';
+import {
+    behyVeci,
+    beziaci,
+    daSaZapisat,
+    parseBezi,
+    parseCaka,
+    posun,
+    prevezmi,
+    zapisZmeny,
+    zapol,
+    zoZvysku,
+    zrus,
+    zvysok,
+} from '../shared/bezi.js';
 
 const D = '2026-09-05';
 
@@ -106,4 +119,91 @@ test('zvysok: koniec bežiaceho behu o hodinu či BEZI.krokMin, zvyšok v hranic
     assert.equal(zvysok(list, 'pracka', D, 600, 600)[0].k, 600 + BEZI.maxZvysokMin, 'najviac maxZvysokMin');
     assert.equal(zvysok([{ id: 'pracka', d: D, m: 30, k: 100 }], 'pracka', D, -60, 50)[0].m, 0, 'nie pred polnoc');
     assert.deepEqual(zvysok(list, 'pracka', D, 60, 800), list, 'dobehnutý beh nemení');
+});
+
+test('parseCaka: len platný spotrebič a deň, každý raz', () => {
+    assert.deepEqual(parseCaka(null), []);
+    assert.deepEqual(
+        parseCaka([
+            { id: 'pracka', d: D },
+            { id: 'pracka', d: D },
+            { id: 'bojler', d: D },
+            { id: 'susicka', d: '5. 9.' },
+            null,
+            { id: 'umyvacka', d: D },
+        ]),
+        [
+            { id: 'pracka', d: D },
+            { id: 'umyvacka', d: D },
+        ],
+    );
+});
+
+test('behyVeci: behy jedného spotrebiča v ten deň', () => {
+    const list = [
+        { id: 'pracka', d: D, m: 420, k: 540 },
+        { id: 'pracka', d: '2026-09-04', m: 420, k: 540 },
+        { id: 'umyvacka', d: D, m: 500, k: 650 },
+    ];
+    assert.deepEqual(behyVeci(list, 'pracka', D), [list[0]]);
+});
+
+test('zapisZmeny: behy spotrebiča v deň zmeny nahradí, iné nechá, staršie dni a nezmysly zahodí', () => {
+    const spolocne = [
+        { id: 'pracka', d: '2026-09-04', m: 600, k: 720 },
+        { id: 'pracka', d: D, m: 420, k: 540 },
+        { id: 'umyvacka', d: D, m: 500, k: 650 },
+    ];
+    const zmeny = [
+        {
+            id: 'pracka',
+            d: D,
+            behy: [
+                { id: 'pracka', d: D, m: 420, k: 540 },
+                { id: 'pracka', d: D, m: 600, k: 720 },
+                { id: 'susicka', d: D, m: 600, k: 700 },
+            ],
+        },
+        { id: 'bojler', d: D, behy: [{ id: 'bojler', d: D, m: 600, k: 700 }] },
+        { id: 'susicka', d: 'zajtra', behy: [] },
+        null,
+    ];
+    assert.deepEqual(zapisZmeny(spolocne, zmeny, D), [
+        { id: 'pracka', d: D, m: 420, k: 540 },
+        { id: 'umyvacka', d: D, m: 500, k: 650 },
+        { id: 'pracka', d: D, m: 600, k: 720 },
+    ]);
+    // „Nebeží“: prázdne behy spotrebič zo zoznamu odstránia.
+    assert.deepEqual(zapisZmeny(spolocne, [{ id: 'umyvacka', d: D, behy: [] }], D), [{ id: 'pracka', d: D, m: 420, k: 540 }]);
+    // Bez zmien len prečistí; zlé vstupy nič nezhodia.
+    assert.deepEqual(zapisZmeny(spolocne, undefined, D), spolocne.slice(1));
+    assert.deepEqual(zapisZmeny('x', 'y', D), []);
+    // Viac zmien než spotrebičov telefón neposiela - zvyšok sa ignoruje.
+    const vela = Array.from({ length: BEZI.veci.length + 1 }, () => ({ id: 'umyvacka', d: D, behy: [] }));
+    vela[BEZI.veci.length] = { id: 'susicka', d: D, behy: [{ id: 'susicka', d: D, m: 600, k: 700 }] };
+    assert.deepEqual(zapisZmeny([], vela, D), []);
+});
+
+test('prevezmi: dnešné behy od Workera, nepotvrdené spotrebiče z telefónu', () => {
+    const lokalne = [
+        { id: 'pracka', d: D, m: 600, k: 720 },
+        { id: 'umyvacka', d: D, m: 500, k: 650 },
+        { id: 'susicka', d: '2026-09-04', m: 500, k: 600 },
+    ];
+    const zWorkera = [
+        { id: 'pracka', d: D, m: 420, k: 540 },
+        { id: 'susicka', d: D, m: 700, k: 800 },
+        { id: 'umyvacka', d: '2026-09-04', m: 500, k: 650 },
+        { id: 'auto', d: D, m: 1, k: 2 },
+    ];
+    assert.deepEqual(prevezmi(lokalne, zWorkera, [{ id: 'pracka', d: D }], D), [
+        { id: 'pracka', d: D, m: 600, k: 720 },
+        { id: 'susicka', d: D, m: 700, k: 800 },
+    ]);
+    // Nepotvrdená zmena iného dňa sa nepočíta.
+    assert.deepEqual(prevezmi(lokalne, zWorkera, [{ id: 'pracka', d: '2026-09-04' }], D), [
+        { id: 'pracka', d: D, m: 420, k: 540 },
+        { id: 'susicka', d: D, m: 700, k: 800 },
+    ]);
+    assert.deepEqual(prevezmi(lokalne, null, [], D), []);
 });

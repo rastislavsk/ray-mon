@@ -13,6 +13,8 @@ import {
     BOJLER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     OZNAMENIA,
+    BEZI_CAKA_STORAGE_KEY,
+    WORKER_BEZI_URL,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_STAV_URL,
     WORKER_BOJLER_REZIM_URL,
@@ -1168,6 +1170,62 @@ test.describe('bojler na prebytky', () => {
         await page.evaluate((d) => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: d })), OZNAMENIA.bojler);
         await expect(dl).toHaveAttribute('data-zapnuty', '');
         expect(dopyty).toHaveLength(2);
+        expect(errors).toEqual([]);
+    });
+
+    test('spoločné behy: beh z druhého telefónu príde s obnovou dát, „Už beží“ ide hneď Workeru, nepotvrdená zmena čaká', async ({
+        page,
+    }) => {
+        // docs/navrhy/bezi-spolocne.html: Worker podvrhnutý zoznamom, ktorý drží aj „druhý telefón“.
+        await page.addInitScript(
+            ([k, v]) => localStorage.setItem(k, v),
+            [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['pracka', 'umyvacka']))],
+        );
+        const d = '2026-09-05';
+        const umyvacka = { id: 'umyvacka', d, m: 12 * 60, k: 14 * 60 + 30 };
+        /** @type {object[]} */ let spolocne = [umyvacka];
+        /** @type {any[]} */ const dopyty = [];
+        let vypadok = false;
+        await page.route(WORKER_BEZI_URL, (route) => {
+            const telo = JSON.parse(route.request().postData() ?? '{}');
+            dopyty.push(telo);
+            if (vypadok) return route.fulfill({ status: 503, json: { chyba: 'server' } });
+            for (const z of telo.zmeny) spolocne = [...spolocne.filter((b) => /** @type {any} */ (b).id !== z.id), ...z.behy];
+            return route.fulfill({ json: { bezi: spolocne } });
+        });
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ } });
+        const umDl = page.locator('#tz-co [data-vec="umyvacka"]');
+        const prDl = page.locator('#tz-co [data-vec="pracka"]');
+        await expect(umDl, 'umývačku zapol druhý telefón').toHaveAttribute('data-zapnuty', '');
+        expect(dopyty[0]).toEqual({ pecat: NB_ZDROJ.pecat, d, zmeny: [] });
+        // „Už beží“ na tomto telefóne ide Workeru hneď, s behmi práčky.
+        await prDl.click();
+        await page.locator('#tz-vec-zapol').click();
+        await expect.poll(() => dopyty.at(-1)?.zmeny?.[0]?.id).toBe('pracka');
+        expect(dopyty.at(-1).zmeny[0].behy).toHaveLength(1);
+        await page.keyboard.press('Escape');
+        await expect(prDl).toHaveAttribute('data-zapnuty', '');
+        expect(await page.evaluate((k) => localStorage.getItem(k), BEZI_CAKA_STORAGE_KEY)).toBe('[]');
+        // Druhý telefón umývačku zrušil: po návrate do appky zmizne aj tu.
+        spolocne = spolocne.filter((b) => /** @type {any} */ (b).id !== 'umyvacka');
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await expect(umDl).not.toHaveAttribute('data-zapnuty');
+        await expect(prDl).toHaveAttribute('data-zapnuty', '');
+        // Bez Workera: „Nebeží“ platí v telefóne a čaká; odpoveď Workera s práčkou ju potom neprepíše, zmena ide znova.
+        vypadok = true;
+        await prDl.click();
+        await page.locator('#tz-vec-zrus').click();
+        await page.keyboard.press('Escape');
+        await expect(prDl).not.toHaveAttribute('data-zapnuty');
+        await expect
+            .poll(() => page.evaluate((k) => localStorage.getItem(k), BEZI_CAKA_STORAGE_KEY))
+            .toBe(JSON.stringify([{ id: 'pracka', d }]));
+        vypadok = false;
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await expect.poll(() => page.evaluate((k) => localStorage.getItem(k), BEZI_CAKA_STORAGE_KEY)).toBe('[]');
+        expect(dopyty.at(-1).zmeny).toEqual([{ id: 'pracka', d, behy: [] }]);
+        expect(spolocne).toEqual([]);
+        await expect(prDl).not.toHaveAttribute('data-zapnuty');
         expect(errors).toEqual([]);
     });
 

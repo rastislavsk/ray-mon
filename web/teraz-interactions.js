@@ -8,6 +8,7 @@ import { posun, zapol, zrus, zvysok } from '../shared/bezi.js';
 import { BEZI, BOJLER_ULOZENE_MS } from '../shared/config.js';
 import { localDateKey, localMinutes } from '../shared/solar.js';
 import { rytmusSBojlerom } from '../shared/zdroje.js';
+import { zladBehy } from './bezi-spolocne.js';
 import { ulozRezimBojlera } from './data.js';
 import { zmenOznamBojlera } from './bojler-oznam.js';
 import { objednajKoniec } from './koniec.js';
@@ -67,7 +68,8 @@ export function initTeraz(store, dom, refresh) {
 /**
  * Zápis spotrebiča otvoreného v detaile (shared/bezi.js): zmena dostane dnešný dátum a minútu dňa podľa elektrárne,
  * uloží sa v telefóne a appka hneď prepočíta plán - aj s teraz, aby čas zapnutia bol tá chvíľa, nie posledná obnova.
- * Potom objedná či zruší oznámenie o konci (web/koniec.js, `o`).
+ * Potom objedná či zruší oznámenie o konci (web/koniec.js, `o`) a pošle zmenu ostatným telefónom domácnosti
+ * (web/bezi-spolocne.js).
  * @param {Store} store
  * @param {(list: import('../shared/bezi.js').Zapis[], id: string, d: string, m: number) => import('../shared/bezi.js').Zapis[]} zmena
  * @param {{ pytaj?: boolean, hned?: boolean }} [o]
@@ -84,6 +86,7 @@ function zapis(store, zmena, o) {
     saveBezi(bezi, today);
     store.setState({ bezi, now });
     objednajKoniec(store, id, o);
+    void zladBehy(store, { id, d: today });
 }
 
 /**
