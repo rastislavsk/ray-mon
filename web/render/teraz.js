@@ -99,11 +99,11 @@ function renderHreben(h, dom) {
  * Zapnutý spotrebič (beží, alebo bojler, ktorému zásuvka zapla relé) má zelenú ikonu a jemný obrys (`data-zapnuty`,
  * docs/navrhy/teraz-pole-noc-bezi.html, 3A). `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
  * (docs/navrhy/teraz-dlazdice-stlpce.html, B): ikona vedľa čísla a jedna odrážka, mriežku riadkov nezdieľa.
- * @param {Dlazdica} d @param {string} [stlpec] @param {boolean} [pol]
+ * `oziv` je dlaždica, ktorej ikona po ťuknutí na oznámenie ožije, a ako (`data-oziv`, pohyb robí CSS).
+ * @param {Dlazdica} d @param {string} [stlpec] @param {boolean} [pol] @param {Ozivenie | null} [oziv]
  */
-const dlazdicaHtml = (d, stlpec = '', pol = false) =>
-    `<button type="button" class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''} data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''}` +
-    `${zapnuty(d) ? ' data-zapnuty' : ''} data-vec="${d.id}">` +
+const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
+    `<button type="button" class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''}${stavDlazdice(d, oziv)}>` +
     `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${rezimHtml(d.rezim)}</span>` +
     `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimSr(d.rezim)}` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%"`}></i>` +
@@ -115,6 +115,45 @@ const dlazdicaHtml = (d, stlpec = '', pol = false) =>
  * @param {Dlazdica} d
  */
 const zapnuty = (d) => d.tone === 'bezi' || d.riadi === 'bezi';
+
+/** Atribúty stavu dlaždice: tón, druh, zapnutý, oživená ikona a id veci. @param {Dlazdica} d @param {Ozivenie | null} oziv */
+const stavDlazdice = (d, oziv) =>
+    ` data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''}${zapnuty(d) ? ' data-zapnuty' : ''}` +
+    `${oziv?.id === d.id ? ` data-oziv="${oziv.druh}"` : ''} data-vec="${d.id}"`;
+
+/**
+ * Oživená ikona po ťuknutí na oznámenie (docs/navrhy/oznamenia-animacie.html): dlaždica a druh pohybu - `plan`,
+ * `koniec`, `pripomen`, pri bojleri `zapol` či `vypol` podľa toho, či teraz hreje.
+ * @typedef {{ id: string, druh: string }} Ozivenie
+ */
+
+/**
+ * Ktorá ikona ožije: spotrebič z oznámenia, keď má dlaždicu, inak prvý spotrebič v pláne - čo ide teraz alebo
+ * najbližšie, nie čo už beží. Len pri dnešku.
+ * @param {import('../state.js').AppState['tzOziv']} ciel @param {NonNullable<Model['co']>} co @param {Dlazdica[]} veci
+ * @returns {Ozivenie | null}
+ */
+function ozivenie(ciel, co, veci) {
+    if (!ciel || co.den) return null;
+    return (ciel.udalost === 'plan' ? null : ozivenieVeci(ciel, veci)) ?? prvyVPlane(co);
+}
+
+/**
+ * Spotrebič z oznámenia, ak má dlaždicu. Bojler sa zapol, ak teraz hreje, inak vypol.
+ * @param {Exclude<import('../../shared/oznamenia.js').Ciel, { udalost: 'plan' }>} ciel @param {Dlazdica[]} veci
+ * @returns {Ozivenie | null}
+ */
+function ozivenieVeci(ciel, veci) {
+    const d = veci.find((x) => x.id === ciel.vec);
+    if (!d) return null;
+    return { id: d.id, druh: ciel.udalost === 'bojler' ? (zapnuty(d) ? 'zapol' : 'vypol') : ciel.udalost };
+}
+
+/** Prvý spotrebič v pláne: čo ide teraz, inak najbližší. @param {NonNullable<Model['co']>} co @returns {Ozivenie | null} */
+function prvyVPlane(co) {
+    const id = co.hore.dlazdice[0]?.id ?? co.hore.dalsi?.id ?? co.riadky[0]?.id;
+    return id ? { id, druh: 'plan' } : null;
+}
 
 /**
  * Značka režimu bojlera na kraji kruhu s ikonou (docs/navrhy/teraz-pole-noc-bezi.html): ruka (ručne), slnko (riadi appka).
@@ -131,15 +170,17 @@ const rezimSr = (rezim) => (rezim ? `<span class="sr">, ${escapeHtml(TERAZ_BOJLE
  * Poradie, z ktorého ľavý stĺpec vychádza: čo beží, čo ide teraz (alebo najbližšia vec), ďalšie spotrebiče
  * zvoleného dňa, čo dobehlo. Každá dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
  * (bez predpovede, nič doma) nie je. `bojler` je dlaždica bojlera, ktorý riadi zásuvka (pri dnešku, inak null).
- * @param {Model['co']} co @param {Dom} dom @param {Dlazdica | null} bojler
+ * `ciel` je ťuknutie na oznámenie, ktoré ešte čaká (ožije ikona jednej dlaždice).
+ * @param {Model['co']} co @param {Dom} dom @param {Dlazdica | null} bojler @param {import('../state.js').AppState['tzOziv']} ciel
  */
-function renderCo(co, dom, bojler) {
+function renderCo(co, dom, bojler, ciel) {
     show(dom.tzCo, !!co);
     if (!co) return;
     show(dom.tzDen, !!co.den);
     setText(dom.tzDenNazov, co.den?.nazov ?? '');
     setText(dom.tzDenPod, co.den?.pod ?? '');
-    const html = dlazdiceHtml(dlazdiceCo(co, bojler));
+    const veci = dlazdiceCo(co, bojler);
+    const html = dlazdiceHtml(veci, ozivenie(ciel, co, veci));
     setHtml(dom.tzDlazdice, html);
     show(dom.tzDlazdice, html !== '');
 }
@@ -173,15 +214,15 @@ function dlazdiceCo(co, bojler) {
  * Dva stĺpce dlaždíc (shared/teraz-stlpce.js) v jednej mriežke: bloky idú striedavo ľavý a pravý, každý má svoj
  * stĺpec (`data-stlpec`), takže sa rad zarovná, aj keď jednému stĺpcu blok chýba. Dvojica je jeden blok s dvoma
  * polovičnými dlaždicami pod sebou.
- * @param {Dlazdica[]} veci
+ * @param {Dlazdica[]} veci @param {Ozivenie | null} oziv
  */
-function dlazdiceHtml(veci) {
+function dlazdiceHtml(veci, oziv) {
     const { lavy, pravy } = stlpceDlazdic(veci);
     /** @param {Dlazdica[]} b @param {string} s */
     const blok = (b, s) =>
         b.length === 1
-            ? dlazdicaHtml(b[0], s)
-            : `<div class="dl-par" data-stlpec="${s}">${b.map((d) => dlazdicaHtml(polovicaDlazdice(d), '', true)).join('')}</div>`;
+            ? dlazdicaHtml(b[0], s, false, oziv)
+            : `<div class="dl-par" data-stlpec="${s}">${b.map((d) => dlazdicaHtml(polovicaDlazdice(d), '', true, oziv)).join('')}</div>`;
     let html = '';
     for (let i = 0; i < Math.max(lavy.length, pravy.length); i++)
         html += (lavy[i] ? blok(lavy[i], 'l') : '') + (pravy[i] ? blok(pravy[i], 'p') : '');
@@ -570,13 +611,11 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskText, T.askText);
     setText(dom.tzAskBtn, T.askBtn);
     renderHreben(m.co ? m.hreben : null, dom);
-    renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler));
+    // Starý web/state.js z cache po nasadení `tzOziv` nemá - undefined je ako null (CLAUDE.md, Nasadenie a cache).
+    renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler), state.tzOziv);
     renderTokPole(s, m.co, dom);
     // Dlaždice v noci na svetlom skle (docs/navrhy/teraz-pole-noc-bezi.html, 2B): tmavé sklo by na nočnej oblohe zmizlo.
     dom.tzCo.toggleAttribute('data-noc', m.pocasie?.noc === true);
-    // Obrys po ťuknutí na oznámenie: CSS ho spustí, až keď je čo zapnúť naozaj vidieť. `=== true`: starý
-    // web/state.js z cache po nasadení pole nemá (CLAUDE.md, Nasadenie a cache).
-    dom.tzCo.toggleAttribute('data-obrys', state.tzObrys === true);
     renderVecSheet(state, m, dom);
     renderBojlerSheet(state, dom, m.bojler);
     renderTokSheet(state, dom);

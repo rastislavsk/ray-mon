@@ -13,7 +13,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * Stav. `mzGraf` otvorený panel s grafom dňa na karte Dnes (docs/navrhy/dnes-predpoved-graf.html) a `terazPreview`
  * zvolený čas v ňom (minúta dňa, null = teraz; meno ostalo z čias, keď bol graf na karte Teraz), `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
  * `tzDen` deň zvolený v hrebeni týždňa karty Teraz (poradie od dneška, 0 = dnes; docs/navrhy/teraz-vyhlad-alternativy.html),
- * `tzObrys` čaká alebo beží jednorazový obrys toho, čo zapnúť, po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, web/oznamenia-klik.js),
+ * `tzOziv` na čo sa ťuklo v oznámení, kým čaká alebo beží oživená ikona dlaždice (docs/navrhy/oznamenia-animacie.html, web/oznamenia-klik.js),
  * `tzChip` otvorený panel Elektrina teraz zo scény či poľa toku energie karty Teraz (`tok`),
  * `mzChip` otvorené vysvetlenie odznaku triedy dňa na karte Dnes - dnešného, alebo večer zajtrajšieho (docs/navrhy/dnes-upravy.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
@@ -45,7 +45,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   terazPreview: number | null,
  *   tzVec: string | null,
  *   tzDen: number,
- *   tzObrys: boolean,
+ *   tzOziv: import('../shared/oznamenia.js').Ciel | null,
  *   tzChip: TzChip | null,
  *   mzChip: MzChip | null,
  *   weekDetail: WeekDetail | null,
@@ -265,7 +265,7 @@ export function panelChange(from, to) {
         terazPreview: /** @type {number | null} */ (null),
         tzVec: /** @type {string | null} */ (null),
         tzDen: 0,
-        tzObrys: false,
+        tzOziv: /** @type {import('../shared/oznamenia.js').Ciel | null} */ (null),
         tzChip: /** @type {TzChip | null} */ (null),
         mzChip: /** @type {MzChip | null} */ (null),
         weekDetail: /** @type {WeekDetail | null} */ (null),
@@ -276,12 +276,12 @@ export function panelChange(from, to) {
 }
 
 /**
- * Ťuknutie na oznámenie: karta Teraz s obrysom okolo toho, čo zapnúť. Čokoľvek bolo otvorené,
- * zatvorí sa ako pri prechode na kartu.
- * @param {AppState} state
+ * Ťuknutie na oznámenie: karta Teraz a ožije ikona dlaždice, ktorej sa oznámenie týka (docs/navrhy/oznamenia-animacie.html).
+ * Čokoľvek bolo otvorené, zatvorí sa ako pri prechode na kartu.
+ * @param {AppState} state @param {import('../shared/oznamenia.js').Ciel} ciel
  */
-export function zOznamenia(state) {
-    return { ...panelChange(state.panel, 'terazky'), tzObrys: true };
+export function zOznamenia(state, ciel) {
+    return { ...panelChange(state.panel, 'terazky'), tzOziv: ciel };
 }
 
 /**

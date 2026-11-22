@@ -23,21 +23,31 @@ export function weatherIcon(w) {
     return `<svg class="wi" data-w="${w}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${INNER[w]}</svg>`;
 }
 
+/** Fajka po dobehnutom programe (docs/navrhy/oznamenia-animacie.html): skrytá, nakreslí ju CSS. @param {string} d */
+const fajka = (d) => `<path class="vi-fajka" pathLength="1" d="${d}"/>`;
+
 /**
  * Spotrebiče v Pláne dňa (karta Teraz, docs/navrhy/teraz-navrh-2.html): strohé čiarové ikony
  * ako v navigácii, nie obrázky - aby karta nebola detská. Ikona je len ozdoba, meno nesie text.
+ * Triedy `vi-*` sú časti, ktorými CSS hýbe po ťuknutí na oznámenie: bubon, kvapka, vnútro a fajka.
  * @type {Record<string, string>}
  */
 const VECI = {
-    pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>',
-    umyvacka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 8h16M7.5 5.5h4M8 12.5h8M8 16.5h8"/>',
+    pracka:
+        '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/>' +
+        `<circle class="vi-bubon" cx="12" cy="14" r="4"/>${fajka('M9.9 14.1l1.4 1.4 2.8-3')}`,
+    umyvacka:
+        '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 8h16M7.5 5.5h4"/>' +
+        `<path class="vi-vnutro" d="M8 12.5h8M8 16.5h8"/>${fajka('M9 14.6l2 2 4-4.2')}`,
     susicka:
-        '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>' +
-        '<path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>',
+        '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle class="vi-bubon" cx="12" cy="14" r="4"/>' +
+        `<path class="vi-vnutro" d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>${fajka('M9.9 14.1l1.4 1.4 2.8-3')}`,
     auto:
         '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/>' +
         '<path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
-    bojler: '<rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
+    bojler:
+        '<rect x="6" y="2.5" width="12" height="19" rx="6"/>' +
+        '<path class="vi-kvapka" d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
 };
 
 /** Ikona spotrebiča podľa id veci (MOZEM_ITEMS); neznámy spotrebič ikonu nemá. @param {string} id */

@@ -963,9 +963,11 @@ export const OZNAMENIA = {
     // Výhľad dní bez slnka, ktorý oznámenie povedalo naposledy - z neho je „Lepšie / Horšie“.
     vyhlad: 'oznamenia-vyhlad.json',
     // Ťuknutie na oznámenie: správa od service workera bežiacej appke a hodnota značky v adrese
-    // zatvorenej (shared/oznamenia.js). Obrys Plánu dňa počká na dáta najviac `obrysCakaMs`.
+    // zatvorenej (shared/oznamenia.js). Oživená ikona dlaždice (docs/navrhy/oznamenia-animacie.html)
+    // počká na dáta najviac `ozivCakaMs` a od chvíle, keď je dlaždica v stránke, trvá `ozivMs`.
     klik: 'oznamenie',
-    obrysCakaMs: 20000,
+    ozivCakaMs: 20000,
+    ozivMs: 3000,
     // Push o zmene ohrevu bojlera má túto značku a service worker ju pošle aj bežiacej appke ako správu -
     // appka si hneď stiahne stav bojlera, dlaždica nečaká na ďalší minútový dopyt.
     bojler: 'bojler',

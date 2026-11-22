@@ -1,0 +1,1522 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <title>Animácie po oznámení</title>
+        <style>
+            /* Zmrazený snímok návrhu (viď README v tomto priečinku). Samostatný súbor: nič neimportuje z appky.
+               Farby, rozmery a ikony sú odpísané z css/teraz.css a z dlaždíc, ktoré appka nakreslila v náhľade
+               (nahlad.html) 20. 11. 2026. Telefón je zmenšený a scéna nad pásom dní vynechaná - po ťuknutí na
+               oznámenie appka posunie stránku na Plán dňa, takže scéna aj tak nie je vidno.
+               Časy a čísla v dlaždiciach a v oznámeniach sú ukážkové, vety oznámení sú z jadra appky. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+            }
+            @property --obeh {
+                syntax: '<angle>';
+                inherits: false;
+                initial-value: 0deg;
+            }
+            :root {
+                color-scheme: dark;
+                --noc: #0b1130;
+                --list: #121a40;
+                --ciara: rgba(255, 255, 255, 0.16);
+                --papier: #f4f5fa;
+                --tlmene: rgba(244, 245, 250, 0.72);
+                --volba: #ffd166;
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --glass: rgba(8, 16, 40, 0.3);
+                --bezi: #fff4d6;
+                --pismo: 'Archivo', system-ui, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--noc);
+                color: var(--papier);
+                font-family: var(--pismo);
+                font-size: 1rem;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1280px;
+                margin: 0 auto;
+                padding: 32px 16px 72px;
+            }
+            h1 {
+                margin: 0 0 8px;
+                font-size: 2rem;
+                font-variation-settings: 'wdth' 110;
+                line-height: 1.15;
+            }
+            h2 {
+                margin: 56px 0 8px;
+                font-size: 1.5rem;
+                font-variation-settings: 'wdth' 108;
+            }
+            h3 {
+                margin: 0 0 6px;
+                font-size: 1.125rem;
+            }
+            p,
+            li {
+                color: var(--tlmene);
+                max-width: 76ch;
+            }
+            strong {
+                color: var(--papier);
+            }
+            code {
+                font-size: 0.9em;
+                color: var(--volba);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 12px 0;
+                font-size: 0.9375rem;
+            }
+            th,
+            td {
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--ciara);
+                text-align: left;
+                vertical-align: top;
+            }
+            th {
+                color: var(--tlmene);
+                font-weight: 600;
+            }
+            .tab-obal {
+                overflow-x: auto;
+            }
+            .ovladanie {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+                margin: 16px 0;
+            }
+            .ovladanie label {
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+                color: var(--tlmene);
+                font-size: 0.9375rem;
+                margin-left: 8px;
+            }
+            .cip {
+                min-height: 40px;
+                padding: 6px 14px;
+                border: 1px solid var(--ciara);
+                border-radius: 999px;
+                background: var(--list);
+                color: var(--papier);
+                font: inherit;
+                font-size: 0.9375rem;
+                cursor: pointer;
+            }
+            .cip[aria-pressed='true'] {
+                background: var(--volba);
+                border-color: var(--volba);
+                color: #241a00;
+                font-weight: 700;
+            }
+            .cip.hlavne {
+                background: var(--papier);
+                color: var(--noc);
+                font-weight: 700;
+            }
+            .rad {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+                gap: 28px 20px;
+                margin-top: 12px;
+            }
+            .var {
+                display: grid;
+                gap: 10px;
+                align-content: start;
+            }
+            .var-h {
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                gap: 8px;
+            }
+            .var-h h3 {
+                margin: 0;
+            }
+            .var ul {
+                margin: 0;
+                padding-left: 18px;
+                font-size: 0.9rem;
+            }
+            .var li {
+                margin: 2px 0;
+            }
+            .plus::marker {
+                content: '+  ';
+                color: var(--yes);
+            }
+            .minus::marker {
+                content: '–  ';
+                color: #ff9a8a;
+            }
+            .odpor {
+                display: inline-block;
+                padding: 1px 8px;
+                border-radius: 999px;
+                background: var(--volba);
+                color: #241a00;
+                font-size: 0.75rem;
+                font-weight: 800;
+                letter-spacing: 0.04em;
+            }
+            .box {
+                margin-top: 16px;
+                padding: 16px 18px;
+                border: 1px solid var(--ciara);
+                border-radius: 16px;
+                background: var(--list);
+            }
+            .box p:last-child,
+            .box ul:last-child {
+                margin-bottom: 0;
+            }
+
+            /* ---------- Telefón ---------- */
+            .tel {
+                position: relative;
+                width: 290px;
+                height: 560px;
+                margin: 0 auto;
+                border: 8px solid #05081a;
+                border-radius: 38px;
+                overflow: hidden;
+                background: linear-gradient(180deg, #5f93db 0%, #3f75c4 45%, #2c5aa6 100%);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+                color: #fff;
+                font-size: 15px;
+            }
+            .tel .zamok {
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(120% 80% at 50% 0%, #2a3566, #070b1f 70%);
+                opacity: 0;
+                pointer-events: none;
+            }
+            .tel .stav {
+                position: relative;
+                z-index: 3;
+                display: flex;
+                justify-content: space-between;
+                padding: 8px 18px 0;
+                font-size: 12px;
+                font-weight: 700;
+            }
+            .obsah {
+                position: relative;
+                padding: 14px 14px 0;
+            }
+            .notif {
+                position: absolute;
+                z-index: 5;
+                top: 30px;
+                left: 10px;
+                right: 10px;
+                padding: 10px 12px;
+                border-radius: 18px;
+                background: rgba(36, 40, 58, 0.96);
+                box-shadow: 0 8px 30px rgba(0, 0, 0, 0.45);
+                font-size: 12.5px;
+                line-height: 1.35;
+                opacity: 0;
+                transform: translateY(-120%);
+            }
+            .notif .app {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+                color: rgba(255, 255, 255, 0.6);
+                font-size: 11px;
+            }
+            .notif .app i {
+                width: 14px;
+                height: 14px;
+                border-radius: 4px;
+                background: linear-gradient(135deg, #ffd166, #f59f2b);
+            }
+            .notif b {
+                display: block;
+                margin-top: 4px;
+                font-size: 13.5px;
+            }
+            .tuk {
+                position: absolute;
+                z-index: 6;
+                top: 62px;
+                left: 50%;
+                width: 46px;
+                height: 46px;
+                margin-left: -23px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.55);
+                opacity: 0;
+                pointer-events: none;
+            }
+            .tel .popis {
+                position: absolute;
+                z-index: 7;
+                bottom: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                padding: 3px 10px;
+                border-radius: 999px;
+                background: rgba(0, 0, 0, 0.55);
+                font-size: 11px;
+                white-space: nowrap;
+                opacity: 0;
+                transition: opacity 0.2s;
+            }
+            .tel .popis.vidno {
+                opacity: 1;
+            }
+
+            /* Pás dní (zmenšený .hreben-dni) */
+            .pas {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+                margin: 0 -4px 6px;
+            }
+            .pas div {
+                position: relative;
+                overflow: hidden;
+                display: grid;
+                gap: 9px;
+                min-height: 58px;
+                padding: 7px 7px 9px;
+                border-radius: 12px;
+                background: rgba(10, 20, 50, 0.38);
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+            }
+            .pas div.dnes {
+                background: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)), rgba(10, 20, 50, 0.38);
+                box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+            }
+            .pas svg {
+                position: absolute;
+                top: 4px;
+                right: 5px;
+                width: 22px;
+                height: 22px;
+            }
+            .pas i {
+                align-self: end;
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(
+                    90deg,
+                    rgba(255, 255, 255, 0.25) 0 20%,
+                    #ffd166 20% var(--k, 80%),
+                    rgba(255, 255, 255, 0.25) var(--k, 80%)
+                );
+            }
+            /* Riadok „oko“ */
+            .oko {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                min-height: 34px;
+                margin-bottom: 6px;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+            }
+            .oko i {
+                width: 9px;
+                height: 9px;
+                border-radius: 50%;
+                background: var(--yes);
+                box-shadow: 0 0 0 3px rgba(185, 242, 140, 0.3);
+            }
+
+            /* Dlaždice (zmenšené .mriezka / .dl) */
+            .mriezka {
+                position: relative;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .dl-par {
+                display: grid;
+                grid-template-rows: 1fr 1fr;
+                gap: 7px;
+            }
+            .vym {
+                display: grid;
+            }
+            .vym > * {
+                grid-area: 1 / 1;
+            }
+            /* Sklo je priesvitné - nový stav pod ním nesmie presvitať, kým nepríde na rad. */
+            .vym > [data-vrstva='po']:not(.ukaz) {
+                opacity: 0;
+            }
+            .dl {
+                position: relative;
+                display: flex;
+                flex-direction: column;
+                min-height: 148px;
+                padding: 11px;
+                border-radius: 20px;
+                overflow: hidden;
+            }
+            .dl[data-tone='go'] {
+                background: var(--yes);
+                color: #14300c;
+                box-shadow: 0 8px 30px rgba(185, 242, 140, 0.3);
+            }
+            .dl[data-tone='tiche'] {
+                background: var(--glass);
+                color: #fff;
+            }
+            .dl[data-tone='bezi'] {
+                background: var(--bezi);
+                color: #3a2a00;
+                box-shadow: 0 8px 30px rgba(255, 244, 214, 0.3);
+            }
+            .ico {
+                position: relative;
+                display: grid;
+                place-items: center;
+                width: 38px;
+                height: 38px;
+                margin-bottom: 14px;
+                border-radius: 50%;
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .dl[data-tone='tiche'] .ico {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .dl[data-tone='bezi'] .ico {
+                background: rgba(58, 42, 0, 0.12);
+            }
+            .vi {
+                width: 22px;
+                height: 22px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+                overflow: visible;
+            }
+            .vi .bubon,
+            .vi .kvapka {
+                transform-box: fill-box;
+                transform-origin: center;
+            }
+            .vi .kvapka {
+                fill: currentColor;
+                fill-opacity: 0;
+            }
+            .dl[data-tone='go'] .vi .kvapka {
+                fill-opacity: 1;
+            }
+            .velky {
+                margin-top: auto;
+                font-size: 1.45rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                font-variant-numeric: tabular-nums;
+                line-height: 1;
+            }
+            .velky small {
+                font-size: 0.55em;
+                font-weight: 800;
+            }
+            .dl b {
+                margin-top: 2px;
+                font-size: 1.1rem;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 108;
+                line-height: 1.1;
+            }
+            .podiel {
+                display: block;
+                height: 5px;
+                margin: 7px 0 4px;
+                border-radius: 3px;
+                background: #ffd166;
+            }
+            .dl[data-tone='go'] .podiel,
+            .dl[data-tone='bezi'] .podiel {
+                box-shadow: 0 0 0 1.5px rgba(20, 48, 12, 0.3);
+            }
+            .podiel.prazdny {
+                visibility: hidden;
+            }
+            .odr {
+                min-height: 2.6em;
+                font-size: 0.78rem;
+                font-weight: 600;
+                line-height: 1.3;
+            }
+            .odr span {
+                display: block;
+                position: relative;
+                padding-left: 0.8em;
+            }
+            .odr span::before {
+                content: '';
+                position: absolute;
+                left: 0.1em;
+                top: 0.55em;
+                width: 0.3em;
+                height: 0.3em;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            /* Polovica dvojice práčka + sušička */
+            .dl.pol {
+                display: grid;
+                grid-template-columns: auto 1fr;
+                column-gap: 8px;
+                align-content: center;
+                min-height: 0;
+                padding: 9px 10px;
+                border-radius: 20px 20px 6px 6px;
+            }
+            .dl-par > :last-child .dl.pol,
+            .dl-par > .dl.pol:last-child {
+                border-radius: 6px 6px 20px 20px;
+            }
+            .dl.pol .ico {
+                grid-row: span 2;
+                align-self: center;
+                width: 30px;
+                height: 30px;
+                margin: 0;
+            }
+            .dl.pol .vi {
+                width: 18px;
+                height: 18px;
+            }
+            .dl.pol .velky {
+                font-size: 1.15rem;
+            }
+            .dl.pol b {
+                margin: 0;
+                font-size: 0.85rem;
+            }
+            .dl.pol .podiel,
+            .dl.pol .odr {
+                grid-column: 1 / -1;
+            }
+            .dl.pol .podiel {
+                margin: 5px 0 2px;
+            }
+            .dl.pol .odr {
+                min-height: 1.3em;
+            }
+
+            /* Pomôcky animácií */
+            .les {
+                position: absolute;
+                inset: -10%;
+                background: linear-gradient(105deg, transparent 35%, rgba(255, 236, 170, 0.8) 50%, transparent 65%);
+                pointer-events: none;
+                transform: translateX(-130%);
+            }
+            .obeh::after {
+                content: '';
+                position: absolute;
+                inset: 0;
+                padding: 2.5px;
+                border-radius: inherit;
+                background: conic-gradient(from var(--obeh), transparent 0 62%, rgba(255, 255, 255, 0.95) 92%, transparent 100%);
+                mask:
+                    linear-gradient(#000 0 0) content-box,
+                    linear-gradient(#000 0 0);
+                mask-composite: exclude;
+                pointer-events: none;
+                animation: obeh var(--obeh-t, 0.9s) ease-in-out var(--obeh-n, 1);
+            }
+            @keyframes obeh {
+                from {
+                    --obeh: 0deg;
+                    opacity: 0;
+                }
+                12%,
+                85% {
+                    opacity: 1;
+                }
+                to {
+                    --obeh: 360deg;
+                    opacity: 0;
+                }
+            }
+            .tel .dl.staticky {
+                box-shadow:
+                    0 0 0 2.5px #fff,
+                    0 8px 30px rgba(0, 0, 0, 0.2);
+            }
+            .vlna {
+                position: absolute;
+                width: 38px;
+                height: 38px;
+                border-radius: 50%;
+                border: 2px solid currentColor;
+                pointer-events: none;
+                opacity: 0;
+            }
+            .nit {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                overflow: visible;
+                pointer-events: none;
+            }
+            .nit path {
+                fill: none;
+                stroke: #ffd166;
+                stroke-width: 3;
+                stroke-linecap: round;
+                filter: drop-shadow(0 0 4px rgba(255, 209, 102, 0.9));
+            }
+            .nit circle {
+                fill: #ffd166;
+                filter: drop-shadow(0 0 5px rgba(255, 209, 102, 0.9));
+            }
+            .fajka {
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2.2;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .obeh::after {
+                    animation: none;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Animácie po ťuknutí na oznámenie</h1>
+            <p>
+                Návrh z 20. 11. 2026. Po ťuknutí na oznámenie sa appka otvorí na karte Teraz a krátka animácia ukáže,
+                <strong>čoho sa oznámenie týkalo</strong>. Každý telefón najprv ukáže oznámenie, potom ťuknutie a otvorenie appky. Telefóny
+                sú zmenšené, scéna s domom nad pásom dní je vynechaná (appka po oznámení posunie stránku na Plán dňa, takže scénu aj tak
+                nevidno).
+            </p>
+            <div class="box">
+                <h3>Aké oznámenia appka posiela (stav k 20. 11. 2026)</h3>
+                <div class="tab-obal">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Oznámenie</th>
+                                <th>Príklad (vety z jadra appky, čísla ukážkové)</th>
+                                <th>Značka</th>
+                                <th>Animácia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Ranný plán dňa o 7, 8 alebo 9 h (aj pri chybe výpočtu)</td>
+                                <td><b>Dnes slnko do 17:30</b><br />Práčka 09:00 · umývačka 10:00 · sušička 11:15…</td>
+                                <td><code>plan</code></td>
+                                <td>1 – Plán dňa</td>
+                            </tr>
+                            <tr>
+                                <td>Pripomienka spotrebiča (tlačidlo „Pripomeň“)</td>
+                                <td><b>Umývačka · teraz</b><br />Zo slnka. Dobehne o 12:00.</td>
+                                <td><code>remind</code></td>
+                                <td>2 – dlaždica spotrebiča</td>
+                            </tr>
+                            <tr>
+                                <td>Koniec programu práčky, sušičky, umývačky</td>
+                                <td><b>Práčka dobehla</b><br />Pranie je hotové. Sušička má teraz slnko.</td>
+                                <td><code>koniec-…</code></td>
+                                <td>2 – dlaždica spotrebiča</td>
+                            </tr>
+                            <tr>
+                                <td>Bojler zapol / vypol ohrev</td>
+                                <td><b>Bojler sa zapol</b><br />Prebytok 2,4 kW · riadi appka</td>
+                                <td><code>bojler</code></td>
+                                <td>2 – dlaždica bojlera</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p>
+                    Dnes všetky štyri skončia rovnako: karta Teraz, posun na Plán dňa a svetlo raz obehne okraj
+                    <em>celého</em> bloku (pás dní aj všetky dlaždice). To vzniklo pre pôvodný Plán dňa – jeden zoznam riadkov. Dnešný Plán
+                    dňa sú dlaždice v dvoch stĺpcoch, takže obrys okolo všetkého nepovie nič.
+                </p>
+            </div>
+
+            <!-- ============ 1. Plán dňa ============ -->
+            <h2>1. Ranné oznámenie s plánom dňa</h2>
+            <p>
+                Oznámenie vymenúva spotrebiče <strong>v poradí podľa času</strong>, no dlaždice v dvoch stĺpcoch to poradie nevidno (práčka
+                a sušička sú jedna dlaždica, bojler stojí vpravo). Varianty sa líšia tým, či animácia poradie ukáže, alebo len pritiahne
+                pohľad.
+            </p>
+            <div class="ovladanie">
+                <button type="button" class="cip hlavne" id="plan-vsetky">▶ Prehrať všetkých päť</button>
+                <label><input type="checkbox" class="uvod" checked /> s oznámením na začiatku</label>
+                <label><input type="checkbox" class="utlm" /> útlm pohybu v systéme</label>
+            </div>
+            <div class="rad" id="plan-rad">
+                <section class="var" data-var="A">
+                    <div class="var-h">
+                        <h3>A · Rozdanie</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Pás dní a riadok „teraz“ sú hneď, dlaždice prídu jedna po druhej v poradí podľa času, ako karty z balíčka. Prvá na
+                        rade (práčka) na konci raz zažiari.
+                    </p>
+                    <ul>
+                        <li class="plus">Jednoduché – len CSS a poradie dlaždíc, žiadne merania polohy.</li>
+                        <li class="plus">Prirodzené: dlaždice sa pri štarte aj tak objavia až s predpoveďou.</li>
+                        <li class="minus">Poradie je vidno len chvíľu a len tušene.</li>
+                        <li class="minus">Pri bežiacej appke dlaždice najprv zmiznú, aby mohli prísť.</li>
+                    </ul>
+                </section>
+                <section class="var" data-var="B">
+                    <div class="var-h">
+                        <h3>B · Slnko prejde plánom</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Zlatý lesk prejde dnešným dňom v páse, bodka „teraz“ pulzne a lesk potom prebehne dlaždicami v poradí podľa času –
+                        ako slnko cez deň.
+                    </p>
+                    <ul>
+                        <li class="plus">Nič nezmizne, obsah je čitateľný celý čas.</li>
+                        <li class="plus">Téma appky (slnko), poradie je vidno lepšie ako v A.</li>
+                        <li class="minus">Na zelenej dlaždici je zlatý lesk slabší.</li>
+                        <li class="minus">Stredná zložitosť (vrstva lesku v každej dlaždici).</li>
+                    </ul>
+                </section>
+                <section class="var" data-var="C">
+                    <div class="var-h">
+                        <h3>C · Niť dňa</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Zlatá niť sa natiahne od ikony k ikone v poradí podľa času (presne ako ho vymenúva oznámenie), pri každej ikone sa
+                        rozsvieti bod. Chvíľu ostane, potom zhasne.
+                    </p>
+                    <ul>
+                        <li class="plus">Jediná varianta, ktorá poradie naozaj <strong>ukáže</strong> aj cez dva stĺpce.</li>
+                        <li class="plus">Obraz namiesto textu, nie detský.</li>
+                        <li class="minus">
+                            Najzložitejšia: niť sa počíta z polohy dlaždíc (JS), pri väčšom písme či na šírku sa musí prepočítať.
+                        </li>
+                        <li class="minus">Na chvíľu prekryje časť textu dlaždíc. Bojler v niti nie je (riadi ho prebytok, nie čas).</li>
+                    </ul>
+                </section>
+                <section class="var" data-var="D">
+                    <div class="var-h">
+                        <h3>D · Obeh okolo prvej</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Najjednoduchšie: dnešné svetlo, ktoré obieha okraj, len presunuté z celého bloku na dlaždicu, ktorá je na rade ako
+                        prvá.
+                    </p>
+                    <ul>
+                        <li class="plus">Takmer bez nového kódu – CSS už je, mení sa len cieľ.</li>
+                        <li class="plus">Jasná odpoveď na „čo mám urobiť ako prvé“.</li>
+                        <li class="minus">Zvyšok plánu neukáže vôbec.</li>
+                        <li class="minus">
+                            Je to tá istá animácia, aká bude pri spotrebičoch (ak sa vyberie 2C) – oznámenia by sa nelíšili.
+                        </li>
+                    </ul>
+                </section>
+                <section class="var" data-var="E">
+                    <div class="var-h">
+                        <h3>E · Ikony ožijú naraz</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Úprava podľa tvojej spätnej väzby: pohyb ikon z 2B, no všetky spotrebiče naraz. Bubny práčky a sušičky sa dotočia,
+                        kvapka bojlera pulzne, umývačka sa zatrasie, auto sa pohne. Okolo každej ikony dve vlny. Fajka nie je – nič
+                        nedobehlo.
+                    </p>
+                    <ul>
+                        <li class="plus">Jeden jazyk pre všetky oznámenia: plán = ožije všetko, spotrebič = ožije jedna ikona.</li>
+                        <li class="plus">Text dlaždíc sa nehýbe, kód pohybov je ten istý ako pri 2B.</li>
+                        <li class="minus">Poradie podľa času neukáže – ostáva na texte oznámenia.</li>
+                        <li class="minus">Päť pohybov naraz môže pôsobiť nepokojne (posúď na telefóne).</li>
+                    </ul>
+                </section>
+            </div>
+
+            <!-- ============ 2. Spotrebiče ============ -->
+            <h2>2. Oznámenia jedného spotrebiča</h2>
+            <p>
+                Koniec programu, zmena ohrevu bojlera a pripomienka sa týkajú jednej dlaždice. Appka posunie stránku tak, aby bola dlaždica
+                vidno, a animácia ukáže, <strong>čo sa s ňou stalo</strong>. Vyber udalosť, varianty sa prehrajú pre ňu.
+            </p>
+            <div class="ovladanie" id="udalosti" role="group" aria-label="Udalosť">
+                <button type="button" class="cip" data-ud="koniec" aria-pressed="true">Práčka dobehla</button>
+                <button type="button" class="cip" data-ud="zapol" aria-pressed="false">Bojler sa zapol</button>
+                <button type="button" class="cip" data-ud="vypol" aria-pressed="false">Bojler sa vypol</button>
+                <button type="button" class="cip" data-ud="pripomen" aria-pressed="false">Pripomienka umývačky</button>
+            </div>
+            <div class="ovladanie">
+                <button type="button" class="cip hlavne" id="vec-vsetky">▶ Prehrať všetky tri</button>
+                <label><input type="checkbox" class="uvod" checked /> s oznámením na začiatku</label>
+                <label><input type="checkbox" class="utlm" /> útlm pohybu v systéme</label>
+            </div>
+            <div class="rad" id="vec-rad">
+                <section class="var" data-var="A">
+                    <div class="var-h">
+                        <h3>A · Prechod stavu</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Dlaždica sa ukáže, aká bola <em>pred</em> udalosťou, a na očiach sa zmení na dnešnú: bojler sa zapol – farba stúpa
+                        zdola ako ohriata voda, vypol – klesne. Práčka dobehla – v ikone sa nakreslí fajka a nový stav sa rozleje z ikony,
+                        potom kývne sušička, ktorá je teraz na rade. Pripomienka nič nemení – z ikony sa rozbehnú vlny.
+                    </p>
+                    <ul>
+                        <li class="plus">Ukáže, <strong>čo sa stalo</strong>, nielen kde. Každá udalosť má svoj pohyb.</li>
+                        <li class="plus">Stav „pred“ appka pozná zo značky (dobehla → bežala, zapol → nehrial).</li>
+                        <li class="minus">Najviac práce: štyri pohyby a na chvíľu dve vrstvy dlaždice.</li>
+                        <li class="minus">Keď sa medzičasom zmenilo ešte niečo, „pred“ je len približné.</li>
+                    </ul>
+                </section>
+                <section class="var" data-var="B">
+                    <div class="var-h">
+                        <h3>B · Ikona ožije</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Dlaždica je hneď v novom stave a hýbe sa len jej ikona: bubon práčky sa dotočí a zastaví s fajkou, kvapka bojlera sa
+                        naplní či vyprázdni, umývačka sa zatrasie. Okolo ikony dve vlny.
+                    </p>
+                    <ul>
+                        <li class="plus">Malé a pokojné, text dlaždice sa nehýbe.</li>
+                        <li class="plus">Každý spotrebič má vlastný „podpis“.</li>
+                        <li class="minus">Ikona je malá – na prvý pohľad menej viditeľné ako A alebo C.</li>
+                        <li class="minus">Nový spotrebič potrebuje vlastný pohyb ikony.</li>
+                    </ul>
+                </section>
+                <section class="var" data-var="C">
+                    <div class="var-h">
+                        <h3>C · Reflektor</h3>
+                        <button type="button" class="cip hraj">▶ Prehrať</button>
+                    </div>
+                    <div class="tel"></div>
+                    <p>
+                        Ostatné dlaždice na chvíľu stlmia, cieľová sa jemne zväčší a okolo nej raz obehne svetlo (to isté, aké je dnes okolo
+                        Plánu dňa). Potom sa všetko vráti.
+                    </p>
+                    <ul>
+                        <li class="plus">Najjednoduchšie a jednotné pre všetky spotrebiče aj budúce oznámenia.</li>
+                        <li class="plus">Na prvý pohľad jasné, kam pozerať.</li>
+                        <li class="minus">Povie len „toto“, nie „čo sa stalo“ – to ostáva na texte oznámenia.</li>
+                    </ul>
+                </section>
+            </div>
+
+            <!-- ============ Spoločné ============ -->
+            <h2>Čo platí pre všetky varianty</h2>
+            <div class="box">
+                <ul>
+                    <li>
+                        <strong>Útlm pohybu v systéme:</strong> nič sa nehýbe, appka hneď ukáže výsledný stav a cieľ (prvá dlaždica plánu,
+                        resp. dlaždica spotrebiča) dostane na 3 s statický biely obrys. Dnes je obrys pri útlme pohybu neviditeľný – človek
+                        nedostane nič. Skúsiš si to zaškrtnutím „útlm pohybu“.
+                    </li>
+                    <li>
+                        <strong>Kam posunúť:</strong> pri pláne ako dnes na pás dní, pri spotrebiči tak, aby bola celá jeho dlaždica vidno
+                        (pri väčšom písme v systéme môže byť nižšie ako obrazovka).
+                    </li>
+                    <li>
+                        <strong>Keď dlaždica nie je</strong> (zásuvka bojlera mlčí, spotrebič človek medzitým vypol v Nastavení): appka
+                        urobí animáciu plánu.
+                    </li>
+                    <li>
+                        <strong>Bežiaca aj zatvorená appka</strong> sa správajú rovnako; animácia čaká, kým je appka v popredí a kým prídu
+                        dáta (dnes najviac 20 s, <code>OZNAMENIA.obrysCakaMs</code>).
+                    </li>
+                    <li>
+                        <strong>Technicky:</strong> service worker dnes appke povie len „ťuklo sa na oznámenie“. Pribudne,
+                        <em>na ktoré</em>: značka oznámenia (<code>plan</code>, <code>remind</code> + spotrebič, <code>koniec-pracka</code>,
+                        <code>bojler</code> + zapol/vypol) pôjde v adrese aj v správe bežiacej appke. Staršia appka značku v adrese ignoruje
+                        a urobí dnešný obrys, nič sa nerozbije.
+                    </li>
+                    <li>Široká obrazovka (stĺpce prehľadu): Plán dňa je v stĺpci Teraz, animácia je tá istá.</li>
+                </ul>
+            </div>
+
+            <h2>Rozhodnutie 22. 11. 2026</h2>
+            <div class="box">
+                <p><span class="odpor">2 · B – Ikona ožije</span> vybraná pre oznámenia jedného spotrebiča.</p>
+                <p>
+                    <span class="odpor">1 · ikona prvého</span> Pre Plán dňa A–E zamietnuté (E 20. 11.). Ožije ikona ako v 2B, ale len
+                    <strong>prvého spotrebiča v pláne</strong> – toho, čo ide teraz alebo najbližšie (prvá dlaždica pod tým, čo už beží).
+                    Fajka nie je, nič nedobehlo.
+                </p>
+                <p>
+                    Bojler: kvapka sa naplní, keď sa zapol, a vyprázdni, keď sa vypol. Fajka pri bojleri nie je – vypnúť sa mohol aj preto,
+                    že prebytok klesol, nielen pre nahriatu vodu.
+                </p>
+            </div>
+
+            <h2>Pôvodné odporúčanie</h2>
+            <div class="box">
+                <p>
+                    <span class="odpor">1 · C – Niť dňa</span> Je to jediná varianta, ktorá ukáže to, čo oznámenie hovorí – poradie
+                    spotrebičov v čase – aj cez dva stĺpce dlaždíc. Ak sa ti bude zdať priveľa, druhá voľba je <strong>B</strong> (nič
+                    nezmizne, poradie je aspoň tušiť).
+                </p>
+                <p>
+                    <span class="odpor">2 · A – Prechod stavu</span> Oznámenie spotrebiča je o zmene a A je jediná, ktorá tú zmenu ukáže
+                    obrazom. Stlmenie ostatných dlaždíc z C sa dá pridať k nej, ak by dlaždica medzi ostatnými zanikala.
+                </p>
+                <p>
+                    Najmenej práce by bolo <strong>1D + 2C</strong> (jedno svetlo, iný cieľ) – ale potom sa oznámenia od seba nelíšia a
+                    rozdiel oproti dnešku je malý.
+                </p>
+            </div>
+        </main>
+
+        <script>
+            // Mockup: dlaždice skladá tento skript z jednoduchých stavov, animácie sú Web Animations API.
+            const IKONY = {
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle class="bubon" cx="12" cy="14" r="4"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle class="bubon" cx="12" cy="14" r="4"/><path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>',
+                bojler: '<rect x="6" y="2.5" width="12" height="19" rx="6"/><path class="kvapka" d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
+                umyvacka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 8h16M7.5 5.5h4M8 12.5h8M8 16.5h8"/>',
+                auto: '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
+            };
+            const MENA = { pracka: 'Práčka', susicka: 'Sušička', bojler: 'Bojler', umyvacka: 'Umývačka', auto: 'Auto' };
+            const SLNKO = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5" fill="#ffd166"/></svg>';
+            const OBLAK =
+                '<svg viewBox="0 0 24 24"><circle cx="15" cy="9" r="4" fill="#ffd166"/><path d="M6 19h11a4 4 0 0 0 0-8 5 5 0 0 0-9.6 1.5A3.3 3.3 0 0 0 6 19z" fill="#e8eef8"/></svg>';
+
+            /** @param {string} id @param {{tone:string, velky:string, pred?:string, odr:string[], s?:boolean}} t @param {boolean} [pol] */
+            function dl(id, t, pol = false) {
+                const velky = (t.pred ? `<small>${t.pred} </small>` : '') + t.velky;
+                return `<div class="dl${pol ? ' pol' : ''}" data-vec="${id}" data-tone="${t.tone}">
+                    <span class="ico"><svg class="vi" viewBox="0 0 24 24">${IKONY[id]}</svg></span>
+                    <span class="velky">${velky}</span><b>${MENA[id]}</b>
+                    <i class="podiel${t.s === false ? ' prazdny' : ''}"></i>
+                    <span class="odr">${t.odr.map((o) => `<span>${o}</span>`).join('')}</span></div>`;
+            }
+            /** Dlaždica, ktorá sa mení: dve vrstvy v jednej bunke (pred, po). */
+            function bunka(id, st, pred, pol) {
+                if (!pred || !pred[id]) return dl(id, st[id], pol);
+                // „pred“ je druhá, teda navrchu: kým animácia nezačne, vidno starý stav.
+                return `<div class="vym" data-cel="${id}">${dl(id, st[id], pol).replace('class="dl', 'data-vrstva="po" class="dl')}${dl(id, pred[id], pol).replace('class="dl', 'data-vrstva="pred" class="dl')}</div>`;
+            }
+            function obsah(st, pred, oko) {
+                const dni = [
+                    ['PI', SLNKO, '82%', true],
+                    ['SO', OBLAK, '60%'],
+                    ['NE', SLNKO, '78%'],
+                    ['PO', OBLAK, '45%'],
+                ];
+                return `<div class="pas">${dni
+                    .map(([d, ik, k, dnes]) => `<div class="${dnes ? 'dnes' : ''}" style="--k:${k}">${d}${ik}<i></i></div>`)
+                    .join('')}</div>
+                    <div class="oko"><i></i><span>${oko}</span></div>
+                    <div class="mriezka">
+                        <div class="dl-par">${bunka('pracka', st, pred, true)}${bunka('susicka', st, pred, true)}</div>
+                        ${bunka('bojler', st, pred)}${bunka('umyvacka', st, pred)}${bunka('auto', st, pred)}
+                    </div>`;
+            }
+
+            // ---------- Scenáre ----------
+            const PLAN = {
+                cas: '9:00',
+                oko: 'Teraz zo slnka',
+                notif: ['Dnes slnko do 17:30', 'Práčka 09:00 · umývačka 10:00 · sušička 11:15. Auto 11:00–15:00: ~150 km zo slnka.'],
+                st: {
+                    pracka: { tone: 'go', velky: '09:00', odr: ['zapni teraz'] },
+                    susicka: { tone: 'tiche', velky: '11:15', odr: ['po práčke'] },
+                    bojler: { tone: 'tiche', velky: '0 kW', odr: ['čaká na slnko'], s: false },
+                    umyvacka: { tone: 'tiche', velky: '10:00', odr: ['za 1 h', 'zo slnka'] },
+                    auto: { tone: 'tiche', velky: '11:00', odr: ['~150 km zo slnka'] },
+                },
+                poradie: ['pracka', 'umyvacka', 'auto', 'susicka'],
+            };
+            const UDALOSTI = {
+                koniec: {
+                    cas: '12:20',
+                    oko: 'Teraz zo slnka',
+                    notif: ['Práčka dobehla', 'Pranie je hotové. Sušička má teraz slnko.'],
+                    cel: 'pracka',
+                    dalsi: 'susicka',
+                    pohyb: 'zaplav',
+                    pred: {
+                        pracka: { tone: 'bezi', pred: 'do', velky: '12:20', odr: ['beží'] },
+                        susicka: { tone: 'tiche', velky: '12:20', odr: ['po práčke'] },
+                    },
+                    st: {
+                        pracka: { tone: 'tiche', velky: '15:30', odr: ['dnes už 1×'] },
+                        susicka: { tone: 'go', velky: '12:20', odr: ['zapni teraz'] },
+                        bojler: { tone: 'go', velky: '2,0 kW', odr: ['hreje zo slnka', 'od 11:40'] },
+                        umyvacka: { tone: 'tiche', velky: '14:00', odr: ['zo slnka'] },
+                        auto: { tone: 'tiche', velky: '13:00', odr: ['~50 km zo slnka'] },
+                    },
+                },
+                zapol: {
+                    cas: '11:40',
+                    oko: 'Teraz zo slnka',
+                    notif: ['Bojler sa zapol', 'Prebytok 2,4 kW · riadi appka'],
+                    cel: 'bojler',
+                    pohyb: 'stupa',
+                    pred: { bojler: { tone: 'tiche', velky: '0 kW', odr: ['čaká na slnko'], s: false } },
+                    st: {
+                        pracka: { tone: 'bezi', pred: 'do', velky: '12:20', odr: ['beží'] },
+                        susicka: { tone: 'tiche', velky: '12:20', odr: ['po práčke'] },
+                        bojler: { tone: 'go', velky: '2,0 kW', odr: ['hreje zo slnka', 'od 11:40'] },
+                        umyvacka: { tone: 'tiche', velky: '14:00', odr: ['zo slnka'] },
+                        auto: { tone: 'tiche', velky: '13:00', odr: ['~50 km zo slnka'] },
+                    },
+                },
+                vypol: {
+                    cas: '14:10',
+                    oko: 'Teraz zo slnka',
+                    notif: ['Bojler sa vypol', 'Voda je nahriata (termostat).'],
+                    cel: 'bojler',
+                    pohyb: 'klesa',
+                    pred: { bojler: { tone: 'go', velky: '2,0 kW', odr: ['hreje zo slnka', 'od 11:40'] } },
+                    st: {
+                        pracka: { tone: 'tiche', velky: '15:30', odr: ['dnes už 1×'] },
+                        susicka: { tone: 'bezi', pred: 'do', velky: '14:50', odr: ['beží'] },
+                        bojler: { tone: 'tiche', velky: '3,2 kWh', odr: ['nahriata', 'o 14:10'] },
+                        umyvacka: { tone: 'go', velky: '14:10', odr: ['zapni teraz'] },
+                        auto: { tone: 'tiche', velky: '14:30', odr: ['~40 km zo slnka'] },
+                    },
+                },
+                pripomen: {
+                    cas: '10:00',
+                    oko: 'Teraz zo slnka',
+                    notif: ['Umývačka · teraz', 'Zo slnka. Dobehne o 12:00.'],
+                    cel: 'umyvacka',
+                    pohyb: 'vlny',
+                    st: {
+                        pracka: { tone: 'bezi', pred: 'do', velky: '10:40', odr: ['beží'] },
+                        susicka: { tone: 'tiche', velky: '10:40', odr: ['po práčke'] },
+                        bojler: { tone: 'tiche', velky: '0 kW', odr: ['čaká na slnko'], s: false },
+                        umyvacka: { tone: 'go', velky: '10:00', odr: ['zapni teraz', 'zo slnka'] },
+                        auto: { tone: 'tiche', velky: '11:00', odr: ['~150 km zo slnka'] },
+                    },
+                },
+            };
+
+            // ---------- Pomôcky ----------
+            const spi = (ms) => new Promise((r) => setTimeout(r, ms));
+            const EASE = 'cubic-bezier(.2,.8,.2,1)';
+            const anim = (el, kf, o) => el.animate(kf, { fill: 'both', easing: EASE, ...o }).finished;
+
+            function kostra(tel, sc) {
+                tel.innerHTML = `<div class="zamok"></div>
+                    <div class="stav"><span>${sc.cas}</span><span>▮▮▮ 82 %</span></div>
+                    <div class="obsah"></div>
+                    <div class="notif"><div class="app"><i></i>RAY-MON · teraz</div><b>${sc.notif[0]}</b>${sc.notif[1]}</div>
+                    <i class="tuk"></i><span class="popis"></span>`;
+            }
+            function popis(tel, t) {
+                const p = tel.querySelector('.popis');
+                p.textContent = t;
+                p.classList.toggle('vidno', Boolean(t));
+            }
+            /** Oznámenie na zamknutej obrazovke, ťuknutie, appka sa otvorí. */
+            async function uvod(tel, s) {
+                const zamok = tel.querySelector('.zamok');
+                const ob = tel.querySelector('.obsah');
+                const n = tel.querySelector('.notif');
+                if (!s.uvod) return;
+                zamok.style.opacity = 1;
+                ob.style.opacity = 0;
+                popis(tel, 'prišlo oznámenie');
+                await anim(
+                    n,
+                    [
+                        { opacity: 0, transform: 'translateY(-120%)' },
+                        { opacity: 1, transform: 'none' },
+                    ],
+                    { duration: 380 },
+                );
+                await spi(900);
+                popis(tel, 'ťuk');
+                await anim(
+                    tel.querySelector('.tuk'),
+                    [
+                        { opacity: 0.9, transform: 'scale(.3)' },
+                        { opacity: 0, transform: 'scale(1.6)' },
+                    ],
+                    { duration: 380 },
+                );
+                n.animate([{ opacity: 1 }, { opacity: 0, transform: 'scale(.96)' }], { duration: 220, fill: 'both' });
+                await anim(zamok, [{ opacity: 1 }, { opacity: 0 }], { duration: 300 });
+                popis(tel, '');
+            }
+            async function ukazObsah(tel, s) {
+                const ob = tel.querySelector('.obsah');
+                if (s.uvod) await anim(ob, [{ opacity: 0 }, { opacity: 1 }], { duration: 260 });
+                ob.style.opacity = 1;
+            }
+            /** Útlm pohybu: statický obrys na 3 s, nič sa nehýbe. */
+            async function staticky(el, tel) {
+                el.classList.add('staticky');
+                popis(tel, 'útlm pohybu: obrys 3 s');
+                await spi(3000);
+                el.classList.remove('staticky');
+                popis(tel, '');
+            }
+
+            // ---------- 1. Plán dňa ----------
+            const tiles = (ob, ids) => ids.map((id) => ob.querySelector(`.dl[data-vec="${id}"]`));
+
+            const PLAN_VAR = {
+                async A(ob) {
+                    const el = tiles(ob, [...PLAN.poradie, 'bojler']);
+                    el.forEach((e) => (e.style.opacity = 0));
+                    return async () => {
+                        await Promise.all(
+                            el.map((e, i) => {
+                                const a = anim(
+                                    e,
+                                    [
+                                        { opacity: 0, transform: 'translateY(18px) scale(.96)' },
+                                        { opacity: 1, transform: 'none' },
+                                    ],
+                                    { duration: 420, delay: 120 + i * 150 },
+                                );
+                                return a.then(() => (e.style.opacity = 1));
+                            }),
+                        );
+                        await anim(
+                            el[0],
+                            [
+                                { boxShadow: '0 0 0 0 rgba(185,242,140,.9), 0 8px 30px rgba(185,242,140,.3)' },
+                                { boxShadow: '0 0 0 12px rgba(185,242,140,0), 0 8px 30px rgba(185,242,140,.3)' },
+                            ],
+                            { duration: 700, iterations: 2, fill: 'none' },
+                        );
+                    };
+                },
+                async B(ob) {
+                    return async () => {
+                        const les = (cel, delay) => {
+                            const l = document.createElement('span');
+                            l.className = 'les';
+                            cel.append(l);
+                            return anim(l, [{ transform: 'translateX(-130%)' }, { transform: 'translateX(130%)' }], {
+                                duration: 750,
+                                delay,
+                                easing: 'ease-in-out',
+                            }).then(() => l.remove());
+                        };
+                        await les(ob.querySelector('.pas .dnes'), 100);
+                        await anim(
+                            ob.querySelector('.oko i'),
+                            [{ transform: 'scale(1)' }, { transform: 'scale(1.9)' }, { transform: 'scale(1)' }],
+                            { duration: 500, fill: 'none' },
+                        );
+                        await Promise.all(
+                            tiles(ob, PLAN.poradie).map((e, i) =>
+                                Promise.all([
+                                    les(e, i * 260),
+                                    anim(e, [{ transform: 'none' }, { transform: 'translateY(-4px)' }, { transform: 'none' }], {
+                                        duration: 700,
+                                        delay: i * 260,
+                                        fill: 'none',
+                                    }),
+                                ]),
+                            ),
+                        );
+                    };
+                },
+                async C(ob) {
+                    return async () => {
+                        const mr = ob.querySelector('.mriezka');
+                        const r0 = mr.getBoundingClientRect();
+                        const body = tiles(ob, PLAN.poradie).map((e) => {
+                            const r = e.querySelector('.ico').getBoundingClientRect();
+                            return [r.left - r0.left + r.width / 2, r.top - r0.top + r.height / 2];
+                        });
+                        const ns = 'http://www.w3.org/2000/svg';
+                        const svg = document.createElementNS(ns, 'svg');
+                        svg.setAttribute('class', 'nit');
+                        mr.append(svg);
+                        const bod = (p) => {
+                            const c = document.createElementNS(ns, 'circle');
+                            c.setAttribute('cx', p[0]);
+                            c.setAttribute('cy', p[1]);
+                            c.setAttribute('r', 6);
+                            svg.append(c);
+                            c.animate(
+                                [
+                                    { r: 0, opacity: 0 },
+                                    { r: 9, opacity: 1 },
+                                    { r: 6, opacity: 1 },
+                                ],
+                                { duration: 380, fill: 'both', easing: EASE },
+                            );
+                        };
+                        bod(body[0]);
+                        await spi(250);
+                        for (let i = 1; i < body.length; i++) {
+                            const [a, b] = [body[i - 1], body[i]];
+                            const dy = Math.max(50, Math.abs(b[1] - a[1]) * 0.6);
+                            const p = document.createElementNS(ns, 'path');
+                            p.setAttribute(
+                                'd',
+                                `M${a[0]} ${a[1]} C${a[0] + (b[0] >= a[0] ? 30 : -30)} ${a[1] + dy} ${b[0]} ${b[1] - dy} ${b[0]} ${b[1]}`,
+                            );
+                            svg.prepend(p);
+                            const len = p.getTotalLength();
+                            p.style.strokeDasharray = len;
+                            await anim(p, [{ strokeDashoffset: len }, { strokeDashoffset: 0 }], {
+                                duration: len * 2.4,
+                                easing: 'ease-in-out',
+                            });
+                            bod(b);
+                        }
+                        await spi(1400);
+                        await anim(svg, [{ opacity: 1 }, { opacity: 0 }], { duration: 600 });
+                        svg.remove();
+                    };
+                },
+                async D(ob) {
+                    return async () => {
+                        const e = ob.querySelector('.dl[data-vec="pracka"]');
+                        e.classList.remove('obeh');
+                        void e.offsetWidth;
+                        e.classList.add('obeh');
+                        await spi(1000);
+                        e.classList.remove('obeh');
+                    };
+                },
+                async E(ob) {
+                    return async () => {
+                        await spi(200);
+                        await Promise.all([...ob.querySelectorAll('.dl')].map((e) => ozivIkonu(e)));
+                    };
+                },
+            };
+
+            async function hrajPlan(sekcia) {
+                const tel = sekcia.querySelector('.tel');
+                const v = sekcia.dataset.var;
+                const s = nastavenie('plan-rad');
+                kostra(tel, PLAN);
+                const ob = tel.querySelector('.obsah');
+                ob.innerHTML = obsah(PLAN.st, null, PLAN.oko);
+                if (s.utlm) {
+                    await uvodBezPohybu(tel, s);
+                    return staticky(ob.querySelector('.dl[data-vec="pracka"]'), tel);
+                }
+                const beh = await PLAN_VAR[v](ob);
+                await uvod(tel, s);
+                await ukazObsah(tel, s);
+                await beh();
+            }
+            async function uvodBezPohybu(tel, s) {
+                if (!s.uvod) return;
+                const zamok = tel.querySelector('.zamok');
+                const n = tel.querySelector('.notif');
+                zamok.style.opacity = 1;
+                n.style.opacity = 1;
+                n.style.transform = 'none';
+                popis(tel, 'prišlo oznámenie');
+                await spi(1500);
+                zamok.style.opacity = 0;
+                n.style.opacity = 0;
+                popis(tel, '');
+            }
+
+            // ---------- 2. Spotrebiče ----------
+            function vlny(cel, n = 2) {
+                const ico = cel.querySelector('.ico');
+                const r = ico.getBoundingClientRect();
+                const rc = cel.getBoundingClientRect();
+                const out = [];
+                for (let i = 0; i < n; i++) {
+                    const w = document.createElement('span');
+                    w.className = 'vlna';
+                    w.style.left = `${r.left - rc.left}px`;
+                    w.style.top = `${r.top - rc.top}px`;
+                    w.style.width = w.style.height = `${r.width}px`;
+                    cel.append(w);
+                    out.push(
+                        anim(
+                            w,
+                            [
+                                { opacity: 0.8, transform: 'scale(1)' },
+                                { opacity: 0, transform: 'scale(3.2)' },
+                            ],
+                            { duration: 900, delay: i * 280, easing: 'ease-out' },
+                        ).then(() => w.remove()),
+                    );
+                }
+                return Promise.all(out);
+            }
+            function fajka(ico) {
+                const svg = ico.querySelector('svg');
+                const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                p.setAttribute('class', 'fajka');
+                p.setAttribute('d', svg.closest('[data-vec="bojler"]') ? 'M17.5 3.5l1.6 1.6 3-3.2' : 'M9.6 14.1l1.7 1.7 3.2-3.4');
+                svg.append(p);
+                const len = p.getTotalLength();
+                p.style.strokeDasharray = len;
+                return anim(p, [{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: 420, easing: 'ease-out' });
+            }
+            /**
+             * Pohyb ikony spotrebiča (2B, v pláne 1E pre všetky naraz) a dve vlny okolo nej.
+             * `pohyb`: zaplav = dobehol (bubon sa dotočí, fajka), stupa / klesa = bojler zapol / vypol, inak bez udalosti.
+             * @param {HTMLElement} e dlaždica @param {string} [pohyb]
+             */
+            async function ozivIkonu(e, pohyb) {
+                const id = e.dataset.vec;
+                const svg = e.querySelector('.vi');
+                const ico = e.querySelector('.ico');
+                const kruhy = vlny(e, 2);
+                if (id === 'pracka' || id === 'susicka') {
+                    const b = svg.querySelector('.bubon');
+                    await anim(
+                        b,
+                        [
+                            { transform: 'rotate(0)', strokeDasharray: '3 2' },
+                            { transform: 'rotate(900deg)', strokeDasharray: '3 2' },
+                        ],
+                        { duration: 1300, easing: 'cubic-bezier(.3,0,.2,1)' },
+                    );
+                    b.getAnimations().forEach((a) => a.cancel());
+                    if (pohyb === 'zaplav') await fajka(ico);
+                } else if (id === 'bojler') {
+                    const k = svg.querySelector('.kvapka');
+                    const plna = e.dataset.tone === 'go' ? 1 : 0;
+                    const [a, b] = pohyb === 'stupa' ? [0, 1] : pohyb === 'klesa' ? [1, 0] : [plna, plna];
+                    await anim(
+                        k,
+                        [
+                            { fillOpacity: a, transform: 'scale(1)' },
+                            { fillOpacity: pohyb ? (a + b) / 2 : 1, transform: 'scale(1.35)' },
+                            { fillOpacity: b, transform: 'scale(1)' },
+                        ],
+                        { duration: 1100, fill: 'none' },
+                    );
+                    if (pohyb === 'klesa') await fajka(ico);
+                } else if (id === 'auto') {
+                    await anim(
+                        ico,
+                        [
+                            { transform: 'none' },
+                            { transform: 'translateX(-4px)' },
+                            { transform: 'translateX(6px)' },
+                            { transform: 'translateX(-2px)' },
+                            { transform: 'none' },
+                        ],
+                        { duration: 1100, fill: 'none', easing: 'ease-in-out' },
+                    );
+                } else {
+                    await anim(
+                        ico,
+                        [
+                            { transform: 'rotate(0)' },
+                            { transform: 'rotate(-10deg)' },
+                            { transform: 'rotate(9deg)' },
+                            { transform: 'rotate(-6deg)' },
+                            { transform: 'rotate(0)' },
+                        ],
+                        { duration: 700, iterations: 2, fill: 'none', easing: 'ease-in-out' },
+                    );
+                }
+                await kruhy;
+            }
+            function stredIkony(cel) {
+                const r = cel.querySelector('.ico').getBoundingClientRect();
+                const rc = cel.getBoundingClientRect();
+                return `${r.left - rc.left + r.width / 2}px ${r.top - rc.top + r.height / 2}px`;
+            }
+
+            const VEC_VAR = {
+                async A(ob, u) {
+                    const vym = ob.querySelector(`.vym[data-cel="${u.cel}"]`);
+                    const cel = () => ob.querySelector(`.dl[data-vec="${u.cel}"]:not([data-vrstva="pred"])`);
+                    if (!vym) {
+                        // Pripomienka: stav sa nemení, len vlny z ikony.
+                        const e = cel();
+                        await Promise.all([
+                            vlny(e, 3),
+                            anim(e, [{ transform: 'none' }, { transform: 'translateY(-4px) scale(1.02)' }, { transform: 'none' }], {
+                                duration: 1100,
+                                fill: 'none',
+                            }),
+                        ]);
+                        return;
+                    }
+                    const pred = vym.querySelector('[data-vrstva="pred"]');
+                    const po = vym.querySelector('[data-vrstva="po"]');
+                    if (u.pohyb === 'zaplav') {
+                        await spi(350);
+                        await fajka(pred.querySelector('.ico'));
+                        await spi(250);
+                        const o = stredIkony(pred);
+                        po.style.clipPath = `circle(0px at ${o})`;
+                        po.classList.add('ukaz');
+                        vym.append(po); // nový stav navrch, rozleje sa z ikony
+                        await anim(po, [{ clipPath: `circle(0px at ${o})` }, { clipPath: `circle(150% at ${o})` }], {
+                            duration: 700,
+                            easing: 'ease-in',
+                        });
+                    } else if (u.pohyb === 'stupa') {
+                        po.style.clipPath = 'inset(100% 0 0 0 round 20px)';
+                        po.classList.add('ukaz');
+                        vym.append(po); // nový stav navrch, stúpa zdola
+                        await spi(450);
+                        await anim(po, [{ clipPath: 'inset(100% 0 0 0 round 20px)' }, { clipPath: 'inset(0 0 0 0 round 20px)' }], {
+                            duration: 1100,
+                            easing: 'ease-in-out',
+                        });
+                    } else if (u.pohyb === 'klesa') {
+                        await spi(450);
+                        po.classList.add('ukaz');
+                        await anim(pred, [{ clipPath: 'inset(0 0 0 0)' }, { clipPath: 'inset(100% 0 0 0)' }], {
+                            duration: 1100,
+                            easing: 'ease-in-out',
+                        });
+                    }
+                    pred.remove();
+                    if (u.dalsi) {
+                        // Sušička sa zmení prelínaním a kývne: teraz je na rade ona.
+                        const dp = ob.querySelector(`.vym[data-cel="${u.dalsi}"] [data-vrstva="pred"]`);
+                        if (dp) {
+                            dp.previousElementSibling.classList.add('ukaz');
+                            await anim(dp, [{ opacity: 1 }, { opacity: 0 }], { duration: 450 });
+                            dp.remove();
+                        }
+                        const d = ob.querySelector(`.dl[data-vec="${u.dalsi}"]:not([data-vrstva="pred"])`);
+                        await Promise.all([
+                            anim(
+                                d,
+                                [
+                                    { transform: 'none' },
+                                    { transform: 'translateX(5px)' },
+                                    { transform: 'translateX(-3px)' },
+                                    { transform: 'none' },
+                                ],
+                                { duration: 600, fill: 'none' },
+                            ),
+                            anim(
+                                d,
+                                [
+                                    { boxShadow: '0 0 0 0 rgba(185,242,140,.9), 0 8px 30px rgba(185,242,140,.3)' },
+                                    { boxShadow: '0 0 0 10px rgba(185,242,140,0), 0 8px 30px rgba(185,242,140,.3)' },
+                                ],
+                                { duration: 700, fill: 'none' },
+                            ),
+                        ]);
+                    }
+                },
+                async B(ob, u) {
+                    await spi(250);
+                    await ozivIkonu(ob.querySelector(`.dl[data-vec="${u.cel}"]`), u.pohyb);
+                },
+                async C(ob, u) {
+                    const e = ob.querySelector(`.dl[data-vec="${u.cel}"]`);
+                    const ini = [...ob.querySelectorAll('.dl')].filter((x) => x !== e);
+                    const tlm = ini.map((x) => anim(x, [{ opacity: 1 }, { opacity: 0.3 }], { duration: 350 }));
+                    await Promise.all([...tlm, anim(e, [{ transform: 'none' }, { transform: 'scale(1.04)' }], { duration: 350 })]);
+                    e.style.setProperty('--obeh-t', '1.3s');
+                    e.classList.add('obeh');
+                    await spi(1600);
+                    e.classList.remove('obeh');
+                    await Promise.all([
+                        ...ini.map((x) => anim(x, [{ opacity: 0.3 }, { opacity: 1 }], { duration: 400 })),
+                        anim(e, [{ transform: 'scale(1.04)' }, { transform: 'none' }], { duration: 400 }),
+                    ]);
+                },
+            };
+
+            async function hrajVec(sekcia) {
+                const tel = sekcia.querySelector('.tel');
+                const v = sekcia.dataset.var;
+                const s = nastavenie('vec-rad');
+                const u = UDALOSTI[udalost];
+                kostra(tel, u);
+                const ob = tel.querySelector('.obsah');
+                // A začína stavom „pred“, B a C rovno novým stavom (C ho ukáže prelínaním).
+                ob.innerHTML = obsah(u.st, v === 'A' && !s.utlm ? u.pred : null, u.oko);
+                if (s.utlm) {
+                    await uvodBezPohybu(tel, s);
+                    return staticky(ob.querySelector(`.dl[data-vec="${u.cel}"]`), tel);
+                }
+                await uvod(tel, s);
+                await ukazObsah(tel, s);
+                await VEC_VAR[v](ob, u);
+            }
+
+            // ---------- Ovládanie ----------
+            let udalost = 'koniec';
+            function nastavenie(radId) {
+                const ovl = document.getElementById(radId).previousElementSibling;
+                return { uvod: ovl.querySelector('.uvod').checked, utlm: ovl.querySelector('.utlm').checked };
+            }
+            const planSek = [...document.querySelectorAll('#plan-rad .var')];
+            const vecSek = [...document.querySelectorAll('#vec-rad .var')];
+            planSek.forEach((s) => s.querySelector('.hraj').addEventListener('click', () => hrajPlan(s)));
+            vecSek.forEach((s) => s.querySelector('.hraj').addEventListener('click', () => hrajVec(s)));
+            document.getElementById('plan-vsetky').addEventListener('click', () => planSek.forEach(hrajPlan));
+            document.getElementById('vec-vsetky').addEventListener('click', () => vecSek.forEach(hrajVec));
+            document.querySelectorAll('#udalosti .cip').forEach((b) =>
+                b.addEventListener('click', () => {
+                    udalost = b.dataset.ud;
+                    document.querySelectorAll('#udalosti .cip').forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
+                    vecSek.forEach(kresliVec);
+                    vecSek.forEach(hrajVec);
+                }),
+            );
+            function kresliVec(sekcia) {
+                const u = UDALOSTI[udalost];
+                const tel = sekcia.querySelector('.tel');
+                kostra(tel, u);
+                tel.querySelector('.obsah').innerHTML = obsah(u.st, null, u.oko);
+            }
+            // Pokojový stav: telefóny ukazujú výsledok; prehrá sa po ťuknutí na ▶.
+            planSek.forEach((s) => {
+                const tel = s.querySelector('.tel');
+                kostra(tel, PLAN);
+                tel.querySelector('.obsah').innerHTML = obsah(PLAN.st, null, PLAN.oko);
+            });
+            vecSek.forEach(kresliVec);
+        </script>
+    </body>
+</html>

@@ -22,23 +22,65 @@ import { vyhladOznamenia } from './vyhlad.js';
  */
 const KLIK_PARAM = 'z';
 
-/** Adresa, ktorú service worker otvorí, keď appka nebeží. @param {string} href @returns {string} */
-export function klikUrl(href) {
+/**
+ * Na čo sa ťuklo (docs/navrhy/oznamenia-animacie.html): ranný plán dňa, alebo oznámenie jedného spotrebiča -
+ * koniec programu, pripomienka, zmena ohrevu bojlera. Appka podľa toho oživí ikonu dlaždice.
+ * @typedef {{ udalost: 'plan' } | { udalost: 'koniec' | 'pripomen' | 'bojler', vec: string }} Ciel
+ */
+
+/** @type {Ciel} */
+const PLAN = { udalost: 'plan' };
+const UDALOSTI = ['koniec', 'pripomen', 'bojler'];
+
+/**
+ * Značka ťuknutia v adrese aj v správe bežiacej appke. Plán je holé OZNAMENIA.klik ako pred cieľmi, takže ho pozná
+ * aj staršia appka; značku spotrebiča staršia appka prejde mlčky.
+ * @param {Ciel} ciel @returns {string}
+ */
+export const klikZnacka = (ciel) => (ciel.udalost === 'plan' ? OZNAMENIA.klik : `${OZNAMENIA.klik}:${ciel.udalost}:${ciel.vec}`);
+
+/**
+ * Cieľ zo značky, null keď to značka ťuknutia nie je. Značku, ktorej táto appka nerozumie (z novšieho service
+ * workera), berie ako plán - ťuknutie sa tak neprepadne.
+ * @param {unknown} znacka @returns {Ciel | null}
+ */
+export function klikCiel(znacka) {
+    if (typeof znacka !== 'string') return null;
+    if (znacka === OZNAMENIA.klik) return PLAN;
+    const [k, udalost, vec, ...zvysok] = znacka.split(':');
+    if (k !== OZNAMENIA.klik) return null;
+    return UDALOSTI.includes(udalost) && /^[a-z]+$/.test(vec ?? '') && !zvysok.length ? /** @type {Ciel} */ ({ udalost, vec }) : PLAN;
+}
+
+/**
+ * Cieľ oznámenia s obsahom podľa jeho značky: koniec programu (`koniec-pracka`, worker/src/budik.js), zmena
+ * ohrevu bojlera (OZNAMENIA.bojler). Inak plán.
+ * @param {string} tag @returns {Ciel}
+ */
+export function cielPushu(tag) {
+    if (tag === OZNAMENIA.bojler) return { udalost: 'bojler', vec: 'bojler' };
+    const vec = /^koniec-([a-z]+)$/.exec(tag)?.[1];
+    return vec ? { udalost: 'koniec', vec } : PLAN;
+}
+
+/** Adresa, ktorú service worker otvorí, keď appka nebeží. @param {string} href @param {Ciel} [ciel] @returns {string} */
+export function klikUrl(href, ciel = PLAN) {
     const url = new URL(href);
-    url.searchParams.set(KLIK_PARAM, OZNAMENIA.klik);
+    url.searchParams.set(KLIK_PARAM, klikZnacka(ciel));
     return url.href;
 }
 
 /**
  * Otvorilo appku ťuknutie na oznámenie? Vráti adresu bez značky (tú treba hneď zapísať, inak by
- * obnovenie stránky ťuknutie zopakovalo), alebo null, keď značku nenesie.
- * @param {string} href @returns {string | null}
+ * obnovenie stránky ťuknutie zopakovalo) a cieľ, alebo null, keď značku nenesie.
+ * @param {string} href @returns {{ adresa: string, ciel: Ciel } | null}
  */
 export function klikZAdresy(href) {
     const url = new URL(href);
-    if (url.searchParams.get(KLIK_PARAM) !== OZNAMENIA.klik) return null;
+    const ciel = klikCiel(url.searchParams.get(KLIK_PARAM));
+    if (!ciel) return null;
     url.searchParams.delete(KLIK_PARAM);
-    return url.pathname + url.search + url.hash;
+    return { adresa: url.pathname + url.search + url.hash, ciel };
 }
 
 /**
@@ -134,7 +176,7 @@ export function reminderNotice(input, { id, voice = 'drzy' }) {
  * Čo ukáže service worker, keď ho Worker zobudí: pripomienka, ak jej čas práve nastal, inak ranný
  * plán dňa - s tlačidlom na pripomienku najbližšieho spotrebiča (`remind`: ISO čas a nápis).
  * `keep` sú pripomienky, ktoré ešte čakajú, `vyhlad` čo si zapamätať z výhľadu dní bez slnka
- * (`posledny` je to, čo si service worker pamätal doteraz).
+ * (`posledny` je to, čo si service worker pamätal doteraz), `vec` spotrebič pripomienky.
  * @param {Zrkadlo} z @param {Pripomienka[]} reminders @param {Parameters<typeof buildForecast>[0]} weather @param {Date} now
  * @param {import('./vyhlad.js').Vyhlad | null} [posledny]
  */
@@ -145,7 +187,7 @@ export function swNotice(z, reminders, weather, now, posledny = null) {
     const due = reminders.find((r) => Math.abs(off(r)) <= OZNAMENIA.remindWindowMin);
     const keep = reminders.filter((r) => r !== due && off(r) > -OZNAMENIA.remindWindowMin);
     const reminder = due ? reminderNotice(input, { id: due.id, voice: z.voice }) : null;
-    if (reminder) return { ...reminder, remind: null, keep, reminder: true, vyhlad: posledny };
+    if (reminder && due) return { ...reminder, remind: null, keep, reminder: true, vec: due.id, vyhlad: posledny };
     const n = planNotice(input, { devices: z.devices, voice: z.voice, posledny });
     const nowMin = localMinutes(now, z.site.timezone);
     const remind = n.remind
@@ -155,7 +197,7 @@ export function swNotice(z, reminders, weather, now, posledny = null) {
               label: oznameniaTexts(z.voice).remind(n.remind.at),
           }
         : null;
-    return { title: n.title, body: n.body, remind, keep, reminder: false, vyhlad: n.vyhlad };
+    return { title: n.title, body: n.body, remind, keep, reminder: false, vec: null, vyhlad: n.vyhlad };
 }
 
 /**

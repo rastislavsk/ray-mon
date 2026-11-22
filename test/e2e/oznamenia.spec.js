@@ -110,10 +110,11 @@ async function sluzba(page, skript = '/sw.js', rozsah = '/') {
  * Ťuknutie na oznámenie v service workeri. Skutočný notificationclick z testu nejde a prehliadač
  * bez ťuknutia focus aj openWindow odmietne - tie dve volania sú preto len zapísané. Správa oknu je
  * skutočná. Na telefóne to treba overiť ručne.
- * @param {import('@playwright/test').Worker} sw @returns {Promise<string[][]>} zavolané focus a openWindow
+ * `data` sú údaje oznámenia (predvolene ranný plán spred cieľov, bez `ciel`).
+ * @param {import('@playwright/test').Worker} sw @param {object} [data] @returns {Promise<string[][]>} zavolané focus a openWindow
  */
-const tukni = (sw) =>
-    sw.evaluate(async () => {
+const tukni = (sw, data = { app: './' }) =>
+    sw.evaluate(async (data) => {
         const glob = /** @type {any} */ (self);
         /** @type {string[][]} */ const volania = [];
         Object.defineProperty(glob.clients, 'openWindow', {
@@ -127,13 +128,13 @@ const tukni = (sw) =>
         /** @type {Promise<unknown> | undefined} */ let hotovo;
         const e = Object.assign(new Event('notificationclick'), {
             action: '',
-            notification: { data: { app: './' }, close() {} },
+            notification: { data, close() {} },
             waitUntil: (/** @type {Promise<unknown>} */ p) => (hotovo = p),
         });
         glob.dispatchEvent(e);
         await hotovo;
         return volania;
-    });
+    }, data);
 
 /** Zapisuje mená CSS animácií, ktoré sa v stránke spustili. @param {import('@playwright/test').Page} page */
 const sledujAnimacie = (page) =>
@@ -142,23 +143,31 @@ const sledujAnimacie = (page) =>
         glob.animacie = [];
         document.addEventListener('animationstart', (e) => glob.animacie.push(e.animationName), true);
     });
-/** Koľkokrát obrys okolo toho, čo zapnúť, začal. @param {import('@playwright/test').Page} page */
-const obrysov = (page) =>
-    page.evaluate(() => /** @type {any} */ (window).animacie.filter((/** @type {string} */ a) => a === 'plan-obrys').length);
+/** Koľko oživení ikony začalo (vlny okolo kruhu s ikonou, dve opakovania sú jedna animácia). @param {import('@playwright/test').Page} page */
+const oziveni = (page) =>
+    page.evaluate(() => /** @type {any} */ (window).animacie.filter((/** @type {string} */ a) => a === 'oziv-vlna').length);
+/** Oživená dlaždica. @param {import('@playwright/test').Page} page */
+const ozivena = (page) => page.locator('#tz-dlazdice [data-oziv]');
 
 /** Karta na obrazovke. @param {import('@playwright/test').Page} page @param {string} panel */
 async function ukazuje(page, panel) {
     await expect(page.locator('#page')).toHaveAttribute('data-panel', panel);
 }
 
-/** Obrys prebehol raz a zhasol. @param {import('@playwright/test').Page} page */
-async function obrysPrebehol(page) {
-    await expect.poll(() => obrysov(page)).toBe(1);
-    await expect(page.locator('#tz-co')).not.toHaveAttribute('data-obrys');
+/**
+ * Ikona ožila raz a zhasla. Pri pláne ožije prvý spotrebič v pláne - prvá dlaždica pod tým, čo beží.
+ * @param {import('@playwright/test').Page} page @param {string} [druh] @param {string} [vec]
+ */
+async function ozilo(page, druh = 'plan', vec) {
+    await expect(ozivena(page)).toHaveCount(1);
+    await expect(ozivena(page)).toHaveAttribute('data-oziv', druh);
+    if (vec) await expect(ozivena(page)).toHaveAttribute('data-vec', vec);
+    await expect.poll(() => oziveni(page)).toBe(1);
+    await expect(ozivena(page)).toHaveCount(0);
 }
 
 test.describe('ťuknutie na oznámenie', () => {
-    test('appka beží na inej karte: Teraz s obrysom okolo toho, čo zapnúť, Späť sa vráti na kartu', async ({ page }) => {
+    test('appka beží na inej karte: Teraz s oživenou ikonou prvého spotrebiča, Späť sa vráti na kartu', async ({ page }) => {
         await sledujAnimacie(page);
         await otvor(page);
         await expect(page.locator('#tz-co')).toBeVisible();
@@ -168,12 +177,12 @@ test.describe('ťuknutie na oznámenie', () => {
         expect(await tukni(sw)).toEqual([['focus']]);
         await ukazuje(page, 'terazky');
         await expect(page.locator('#tz-co')).toBeVisible();
-        await obrysPrebehol(page);
+        await ozilo(page);
         await page.goBack();
         await ukazuje(page, 'mozem');
     });
 
-    test('appka je zatvorená: adresa so značkou ukáže obrys, značka zmizne a obnovenie nič nezopakuje', async ({ page }) => {
+    test('appka je zatvorená: adresa so značkou oživí ikonu, značka zmizne a obnovenie nič nezopakuje', async ({ page }) => {
         await sledujAnimacie(page);
         await otvor(page);
         const sw = await sluzba(page);
@@ -182,62 +191,85 @@ test.describe('ťuknutie na oznámenie', () => {
         expect(volanie).toBe('openWindow');
         await page.goto(adresa);
         await ukazuje(page, 'terazky');
-        await obrysPrebehol(page);
+        await ozilo(page);
         expect(new URL(page.url()).search).toBe('');
         await page.reload();
         await expect(page.locator('#tz-co')).toBeVisible();
         await ukazuje(page, 'terazky');
-        expect(await obrysov(page)).toBe(0);
+        expect(await oziveni(page)).toBe(0);
     });
 
-    test('bežné otvorenie appky: bez obrysu', async ({ page }) => {
+    test('bežné otvorenie appky: nič neožije', async ({ page }) => {
         await sledujAnimacie(page);
         await otvor(page);
         await expect(page.locator('#tz-co')).toBeVisible();
         await ukazuje(page, 'terazky');
-        expect(await obrysov(page)).toBe(0);
+        expect(await oziveni(page)).toBe(0);
+        await expect(ozivena(page)).toHaveCount(0);
     });
 
-    test('útlm pohybu: obrys nie je vidieť', async ({ page }) => {
+    test('útlm pohybu: nič sa nehýbe, kruh s ikonou má na chvíľu obrys', async ({ page }) => {
         await page.emulateMedia({ reducedMotion: 'reduce' });
         await sledujAnimacie(page);
         await otvor(page, 'default', 'denied', { adresa: '/?z=oznamenie' });
         await expect(page.locator('#tz-co')).toBeVisible();
         await ukazuje(page, 'terazky');
-        expect(await obrysov(page)).toBe(0);
-        const obrys = await page.evaluate(
-            () => getComputedStyle(/** @type {Element} */ (document.querySelector('#tz-co')), '::after').opacity,
-        );
-        expect(obrys).toBe('0');
+        await expect(ozivena(page)).toHaveCount(1);
+        const tien = await ozivena(page)
+            .locator('.dl-ico')
+            .evaluate((el) => getComputedStyle(el).boxShadow);
+        expect(tien).toContain('3px');
+        expect(await oziveni(page)).toBe(0);
+        await expect(ozivena(page)).toHaveCount(0);
     });
 
-    test('dáta ešte nie sú: obrys počká, kým je čo zapnúť', async ({ page }) => {
+    test('koniec programu: ožije ikona toho spotrebiča a nakreslí sa fajka', async ({ page }) => {
+        await sledujAnimacie(page);
+        await otvor(page);
+        await expect(page.locator('#tz-co')).toBeVisible();
+        const sw = await sluzba(page);
+        await page.locator('#nav-mozem').click();
+        await tukni(sw, { app: './', ciel: { udalost: 'koniec', vec: 'umyvacka' } });
+        await ukazuje(page, 'terazky');
+        await expect(ozivena(page)).toHaveAttribute('data-vec', 'umyvacka');
+        await expect(ozivena(page)).toHaveAttribute('data-oziv', 'koniec');
+        await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).animacie.includes('oziv-fajka'))).toBe(true);
+        await ozilo(page, 'koniec', 'umyvacka');
+    });
+
+    test('spotrebič bez dlaždice: ožije prvý spotrebič v pláne', async ({ page }) => {
+        await sledujAnimacie(page);
+        await otvor(page, 'default', 'denied', { adresa: '/?z=oznamenie:bojler:bojler' });
+        await ukazuje(page, 'terazky');
+        await ozilo(page, 'plan');
+    });
+
+    test('dáta ešte nie sú: oživenie počká, kým je čo zapnúť', async ({ page }) => {
         await sledujAnimacie(page);
         /** @type {(v?: unknown) => void} */ let pusti = () => {};
         const predpoved = new Promise((ok) => (pusti = ok));
         await otvor(page, 'default', 'denied', { adresa: '/?z=oznamenie', predpoved });
         await expect(page.locator('#tz-co')).toBeHidden();
         await ukazuje(page, 'terazky');
-        expect(await obrysov(page)).toBe(0);
+        expect(await oziveni(page)).toBe(0);
         pusti();
         await expect(page.locator('#tz-co')).toBeVisible();
-        await obrysPrebehol(page);
+        await ozilo(page);
     });
 
-    test('čo zapnúť sa dlho neukáže: obrys prepadne a neskorá predpoveď ho nespustí', async ({ page }) => {
+    test('čo zapnúť sa dlho neukáže: oživenie prepadne a neskorá predpoveď ho nespustí', async ({ page }) => {
         await sledujAnimacie(page);
         /** @type {(v?: unknown) => void} */ let pusti = () => {};
         const predpoved = new Promise((ok) => (pusti = ok));
         await page.clock.install({ time: FIXED_NOW });
         await otvor(page, 'default', 'denied', { adresa: '/?z=oznamenie', predpoved });
-        await expect(page.locator('#tz-co')).toHaveAttribute('data-obrys');
-        await page.clock.fastForward(OZNAMENIA.obrysCakaMs);
-        await expect(page.locator('#tz-co')).not.toHaveAttribute('data-obrys');
+        await expect(page.locator('#tz-co')).toBeHidden();
+        await page.clock.fastForward(OZNAMENIA.ozivCakaMs);
         // Prvá požiadavka medzitým vypršala, predpoveď príde s ďalšou obnovou dát.
         pusti();
         await page.clock.fastForward(REFRESH.dataMs);
         await expect(page.locator('#tz-co')).toBeVisible();
-        expect(await obrysov(page)).toBe(0);
+        expect(await oziveni(page)).toBe(0);
     });
 
     test('čo zapnúť mimo obrazovky: stránka sa k nemu posunie, prvá dlaždica nad spodnú navigáciu', async ({ page }) => {
@@ -279,7 +311,7 @@ test.describe('ťuknutie na oznámenie', () => {
             document.dispatchEvent(new Event('visibilitychange'));
         });
         await ukazuje(page, 'terazky');
-        await obrysPrebehol(page);
+        await ozilo(page);
     });
 
     test('starý odber: správa dôjde do okna v koreni aj bez ovládania, adresa prežije presmerovanie', async ({ page }) => {
@@ -290,7 +322,7 @@ test.describe('ťuknutie na oznámenie', () => {
         await page.locator('#nav-mozem').click();
         expect(await tukni(sw)).toEqual([['focus']]);
         await ukazuje(page, 'terazky');
-        await obrysPrebehol(page);
+        await ozilo(page);
         await page.goto('/obloha/?z=oznamenie');
         await ukazuje(page, 'terazky');
         await expect(page).toHaveURL(/\/#nastavenie=/);

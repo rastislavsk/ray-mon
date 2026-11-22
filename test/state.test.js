@@ -207,21 +207,23 @@ test('detail spotrebiča na karte Teraz: otvorený je krok navigácie, Späť a 
     assert.equal(panelChange('terazky', 'mozem').tzVec, null);
 });
 
-test('ťuknutie na oznámenie: Teraz s obrysom okolo toho, čo zapnúť, inak sa všetko zavrie', () => {
+test('ťuknutie na oznámenie: Teraz a oživená ikona spotrebiča, inak sa všetko zavrie', () => {
     const s = stateWith({ panel: '7dni', weekDetail: 'day', terazPreview: 600, tzChip: 'tok', tzVec: 'pracka', stavTip: true });
-    const po = { ...s, ...zOznamenia(s) };
+    /** @type {import('../shared/oznamenia.js').Ciel} */
+    const ciel = { udalost: 'koniec', vec: 'pracka' };
+    const po = { ...s, ...zOznamenia(s, ciel) };
     assert.equal(po.panel, 'terazky');
     assert.equal(po.panelDir, -1);
     assert.equal(po.tzVec, null);
-    assert.equal(po.tzObrys, true);
+    assert.deepEqual(po.tzOziv, ciel);
     assert.equal(po.weekDetail, null);
     assert.equal(po.terazPreview, null);
     assert.equal(po.tzChip, null);
     assert.equal(po.stavTip, false);
-    // Obrys nie je krok navigácie a s kartou zhasne, aj keď ešte čakal na dáta.
-    assert.deepEqual(navStep(po), navStep({ ...po, tzObrys: false }));
-    assert.equal(panelChange('terazky', 'mozem').tzObrys, false);
-    assert.equal(stateWith().tzObrys, false);
+    // Oživenie nie je krok navigácie a s kartou zhasne, aj keď ešte čakalo na dáta.
+    assert.deepEqual(navStep(po), navStep({ ...po, tzOziv: null }));
+    assert.equal(panelChange('terazky', 'mozem').tzOziv, null);
+    assert.equal(stateWith().tzOziv, null);
 });
 
 test('panel Elektrina teraz na karte Teraz: otvorený je krok navigácie, Späť a iná karta ho zavrú', () => {
