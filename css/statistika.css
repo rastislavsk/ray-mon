@@ -287,15 +287,33 @@
     font-size: 0.9375rem;
     line-height: 1.4;
 }
-.sheet .x {
-    position: absolute;
-    top: 10px;
-    right: 10px;
+/* Krížik vpravo hore v každom paneli (web/sheet.js, docs/navrhy/zatvaranie-popupov.html, V2): viditeľný
+   kruh 28 px, plocha na prst 44 px. Rovnaký je aj v sprievodcovi (.wz .x). Nadpis a hlavy panelov
+   (.vec-top, .citanie) mu nechávajú miesto vpravo. */
+.sheet-x,
+.wz .x {
+    display: grid;
+    place-items: center;
     width: 44px;
     height: 44px;
+    padding: 0;
     border: 0;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.14);
-    font-size: 1.375rem;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 13.5px, transparent 14px);
     cursor: pointer;
+}
+.sheet-x {
+    position: absolute;
+    z-index: 1;
+    top: 6px;
+    right: 6px;
+}
+.sheet-x svg,
+.wz .x svg {
+    width: 12px;
+    height: 12px;
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.6;
+    stroke-linecap: round;
 }

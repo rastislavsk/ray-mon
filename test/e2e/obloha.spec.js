@@ -450,6 +450,21 @@ test('.hidden skryje každý prvok v stránke, nič ju neprebíja', async ({ pag
     expect(errors).toEqual([]);
 });
 
+/** Každý panel zdola má krížik vpravo hore (docs/navrhy/zatvaranie-popupov.html). Nový panel netreba
+ *  nikam dopisovať, test ho uvidí sám. Panely Nastavenia sa zapoja až s jeho časťou appky. */
+test('každý panel zdola má krížik Zavrieť', async ({ page }) => {
+    const errors = await openObloha(page);
+    await page.locator('#nav-nastavenie').click();
+    await ocakavajKartu(page, 'nastavenie');
+    const panely = await page.locator('dialog.sheet').evaluateAll((ds) => ds.map((d) => d.id));
+    expect(panely.length).toBeGreaterThanOrEqual(7);
+    for (const id of panely) {
+        await expect(page.locator(`#${id} .sheet-x`), `#${id} nemá krížik`).toHaveCount(1);
+        await expect(page.locator(`#${id} .sheet-x`)).toHaveAttribute('aria-label', 'Zavrieť');
+    }
+    expect(errors).toEqual([]);
+});
+
 /** Iná karta začína navrchu, nie na výške, kam bola odscrollovaná predošlá. */
 test('po prepnutí karty je stránka navrchu', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 400 });
@@ -1033,8 +1048,14 @@ test.describe('karta Dnes', () => {
         await expect(page.locator('#mz-trieda-stupnica > li b')).toHaveText(v.stupnica.map((s) => s.label));
         await expect(page.locator('#mz-trieda-stupnica > li[aria-current]')).toHaveAttribute('data-cls', v.cls);
         expect(await vazneNalezy(page)).toEqual([]);
-        // Tlačidlo Zavrieť panel nemá: zatvára ho Escape, ťuknutie vedľa a Späť.
-        await expect(panel.locator('button')).toHaveCount(0);
+        // Jediné tlačidlo je krížik vpravo hore (docs/navrhy/zatvaranie-popupov.html). Zavrie panel krokom späť,
+        // karta ostane.
+        await expect(panel.locator('button')).toHaveCount(1);
+        await panel.getByRole('button', { name: 'Zavrieť' }).click();
+        await expect(panel).toBeHidden();
+        await ocakavajKartu(page, 'mozem');
+        // Escape, ťuknutie vedľa a Späť ostávajú.
+        await chip.click();
         await page.keyboard.press('Escape');
         await expect(panel).toBeHidden();
         await expect(chip).toBeFocused();
@@ -1452,9 +1473,9 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-vec-pas .os-usek')).toHaveAttribute('data-tone', v.slot?.tone ?? '');
             await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(1);
             expect(await vazneNalezy(page)).toEqual([]);
-            // Tlačidlo Zavrieť panel nemá - jediné tlačidlo je „Už beží“. Escape vráti fokus na dlaždicu či riadok,
+            // Okrem krížika vpravo hore je jediné tlačidlo „Už beží“. Escape vráti fokus na dlaždicu či riadok,
             // z ktorého sa detail otvoril.
-            await expect(panel.locator('button:visible')).toHaveText([TERAZ_BEZI.zapol]);
+            await expect(panel.locator('button:visible:not(.sheet-x)')).toHaveText([TERAZ_BEZI.zapol]);
             await page.keyboard.press('Escape');
             await expect(panel).toBeHidden();
             await expect(vec(id)).toBeFocused();
@@ -1462,6 +1483,10 @@ test.describe('karta Teraz', () => {
         // Ťuknutie vedľa panelu (na stmavenú stránku nad ním) trafí dialóg a zavrie ho.
         await vec('pracka').click();
         await page.mouse.click(187, 60);
+        await expect(panel).toBeHidden();
+        // Krížik vpravo hore detail zavrie.
+        await vec('susicka').click();
+        await panel.getByRole('button', { name: 'Zavrieť' }).click();
         await expect(panel).toBeHidden();
         // Tlačidlo Späť v telefóne detail zavrie a ostane na karte.
         await vec('auto').click();
@@ -1494,7 +1519,7 @@ test.describe('karta Teraz', () => {
         await expect(kh).toHaveAttribute('aria-label', TERAZ_BEZI.hodiny);
         await expect(page.locator('#tz-vec-konci')).toHaveText('skončí o 15:00');
         await expect(page.locator('#tz-vec-od')).toBeHidden();
-        await expect(panel.locator('button:visible')).toHaveText([TERAZ_BEZI.nastav]);
+        await expect(panel.locator('button:visible:not(.sheet-x)')).toHaveText([TERAZ_BEZI.nastav]);
         await expect(dlazdica).not.toHaveAttribute('data-tone', 'bezi');
         expect(await vazneNalezy(page)).toEqual([]);
         // Koliesko otočené na stred (2 h) a minúty ťahom - posúva ich prehliadač, appka si prečíta, kde zastali.
@@ -1561,7 +1586,7 @@ test.describe('karta Teraz', () => {
         await expect(kh).toHaveAttribute('aria-valuenow', '1');
         await expect(km).toHaveAttribute('aria-valuenow', '25');
         await expect(page.locator('#tz-vec-note')).toBeHidden();
-        await expect(panel.locator('button:visible')).toHaveText([TERAZ_BEZI.nastav, TERAZ_BEZI.nebezi]);
+        await expect(panel.locator('button:visible:not(.sheet-x)')).toHaveText([TERAZ_BEZI.nastav, TERAZ_BEZI.nebezi]);
         // „Nebeží“ tiež zavrie panel s bublinou.
         await page.locator('#tz-vec-zrus').click();
         await expect(panel).toBeHidden();
@@ -1758,12 +1783,14 @@ test.describe('karta Teraz', () => {
                     right: r.right,
                     top: r.top,
                     px: parseFloat(getComputedStyle(/** @type {Element} */ (document.querySelector(sel))).fontSize),
+                    pr: parseFloat(getComputedStyle(/** @type {Element} */ (document.querySelector(sel))).paddingRight),
                 };
             }),
         );
         expect(kw.right).toBeLessThan(cas.left);
         expect(Math.abs(kw.top - cas.top)).toBeLessThan(8);
-        expect(Math.abs(cas.right - hlava.right), 'čas je pri pravom okraji').toBeLessThan(1);
+        // Vpravo od času je už len miesto pre krížik panelu.
+        expect(Math.abs(cas.right - (hlava.right - hlava.pr)), 'čas je pri pravom okraji').toBeLessThan(1);
         expect(cas.px).toBeCloseTo(kw.px * 0.75, 1);
         await page.getByRole('button', { name: 'Späť na teraz' }).click();
         await expect(page.locator('#gr-citanie .c-cas')).toHaveText('Teraz 13:00');
