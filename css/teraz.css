@@ -1432,8 +1432,11 @@
 /* Zapnutý spotrebič (docs/navrhy/teraz-pole-noc-bezi.html, 3A): beží, alebo bojleru zásuvka zapla relé. Ikona je
    zelená na zelenom nádychu kruhu a dlaždica má jemný biely obrys - cez deň aj v noci. Farba stavu je len na ikone,
    dlaždica ostáva na skle ako ostatné (rozhodnutie 21. 11. 2026, CLAUDE.md). */
+/* Obrys má pôsobiť ako pri zvolenom dni v páse dní (.hreben-dni button[aria-pressed='true']). Tam je ten istý 1,5 px
+   obrys na svetlejšej výplni a pri menšom zaoblení, takže na dlaždici s rovnakými číslami vyzeral tenší a tmavší -
+   preto je tu hrubší a svetlejší. */
 .dl[data-zapnuty] {
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75);
 }
 .dl[data-zapnuty] .dl-ico {
     color: var(--yes);
