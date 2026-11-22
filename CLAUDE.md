@@ -75,7 +75,7 @@ Rozhodnuté 21. 11. 2026: dlaždice spotrebičov na karte Teraz sú všetky na s
 nefarbí; výnimkou je jantárový rám zásuvky bez spojenia (`chyba`). Úsek na osi v detaile a pás dní sú graf, tie farby majú.
 
 Druhá výnimka (22. 11. 2026, `docs/navrhy/teraz-pole-noc-bezi.html`, 3A): zapnutý spotrebič - beží („Už beží“), alebo
-bojleru zásuvka zapla relé - má zelenú ikonu (`--yes`) a jemný biely obrys dlaždice (`data-zapnuty`). Kto bojler zapína
+bojleru zásuvka zapla relé - má zelenú ikonu (`--yes`) a biely obrys dlaždice ako zvolený deň v páse dní (`data-zapnuty`). Kto bojler zapína
 (ruka / slnko, `.dl-rz`), je na kraji kruhu s ikonou; bodka stavu bojlera pri ikone je preč. V noci (`data-noc` na
 `#tz-co`) sú dlaždice na svetlom skle (2B), tmavé na nočnej oblohe nebolo vidno.
 
