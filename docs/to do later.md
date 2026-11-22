@@ -59,9 +59,6 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 - **Ranné oznámenie nepozná učenie ani bojler** (19. 11. 2026): service worker nemá prístup k úložisku telefónu,
   plán v rannom oznámení ide bez naučenej predpovede a bez bojlera.
 
-- **Menič a elektromer z rôznych chvíľ?** (19. 11. 2026): 18. 11. o 13:45 appka ukázala 2,7 kW a sieť 0, FusionSolar
-  o 13:40 2,89 kW a dodávku 0,9 kW. Dočasné porovnanie do logu Workera (#505) bolo 22. 11. zmazané bez vyhodnotenia,
-  možnosť 2a (scéna z histórie) ostáva nerozhodnutá. Ak sa rozdiel ukáže znova, porovnanie sa dá vrátiť z gitu.
 - **Dážď a sneh v ikonách počasia** (18. 11. 2026): sada má len jasno / polojasno / zamračené.
   Predpoveď zrážky po hodinách už sťahuje. Treba nakresliť ikony a pravidlo, kedy je deň „daždivý“
   či „snežný“; naraz na karte 7 dní aj v páse dní na karte Teraz.
