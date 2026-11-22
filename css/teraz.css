@@ -444,38 +444,139 @@
         font-size: min(1.75rem, 6.6cqi);
     }
 }
-/* Obrys po ťuknutí na oznámenie (docs/navrhy/oznamenie-plan-dna.html, A): svetlo raz obehne okraj
-   toho, čo zapnúť. Bez animácie (útlm pohybu) je neviditeľný - vidno ho len cez kľúčové snímky. */
-@property --plan-obeh {
-    syntax: '<angle>';
-    inherits: false;
-    initial-value: 0deg;
-}
-#tz-co[data-obrys]::after {
-    content: '';
-    position: absolute;
-    inset: 0 8px -6px;
-    padding: 2px;
-    border-radius: 24px;
-    background: conic-gradient(from var(--plan-obeh), transparent 0 62%, rgba(255, 255, 255, 0.95) 92%, transparent 100%);
-    mask:
-        linear-gradient(#000 0 0) content-box,
-        linear-gradient(#000 0 0);
-    mask-composite: exclude;
+/* Ťuknutie na oznámenie (docs/navrhy/oznamenia-animacie.html): ožije ikona jednej dlaždice (`data-oziv`) - prvého
+   spotrebiča v pláne (`plan`) alebo toho, o ktorom oznámenie bolo. Okolo kruhu s ikonou dve vlny a ikona sa pohne
+   podľa spotrebiča: bubon sa dotočí, umývačka sa zatrasie, auto pohne, kvapka bojlera sa naplní (`zapol`) či
+   vyprázdni (`vypol`). Po dobehnutom programe (`koniec`) vnútro zhasne a nakreslí sa fajka. Appka `data-oziv`
+   zhasne po OZNAMENIA.ozivMs (web/oznamenia-klik.js), dovtedy ostane posledná snímka. */
+.vi-fajka {
     opacity: 0;
-    pointer-events: none;
-    animation: plan-obrys 0.9s ease-in-out;
 }
-@keyframes plan-obrys {
+.vi-bubon,
+.vi-kvapka {
+    transform-box: fill-box;
+    transform-origin: center;
+}
+.vi-kvapka {
+    fill: currentColor;
+    fill-opacity: 0;
+}
+.dl[data-oziv] .dl-ico {
+    animation: oziv-vlna 1s ease-out 2;
+}
+.dl[data-oziv] .vi-bubon {
+    animation: oziv-bubon 1.3s cubic-bezier(0.3, 0, 0.2, 1);
+}
+.dl[data-oziv][data-vec='umyvacka'] .dl-ico > .vi {
+    animation: oziv-tras 0.7s ease-in-out 2;
+}
+.dl[data-oziv][data-vec='auto'] .dl-ico > .vi {
+    animation: oziv-jazda 1.1s ease-in-out;
+}
+.dl[data-oziv='zapol'] .vi-kvapka {
+    animation: oziv-zapol 2.4s ease-in-out both;
+}
+.dl[data-oziv='vypol'] .vi-kvapka {
+    animation: oziv-vypol 1.4s ease-in-out both;
+}
+.dl[data-oziv='koniec'] .vi-vnutro {
+    animation: oziv-zhasni 1.5s both;
+}
+.dl[data-oziv='koniec'] .vi-fajka {
+    opacity: 1;
+    stroke-dasharray: 1;
+    animation: oziv-fajka 0.45s ease-out 1.25s both;
+}
+@keyframes oziv-vlna {
     from {
-        --plan-obeh: 0deg;
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
     }
-    15%,
+    to {
+        box-shadow: 0 0 0 18px rgba(255, 255, 255, 0);
+    }
+}
+@keyframes oziv-bubon {
+    from {
+        transform: rotate(0);
+        stroke-dasharray: 3 2;
+    }
+    to {
+        transform: rotate(900deg);
+        stroke-dasharray: 3 2;
+    }
+}
+@keyframes oziv-tras {
+    25% {
+        transform: rotate(-10deg);
+    }
+    50% {
+        transform: rotate(9deg);
+    }
+    75% {
+        transform: rotate(-6deg);
+    }
+}
+@keyframes oziv-jazda {
+    25% {
+        transform: translateX(-4px);
+    }
+    60% {
+        transform: translateX(6px);
+    }
+    85% {
+        transform: translateX(-2px);
+    }
+}
+@keyframes oziv-zapol {
+    from {
+        fill-opacity: 0;
+    }
+    35% {
+        fill-opacity: 1;
+        transform: scale(1.35);
+    }
+    60%,
     80% {
+        fill-opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        fill-opacity: 0;
+    }
+}
+@keyframes oziv-vypol {
+    from {
+        fill-opacity: 1;
+    }
+    30% {
+        fill-opacity: 1;
+        transform: scale(1.35);
+    }
+    to {
+        fill-opacity: 0;
+        transform: scale(1);
+    }
+}
+@keyframes oziv-zhasni {
+    75% {
         opacity: 1;
     }
     to {
-        --plan-obeh: 360deg;
+        opacity: 0;
+    }
+}
+@keyframes oziv-fajka {
+    from {
+        stroke-dashoffset: 1;
+    }
+    to {
+        stroke-dashoffset: 0;
+    }
+}
+/* Útlm pohybu: nič sa nehýbe, kruh s ikonou má na chvíľu biely obrys. */
+@media (prefers-reduced-motion: reduce) {
+    .dl[data-oziv] .dl-ico {
+        box-shadow: 0 0 0 3px #fff;
     }
 }
 /* Zbaliteľné sekcie (karta Nastavenie): hlavička je tlačidlo cez celú šírku so šípkou. */

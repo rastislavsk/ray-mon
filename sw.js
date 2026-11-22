@@ -10,7 +10,7 @@
 
 import { OZNAMENIA, openMeteoUrl, WORKER_OZNAMENIA_URL, WORKER_PRIPOMEN_URL } from './shared/config.js';
 import { oznameniaTexts } from './shared/messages-core.js';
-import { klikUrl, swNotice, vapidKeyBytes } from './shared/oznamenia.js';
+import { cielPushu, klikUrl, klikZnacka, swNotice, vapidKeyBytes } from './shared/oznamenia.js';
 
 // Koreň appky. Tento súbor importuje aj obloha/sw.js (odbery z čias, keď appka bývala v obloha/), takže adresy sa nesmú počítať voči
 // rozsahu ani adrese service workera, ale voči tomuto súboru.
@@ -57,7 +57,12 @@ async function ukaz() {
                   { action: 'otvor', title: oznameniaTexts(z.voice).open },
               ]
             : [];
-        return ukazOznamenie(n.reminder ? TAG.remind : TAG.plan, n, { data: { app: z.app, remind: n.remind, voice: z.voice }, actions });
+        // `ciel`: na čo appka po ťuknutí upozorní (docs/navrhy/oznamenia-animacie.html) - pripomienka na svoj spotrebič.
+        const ciel = n.vec ? { udalost: 'pripomen', vec: n.vec } : { udalost: 'plan' };
+        return ukazOznamenie(n.reminder ? TAG.remind : TAG.plan, n, {
+            data: { app: z.app, remind: n.remind, voice: z.voice, ciel },
+            actions,
+        });
     } catch {
         return ukazOznamenie(TAG.plan, oznameniaTexts(z?.voice).fail, { data: { app: z?.app ?? './' } });
     }
@@ -80,7 +85,8 @@ async function pripomen(data) {
 /**
  * Ťuknutie: tlačidlo Pripomeň, inak otvorí appku (okno práve tej appky, nie druhej) na karte Teraz
  * s rozbaleným Plánom dňa. Zatvorená appka to vie z adresy, bežiaca zo správy - samotný focus by
- * ju nechal na poslednej karte. Správa ide aj do okna, ktoré tento service worker neovláda.
+ * ju nechal na poslednej karte. Správa ide aj do okna, ktoré tento service worker neovláda. Obe nesú
+ * značku cieľa (`data.ciel`; oznámenie spred cieľov ho nemá - to je plán).
  */
 async function klik(action, data) {
     if (action === 'pripomen' && data?.remind) return pripomen(data);
@@ -88,8 +94,9 @@ async function klik(action, data) {
     const appka = (/** @type {string} */ u) => new URL(u).pathname.replace(/index\.html$/, '') === url.pathname;
     const okna = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const okno = okna.find((c) => appka(c.url));
-    if (!okno) return self.clients.openWindow(klikUrl(url.href));
-    okno.postMessage(OZNAMENIA.klik);
+    const ciel = data?.ciel ?? { udalost: 'plan' };
+    if (!okno) return self.clients.openWindow(klikUrl(url.href, ciel));
+    okno.postMessage(klikZnacka(ciel));
     return okno.focus();
 }
 
@@ -115,7 +122,7 @@ self.addEventListener('install', () => self.skipWaiting());
  * Worker zašifrovaný, netreba nič počítať. Prázdny push je ranné oznámenie či pripomienka (ukaz). Ťuknutie otvorí appku.
  * @param {{ title: string, body: string, tag: string }} d
  */
-const ukazText = (d) => ukazOznamenie(d.tag, d, { data: { app: './' } });
+const ukazText = (d) => ukazOznamenie(d.tag, d, { data: { app: './', ciel: cielPushu(d.tag) } });
 
 /** Obsah pushu ako JSON s nadpisom, textom a značkou, inak null. */
 function obsah(data) {

@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, OZNAMENIA, PLAN_DNA, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { bojlerZmenaText, koniecText, oznameniaTexts, planNoticeText } from '../shared/messages.js';
 import {
+    cielPushu,
+    klikCiel,
     klikUrl,
+    klikZnacka,
     koniecNotice,
     klikZAdresy,
     morningDue,
@@ -42,11 +45,36 @@ const input = (now, extra = {}) => ({
 
 test('ťuknutie na oznámenie: značka v adrese sa dá prečítať a odstrániť, cudzia sa nepočíta', () => {
     const appka = 'https://priklad.sk/ray-mon/';
-    assert.equal(klikZAdresy(klikUrl(appka)), '/ray-mon/');
-    assert.equal(klikZAdresy(`${appka}?a=1&z=oznamenie#nastavenie=x`), '/ray-mon/?a=1#nastavenie=x');
+    const plan = { udalost: 'plan' };
+    assert.deepEqual(klikZAdresy(klikUrl(appka)), { adresa: '/ray-mon/', ciel: plan });
+    assert.deepEqual(klikZAdresy(`${appka}?a=1&z=oznamenie#nastavenie=x`), { adresa: '/ray-mon/?a=1#nastavenie=x', ciel: plan });
+    const koniec = klikZAdresy(klikUrl(appka, { udalost: 'koniec', vec: 'pracka' }));
+    assert.deepEqual(koniec, { adresa: '/ray-mon/', ciel: { udalost: 'koniec', vec: 'pracka' } });
     assert.equal(klikZAdresy(appka), null);
     assert.equal(klikZAdresy(`${appka}?z=ine`), null);
     assert.equal(klikZAdresy(`${appka}?a=1`), null);
+});
+
+test('ťuknutie na oznámenie: plán má holú značku ako staršia appka, spotrebič svoju; neznáma značka appky je plán', () => {
+    assert.equal(klikZnacka({ udalost: 'plan' }), OZNAMENIA.klik);
+    for (const ciel of /** @type {const} */ ([
+        { udalost: 'koniec', vec: 'umyvacka' },
+        { udalost: 'pripomen', vec: 'auto' },
+        { udalost: 'bojler', vec: 'bojler' },
+    ]))
+        assert.deepEqual(klikCiel(klikZnacka(ciel)), ciel);
+    assert.deepEqual(klikCiel(`${OZNAMENIA.klik}:nieco:pracka`), { udalost: 'plan' }, 'z novšieho service workera');
+    assert.deepEqual(klikCiel(`${OZNAMENIA.klik}:koniec:<b>`), { udalost: 'plan' });
+    assert.deepEqual(klikCiel(`${OZNAMENIA.klik}:koniec:pracka:x`), { udalost: 'plan' });
+    assert.equal(klikCiel('ine:koniec:pracka'), null);
+    assert.equal(klikCiel(OZNAMENIA.bojler), null, 'správa o zmene ohrevu nie je ťuknutie');
+    assert.equal(klikCiel(null), null);
+});
+
+test('cielPushu: koniec programu a zmena ohrevu bojlera podľa značky, inak plán', () => {
+    assert.deepEqual(cielPushu('koniec-susicka'), { udalost: 'koniec', vec: 'susicka' });
+    assert.deepEqual(cielPushu(OZNAMENIA.bojler), { udalost: 'bojler', vec: 'bojler' });
+    assert.deepEqual(cielPushu('ine'), { udalost: 'plan' });
 });
 
 test('parseOznamenia: predvolene vypnuté o 9:00, poškodené a neznáme hodnoty nahradí, nič nezahodí celé', () => {
@@ -190,7 +218,9 @@ test('swNotice: ranné oznámenie s tlačidlom Pripomeň, v čase pripomienky pr
     const pripomienka = swNotice(z, [stara, { id: rano.remind.id, at: rano.remind.at }], weather, remindAt);
     assert.match(pripomienka.title, / · teraz$/);
     assert.equal(pripomienka.reminder, true, 'pripomienka má vlastnú značku v lište');
+    assert.equal(pripomienka.vec, rano.remind.id, 'po ťuknutí ožije jej spotrebič');
     assert.equal(rano.reminder, false);
+    assert.equal(rano.vec, null);
     assert.equal(pripomienka.remind, null);
     assert.deepEqual(pripomienka.keep, [], 'odoslaná aj stará pripomienka zmizli');
     const neskor = { id: 'susicka', at: at('15:00').toISOString() };

@@ -1,46 +1,58 @@
-// Ťuknutie na oznámenie: appka ukáže kartu Teraz s obrysom okolo toho, čo zapnúť
-// (docs/navrhy/oznamenie-plan-dna.html). Zatvorená appka sa to dozvie z adresy, bežiaca zo správy
-// service workera (klik v sw.js). Bežné otvorenie appky sa tohto netýka.
+// Ťuknutie na oznámenie: appka ukáže kartu Teraz a ožije ikona dlaždice - spotrebiča, o ktorom oznámenie bolo, pri
+// rannom pláne prvého spotrebiča v pláne (docs/navrhy/oznamenia-animacie.html). Zatvorená appka sa to dozvie
+// z adresy, bežiaca zo správy service workera (klik v sw.js). Bežné otvorenie appky sa tohto netýka.
 
 import { OZNAMENIA } from '../shared/config.js';
-import { klikZAdresy } from '../shared/oznamenia.js';
+import { klikCiel, klikZAdresy } from '../shared/oznamenia.js';
 import { zOznamenia } from './state.js';
 
 /**
- * Čo zapnúť sa pri štarte objaví až s predpoveďou - posun aj obrys naň počkajú, najviac
- * OZNAMENIA.obrysCakaMs. Obrys tak zhasne aj vtedy, keď nebeží (útlm pohybu) alebo nie je čo
- * ukázať. Keď sa počas čakania nezobrazí a človek odíde z karty, panelChange čakanie zruší.
+ * Dlaždice sa pri štarte objavia až s predpoveďou - posun aj oživenie na ne počkajú, najviac
+ * OZNAMENIA.ozivCakaMs. Keď dlaždica v stránke je, oživenie trvá OZNAMENIA.ozivMs a zhasne aj bez animácie
+ * (útlm pohybu, tam má kruh s ikonou len obrys). Keď sa počas čakania nezobrazí a človek odíde z karty,
+ * panelChange čakanie zruší.
  * @param {import('./state.js').Store} store @param {import('./dom.js').Dom} dom
  */
 export function initOznamKlik(store, dom) {
     /** @type {ReturnType<typeof setTimeout> | undefined} */
     let limit;
-    let posun = false;
+    let caka = false;
     const zhasni = () => {
         clearTimeout(limit);
-        store.setState({ tzObrys: false });
+        caka = false;
+        store.setState({ tzOziv: null });
     };
-    const posunNaPlan = () => {
-        if (!store.get().tzObrys) posun = false;
-        if (!posun || dom.tzCo.classList.contains('hidden')) return;
-        posun = false;
-        // Navrch: čo zapnúť môže byť vyššie ako obrazovka, riadok nad dlaždicami musí byť vidno.
-        dom.tzCo.scrollIntoView({ block: 'start' });
-    };
-    const otvor = () => {
-        // Správa môže prísť skôr, než je appka v popredí - obrys by dobehol nevidený.
-        if (document.hidden) return void document.addEventListener('visibilitychange', otvor, { once: true });
-        posun = true;
-        store.setState(zOznamenia(store.get()));
+    const ukaz = () => {
+        if (!store.get().tzOziv) caka = false;
+        const el = /** @type {HTMLElement | null} */ (dom.tzCo.querySelector('[data-oziv]'));
+        if (!caka || !el || dom.tzCo.classList.contains('hidden')) return;
+        caka = false;
+        // Plán: navrch Plánu dňa, ako vždy - riadok nad dlaždicami musí byť vidno. Spotrebič: jeho dlaždica do stredu,
+        // nad spodnú navigáciu.
+        if (el.dataset.oziv === 'plan') dom.tzCo.scrollIntoView({ block: 'start' });
+        else el.scrollIntoView({ block: 'center' });
         clearTimeout(limit);
-        limit = setTimeout(zhasni, OZNAMENIA.obrysCakaMs);
-        posunNaPlan();
+        limit = setTimeout(zhasni, OZNAMENIA.ozivMs);
     };
-    store.subscribe(posunNaPlan);
-    dom.tzCo.addEventListener('animationend', (e) => e.animationName === 'plan-obrys' && zhasni());
-    navigator.serviceWorker?.addEventListener('message', (e) => e.data === OZNAMENIA.klik && otvor());
-    const adresa = klikZAdresy(location.href);
-    if (adresa === null) return;
-    history.replaceState(history.state, '', adresa);
-    otvor();
+    /** @param {import('../shared/oznamenia.js').Ciel} ciel */
+    const otvor = (ciel) => {
+        // Správa môže prísť skôr, než je appka v popredí - ikona by ožila nevidená.
+        if (document.hidden) return void document.addEventListener('visibilitychange', () => otvor(ciel), { once: true });
+        // Nové ťuknutie počas oživenia: dlaždice sa najprv prekreslia bez neho, aby sa animácia spustila znova.
+        store.setState({ tzOziv: null });
+        caka = true;
+        // Najprv limit čakania - keď je dlaždica hneď v stránke, ukaz ho po prekreslení nahradí trvaním oživenia.
+        clearTimeout(limit);
+        limit = setTimeout(zhasni, OZNAMENIA.ozivCakaMs);
+        store.setState(zOznamenia(store.get(), ciel));
+    };
+    store.subscribe(ukaz);
+    navigator.serviceWorker?.addEventListener('message', (e) => {
+        const ciel = klikCiel(e.data);
+        if (ciel) otvor(ciel);
+    });
+    const k = klikZAdresy(location.href);
+    if (k === null) return;
+    history.replaceState(history.state, '', k.adresa);
+    otvor(k.ciel);
 }
