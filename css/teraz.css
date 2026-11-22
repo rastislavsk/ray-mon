@@ -1326,7 +1326,8 @@
     background: #fff4d6;
     box-shadow: 0 0 18px rgba(255, 244, 214, 0.6);
 }
-/* Zápis v detaile spotrebiča: „Už beží“, potom zvyšok programu či čas zapnutia s − a +, oznámenie o konci a „Nebeží“. */
+/* Zápis v detaile spotrebiča (docs/navrhy/spotrebic-cas-nastavenie.html, A + D): „Už beží“, potom nastavenie času
+   s „Nastaviť“ a pri bežiacom „Nebeží“. */
 .vec-zapis {
     display: grid;
     gap: 10px;
@@ -1335,35 +1336,10 @@
 .vec-zapis .pbtn {
     justify-self: stretch;
 }
-.vec-posun {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    font-weight: 800;
-    font-variant-numeric: tabular-nums;
-}
-.vec-krok {
-    width: 44px;
-    height: 44px;
+/* Nastavenie času: nad ním „Zostáva“ či „Zapnutá o“, pod ním kedy skončí. */
+.vec-nastav {
     display: grid;
-    place-items: center;
-    border: 0;
-    border-radius: 50%;
-    background: var(--glass);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
-    color: #fff;
-    cursor: pointer;
-}
-.vec-krok:disabled {
-    cursor: default;
-    opacity: 0.4;
-}
-/* Zvyšok programu práčky a sušičky (docs/navrhy/spotrebic-koniec-opakovanie.html): hodiny a minúty vedľa seba, každé
-   s − a +, nad nimi „Zostáva“, pod nimi kedy skončí. */
-.vec-zvysok {
-    display: grid;
-    gap: 6px;
+    gap: 8px;
     justify-items: center;
     padding: 10px 8px;
     border-radius: 18px;
@@ -1376,19 +1352,68 @@
     text-transform: uppercase;
     color: var(--dim);
 }
-.vec-zost {
+/* Kolieska zvyšku programu (A) ako Časovač v telefóne: tri položky na výšku, stredná v pruhu. Posúva ich prehliadač
+   (scroll-snap) - žiadny kód nad dotykom, zvislý ťah je obyčajné posúvanie. */
+.vec-kolesa {
+    position: relative;
     display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 6px 18px;
+    align-items: center;
+    gap: 6px;
+    font-variant-numeric: tabular-nums;
 }
-.vec-zost .vec-posun {
-    gap: 8px;
+.vec-kolesa::before {
+    content: '';
+    position: absolute;
+    inset: 40px -8px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.12);
+    pointer-events: none;
 }
-.vec-zost .vec-posun span {
-    min-width: 4.2em;
+.koleso {
+    position: relative;
+    width: 58px;
+    height: 120px;
+    padding-block: 40px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+    border-radius: 12px;
+    cursor: pointer;
+}
+.koleso::-webkit-scrollbar {
+    display: none;
+}
+.koleso:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 2px;
+}
+.koleso div {
+    height: 40px;
+    line-height: 40px;
     text-align: center;
-    font-size: 20px;
+    scroll-snap-align: center;
+    font-size: 24px;
+    font-weight: 800;
+}
+.koleso-j {
+    min-width: 2.2em;
+    font-weight: 700;
+    color: var(--dim);
+}
+/* Čas zapnutia umývačky (D): systémový výber času, ťuknutie otvorí ciferník či kolieska telefónu. */
+.vec-od {
+    padding: 6px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    color-scheme: dark;
+    font: inherit;
+    font-size: 28px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
 }
 .vec-konci {
     font-weight: 700;

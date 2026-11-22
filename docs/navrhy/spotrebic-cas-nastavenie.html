@@ -1,0 +1,1126 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Spotrebič – nastavenie času</title>
+        <style>
+            /* Návrh (22. 11. 2026): karta Teraz, detail práčky, sušičky a umývačky po „Už beží“ – ako nastaviť zvyšok
+               programu (práčka, sušička) a čas zapnutia (umývačka) pohodlnejšie ako dnešnými krokovačmi − / +.
+               Samostatný súbor, nič neimportuje z appky. Mockupy sa dajú skúsiť (ťah, ťuknutie), časy sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --sun: #ffd166;
+                --zelena: #8fe36f;
+                --krem: rgba(255, 244, 214, 0.1);
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 74ch;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                width: 300px;
+                max-width: 100%;
+                align-content: start;
+            }
+            figcaption {
+                font-size: 14px;
+            }
+            figcaption b {
+                display: block;
+                font-size: 16px;
+            }
+            .plus,
+            .minus {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--zelena);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 14px;
+                max-width: 100%;
+            }
+            .tab {
+                overflow-x: auto;
+            }
+            th,
+            td {
+                padding: 6px 10px;
+                border-bottom: 1px solid var(--line);
+                text-align: left;
+                vertical-align: top;
+            }
+
+            /* ===== telefón s panelom zdola ===== */
+            .phone {
+                position: relative;
+                width: 300px;
+                max-width: 100%;
+                height: 560px;
+                overflow: hidden;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f62b5, #5d8fd8 60%, #6f9cdc);
+                font-size: 13px;
+            }
+            .sheet {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding: 16px 16px 18px;
+                border-radius: 24px 24px 0 0;
+                background: rgba(10, 20, 48, 0.86);
+                display: grid;
+                gap: 12px;
+            }
+            .hlav {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+            .ico {
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.12);
+                display: grid;
+                place-items: center;
+                color: var(--zelena);
+                font-size: 18px;
+            }
+            .hlav b {
+                font-size: 17px;
+                display: block;
+                line-height: 1.1;
+            }
+            .hlav small {
+                font-size: 10px;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--dim);
+                font-weight: 800;
+            }
+            .box {
+                display: grid;
+                gap: 8px;
+                justify-items: center;
+                padding: 10px 8px;
+                border-radius: 18px;
+                background: var(--krem);
+            }
+            .ttl {
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .konci {
+                font-weight: 700;
+            }
+            .btn {
+                border: 0;
+                border-radius: 999px;
+                padding: 10px;
+                font: inherit;
+                font-weight: 800;
+                color: #fff;
+                background: transparent;
+                box-shadow: inset 0 0 0 1px var(--line);
+                width: 100%;
+            }
+            .krok {
+                width: 40px;
+                height: 40px;
+                border: 0;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+                color: #fff;
+                font: inherit;
+                font-size: 20px;
+                font-weight: 800;
+            }
+            .riadok {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 800;
+                font-size: 18px;
+                font-variant-numeric: tabular-nums;
+            }
+            .riadok span {
+                min-width: 4em;
+                text-align: center;
+            }
+            .dvojica {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            /* ===== A: kolieska (scroll-snap, posúva prehliadač sám) ===== */
+            .kolesa {
+                position: relative;
+                display: flex;
+                gap: 4px;
+                align-items: center;
+                height: 132px;
+                font-variant-numeric: tabular-nums;
+            }
+            .kolesa::before {
+                content: '';
+                position: absolute;
+                left: -6px;
+                right: -6px;
+                top: 46px;
+                height: 40px;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.12);
+                pointer-events: none;
+            }
+            .koleso {
+                height: 132px;
+                width: 56px;
+                overflow-y: auto;
+                scroll-snap-type: y mandatory;
+                scrollbar-width: none;
+                mask-image: linear-gradient(transparent, #000 30%, #000 70%, transparent);
+                overscroll-behavior: contain;
+            }
+            .koleso::-webkit-scrollbar {
+                display: none;
+            }
+            .koleso div {
+                height: 40px;
+                line-height: 40px;
+                text-align: center;
+                scroll-snap-align: center;
+                font-size: 24px;
+                font-weight: 800;
+            }
+            .koleso div:first-child {
+                margin-top: 46px;
+            }
+            .koleso div:last-child {
+                margin-bottom: 46px;
+            }
+            .jedn {
+                font-weight: 700;
+                color: var(--dim);
+                width: 34px;
+            }
+
+            /* ===== B: číselník ako na displeji ===== */
+            .displej {
+                font-size: 38px;
+                font-weight: 900;
+                letter-spacing: 0.04em;
+                font-variant-numeric: tabular-nums;
+                line-height: 1;
+            }
+            .displej i {
+                font-style: normal;
+                color: rgba(255, 255, 255, 0.3);
+            }
+            .klav {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                width: 100%;
+            }
+            .klav button {
+                height: 38px;
+                border: 0;
+                border-radius: 12px;
+                background: rgba(255, 255, 255, 0.1);
+                color: #fff;
+                font: inherit;
+                font-size: 18px;
+                font-weight: 800;
+            }
+
+            /* ===== C: rýchle voľby ===== */
+            .chip {
+                border: 0;
+                border-radius: 999px;
+                padding: 7px 12px;
+                background: rgba(255, 255, 255, 0.12);
+                color: #fff;
+                font: inherit;
+                font-weight: 800;
+            }
+            .chip[aria-pressed='true'] {
+                background: #fff;
+                color: #0b1226;
+            }
+
+            /* ===== D: systémový výber času ===== */
+            .sys {
+                border: 0;
+                border-radius: 14px;
+                padding: 8px 14px;
+                background: rgba(255, 255, 255, 0.14);
+                color: #fff;
+                font: inherit;
+                font-size: 28px;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+            }
+            .sys::-webkit-calendar-picker-indicator {
+                filter: invert(1);
+            }
+
+            /* ===== E: posuvník ===== */
+            .posuv {
+                width: 100%;
+                accent-color: var(--sun);
+                height: 32px;
+            }
+            .stupnica {
+                display: flex;
+                justify-content: space-between;
+                width: 100%;
+                font-size: 10px;
+                color: var(--dim);
+            }
+            /* ===== potvrdenie ===== */
+            figure:has(.krok-pas) {
+                width: 410px;
+            }
+            .krok-pas {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .sipka {
+                font-size: 22px;
+                font-weight: 800;
+                color: var(--dim);
+            }
+            .phone.mini {
+                width: 190px;
+                height: 380px;
+                border-radius: 22px;
+                font-size: 10px;
+                flex: none;
+            }
+            .mini .sheet {
+                padding: 12px 10px;
+                gap: 8px;
+            }
+            .mini .ico {
+                width: 26px;
+                height: 26px;
+                font-size: 13px;
+            }
+            .mini .hlav b {
+                font-size: 13px;
+            }
+            .mini .btn {
+                padding: 7px;
+            }
+            .btn.plny {
+                background: #fff;
+                color: #0b1226;
+                box-shadow: none;
+            }
+            .mini-kolesa {
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .mini-kolesa span {
+                display: inline-block;
+                padding: 2px 8px;
+                border-radius: 8px;
+                background: rgba(255, 255, 255, 0.12);
+                color: #fff;
+                font-size: 18px;
+                font-weight: 800;
+            }
+            .konci.ok {
+                color: var(--zelena);
+            }
+            .teraz {
+                position: absolute;
+                left: 10px;
+                right: 10px;
+                top: 140px;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
+            }
+            .dl {
+                display: grid;
+                gap: 2px;
+                padding: 8px;
+                border-radius: 14px;
+                background: rgba(8, 16, 40, 0.3);
+            }
+            .dl[data-zap] {
+                box-shadow: inset 0 0 0 1.5px #fff;
+            }
+            .dl b {
+                font-size: 11px;
+            }
+            .dl small {
+                color: var(--dim);
+            }
+            .dl-ico {
+                font-size: 14px;
+            }
+            .dl-ico.zap {
+                color: var(--zelena);
+            }
+            .blik {
+                animation: blik 1.6s ease-out infinite;
+            }
+            @keyframes blik {
+                0% {
+                    transform: scale(1);
+                }
+                15% {
+                    transform: scale(1.07);
+                    box-shadow:
+                        inset 0 0 0 1.5px #fff,
+                        0 0 18px 4px rgba(143, 227, 111, 0.6);
+                }
+                40%,
+                100% {
+                    transform: scale(1);
+                }
+            }
+            .bubl {
+                position: absolute;
+                left: 10px;
+                right: 10px;
+                bottom: 54px;
+                padding: 8px 10px;
+                border-radius: 12px;
+                background: rgba(10, 20, 48, 0.92);
+                font-weight: 700;
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+            }
+            .bubl u {
+                float: right;
+                text-decoration: none;
+                color: var(--sun);
+                font-weight: 800;
+            }
+            .nav {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 44px;
+                background: rgba(8, 16, 40, 0.55);
+            }
+            .odpocet {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                color: var(--dim);
+                font-weight: 700;
+                padding: 6px;
+            }
+            .krut {
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: conic-gradient(var(--zelena) 70%, rgba(255, 255, 255, 0.15) 0);
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .blik {
+                    animation: none;
+                }
+            }
+            .velke {
+                font-size: 30px;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+                line-height: 1;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Spotrebič beží – nastavenie času</h1>
+                <p class="dim">
+                    Karta Teraz, detail práčky, sušičky a umývačky po „Už beží“. Dnes sa zvyšok programu (práčka, sušička) nastavuje dvoma
+                    krokovačmi – hodiny po 1, minúty po 5 – a umývačke sa čas zapnutia posúva po 15 minútach. Displej práčky ukazuje napr.
+                    <b>2:35</b>; z 1:00 je to 1× „+ h“ a 7× „+ min“, teda 8 ťuknutí a pri každom treba čítať, kde to práve je. Nižšie päť
+                    iných spôsobov, väčšina zo systémov telefónov. Mockupy sa dajú skúsiť – na telefóne ťahom aj ťuknutím.
+                </p>
+            </section>
+
+            <section>
+                <h2>Dnes</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <div class="sheet">
+                                <div class="hlav">
+                                    <span class="ico">◉</span>
+                                    <div><small>beží</small><b>Práčka</b></div>
+                                </div>
+                                <div class="box">
+                                    <span class="ttl">Zostáva</span>
+                                    <div class="dvojica">
+                                        <div class="riadok">
+                                            <button class="krok" data-o="-60">−</button><span data-h>1 h</span
+                                            ><button class="krok" data-o="60">+</button>
+                                        </div>
+                                        <div class="riadok">
+                                            <button class="krok" data-o="-5">−</button><span data-m>0 min</span
+                                            ><button class="krok" data-o="5">+</button>
+                                        </div>
+                                    </div>
+                                    <span class="konci" data-konci>skončí o 15:40</span>
+                                </div>
+                                <button class="btn">Nebeží</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Krokovače − / + (dnes)</b>
+                            <span class="minus">veľa ťuknutí, pri 2:35 osem; pri 5:50 pätnásť</span>
+                            <span class="minus">dva páry tlačidiel vedľa seba, ľahko sa minúť</span>
+                            <span class="minus">umývačka má iný ovládač (čas zapnutia po 15 min)</span>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Možnosti pre práčku a sušičku (zvyšok programu)</h2>
+                <div class="phones">
+                    <!-- A kolieska -->
+                    <figure>
+                        <div class="phone">
+                            <div class="sheet">
+                                <div class="hlav">
+                                    <span class="ico">◉</span>
+                                    <div><small>beží</small><b>Práčka</b></div>
+                                </div>
+                                <div class="box">
+                                    <span class="ttl">Zostáva</span>
+                                    <div class="kolesa" data-kolesa>
+                                        <div class="koleso" data-k="h"></div>
+                                        <span class="jedn">h</span>
+                                        <div class="koleso" data-k="m"></div>
+                                        <span class="jedn">min</span>
+                                    </div>
+                                    <span class="konci" data-konci>skončí o 15:40</span>
+                                </div>
+                                <button class="btn">Nebeží</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>A – kolieska (iOS Časovač, Android výber čísla)</b>
+                            <span class="plus">poznajú to všetci: Časovač v iPhone, budík a časovač v Androide</span>
+                            <span class="plus">2:35 sú dva ťahy, aj 5:50; hodnota je stále na očiach</span>
+                            <span class="plus">posúva prehliadač sám (CSS scroll-snap ako pás kariet na Dnes), žiadny kód nad dotykom</span>
+                            <span class="minus">prístupnosť treba doplniť (role spinbutton, šípky na klávesnici)</span>
+                            <span class="minus">myšou sa koliesko točí kolieskom myši alebo ťuknutím na číslo nad/pod</span>
+                        </figcaption>
+                    </figure>
+
+                    <!-- B displej + klávesnica -->
+                    <figure>
+                        <div class="phone">
+                            <div class="sheet">
+                                <div class="hlav">
+                                    <span class="ico">◉</span>
+                                    <div><small>beží</small><b>Práčka</b></div>
+                                </div>
+                                <div class="box">
+                                    <span class="ttl">Opíš z displeja</span>
+                                    <span class="displej" data-displej>1:00</span>
+                                    <div class="klav" data-klav>
+                                        <button>1</button><button>2</button><button>3</button><button>4</button><button>5</button
+                                        ><button>6</button><button>7</button><button>8</button><button>9</button><button data-x>⌫</button
+                                        ><button>0</button><button data-ok>OK</button>
+                                    </div>
+                                    <span class="konci" data-konci>skončí o 15:40</span>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>B – opíš z displeja (Android Hodiny → Časovač)</b>
+                            <span class="plus">píše sa presne to, čo svieti na práčke: 2, 3, 5 → 2:35, číslice idú sprava</span>
+                            <span class="plus">najrýchlejšie pri presnom čase, ľubovoľná minúta (nie po 5)</span>
+                            <span class="minus">klávesnica zaberie pol panela; pri neskoršej oprave treba písať znova</span>
+                            <span class="minus">systémová klávesnica (input) by panel prekryla, preto vlastná – viac kódu</span>
+                        </figcaption>
+                    </figure>
+
+                    <!-- C rýchle voľby -->
+                    <figure>
+                        <div class="phone">
+                            <div class="sheet">
+                                <div class="hlav">
+                                    <span class="ico">◉</span>
+                                    <div><small>beží</small><b>Práčka</b></div>
+                                </div>
+                                <div class="box">
+                                    <span class="ttl">Zostáva</span>
+                                    <div class="dvojica" data-chipy>
+                                        <button class="chip" data-v="30">0:30</button>
+                                        <button class="chip" data-v="60" aria-pressed="true">1:00</button>
+                                        <button class="chip" data-v="90">1:30</button>
+                                        <button class="chip" data-v="120">2:00</button>
+                                        <button class="chip" data-v="150">2:30</button>
+                                        <button class="chip" data-v="180">3:00</button>
+                                    </div>
+                                    <div class="riadok">
+                                        <button class="krok" data-c="-5">−</button><span data-c-val>1:00</span
+                                        ><button class="krok" data-c="5">+</button>
+                                    </div>
+                                    <span class="konci" data-konci>skončí o 15:40</span>
+                                </div>
+                                <button class="btn">Nebeží</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>C – rýchle voľby + doladenie (Google Hodiny, rýchle časovače)</b>
+                            <span class="plus">jedno ťuknutie na blízky čas, potom pár ťuknutí po 5 min</span>
+                            <span class="plus">voľby sa môžu naučiť z behov (`behy-hist-v1`) – obvyklé programy navrchu</span>
+                            <span class="minus">2:35 = 2:30 + 1× „+“; 5:50 voľba nemá → späť k mnohým ťuknutiam</span>
+                            <span class="minus">stále krokovač, len kratší</span>
+                        </figcaption>
+                    </figure>
+
+                    <!-- E posuvník -->
+                    <figure>
+                        <div class="phone">
+                            <div class="sheet">
+                                <div class="hlav">
+                                    <span class="ico">◉</span>
+                                    <div><small>beží</small><b>Práčka</b></div>
+                                </div>
+                                <div class="box">
+                                    <span class="ttl">Zostáva</span>
+                                    <span class="velke" data-e-val>1:00</span>
+                                    <input class="posuv" type="range" min="5" max="360" step="5" value="60" data-e />
+                                    <div class="stupnica">
+                                        <span>0</span><span>1 h</span><span>2 h</span><span>3 h</span><span>4 h</span><span>5 h</span
+                                        ><span>6 h</span>
+                                    </div>
+                                    <span class="konci" data-konci>skončí o 15:40</span>
+                                </div>
+                                <button class="btn">Nebeží</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>E – posuvník (najjednoduchšie)</b>
+                            <span class="plus">systémový &lt;input type="range"&gt;, prístupnosť aj klávesnica zadarmo, málo kódu</span>
+                            <span class="plus">jeden ťah, hneď vidno „skončí o“</span>
+                            <span class="minus">6 h na 260 px: 5 minút je 3–4 px, presne 2:35 sa trafí ťažko</span>
+                            <span class="minus">vodorovný ťah v paneli, ktorý sa zatvára ťahom zdola – treba pozor na gestá</span>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Umývačka (čas zapnutia) – a jeden spôsob pre všetky</h2>
+                <p class="dim">
+                    Umývačka zvyšok neukazuje, preto sa jej zadáva, kedy sa zapla. Dá sa na to použiť to isté, čo vyhrá pri práčke (kolieska
+                    s hodinou a minútou dňa), alebo systémový výber času.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="phone">
+                            <div class="sheet">
+                                <div class="hlav">
+                                    <span class="ico">◉</span>
+                                    <div><small>beží</small><b>Umývačka</b></div>
+                                </div>
+                                <div class="box">
+                                    <span class="ttl">Zapnutá o</span>
+                                    <input class="sys" type="time" value="13:20" data-d />
+                                    <span class="konci" data-d-konci>skončí o 16:20</span>
+                                </div>
+                                <button class="btn">Nebeží</button>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>D – systémový výber času (&lt;input type="time"&gt;)</b>
+                            <span class="plus"
+                                >ťuknutie otvorí výber času telefónu: na Androide ciferník Material (s prepnutím na klávesnicu), na iPhone
+                                kolieska</span
+                            >
+                            <span class="plus">nula vlastného kódu na ovládanie, prístupnosť od systému</span>
+                            <span class="plus">pre umývačku ideálne – zadáva sa čas dňa, nie dĺžka</span>
+                            <span class="minus"
+                                >pre zvyšok práčky sa nehodí: systém dĺžku (2 h 35 min) nevie, len čas dňa → človek by musel rátať „skončí
+                                o“</span
+                            >
+                            <span class="minus">vzhľad okna určuje systém, nie appka (na počítači iný)</span>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Porovnanie</h2>
+                <div class="tab">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>2:35</th>
+                            <th>5:50</th>
+                            <th>známe z telefónu</th>
+                            <th>kód</th>
+                            <th>neskoršia oprava</th>
+                        </tr>
+                        <tr>
+                            <td>dnes</td>
+                            <td>8 ťuknutí</td>
+                            <td>15 ťuknutí</td>
+                            <td>áno</td>
+                            <td>–</td>
+                            <td>dobrá</td>
+                        </tr>
+                        <tr>
+                            <td>A kolieska</td>
+                            <td>2 ťahy</td>
+                            <td>2 ťahy</td>
+                            <td>áno (iOS aj Android)</td>
+                            <td>stredný, CSS posúva samo</td>
+                            <td>dobrá</td>
+                        </tr>
+                        <tr>
+                            <td>B opíš z displeja</td>
+                            <td>3 ťuknutia + OK</td>
+                            <td>3 + OK</td>
+                            <td>áno (Android)</td>
+                            <td>stredný</td>
+                            <td>písať znova</td>
+                        </tr>
+                        <tr>
+                            <td>C voľby + doladenie</td>
+                            <td>2</td>
+                            <td>~13</td>
+                            <td>áno (Google Hodiny)</td>
+                            <td>malý</td>
+                            <td>dobrá</td>
+                        </tr>
+                        <tr>
+                            <td>D systémový čas</td>
+                            <td colspan="2">len pre umývačku (čas dňa)</td>
+                            <td>áno, je to systém</td>
+                            <td>najmenší</td>
+                            <td>dobrá</td>
+                        </tr>
+                        <tr>
+                            <td>E posuvník</td>
+                            <td>1 ťah, nepresne</td>
+                            <td>1 ťah, nepresne</td>
+                            <td>čiastočne</td>
+                            <td>najmenší</td>
+                            <td>dobrá</td>
+                        </tr>
+                    </table>
+                </div>
+            </section>
+
+            <section>
+                <h2>Odporúčanie – zvolené A + D (22. 11. 2026)</h2>
+                <p class="odpor">
+                    <b>A – kolieska pre práčku a sušičku, D – systémový výber času pre umývačku.</b> Kolieska sú presne to, čo človek pozná
+                    z Časovača v telefóne, zvládnu aj 5:50 dvoma ťahmi a posúva ich prehliadač sám (scroll-snap, bez vlastného kódu nad
+                    dotykom – ako pás kariet na Dnes, v duchu pravidla „rozhoduj podľa typu vstupu“). Minúty po 5 alebo po 1? Po 1 je presne
+                    podľa displeja, kolieska to unesú (60 riadkov), navrhujem po 1. Umývačke sa zadáva čas dňa, na to má telefón vlastný
+                    výber a nemusíme nič kresliť. Ak by si chcel jeden vzhľad pre všetky tri, umývačka môže dostať tie isté kolieska (hodina
+                    0–23, minúta).
+                </p>
+            </section>
+
+            <section>
+                <h2>Potvrdenie, že je čas nastavený</h2>
+                <p class="dim">
+                    Dnes sa každé ťuknutie zapíše hneď, panel ostane otvorený a nič nepovie, že je hotovo – človek ho musí zavrieť sám a
+                    nevie, či sa niečo uložilo. Pri kolieskach je to ešte horšie: kým sa točia, nie je jasné, kedy je „nastavené“. Nižšie
+                    štyri spôsoby. Bublina vo všetkých je tá istá ako „Meranie pripojené“ nad navigáciou, nie nový prvok. Ak sa nepodarí
+                    objednať oznámenie o konci, povie to bublina namiesto dnešného riadku v paneli.
+                </p>
+                <div class="phones">
+                    <!-- P1 -->
+                    <figure>
+                        <div class="krok-pas">
+                            <div class="phone mini">
+                                <div class="sheet">
+                                    <div class="hlav">
+                                        <span class="ico">◉</span>
+                                        <div><small>beží</small><b>Práčka</b></div>
+                                    </div>
+                                    <div class="box">
+                                        <span class="ttl">Zostáva</span>
+                                        <div class="mini-kolesa"><span>2</span> h <span>35</span> min</div>
+                                        <span class="konci">skončí o 17:15</span>
+                                    </div>
+                                    <button class="btn plny">Nastaviť</button>
+                                    <button class="btn">Nebeží</button>
+                                </div>
+                            </div>
+                            <span class="sipka">→</span>
+                            <div class="phone mini">
+                                <div class="teraz">
+                                    <div class="dl" data-zap><span class="dl-ico zap">◉</span><b>Práčka</b><small>do 17:15</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Sušička</b><small>po práčke</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Umývačka</b><small>13:00</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Bojler</b><small>slnko</small></div>
+                                </div>
+                                <div class="bubl">✓ Práčka skončí o 17:15 · dám vedieť <u>Späť</u></div>
+                                <div class="nav"></div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>P1 – tlačidlo „Nastaviť“, panel sa zavrie a bublina potvrdí</b>
+                            <span class="plus">ako Hotovo / OK pri výbere času v Androide aj iOS – každý vie, čo robí</span>
+                            <span class="plus">jedným ťuknutím späť na Teraz; bublina povie čo, dokedy a či príde oznámenie</span>
+                            <span class="plus">„Späť“ v bubline vráti zápis (Gmail, Fotky – Material snackbar), omyl nič nestojí</span>
+                            <span class="plus">kolieska do ťuknutia nič neukladajú – žiadne medzistavy na druhé telefóny</span>
+                            <span class="minus">o jedno ťuknutie viac než dnes (Nastaviť), zato nie treba zatvárať</span>
+                            <span class="minus">zavretie krížikom alebo Späť bez „Nastaviť“ = zmena sa zahodí (tak to robí aj systém)</span>
+                        </figcaption>
+                    </figure>
+
+                    <!-- P2 -->
+                    <figure>
+                        <div class="krok-pas">
+                            <div class="phone mini">
+                                <div class="sheet">
+                                    <div class="hlav">
+                                        <span class="ico">◉</span>
+                                        <div><small>beží</small><b>Práčka</b></div>
+                                    </div>
+                                    <div class="box">
+                                        <span class="ttl">Zostáva</span>
+                                        <div class="mini-kolesa"><span>2</span> h <span>35</span> min</div>
+                                        <span class="konci ok">✓ Uložené · skončí o 17:15</span>
+                                    </div>
+                                    <button class="btn">Nebeží</button>
+                                </div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>P2 – ukladá sa samo, v paneli „✓ Uložené“</b>
+                            <span class="plus">najmenšia zmena: ako dnes, len po zastavení koliesok (~1 s) svieti „✓ Uložené“</span>
+                            <span class="plus">ako Nastavenia v telefóne – zmena platí hneď, bez tlačidla</span>
+                            <span class="minus">tvoju druhú požiadavku nerieši: z panela treba stále odísť ručne</span>
+                            <span class="minus"
+                                >medzistavy pri točení idú do pamäte a k druhým telefónom (dá sa odložiť, ale je to kód navyše)</span
+                            >
+                        </figcaption>
+                    </figure>
+
+                    <!-- P3 -->
+                    <figure>
+                        <div class="krok-pas">
+                            <div class="phone mini">
+                                <div class="sheet">
+                                    <div class="hlav">
+                                        <span class="ico">◉</span>
+                                        <div><small>beží</small><b>Práčka</b></div>
+                                    </div>
+                                    <div class="box">
+                                        <span class="ttl">Zostáva</span>
+                                        <div class="mini-kolesa"><span>2</span> h <span>35</span> min</div>
+                                        <span class="konci">skončí o 17:15</span>
+                                    </div>
+                                    <div class="odpocet"><span class="krut"></span>Ukladám a zatváram…</div>
+                                </div>
+                            </div>
+                            <span class="sipka">→</span>
+                            <div class="phone mini">
+                                <div class="teraz">
+                                    <div class="dl" data-zap><span class="dl-ico zap">◉</span><b>Práčka</b><small>do 17:15</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Sušička</b><small>po práčke</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Umývačka</b><small>13:00</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Bojler</b><small>slnko</small></div>
+                                </div>
+                                <div class="bubl">✓ Práčka skončí o 17:15 · dám vedieť</div>
+                                <div class="nav"></div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>P3 – zavrie sa samo po chvíli pokoja (nekonvenčné)</b>
+                            <span class="plus"
+                                >žiadne tlačidlo navyše: kolieska zastanú, po 2 s krúžok dobehne a panel sa zavrie s bublinou</span
+                            >
+                            <span class="minus">panel, ktorý sa zatvára sám, prekvapí; kto ešte číta alebo váha, príde oň</span>
+                            <span class="minus">ťažko sa ladí čas čakania; čítačka obrazovky a pomalší ľudia sú v nevýhode</span>
+                            <span class="minus">systémy to pri výbere času nerobia – nie je to štandard</span>
+                        </figcaption>
+                    </figure>
+
+                    <!-- P4 -->
+                    <figure>
+                        <div class="krok-pas">
+                            <div class="phone mini">
+                                <div class="sheet">
+                                    <div class="hlav">
+                                        <span class="ico">◉</span>
+                                        <div><small>beží</small><b>Práčka</b></div>
+                                    </div>
+                                    <div class="box">
+                                        <span class="ttl">Zostáva</span>
+                                        <div class="mini-kolesa"><span>2</span> h <span>35</span> min</div>
+                                        <span class="konci">skončí o 17:15</span>
+                                    </div>
+                                    <button class="btn plny">Nastaviť</button>
+                                    <button class="btn">Nebeží</button>
+                                </div>
+                            </div>
+                            <span class="sipka">→</span>
+                            <div class="phone mini">
+                                <div class="teraz">
+                                    <div class="dl blik" data-zap>
+                                        <span class="dl-ico zap">◉</span><b>Práčka</b><small>do 17:15 ✓</small>
+                                    </div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Sušička</b><small>po práčke</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Umývačka</b><small>13:00</small></div>
+                                    <div class="dl"><span class="dl-ico">◌</span><b>Bojler</b><small>slnko</small></div>
+                                </div>
+                                <div class="nav"></div>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>P4 – „Nastaviť“ a potvrdí to sama dlaždica (bez bubliny)</b>
+                            <span class="plus"
+                                >panel sa zavrie, dlaždica práčky raz ožije (ako pri oznámení, „ikona ožije“ z oznamenia-animacie.html) a
+                                ukáže nový koniec</span
+                            >
+                            <span class="plus">pozornosť ide presne tam, kde sa zmena prejavila; žiadny text navyše</span>
+                            <span class="minus"
+                                >bez slov – kto sa nepozrie na dlaždicu, potvrdenie prehliadne; pri útlme pohybu len krátky obrys</span
+                            >
+                            <span class="minus">nemá kam napísať, že oznámenie o konci nepríde, ani ponúknuť „Späť“</span>
+                        </figcaption>
+                    </figure>
+                </div>
+
+                <h2>Umývačka (D) a „Nebeží“</h2>
+                <p>
+                    Pri umývačke je „Nastaviť“ tlačidlo OK v systémovom výbere času – po ňom sa panel zavrie a príde tá istá bublina („✓
+                    Umývačka skončí o 16:20 · dám vedieť“), druhé ťuknutie netreba. „Nebeží“ tiež zavrie panel s bublinou „Práčka nebeží“ a
+                    „Späť“. Prvé „Už beží“ už neukladá nič samo – iba ukáže kolieska s odhadom programu, uloží až „Nastaviť“.
+                </p>
+
+                <p class="dim">
+                    Pri realizácii inak: aj umývačka má „Nastaviť“ (na počítači výber času mení hodnotu pri každej číslici, panel by sa
+                    zavrel priskoro), tlačidlo v bubline je „Vrátiť“ (nie „Späť“, to je tlačidlo Späť telefónu) a fajka je kreslená.
+                </p>
+                <p class="odpor">
+                    <b>Odporúčam P1 – zvolené P1 (22. 11. 2026).</b> Je to štandard výberu času v oboch systémoch (Hotovo / OK), rieši obe
+                    tvoje požiadavky naraz – potvrdenie aj návrat na Teraz – a „Späť“ v bubline robí z omylu maličkosť. Dlaždicu z P4 sa dá
+                    pridať k P1 (bublina + dlaždica raz ožije), ak ti bublina samotná nebude stačiť.
+                </p>
+            </section>
+        </main>
+        <script>
+            // Len pre mockup: „teraz“ je 14:40, koniec = teraz + zvyšok.
+            const TERAZ = 14 * 60 + 40;
+            const hm = (m) => `${Math.floor(m / 60) % 24}:${String(m % 60).padStart(2, '0')}`;
+            const dlzka = (m) => `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`;
+            const konci = (fig, m) => {
+                const el = fig.querySelector('[data-konci]');
+                if (el) el.textContent = `skončí o ${hm(TERAZ + m)}`;
+            };
+            const figs = document.querySelectorAll('figure');
+
+            // dnes: krokovače
+            {
+                const fig = figs[0];
+                let z = 60;
+                const kresli = () => {
+                    fig.querySelector('[data-h]').textContent = `${Math.floor(z / 60)} h`;
+                    fig.querySelector('[data-m]').textContent = `${z % 60} min`;
+                    konci(fig, z);
+                };
+                fig.querySelectorAll('[data-o]').forEach((b) =>
+                    b.addEventListener('click', () => {
+                        z = Math.max(5, Math.min(360, z + Number(b.dataset.o)));
+                        kresli();
+                    }),
+                );
+                kresli();
+            }
+
+            // A: kolieska
+            {
+                const fig = figs[1];
+                const kh = fig.querySelector('[data-k="h"]');
+                const km = fig.querySelector('[data-k="m"]');
+                kh.innerHTML = Array.from({ length: 7 }, (_, i) => `<div>${i}</div>`).join('');
+                km.innerHTML = Array.from({ length: 60 }, (_, i) => `<div>${String(i).padStart(2, '0')}</div>`).join('');
+                const hodnota = (k) => Math.round(k.scrollTop / 40);
+                const prepocet = () => konci(fig, hodnota(kh) * 60 + hodnota(km));
+                [kh, km].forEach((k) => {
+                    k.addEventListener('scroll', prepocet, { passive: true });
+                    // ťuknutie na číslo nad/pod ho posunie do stredu
+                    k.addEventListener('click', (e) => {
+                        const i = [...k.children].indexOf(e.target);
+                        if (i >= 0) k.scrollTo({ top: i * 40, behavior: 'smooth' });
+                    });
+                });
+                requestAnimationFrame(() => {
+                    kh.scrollTop = 40;
+                    km.scrollTop = 0;
+                    prepocet();
+                });
+            }
+
+            // B: opíš z displeja
+            {
+                const fig = figs[2];
+                let cisla = '100';
+                const disp = fig.querySelector('[data-displej]');
+                const kresli = () => {
+                    const s = cisla.padStart(3, '0').slice(-3);
+                    const h = Number(s[0]);
+                    const m = Math.min(59, Number(s.slice(1)));
+                    disp.innerHTML = cisla.length ? `${h}:${String(m).padStart(2, '0')}` : '<i>0:00</i>';
+                    konci(fig, h * 60 + m);
+                };
+                fig.querySelectorAll('[data-klav] button').forEach((b) =>
+                    b.addEventListener('click', () => {
+                        if ('x' in b.dataset) cisla = cisla.slice(0, -1);
+                        else if ('ok' in b.dataset) return;
+                        else cisla = (cisla.length >= 3 ? '' : cisla) + b.textContent;
+                        kresli();
+                    }),
+                );
+                kresli();
+            }
+
+            // C: rýchle voľby
+            {
+                const fig = figs[3];
+                let z = 60;
+                const chipy = fig.querySelectorAll('[data-v]');
+                const kresli = () => {
+                    fig.querySelector('[data-c-val]').textContent = dlzka(z);
+                    chipy.forEach((c) => c.setAttribute('aria-pressed', String(Number(c.dataset.v) === z)));
+                    konci(fig, z);
+                };
+                chipy.forEach((c) =>
+                    c.addEventListener('click', () => {
+                        z = Number(c.dataset.v);
+                        kresli();
+                    }),
+                );
+                fig.querySelectorAll('[data-c]').forEach((b) =>
+                    b.addEventListener('click', () => {
+                        z = Math.max(5, Math.min(360, z + Number(b.dataset.c)));
+                        kresli();
+                    }),
+                );
+                kresli();
+            }
+
+            // E: posuvník
+            {
+                const fig = figs[4];
+                const r = fig.querySelector('[data-e]');
+                const kresli = () => {
+                    fig.querySelector('[data-e-val]').textContent = dlzka(Number(r.value));
+                    konci(fig, Number(r.value));
+                };
+                r.addEventListener('input', kresli);
+                kresli();
+            }
+
+            // D: systémový čas (umývačka beží 3 h)
+            {
+                const fig = figs[5];
+                const t = fig.querySelector('[data-d]');
+                const kresli = () => {
+                    const [h, m] = t.value.split(':').map(Number);
+                    fig.querySelector('[data-d-konci]').textContent = `skončí o ${hm(h * 60 + m + 180)}`;
+                };
+                t.addEventListener('input', kresli);
+                kresli();
+            }
+        </script>
+    </body>
+</html>

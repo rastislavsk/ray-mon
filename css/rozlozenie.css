@@ -132,6 +132,60 @@
 :root:is([data-layout='medium'], [data-layout='wide']) .spat-bublina {
     bottom: calc(24px + env(safe-area-inset-bottom));
 }
+/* Bublina po „Nastaviť“ a „Nebeží“ v detaile spotrebiča (docs/navrhy/spotrebic-cas-nastavenie.html, P1): ako
+   systémová bublina s akciou - fajka, text a „Vrátiť“. */
+.vec-bublina {
+    position: fixed;
+    inset: auto 16px calc(84px + env(safe-area-inset-bottom)) 16px;
+    z-index: 7;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 8px 8px 12px;
+    border-radius: 18px;
+    background: rgba(10, 16, 38, 0.94);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 700;
+    line-height: 1.35;
+    animation: pripojene-in 0.3s ease-out;
+}
+.vec-bublina svg {
+    flex: none;
+    width: 24px;
+    height: 24px;
+}
+.vec-bublina circle {
+    fill: var(--yes);
+}
+.vec-bublina path {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.vec-bublina span {
+    flex: 1;
+}
+.vec-bublina-vrat {
+    flex: none;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: var(--yes);
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+}
+:root:is([data-layout='medium'], [data-layout='wide']) .vec-bublina {
+    bottom: calc(24px + env(safe-area-inset-bottom));
+}
 /* Bublina „Meranie pripojené“: dole už navigácia nie je. */
 :root:is([data-layout='medium'], [data-layout='wide']) .pripojene {
     bottom: calc(16px + env(safe-area-inset-bottom));

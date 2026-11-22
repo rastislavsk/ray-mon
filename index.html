@@ -898,6 +898,17 @@
              Zmizne sama po SPAT.bublinaMs. Text píše render. -->
         <p id="spat-bublina" class="spat-bublina hidden" role="status"></p>
 
+        <!-- Bublina po „Nastaviť“ a „Nebeží“ v detaile spotrebiča (docs/navrhy/spotrebic-cas-nastavenie.html, P1): čo sa
+             nastavilo, či príde oznámenie o konci, a „Vrátiť“. Zmizne sama po BEZI.bublinaMs. Text píše render. -->
+        <div id="vec-bublina" class="vec-bublina hidden" role="status">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="11" />
+                <path d="M7 12.4l3.2 3.1L17 8.8" />
+            </svg>
+            <span id="vec-bublina-text"></span>
+            <button type="button" id="vec-bublina-vrat" class="vec-bublina-vrat"></button>
+        </div>
+
         <!-- Ponuka prevziať nastavenie z otvoreného odkazu (#nastavenie=…). Pevne nad navigáciou,
              aby bola vidieť na ktorejkoľvek karte. Odkaz môže poslať ktokoľvek, preto sa sám neuloží. -->
         <section id="import-offer" class="cta offer hidden" aria-live="polite" aria-labelledby="import-offer-title">
@@ -1034,54 +1045,23 @@
                 <ul id="tz-vec-hotove" class="vec-hotove hidden"></ul>
                 <p id="tz-vec-cas" class="vec-cas"></p>
                 <div id="tz-vec-pas" class="vec-pas" aria-hidden="true"></div>
-                <!-- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-koniec-opakovanie.html): „Už beží“,
-                     potom zvyšok programu (práčka, sušička) či čas zapnutia (umývačka) s − a +, či príde oznámenie o konci a „Nebeží“. -->
+                <!-- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-cas-nastavenie.html, A + D): „Už beží“
+                     ukáže nastavenie času - kolieska zvyšku programu (práčka, sušička) či výber času zapnutia (umývačka). Uloží až
+                     „Nastaviť“, ktoré zavrie panel a ukáže bublinu #vec-bublina. Položky koliesok píše render. -->
                 <div id="tz-vec-zapis" class="vec-zapis hidden">
                     <button type="button" id="tz-vec-zapol" class="pbtn"></button>
-                    <div id="tz-vec-zvysok" class="vec-zvysok">
-                        <span id="tz-vec-zostava" class="vec-zost-ttl"></span>
-                        <div class="vec-zost">
-                            <div class="vec-posun">
-                                <button type="button" id="tz-vec-h-menej" class="vec-krok">
-                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <path d="M6 12h12"></path>
-                                    </svg>
-                                </button>
-                                <span id="tz-vec-h"></span>
-                                <button type="button" id="tz-vec-h-viac" class="vec-krok">
-                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <path d="M6 12h12M12 6v12"></path>
-                                    </svg>
-                                </button>
-                            </div>
-                            <div class="vec-posun">
-                                <button type="button" id="tz-vec-m-menej" class="vec-krok">
-                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <path d="M6 12h12"></path>
-                                    </svg>
-                                </button>
-                                <span id="tz-vec-m"></span>
-                                <button type="button" id="tz-vec-m-viac" class="vec-krok">
-                                    <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                        <path d="M6 12h12M12 6v12"></path>
-                                    </svg>
-                                </button>
-                            </div>
+                    <div id="tz-vec-nastav" class="vec-nastav">
+                        <span id="tz-vec-ttl" class="vec-zost-ttl"></span>
+                        <div id="tz-vec-kolesa" class="vec-kolesa">
+                            <div id="tz-vec-kh" class="koleso" role="spinbutton" tabindex="0" aria-valuemin="0"></div>
+                            <span id="tz-vec-jh" class="koleso-j" aria-hidden="true"></span>
+                            <div id="tz-vec-km" class="koleso" role="spinbutton" tabindex="0" aria-valuemin="0" aria-valuemax="59"></div>
+                            <span id="tz-vec-jm" class="koleso-j" aria-hidden="true"></span>
                         </div>
+                        <input type="time" id="tz-vec-od" class="vec-od" min="00:00" required aria-labelledby="tz-vec-ttl" />
                         <span id="tz-vec-konci" class="vec-konci" aria-live="polite"></span>
                     </div>
-                    <div id="tz-vec-posun" class="vec-posun">
-                        <button type="button" id="tz-vec-skor" class="vec-krok" data-smer="-1">
-                            <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 12h12"></path></svg>
-                        </button>
-                        <span id="tz-vec-od" aria-live="polite"></span>
-                        <button type="button" id="tz-vec-neskor" class="vec-krok" data-smer="1">
-                            <svg class="vi" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                                <path d="M6 12h12M12 6v12"></path>
-                            </svg>
-                        </button>
-                    </div>
-                    <p id="tz-vec-oznam" class="dim" aria-live="polite"></p>
+                    <button type="button" id="tz-vec-ok" class="pbtn"></button>
                     <button type="button" id="tz-vec-zrus" class="pbtn ghost"></button>
                 </div>
                 <p id="tz-vec-why"></p>

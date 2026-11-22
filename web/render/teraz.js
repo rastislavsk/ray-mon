@@ -3,11 +3,13 @@
 // dňa je v paneli karty Dnes (render/graf.js). Všetko počíta shared/teraz.js a texty sú v
 // shared/messages.js - tu sa len zapisuje do DOM.
 
+import { BEZI } from '../../shared/config.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
-import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, voiceTexts } from '../../shared/messages-core.js';
+import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
+import { localMinutes } from '../../shared/solar.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
@@ -228,55 +230,101 @@ function renderVecSheet(state, m, dom) {
         setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
         show(dom.tzVecPas, !!v.slot);
         setHtml(dom.tzVecPas, v.slot ? osHtml(m.os, v.slot) : '');
-        renderZapis(v, state.koniecOznam ?? null, dom);
+        renderZapis(v, dom);
         setText(dom.tzVecWhy, v.why);
     }
     const id = state.tzVec;
     dialog(dom.tzVecSheet, !!v, () => (shows(state, 'terazky') && id ? dom.tzCo.querySelector(`[data-vec="${id}"]`) : null));
+    if (v) polohaKolies(dom);
 }
 
 /**
- * Zápis v detaile spotrebiča (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-koniec-opakovanie.html):
- * čo dnes už dobehlo, „Už beží“, a keď beží, pri práčke a sušičke zvyšok programu (hodiny a minúty s − a +), pri
- * umývačke čas zapnutia s − a +, či príde oznámenie o konci a „Nebeží“. Spotrebič, ktorý sa zapísať nedá, ani iný
- * deň zápis nemá. Že naraz ide len toľko, koľko strecha utiahne, hovorí o pláne - nie o tom, čo už beží.
- * `?? []`, `?? null`: model zo starého shared/teraz.js z cache po nasadení tieto polia nemá.
+ * Zápis v detaile spotrebiča (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-cas-nastavenie.html, A + D):
+ * čo dnes už dobehlo, „Už beží“ a po ňom - či keď spotrebič beží - nastavenie času s „Nastaviť“: kolieska zvyšku
+ * programu (práčka, sušička), výber času zapnutia (umývačka), kedy skončí; pri bežiacom aj „Nebeží“. Spotrebič, ktorý sa
+ * zapísať nedá, ani iný deň zápis nemá. Že naraz ide len toľko, koľko strecha utiahne, hovorí o pláne - nie o tom, čo už beží.
+ * `?? []`: model zo starého shared/teraz.js z cache po nasadení tieto polia nemá.
  * @param {object} v detail spotrebiča - iný deň (shared/tyzden.js) pole `zapis` nemá
- * @param {import('../state.js').AppState['koniecOznam']} oznam @param {Dom} dom
+ * @param {Dom} dom
  */
-function renderZapis(v, oznam, dom) {
+function renderZapis(v, dom) {
     /** @type {import('../../shared/teraz.js').VecZapis | null} */
     const z = 'zapis' in v ? /** @type {any} */ (v.zapis) : null;
     renderHotove(z?.hotove ?? [], dom);
     show(dom.tzVecZapis, !!z);
-    const bezi = z?.stav === 'bezi' ? z : null;
+    const bezi = z?.stav === 'bezi';
+    const cas = z?.cas ?? null;
     show(dom.tzVecNote, !bezi);
     setText(dom.tzVecNote, bezi ? '' : PLAN_DNA_NOTE);
-    show(dom.tzVecZapol, !bezi);
+    show(dom.tzVecZapol, !cas);
     setText(dom.tzVecZapol, TERAZ_BEZI.zapol);
-    // Či príde oznámenie o konci, vie appka len o behu, ktorý v tejto chvíli objednala.
-    renderBezi(bezi, oznam && 'id' in v && oznam.id === v.id ? oznam.stav : null, dom);
+    show(dom.tzVecNastav, !!cas);
+    show(dom.tzVecOk, !!cas);
+    setText(dom.tzVecOk, TERAZ_BEZI.nastav);
+    show(dom.tzVecZrus, bezi);
+    setText(dom.tzVecZrus, TERAZ_BEZI.nebezi);
+    renderCas(cas, dom);
 }
 
 /**
- * Spotrebič, ktorý beží (`z`, inak null): zvyšok programu (práčka, sušička), alebo čas zapnutia s − a + (umývačka), či
- * príde oznámenie o konci a „Nebeží“.
- * @param {import('../../shared/teraz.js').VecZapis | null} z @param {'ok' | 'zakazane' | 'chyba' | null} oznam @param {Dom} dom
+ * Nastavenie času: „Zostáva“ s kolieskami (práčka, sušička) či „Zapnutá o“ s výberom času (umývačka) a kedy skončí.
+ * @param {import('../../shared/teraz.js').NastavCas | null} cas @param {Dom} dom
  */
-function renderBezi(z, oznam, dom) {
-    const zv = z?.zvysok ?? null;
-    const posun = !!z && !zv;
-    show(dom.tzVecPosun, posun);
-    show(dom.tzVecZrus, !!z);
-    renderZvysok(zv, dom);
-    setText(dom.tzVecOd, posun ? /** @type {NonNullable<typeof z>} */ (z).od : '');
-    dom.tzVecSkor.setAttribute('aria-label', TERAZ_BEZI.skor);
-    dom.tzVecNeskor.setAttribute('aria-label', TERAZ_BEZI.neskor);
-    dom.tzVecNeskor.disabled = !z?.neskor;
-    const o = z && oznam ? TERAZ_BEZI.oznam[oznam] : '';
-    show(dom.tzVecOznam, !!o);
-    setText(dom.tzVecOznam, o);
-    setText(dom.tzVecZrus, TERAZ_BEZI.nebezi);
+function renderCas(cas, dom) {
+    setText(dom.tzVecTtl, cas?.zvysok ? TERAZ_BEZI.zostava : TERAZ_BEZI.zapnuta);
+    setText(dom.tzVecKonci, cas?.konci ?? '');
+    renderKolesa(cas?.zvysok ?? null, dom);
+    renderOd(cas?.od ?? '', cas?.max ?? '', dom);
+}
+
+/** Čas zapnutia umývačky vo výbere času telefónu (prázdny = skrytý), najviac teraz (`max`). @param {string} od @param {string} max @param {Dom} dom */
+function renderOd(od, max, dom) {
+    show(dom.tzVecOd, !!od);
+    dom.tzVecOd.max = max;
+    if (od && dom.tzVecOd.value !== od) dom.tzVecOd.value = od;
+}
+
+/** Položky kolieska 0…`po` (minúty s nulou na začiatku). @param {number} po @param {boolean} nula */
+const polozkyKolesa = (po, nula) =>
+    Array.from({ length: po + 1 }, (_, i) => `<div aria-hidden="true">${nula ? String(i).padStart(2, '0') : i}</div>`).join('');
+
+/**
+ * Kolieska zvyšku programu práčky a sušičky: hodiny 0 až BEZI.maxZvysokMin, minúty 0–59. Sú to spinbuttony - hodnotu
+ * hovoria aria-valuenow a aria-valuetext; kam sú otočené, nastaví polohaKolies, až keď je panel otvorený.
+ * @param {{ h: number, m: number } | null} zv @param {Dom} dom
+ */
+function renderKolesa(zv, dom) {
+    show(dom.tzVecKolesa, !!zv);
+    if (!dom.tzVecKh.childElementCount) setHtml(dom.tzVecKh, polozkyKolesa(Math.floor(BEZI.maxZvysokMin / 60), false));
+    if (!dom.tzVecKm.childElementCount) setHtml(dom.tzVecKm, polozkyKolesa(59, true));
+    setText(dom.tzVecJh, TERAZ_BEZI.h);
+    setText(dom.tzVecJm, TERAZ_BEZI.min);
+    /** @type {Array<[HTMLElement, string, string, number]>} */
+    const kolesa = [
+        [dom.tzVecKh, TERAZ_BEZI.hodiny, TERAZ_BEZI.h, zv?.h ?? 0],
+        [dom.tzVecKm, TERAZ_BEZI.minuty, TERAZ_BEZI.min, zv?.m ?? 0],
+    ];
+    dom.tzVecKh.setAttribute('aria-valuemax', String(Math.floor(BEZI.maxZvysokMin / 60)));
+    for (const [el, label, jedn, hodnota] of kolesa) {
+        el.setAttribute('aria-label', label);
+        el.setAttribute('aria-valuenow', String(hodnota));
+        el.setAttribute('aria-valuetext', `${hodnota} ${jedn}`);
+    }
+}
+
+/**
+ * Otočí kolieska na hodnotu zo stavu (aria-valuenow), keď na nej nestoja - po otvorení panelu, po klávesnici či ťuknutí
+ * na položku a keď appka zvyšok obmedzí. Koliesko, ktoré človek práve točí (`data-toci`, web/teraz-interactions.js),
+ * nechá - prekreslenie z iného dôvodu ho nesmie vrátiť. Volá sa, až keď je panel otvorený (skryté nemá rozmery).
+ * @param {Dom} dom
+ */
+function polohaKolies(dom) {
+    if (dom.tzVecKolesa.classList.contains('hidden')) return;
+    for (const el of [dom.tzVecKh, dom.tzVecKm]) {
+        const krok = el.firstElementChild instanceof HTMLElement ? el.firstElementChild.offsetHeight : 0;
+        const ciel = Number(el.getAttribute('aria-valuenow')) * krok;
+        if (krok && !el.dataset.toci && Math.abs(el.scrollTop - ciel) > 1) el.scrollTop = ciel;
+    }
 }
 
 /** Čo dnes už dobehlo: riadok na beh, čas vpravo. @param {import('../../shared/teraz.js').VecZapis['hotove']} hotove @param {Dom} dom */
@@ -286,27 +334,19 @@ function renderHotove(hotove, dom) {
 }
 
 /**
- * Zvyšok programu práčky či sušičky: hodiny a minúty, každé s − a + (na kraji zvyšku sa stlačiť nedajú), a kedy skončí.
- * Bez neho (umývačka, nebeží) je skrytý.
- * @param {import('../../shared/teraz.js').VecZapis['zvysok']} zv @param {Dom} dom
+ * Bublina po „Nastaviť“ a „Nebeží“ (docs/navrhy/spotrebic-cas-nastavenie.html, P1): čo sa nastavilo a či príde oznámenie
+ * o konci (`koniecOznam` toho spotrebiča), s „Vrátiť“. Len na karte Teraz.
+ * @param {import('../state.js').AppState} state @param {Dom} dom
  */
-function renderZvysok(zv, dom) {
-    show(dom.tzVecZvysok, !!zv);
-    setText(dom.tzVecZostava, TERAZ_BEZI.zostava);
-    setText(dom.tzVecH, zv?.h ?? '');
-    setText(dom.tzVecM, zv?.min ?? '');
-    setText(dom.tzVecKonci, zv?.konci ?? '');
-    /** @type {Array<[HTMLButtonElement, string, boolean]>} */
-    const kroky = [
-        [dom.tzVecHMenej, TERAZ_BEZI.hodinaMenej, !!zv?.menejH],
-        [dom.tzVecHViac, TERAZ_BEZI.hodinaViac, !!zv?.viacH],
-        [dom.tzVecMMenej, TERAZ_BEZI.minMenej, !!zv?.menejM],
-        [dom.tzVecMViac, TERAZ_BEZI.minViac, !!zv?.viacM],
-    ];
-    for (const [btn, label, moze] of kroky) {
-        btn.setAttribute('aria-label', label);
-        btn.disabled = !moze;
-    }
+function renderVecBublina(state, dom) {
+    // `?? null`: starý web/state.js z cache po nasadení pole vecBublina nemá.
+    const b = shows(state, 'terazky') ? (state.vecBublina ?? null) : null;
+    show(dom.vecBublina, !!b);
+    if (!b) return;
+    const oznam = state.koniecOznam?.id === b.id ? state.koniecOznam.stav : null;
+    const nowMin = localMinutes(state.now, state.site.timezone);
+    setText(dom.vecBublinaText, terazBublinaText(b.id, b.k === null ? null : { k: b.k }, nowMin, oznam));
+    setText(dom.vecBublinaVrat, TERAZ_BEZI.vratit);
 }
 
 /**
@@ -496,6 +536,7 @@ function renderBojlerOznam(state, dom) {
 export function renderTeraz(state, dom) {
     const T = voiceTexts(state.voice).TERAZ_TEXTS;
     renderStav(state, dom);
+    renderVecBublina(state, dom);
     if (!shows(state, 'terazky')) {
         renderVecSheet(state, null, dom);
         dialog(dom.tzBojlerSheet, false, () => null);

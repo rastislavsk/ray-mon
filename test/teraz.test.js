@@ -26,6 +26,7 @@ import {
     mozemOfflineText,
     TERAZ_TEXTS,
     terazChartText,
+    terazBublinaText,
     terazCloudText,
     terazLimitGap,
     terazPreviewTime,
@@ -505,7 +506,7 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo, deň a úsek na osi 
             cas: '13:00 – 15:00',
             why: 'Ohrev chytí slnko.',
             slot: undefined,
-            zapis: { stav: 'moze', od: '', neskor: false, hotove: [], zvysok: null },
+            zapis: { stav: 'moze', hotove: [], cas: null },
         },
     );
     assert.ok(pracka?.slot && pracka.slot.left > 0 && pracka.slot.width > 0);
@@ -1022,17 +1023,15 @@ test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať s
             cas: '12:00 – 14:30',
             why: undefined,
             slot: undefined,
-            zapis: { stav: 'bezi', od: 'zapnutá 12:00', neskor: true, hotove: [], zvysok: null },
+            zapis: { stav: 'bezi', hotove: [], cas: { zvysok: null, od: '12:00', max: '13:00', konci: 'skončí o 14:30' } },
         },
     );
     assert.equal(umyvacka.slot && umyvacka.slot.tone, 'bezi');
     const pracka = detail(m, 'pracka');
     assert.deepEqual('zapis' in pracka && pracka.zapis, {
         stav: 'moze',
-        od: '',
-        neskor: false,
         hotove: [{ text: 'Dnes už prala', cas: '09:30 – 11:30' }],
-        zvysok: null,
+        cas: null,
     });
     const susicka = detail(m, 'susicka');
     assert.equal('zapis' in susicka && susicka.zapis && susicka.zapis.stav, 'moze');
@@ -1045,18 +1044,36 @@ test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať s
     assert.equal(prave.why, 'Nastav, koľko ukazuje práčka.');
     assert.deepEqual('zapis' in prave && prave.zapis, {
         stav: 'bezi',
-        od: '',
-        neskor: false,
         hotove: [{ text: 'Dnes už prala', cas: '09:30 – 11:30' }],
-        zvysok: { h: '2 h', min: '0 min', konci: 'skončí o 15:00', menejH: true, viacH: true, menejM: true, viacM: true },
+        cas: { zvysok: { h: 2, m: 0 }, od: null, max: '13:00', konci: 'skončí o 15:00' },
     });
-    // Na kraji zvyšku sa − či + stlačiť nedá.
     const kratko = detail(
         terazModel(input(at('13:00'), { bezi: [{ id: 'susicka', d: '2026-09-05', m: hm(11, 35), k: hm(13, 5) }] })),
         'susicka',
     );
-    const zv = 'zapis' in kratko && kratko.zapis ? kratko.zapis.zvysok : null;
-    assert.deepEqual(zv && [zv.min, zv.menejH, zv.menejM, zv.viacM], ['5 min', false, false, true]);
+    assert.deepEqual('zapis' in kratko && kratko.zapis?.cas?.zvysok, { h: 0, m: 5 });
+});
+
+test('nastavenie času: po „Už beží“ návrh, ktorý ešte nie je uložený - kolieska práčky, čas zapnutia umývačky', () => {
+    const cas = (/** @type {any} */ m, /** @type {string} */ id) => {
+        const v = detail(m, id);
+        return 'zapis' in v ? v.zapis?.cas : undefined;
+    };
+    const pracka = cas(terazModel(input(at('13:00'), { vecNavrh: { id: 'pracka', min: 155 } })), 'pracka');
+    assert.deepEqual(pracka, { zvysok: { h: 2, m: 35 }, od: null, max: '13:00', konci: 'skončí o 15:35' });
+    // Návrh patrí len svojmu spotrebiču.
+    assert.equal(cas(terazModel(input(at('13:00'), { vecNavrh: { id: 'pracka', min: 155 } })), 'susicka'), null);
+    // Umývačka zapnutá dávno už dobehla.
+    const umyvacka = cas(terazModel(input(at('13:00'), { vecNavrh: { id: 'umyvacka', min: hm(9) } })), 'umyvacka');
+    assert.deepEqual(umyvacka, { zvysok: null, od: '09:00', max: '13:00', konci: 'dobehla o 11:30' });
+});
+
+test('terazBublinaText: čo sa nastavilo a či príde oznámenie o konci', () => {
+    assert.equal(terazBublinaText('pracka', { k: hm(17, 15) }, hm(14), 'ok'), 'Práčka skončí o 17:15 · dám vedieť');
+    assert.equal(terazBublinaText('susicka', { k: hm(17, 15) }, hm(14), null), 'Sušička skončí o 17:15');
+    assert.equal(terazBublinaText('pracka', { k: hm(17, 15) }, hm(14), 'zakazane'), 'Práčka skončí o 17:15 · oznámenie nepríde');
+    assert.equal(terazBublinaText('umyvacka', { k: hm(12) }, hm(14), 'ok'), 'Umývačka dobehla o 12:00');
+    assert.equal(terazBublinaText('pracka', null, hm(14), 'ok'), 'Práčka nebeží');
 });
 
 test('spotrebič beží: graf dňa ho vidí - o 13:00 beží aj umývačka, ktorú človek zapol', () => {

@@ -1,8 +1,8 @@
 // Texty karty Teraz: číslo a stav a čo zapnúť. Čisté funkcie bez DOM.
 
-import { BEZI, MINUTES_PER_DAY, PLAN_DNA } from './config.js';
+import { MINUTES_PER_DAY, PLAN_DNA } from './config.js';
 import { fmt1, kwpRoughText, weekDateLabel, weekDayName } from './format.js';
-import { MOZEM_SKY_TEXTS, PLAN_AFTER, PLAN_PO_BOJLERI, countdownText } from './messages-mozem.js';
+import { MOZEM_ITEM_TEXTS, MOZEM_SKY_TEXTS, PLAN_AFTER, PLAN_PO_BOJLERI, countdownText } from './messages-mozem.js';
 import { andList, cap, dniSlovo, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
 
 // ---- Karta Teraz -----------------------------------------------------
@@ -103,37 +103,45 @@ export function terazDlazdicaText(r, voice = 'drzy') {
 }
 
 /**
- * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-koniec-opakovanie.html): tlačidlá
- * v detaile spotrebiča, zvyšok programu (práčka, sušička) či čas zapnutia (umývačka) a či príde oznámenie o konci.
- * Práčka, sušička aj umývačka sú „ona“ - „zapnutá“, „dobehla“.
+ * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-cas-nastavenie.html): tlačidlá v detaile
+ * spotrebiča, kolieska zvyšku programu (práčka, sušička), čas zapnutia (umývačka) a bublina po „Nastaviť“ a „Nebeží“
+ * s „Vrátiť“ a tým, či príde oznámenie o konci. Práčka, sušička aj umývačka sú „ona“ - „zapnutá“, „dobehla“.
  */
 export const TERAZ_BEZI = {
     zapol: 'Už beží',
+    nastav: 'Nastaviť',
     nebezi: 'Nebeží',
-    skor: `Zapnutá o ${BEZI.posunMin} minút skôr`,
-    neskor: `Zapnutá o ${BEZI.posunMin} minút neskôr`,
     zostava: 'Zostáva',
-    hodinaMenej: 'O hodinu menej',
-    hodinaViac: 'O hodinu viac',
-    minMenej: `O ${BEZI.krokMin} minút menej`,
-    minViac: `O ${BEZI.krokMin} minút viac`,
+    zapnuta: 'Zapnutá o',
+    hodiny: 'Hodiny',
+    minuty: 'Minúty',
+    h: 'h',
+    min: 'min',
+    vratit: 'Vrátiť',
     /** Či príde oznámenie o konci (web/koniec.js): objednané, zakázané v prehliadači, nepodarilo sa. */
     oznam: {
-        ok: 'O konci ti dám vedieť.',
-        zakazane: 'Oznámenie o konci nepríde – appka ho nemá povolené.',
-        chyba: 'Oznámenie o konci sa nepodarilo objednať.',
+        ok: 'dám vedieť',
+        zakazane: 'oznámenie nepríde',
+        chyba: 'oznámenie sa nepodarilo',
     },
 };
 
-/** „zapnutá 9:40“ - kedy ju človek zapol. @param {number} start minúta dňa */
-export const terazZapnutaText = (start) => `zapnutá ${hm(start)}`;
+/**
+ * Kedy nastavovaný beh skončí - „skončí o 17:15“, a keď je jeho koniec už preč (umývačka zapnutá dávno), „dobehla o 12:00“.
+ * @param {number} k minúta dňa konca @param {number} nowMin
+ */
+export const terazKonciText = (k, nowMin) => `${k > nowMin ? 'skončí' : 'dobehla'} o ${hm(k % MINUTES_PER_DAY)}`;
 
 /**
- * Zvyšok programu v detaile spotrebiča: hodiny, minúty a kedy skončí („1 h“, „25 min“, „skončí o 14:25“).
- * @param {number} zvysok minúty do konca @param {number} koniec minúta dňa konca
+ * Bublina po „Nastaviť“ či „Nebeží“: „Práčka skončí o 17:15 · dám vedieť“, „Umývačka dobehla o 12:00“, „Práčka nebeží“.
+ * @param {string} id @param {{ k: number } | null} beh beh po zmene, null po „Nebeží“ @param {number} nowMin
+ * @param {'ok' | 'zakazane' | 'chyba' | null} oznam či príde oznámenie o konci
  */
-export function terazZvysokText(zvysok, koniec) {
-    return { h: `${Math.floor(zvysok / 60)} h`, min: `${zvysok % 60} min`, konci: `skončí o ${hm(koniec % MINUTES_PER_DAY)}` };
+export function terazBublinaText(id, beh, nowMin, oznam) {
+    const meno = MOZEM_ITEM_TEXTS[id]?.name ?? '';
+    if (!beh) return `${meno} ${TERAZ_BEZI.nebezi.toLowerCase()}`;
+    const o = beh.k > nowMin && oznam ? ` · ${TERAZ_BEZI.oznam[oznam]}` : '';
+    return `${meno} ${terazKonciText(beh.k, nowMin)}${o}`;
 }
 
 /** Čo spotrebič robí - „Dnes už prala“. @type {Record<string, string>} */

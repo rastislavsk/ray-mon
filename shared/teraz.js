@@ -5,9 +5,9 @@
 // (shared/dnes-faza.js). Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
-import { daSaZapisat, zoZvysku } from './bezi.js';
+import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
 import { interpolate, opravenaPredpoved, realCurveBoundary } from './chart-model.js';
-import { BEZI, installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayChartModel, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { heroModel } from './hero-model.js';
@@ -19,6 +19,7 @@ import {
     terazDalsiText,
     terazDlazdicaText,
     terazHotoveText,
+    terazKonciText,
     terazNoteText,
     terazOpakText,
     terazPotomText,
@@ -28,8 +29,6 @@ import {
     terazTypicalText,
     terazVecText,
     terazWindowText,
-    terazZapnutaText,
-    terazZvysokText,
     voiceTexts,
 } from './messages-core.js';
 import { dayCtx, planWindows } from './mozem-jadro.js';
@@ -43,7 +42,7 @@ import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzaRiadok, nudzoveC
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
  *   known: import('./settings.js').Known, previewMinutes: number | null,
- *   pristup?: import('./pristup.js').Odmietnutie | null }} TerazInput
+ *   pristup?: import('./pristup.js').Odmietnutie | null, vecNavrh?: { id: string, min: number } | null }} TerazInput
  * @typedef {import('./day-chart.js').Tone} Tone
  */
 
@@ -160,28 +159,32 @@ function dnesOf(input, rows, teraz, span, voice) {
             id,
             (teraz.behy ?? []).filter((b) => b.id === id && b.kind === 'done'),
         );
+    // Nastavenie času (docs/navrhy/spotrebic-cas-nastavenie.html): pri bežiacom behu vždy, pri nebežiacom po „Už beží“ -
+    // vtedy je v stave návrh (`vecNavrh`), ktorý ešte nie je uložený.
+    const d = localDateKey(input.now, input.site.timezone);
+    const navrh = (/** @type {string} */ id) => (input.vecNavrh?.id === id ? input.vecNavrh.min : null);
+    const cas = (/** @type {string} */ id) => nastavenieCasu(input.bezi ?? [], id, d, teraz.nowMin, navrh(id));
     const moze = (/** @type {VecDetail} */ v) =>
         daSaZapisat(v.id)
-            ? { ...v, zapis: { stav: /** @type {const} */ ('moze'), od: '', neskor: false, hotove: hotove(v.id), zvysok: null } }
+            ? { ...v, zapis: { stav: /** @type {const} */ ('moze'), hotove: hotove(v.id), cas: navrh(v.id) === null ? null : cas(v.id) } }
             : v;
     return {
         co: coZapnutModel(rows, { ...teraz, nudza: nudza.map((n) => n.riadok), potom }, voice),
         veci: [
             ...rows.filter((r) => dnesny(r)).map((r) => moze(vecDetail(r, teraz.nowMin, span))),
             ...nudza.map((n) => moze(n.detail)),
-            ...bezia.map((b) => behDetail(b, span, teraz.nowMin, hotove(b.id))),
+            ...bezia.map((b) => behDetail(b, span, hotove(b.id), cas(b.id))),
         ],
     };
 }
 
 /**
- * Detail spotrebiča, ktorý beží: od-do, jeho úsek na osi dňa a zápis - pri práčke a sušičke zvyšok programu
- * (`zvysok`: hodiny, minúty, kedy skončí a ktoré − a + sa dajú stlačiť), pri umývačke kedy ju človek zapol
- * (`neskor`: čas zapnutia sa dá ešte posunúť neskôr - najviac na teraz, `nowMin`). `hotove`: čo dnes už dobehlo.
- * @param {Beh} b @param {{ from: number, to: number }} span os dňa @param {number} nowMin
- * @param {VecZapis['hotove']} hotove @returns {VecDetail}
+ * Detail spotrebiča, ktorý beží: od-do, jeho úsek na osi dňa a zápis - nastavenie času (`cas`) a čo dnes už dobehlo
+ * (`hotove`).
+ * @param {Beh} b @param {{ from: number, to: number }} span os dňa
+ * @param {VecZapis['hotove']} hotove @param {NastavCas} cas @returns {VecDetail}
  */
-function behDetail(b, span, nowMin, hotove) {
+function behDetail(b, span, hotove, cas) {
     const slot =
         b.end <= span.from || b.start >= span.to
             ? null
@@ -191,20 +194,31 @@ function behDetail(b, span, nowMin, hotove) {
                   tone: /** @type {const} */ ('bezi'),
                   dnes: true,
               };
-    const z = zoZvysku(b.id);
-    const zost = b.end - nowMin;
-    const zvysok = z
-        ? {
-              ...terazZvysokText(zost, b.end),
-              menejH: zost - 60 >= BEZI.minZvysokMin,
-              viacH: zost + 60 <= BEZI.maxZvysokMin,
-              menejM: zost - BEZI.krokMin >= BEZI.minZvysokMin,
-              viacM: zost + BEZI.krokMin <= BEZI.maxZvysokMin,
-          }
-        : null;
     /** @type {VecZapis} */
-    const zapis = { stav: 'bezi', od: z ? '' : terazZapnutaText(b.start), neskor: b.start < nowMin, hotove, zvysok };
-    return { id: b.id, name: b.name, tone: 'bezi', den: '', ...terazBehVecText(b, b.name, z), slot, zapis };
+    const zapis = { stav: 'bezi', hotove, cas };
+    return { id: b.id, name: b.name, tone: 'bezi', den: '', ...terazBehVecText(b, b.name, zoZvysku(b.id)), slot, zapis };
+}
+
+/** Minúta dňa ako hodnota výberu času, „09:05“. @param {number} min */
+const hodnotaCasu = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+
+/**
+ * Nastavenie času v detaile spotrebiča (docs/navrhy/spotrebic-cas-nastavenie.html, A + D) - beh, ktorý by uložilo
+ * „Nastaviť“ (navrhBehu): pri práčke a sušičke zvyšok programu na kolieskach (`zvysok`, hodiny a minúty), pri umývačke
+ * čas zapnutia pre výber času telefónu (`od`, najviac teraz - `max`), a kedy skončí.
+ * @param {import('./bezi.js').Zapis[]} list @param {string} id @param {string} d @param {number} nowMin
+ * @param {number | null} min čo človek nastavil a ešte neuložil @returns {NastavCas}
+ */
+function nastavenieCasu(list, id, d, nowMin, min) {
+    const b = navrhBehu(list, id, d, nowMin, min);
+    const zost = b.k - nowMin;
+    const z = zoZvysku(id);
+    return {
+        zvysok: z ? { h: Math.floor(zost / 60), m: zost % 60 } : null,
+        od: z ? null : hodnotaCasu(b.m),
+        max: hodnotaCasu(nowMin),
+        konci: terazKonciText(b.k, nowMin),
+    };
 }
 
 /**
@@ -415,11 +429,14 @@ function soFar(hourly, nowMin) {
  *   zapis?: VecZapis }} VecDetail
  */
 /**
- * Zápis v detaile spotrebiča: dnes sa dá zapísať, že beží (`moze`, tlačidlo „Už beží“), alebo už beží (`bezi`) -
- * práčka a sušička so zvyškom programu (`zvysok`), umývačka s časom zapnutia (`od`, `neskor`: dá sa posunúť
- * neskôr). `hotove`: behy, ktoré dnes už dobehli.
- * @typedef {{ stav: 'moze' | 'bezi', od: string, neskor: boolean, hotove: Array<{ text: string, cas: string }>,
- *   zvysok: { h: string, min: string, konci: string, menejH: boolean, viacH: boolean, menejM: boolean, viacM: boolean } | null }} VecZapis
+ * Zápis v detaile spotrebiča: dnes sa dá zapísať, že beží (`moze`, tlačidlo „Už beží“), alebo už beží (`bezi`).
+ * `cas`: nastavenie času - pri bežiacom behu vždy, pri `moze` po „Už beží“, inak null. `hotove`: behy, ktoré dnes už dobehli.
+ * @typedef {{ stav: 'moze' | 'bezi', hotove: Array<{ text: string, cas: string }>, cas: NastavCas | null }} VecZapis
+ */
+/**
+ * Nastavenie času: zvyšok programu na kolieskach (práčka, sušička) alebo čas zapnutia „HH:MM“ (umývačka, `max` je teraz)
+ * a kedy beh skončí.
+ * @typedef {{ zvysok: { h: number, m: number } | null, od: string | null, max: string, konci: string }} NastavCas
  */
 /** Spotrebič, ktorý človek dnes zapol, s menom (planDnaModel, `behy`). @typedef {import('./plan-dna.js').BehRow & { name: string }} Beh */
 
