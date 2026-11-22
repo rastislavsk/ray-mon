@@ -16,6 +16,7 @@
 // POST /bojler: skript v zásuvke Shelly s bojlerom sa každú minútu pýta, či ho má zapnúť
 // (docs/navrhy/bojler-prebytky.html). POST /bojler-pecat: pečať telefónu -> menšia pečať do skriptu.
 // POST /koniec: oznámenie o konci programu spotrebiča - budík v Durable Object (worker/src/budik.js).
+// POST /bojler-stav: pečať telefónu -> posledné hlásenie zásuvky s bojlerom, bez merania (worker/src/ucet.js).
 // POST /bojler-oznamenia: telefón si zapne či vypne oznámenia o zapnutí a vypnutí bojlera (worker/src/ucet.js).
 // POST /historia: pečať telefónu -> história elektrárne pre učenie Plánu dňa (worker/src/ucet.js, shared/historia.js).
 //
@@ -27,6 +28,7 @@ import {
     WORKER_BOJLER_PECAT_PATH,
     WORKER_BOJLER_OZNAM_PATH,
     WORKER_BOJLER_REZIM_PATH,
+    WORKER_BOJLER_STAV_PATH,
     WORKER_HISTORIA_PATH,
     WORKER_KONIEC_PATH,
     WORKER_OZNAMENIA_PATH,
@@ -361,6 +363,24 @@ export async function handleBojlerRezim(request, env, now) {
 }
 
 /**
+ * POST /bojler-stav: `{ pecat }` od appky (pečať telefónu) -> `{ bojler }`, posledné hlásenie zásuvky (null, keď sa
+ * ešte neozvala). Appka sa pýta každú minútu, aby dlaždica Bojler nečakala na meranie Huawei (raz za 5 minút).
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleBojlerStav(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { obsah } = await dopytBojlera(request, key, now);
+    if (!obsah) return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/stav', now);
+        return json(200, { bojler: r.bojler ?? null });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
  * POST /historia: `{ pecat }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ dni }`, história elektrárne
  * pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html). Len Huawei Northbound - iné zdroje Durable Object nemajú.
  * @param {Request} request @param {Env} env @param {Date} now
@@ -402,6 +422,8 @@ const CESTY = {
     [WORKER_BOJLER_PATH]: { limit: false, run: handleBojler },
     [WORKER_BOJLER_PECAT_PATH]: { limit: true, run: handleBojlerPecat },
     [WORKER_BOJLER_REZIM_PATH]: { limit: true, run: handleBojlerRezim },
+    // Appka sa pýta každú minútu, bez platnej pečate nič nespraví (ako meranie).
+    [WORKER_BOJLER_STAV_PATH]: { limit: false, run: handleBojlerStav },
     [WORKER_OZNAMENIA_PATH]: { limit: true, run: (request, env) => oznam((body) => ulozOdber(body, env), request) },
     [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
     [WORKER_KONIEC_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozKoniec(body, env, now), request) },

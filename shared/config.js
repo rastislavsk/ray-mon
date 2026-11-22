@@ -808,13 +808,16 @@ export const WORKER_TRASY_PATH = '/trasy';
 export const WORKER_TRASY_URL = new URL(WORKER_TRASY_PATH, WORKER_URL).href;
 // Bojler na prebytky (docs/navrhy/bojler-prebytky.html): skript v zásuvke Shelly sa každú minútu
 // opýta `/bojler`, či má bojler zapnúť. `/bojler-pecat` vydá appke pečať do skriptu, `/bojler-rezim`
-// uloží, či bojler riadi appka, alebo ho človek zapína ručne.
+// uloží, či bojler riadi appka, alebo ho človek zapína ručne. `/bojler-stav` vráti appke posledné hlásenie
+// zásuvky bez merania - appka sa naň pýta každú minútu, meranie Huawei je len raz za 5 minút.
 export const WORKER_BOJLER_PATH = '/bojler';
 export const WORKER_BOJLER_URL = new URL(WORKER_BOJLER_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_PECAT_PATH = '/bojler-pecat';
 export const WORKER_BOJLER_PECAT_URL = new URL(WORKER_BOJLER_PECAT_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_REZIM_PATH = '/bojler-rezim';
 export const WORKER_BOJLER_REZIM_URL = new URL(WORKER_BOJLER_REZIM_PATH, WORKER_URL).href;
+export const WORKER_BOJLER_STAV_PATH = '/bojler-stav';
+export const WORKER_BOJLER_STAV_URL = new URL(WORKER_BOJLER_STAV_PATH, WORKER_URL).href;
 /** História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. */
 export const WORKER_HISTORIA_PATH = '/historia';
 export const WORKER_HISTORIA_URL = new URL(WORKER_HISTORIA_PATH, WORKER_URL).href;
@@ -954,6 +957,9 @@ export const OZNAMENIA = {
     // zatvorenej (shared/oznamenia.js). Obrys Plánu dňa počká na dáta najviac `obrysCakaMs`.
     klik: 'oznamenie',
     obrysCakaMs: 20000,
+    // Push o zmene ohrevu bojlera má túto značku a service worker ju pošle aj bežiacej appke ako správu -
+    // appka si hneď stiahne stav bojlera, dlaždica nečaká na ďalší minútový dopyt.
+    bojler: 'bojler',
 };
 
 /**

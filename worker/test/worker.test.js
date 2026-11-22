@@ -8,6 +8,7 @@ import {
     handleBojlerOznam,
     handleBojlerPecat,
     handleBojlerRezim,
+    handleBojlerStav,
     handleHistoria,
     handlePripoj,
     handlePv,
@@ -1146,6 +1147,30 @@ test('ručný režim: appka ho uloží, zásuvka dostane stav relé a rucne, tel
     assert.equal((await handleBojlerRezim(post('/bojler-rezim', 'nie json'), env, NOW)).status, 400);
     assert.equal((await handleBojlerRezim(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: true })), ENV, NOW)).status, 503);
     const cez = await handleRequest(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: false })), env, po(4));
+    assert.equal(cez.status, 200);
+});
+
+test('stav bojlera: telefón dostane posledné hlásenie zásuvky bez merania na Huawei; zdieľaný odkaz nie', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom({ sietW: () => 100 });
+    const stav = async (/** @type {string} */ pecat, /** @type {number} */ min) =>
+        handleBojlerStav(post('/bojler-stav', JSON.stringify({ pecat })), env, po(min));
+    const volania = () => s.calls.length;
+    // Zásuvka sa ešte neozvala.
+    assert.deepEqual(await (await stav(telefon, 1)).json(), { bojler: null });
+    await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2200, e: 1 }), env, po(2));
+    const pred = volania();
+    const b = (await (await stav(telefon, 3)).json()).bojler;
+    assert.deepEqual([b.rele, b.w, b.kontaktAt], [true, 2200, po(2).getTime()]);
+    assert.equal(volania(), pred, 'na Huawei nejde nič');
+    await handleBojler(bojlerReq({ pecat: zasuvka, rele: false, w: 0, e: 2 }), env, po(4));
+    assert.equal((await (await stav(telefon, 4)).json()).bojler.rele, false, 'zmena hneď, nečaká na meranie');
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = /** @type {any} */ (await otvor(key, telefon, NOW));
+    const zdielana = await zapecat(key, { sposob: 'huawei-northbound', pristup: obsah.pristup, platiDo: po(60).getTime() });
+    assert.equal((await stav(zdielana, 5)).status, 400, 'zo zdieľaného odkazu nie');
+    assert.equal((await handleBojlerStav(post('/bojler-stav', 'nie json'), env, NOW)).status, 400);
+    assert.equal((await handleBojlerStav(post('/bojler-stav', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
+    const cez = await handleRequest(post('/bojler-stav', JSON.stringify({ pecat: telefon })), env, po(6));
     assert.equal(cez.status, 200);
 });
 

@@ -12,7 +12,9 @@ import {
     TARIFF,
     BOJLER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
+    OZNAMENIA,
     WORKER_BOJLER_PECAT_URL,
+    WORKER_BOJLER_STAV_URL,
     WORKER_BOJLER_REZIM_URL,
     WORKER_BOJLER_URL,
     WORKER_PRIPOJ_URL,
@@ -1138,6 +1140,37 @@ test.describe('bojler na prebytky', () => {
         await expect(sheet).toBeHidden();
         expect(errors).toEqual([]);
     });
+    test('dlaždica Bojler sa prekreslí s hlásením zásuvky, nečaká na meranie; push zmeny ohrevu ju obnoví hneď', async ({ page }) => {
+        await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['bojler']))]);
+        /** @type {object} */
+        let stav = { ...BOJLER_INFO, rele: false, w: 0, kontaktAt: FIXED_NOW.getTime() };
+        /** @type {string[]} */
+        const dopyty = [];
+        await page.route(WORKER_BOJLER_STAV_URL, (route) => {
+            dopyty.push(route.request().postData() ?? '');
+            return route.fulfill({ json: { bojler: stav } });
+        });
+        let merania = 0;
+        page.on('request', (r) => r.url() === WORKER_PV_URL && merania++);
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ }, bojler: BOJLER_INFO });
+        const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
+        await expect(dl).toHaveAttribute('data-zapnuty', '');
+        // Minútová obnova (tu návrat z pozadia): meranie ešte nie je na rade, stav bojlera príde z /bojler-stav.
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        // Prvý riadok je stav zo zásuvky; druhý (kedy zapne) ráta appka z predpovede.
+        const vyp = bojlerDlazdica(/** @type {any} */ (stav), FIXED_NOW, SITE.timezone);
+        await expect(dl.locator('small > span:not(.sr)').first()).toHaveText(vyp.odr[0]);
+        await expect(dl).not.toHaveAttribute('data-zapnuty', '');
+        expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });
+        expect(merania, 'na meranie sa appka znova nepýta').toBe(1);
+        // Push o zmene ohrevu: service worker pošle oknu správu a appka si stav stiahne hneď.
+        stav = { ...BOJLER_INFO, kontaktAt: FIXED_NOW.getTime() };
+        await page.evaluate((d) => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: d })), OZNAMENIA.bojler);
+        await expect(dl).toHaveAttribute('data-zapnuty', '');
+        expect(dopyty).toHaveLength(2);
+        expect(errors).toEqual([]);
+    });
+
     test('ručný režim: prepínač v paneli Bojler dnes uloží režim a dlaždica prestane radiť', async ({ page }) => {
         await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['bojler']))]);
         /** @type {any[]} */ const ulozene = [];

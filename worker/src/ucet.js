@@ -16,7 +16,7 @@
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
 
-import { BOJLER, PUSH_TEXT } from '../../shared/config.js';
+import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zmenaOhrevu } from '../../shared/bojler.js';
 import { domBezBojlera, sBojlerom, zapisMeranie } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
@@ -69,11 +69,13 @@ export class UcetHuawei {
                     ? await this.bojler(req, now)
                     : path === '/rezim'
                       ? await this.rezim(req, now)
-                      : path === '/oznam'
-                        ? await this.oznam(req)
-                        : path === '/historia'
-                          ? await this.historia(req)
-                          : await this.pv(req.pristup, now);
+                      : path === '/stav'
+                        ? await this.stav(req)
+                        : path === '/oznam'
+                          ? await this.oznam(req)
+                          : path === '/historia'
+                            ? await this.historia(req)
+                            : await this.pv(req.pristup, now);
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -230,7 +232,7 @@ export class UcetHuawei {
         const odbery = /** @type {OdberBojlera[]} */ ((await this.storage.get(`bo:${plant}`)) ?? []);
         if (!odbery.length || !this.env.VAPID_JWK) return;
         const klic = await vapidKlic(this.env.VAPID_JWK);
-        const data = { ...text, tag: 'bojler' };
+        const data = { ...text, tag: OZNAMENIA.bojler };
         /** @type {string[]} */ const neplatne = [];
         for (const o of odbery) {
             const status = await posliPush(o.e, klic, now, this.fetchImpl, { data, keys: o.keys }).catch(() => 0);
@@ -241,6 +243,15 @@ export class UcetHuawei {
                 `bo:${plant}`,
                 odbery.filter((o) => !neplatne.includes(o.e)),
             );
+    }
+
+    /**
+     * Stav bojlera pre appku: posledné hlásenie zásuvky (null, keď sa ešte neozvala), bez merania - na Huawei nejde nič.
+     * @param {{ pristup: Record<string, unknown> }} req
+     */
+    async stav(req) {
+        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${String(req.pristup.plant ?? '')}`));
+        return { bojler: bojler ?? null };
     }
 
     /**
