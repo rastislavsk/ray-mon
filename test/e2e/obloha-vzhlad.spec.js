@@ -141,7 +141,7 @@ test.describe('tón hlášok', () => {
         await slusnyBtn.click();
         await expect(slusnyBtn).toHaveAttribute('aria-pressed', 'true');
         await expect(drzyBtn).toHaveAttribute('aria-pressed', 'false');
-        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'slusny', obloha: true, farba: true });
+        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'slusny', obloha: true });
 
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
@@ -195,7 +195,7 @@ test.describe('živá obloha', () => {
         await prepinac.click();
         await expect(prepinac).toHaveAttribute('aria-checked', 'false');
         await expect.poll(() => obloha(page)).toEqual(SKY.calm);
-        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'drzy', obloha: false, farba: true });
+        expect(JSON.parse((await ulozene(page, LOOK_STORAGE_KEY)) || 'null')).toEqual({ ton: 'drzy', obloha: false });
         // Pokojná obloha nemá prechod.
         expect(await page.evaluate(() => getComputedStyle(document.documentElement).transitionDuration)).toBe('0s');
 

@@ -124,7 +124,6 @@ function neplatiModel(zdroj, sposob, o, now) {
     return {
         druh: /** @type {const} */ ('neplati'),
         riadok: `${znacka} prestal prijímať prístup`,
-        pas: { nadpis: 'Meranie treba pripojiť znova', text: `${znacka} prestal prijímať prístup.`, tlacidlo: 'Pripojiť' },
         hlavicka: 'meranie treba pripojiť znova',
         tone: 'prístup k meraniu neplatí',
         stav: `${znacka} · prístup neplatí`,
@@ -162,7 +161,7 @@ function vyprsiModel(zdroj, sposob, now, timezone) {
 /**
  * Čo appka o prístupe k meraniu hovorí, alebo null, keď nie je čo. `neplati`: výrobca prístup
  * opakovane odmietol. `vyprsi`: prístup na čas (Deye) čoskoro vyprší.
- * - `riadok`: veta pod číslom na karte Teraz, `pas`: pás pod hlavičkou,
+ * - `riadok`: veta pod číslom na karte Teraz,
  * - `hlavicka`: stav v hlavičke, `tone`: to isté pre čítačku obrazovky,
  * - `stav`: riadok Živé meranie v Nastavení (`stavKratko` bez značky), `karta`: hlásenie v Nastavení,
  * - `statistika`: veta na karte Štatistika, `sprievodca`: nadpis a úvod pri pripájaní znova.

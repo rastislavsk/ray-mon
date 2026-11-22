@@ -257,21 +257,7 @@ export async function handleZdielaj(request, env, now) {
 
 // Čo pečať pre zásuvku nesie: na meranie stačí prístup bez relácie a bez toho, čo si meranie
 // zapamätá samo (krivka, časy) - to drží Durable Object účtu. Skript ju posiela s každým dopytom.
-const BOJLER_PRISTUP = [
-    'server',
-    'meno',
-    'heslo',
-    'plant',
-    'nazov',
-    'devs',
-    'dns',
-    'meters',
-    'meterDns',
-    'devsAt',
-    'dnsAt',
-    'metersAt',
-    'meterDnsAt',
-];
+const BOJLER_PRISTUP = ['server', 'meno', 'heslo', 'plant', 'nazov', 'devs', 'dns', 'meters', 'devsAt', 'dnsAt', 'metersAt'];
 
 /**
  * POST /bojler-pecat: pečať telefónu v tele -> pečať do skriptu zásuvky. Len Huawei Northbound,

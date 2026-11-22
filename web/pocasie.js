@@ -1,5 +1,5 @@
 // Počasie v pozadí karty Teraz (docs/navrhy/teraz-pocasie-2.html): vrstvy kresby.
-// Čo je vidno, rozhoduje web/pocasie.css podľa data-wx a data-noc na nosiči, farby a výšku
+// Čo je vidno, rozhoduje css/pocasie.css podľa data-wx a data-noc na nosiči, farby a výšku
 // obzoru appka v css/. Stav počasia počíta shared/pocasie.js (terazModel).
 // Neutrálny modul: nesiaha na DOM ani na stav appky, len skladá HTML a atribúty.
 
@@ -19,7 +19,7 @@ export function mesiacTvar(faza) {
  * Kvapky dažďa (docs/navrhy/dazd-sily.html): tri hĺbky, každá je dlaždica w × h px (ďaleko, stred,
  * blízko). Pre každú silu dažďa počet kvapiek `n`, ich dĺžka, hrúbka a jas od-do a rozmazanie
  * nakreslené rovno v obrázku (vrstva sa potom len posúva, rozmazanie sa v snímkoch nepočíta).
- * Rýchlosť, sklon a ostatné vrstvy dažďa určuje web/pocasie.css. Mrholenie blízke kvapky nemá.
+ * Rýchlosť, sklon a ostatné vrstvy dažďa určuje css/pocasie.css. Mrholenie blízke kvapky nemá.
  */
 const KVAPKY = {
     mrholenie: [
@@ -42,7 +42,7 @@ const KVAPKY = {
         { n: 16, len: [54, 80], wid: [1.6, 2.4], al: [0.55, 0.9], blur: 0 },
     ],
 };
-/** Rozmery dlaždíc v px; výšky musia sedieť s posunom vrstiev (wx-kv0 až wx-kv2) vo web/pocasie.css. */
+/** Rozmery dlaždíc v px; výšky musia sedieť s posunom vrstiev (wx-kv0 až wx-kv2) vo css/pocasie.css. */
 const DLAZDICA = [
     [160, 200],
     [220, 260],

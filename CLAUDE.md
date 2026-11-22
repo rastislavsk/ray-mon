@@ -12,8 +12,8 @@ skončila v novembri 2026, jej posledný stav je v git tagu `original-posledna`.
 `sw.js` drží odbery oznámení z čias, keď appka bývala tam (`APPKY` vo
 `web/oznamenia.js`). Odstrániť sa dá, až keď na žiadnom telefóne nebude starý odber.
 
-Jadro (`shared/`) ešte nesie zvyšky pôvodnej appky, ktoré testy nazvú použitými, hoci appka ich nečíta
-(napr. `farba` vo vzhľade, `pas` v `shared/pristup.js`). Keď na ne natrafíš, zmaž ich.
+Jadro (`shared/`) môže ešte niesť zvyšky pôvodnej appky, ktoré testy nazvú použitými, hoci appka ich nečíta
+(takto boli zmazané `farba` vo vzhľade a `pas` v `shared/pristup.js`). Keď na ne natrafíš, zmaž ich.
 
 ## Karta Radar
 
@@ -196,7 +196,7 @@ nebola. Inde `!important` nepíš. Jedinou ďalšou výnimkou je `prefers-reduce
 musí vypnúť animácie a prechody všade – z rovnakého dôvodu: nesmie ho nič prebiť.
 
 Štýly sú rozdelené podľa kariet v `css/` a `index.html` ich načítava v pevnom poradí – to poradie je poradie
-kaskády. `zaklad.css` je prvý (premenné, písmo, hlavička, sklá), `rozlozenie.css` posledný (navigácia, rozloženie
+kaskády. Pred všetkými ide `pocasie.css` (vrstvy počasia v pozadí), potom `zaklad.css` (premenné, písmo, hlavička, sklá), `rozlozenie.css` posledný (navigácia, rozloženie
 na šírku, `.hidden`, útlm pohybu). Nový súbor patrí medzi ne; štýl karty do súboru tej karty.
 
 Kontroluje to e2e test „`.hidden` skryje každý prvok v stránke“, ktorý prejde všetky
