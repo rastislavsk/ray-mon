@@ -900,7 +900,7 @@
 }
 /* Lúče sú dve otáčajúce sa plochy 1040 × 1040 px - v paneli by sa krútili druhýkrát popri pozadí
    a zdvojnásobili prácu telefónu aj pri ťahu. Slnko v karte je žiara bez lúčov. */
-/* Špecificita prebije pravidlá „čo je v ktorom stave vidno“ vo web/pocasie.css (0,4,0). */
+/* Špecificita prebije pravidlá „čo je v ktorom stave vidno“ vo css/pocasie.css (0,4,0). */
 .grden .wx.wx-den[data-wx] :is(.wx-r1, .wx-r2, .wx-flare) {
     display: none;
 }

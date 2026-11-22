@@ -347,12 +347,12 @@ export function incomingSettings(linked, saved) {
 // ---- Vzhľad ------------------------------------------------------------------------
 
 /**
- * Vzhľad: tón hlášok, živá obloha a farba pozadia (dnes bez účinku). Uložený je pod LOOK_STORAGE_KEY ako { ton, obloha, farba }.
- * @typedef {{ voice: import('./messages.js').Voice, liveSky: boolean, bgTint: boolean }} Look
+ * Vzhľad: tón hlášok a živá obloha. Uložený je pod LOOK_STORAGE_KEY ako { ton, obloha }.
+ * @typedef {{ voice: import('./messages.js').Voice, liveSky: boolean }} Look
  */
 
-/** Predvolený vzhľad: drzý tón, živá obloha a farba pozadia. @type {Look} */
-export const DEFAULT_LOOK = { voice: VOICES[0], liveSky: true, bgTint: true };
+/** Predvolený vzhľad: drzý tón a živá obloha. @type {Look} */
+export const DEFAULT_LOOK = { voice: VOICES[0], liveSky: true };
 
 /**
  * Vzhľad z úložiska. Čo chýba alebo nesedí, je predvolené - každá voľba zvlášť.
@@ -363,9 +363,8 @@ export function parseLook(raw) {
     return {
         voice: VOICES.find((v) => v === o.ton) ?? DEFAULT_LOOK.voice,
         liveSky: typeof o.obloha === 'boolean' ? o.obloha : DEFAULT_LOOK.liveSky,
-        bgTint: typeof o.farba === 'boolean' ? o.farba : DEFAULT_LOOK.bgTint,
     };
 }
 
 /** Vzhľad v tvare na uloženie. @param {Look} look */
-export const lookToStored = (look) => ({ ton: look.voice, obloha: look.liveSky, farba: look.bgTint });
+export const lookToStored = (look) => ({ ton: look.voice, obloha: look.liveSky });

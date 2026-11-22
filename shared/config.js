@@ -557,8 +557,8 @@ export const RADAR_MODEL_STORAGE_KEY = 'radar-model-v1';
 export const VOICES = /** @type {const} */ (['drzy', 'slusny']);
 
 /**
- * Vzhľad: tón hlášok, živá obloha (vypnutá = pokojná tmavá)
- * a farba pozadia (`farba`, dnes bez účinku). Formát: { ton, obloha, farba }.
+ * Vzhľad: tón hlášok a živá obloha (vypnutá = pokojná tmavá). Formát: { ton, obloha }.
+ * Staršie uloženia majú aj `farba` (farba pozadia z pôvodnej appky), appka ju ignoruje.
  */
 export const LOOK_STORAGE_KEY = 'vzhlad-v1';
 

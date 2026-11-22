@@ -11,7 +11,6 @@ import {
     parseNbDevices,
     parseNbDevReal,
     parseNbHistory,
-    parseNbMeterDns,
     parseNbMeters,
     parseNbSiet,
     parseNbStationReal,
@@ -191,7 +190,6 @@ test('priebeh dňa: devDn meničov, 5-minútové body sčítané cez meniče, le
         ],
     };
     assert.deepEqual(parseNbDevDns(zoznam), { 'NE=9': { 38: ['NE=1'], 1: ['NE=2'] } });
-    assert.deepEqual(parseNbMeterDns(zoznam), { 'NE=9': { 17: ['NE=3'] } });
     // 5. 9. 2026 13:00 SELČ. Dva meniče v tom istom čase zberu sa sčítajú, včerajšok a prázdna hodnota nie.
     const now = new Date('2026-09-05T11:00:00Z');
     const bod = (/** @type {string} */ dn, /** @type {number} */ t, /** @type {unknown} */ kw) => ({

@@ -148,12 +148,6 @@ export const parseNbMeters = (json) => idsPodlaTypu(json, jeElektromer);
 export const parseNbDevDns = (json) => dnsPodlaTypu(json, jeMenic);
 
 /**
- * Textové id elektromerov (`devDn`) zo zoznamu zariadení, po elektrárňach a typoch: `{ plantCode: { 47: ['NE=…'] } }`.
- * @param {unknown} json @returns {Record<string, Record<string, string[]>>}
- */
-export const parseNbMeterDns = (json) => dnsPodlaTypu(json, jeElektromer);
-
-/**
  * Textové id (`devDn`) zariadení vybraného druhu zo zoznamu zariadení, po elektrárňach a typoch.
  * @param {unknown} json @param {(typ: unknown) => typ is number} druh @returns {Record<string, Record<string, string[]>>}
  */

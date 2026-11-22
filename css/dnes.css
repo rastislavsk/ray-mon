@@ -425,12 +425,6 @@
 .k-stlpce i[data-preslo] {
     opacity: 0.45;
 }
-.k-os {
-    display: flex;
-    justify-content: space-between;
-    margin-top: -4px;
-    font-size: 0.75rem;
-}
 /* Stĺpce výkonu po hodinách, najsilnejšia hodina zelená. */
 .k-stlpce {
     display: grid;
