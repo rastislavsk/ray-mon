@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Zatváranie popupov</title>
+        <style>
+            /* Návrh (22. 11. 2026): jednotné zatváranie popupov – malé X vpravo hore v každom popupe,
+               popri ťuknutí vedľa, Escape a tlačidle Späť. Samostatný súbor, nič neimportuje z appky.
+               Texty v telefónoch sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --yes: #8fe36f;
+                --amber: #ffb347;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 17px;
+                font-weight: 800;
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 74ch;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            table {
+                border-collapse: collapse;
+                width: 100%;
+                font-size: 14px;
+            }
+            .tw {
+                overflow-x: auto;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+            }
+            .ok {
+                color: var(--yes);
+            }
+            .no {
+                color: var(--amber);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                width: 300px;
+                max-width: 100%;
+            }
+            figcaption {
+                font-size: 14px;
+                color: var(--dim);
+            }
+            figcaption b {
+                color: #fff;
+            }
+            .tel {
+                position: relative;
+                height: 520px;
+                border-radius: 34px;
+                border: 2px solid var(--line);
+                overflow: hidden;
+                background: linear-gradient(180deg, #1d3a74 0%, #3c6db0 55%, #7aa7d6 100%);
+            }
+            .tel.noc {
+                background: linear-gradient(180deg, #050a1c 0%, #0d1a3a 60%, #1c2f57 100%);
+            }
+            .tel .hl {
+                position: absolute;
+                inset: 14px 16px auto;
+                display: flex;
+                justify-content: space-between;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+            }
+            .tel .tma {
+                position: absolute;
+                inset: 0;
+                background: rgba(5, 8, 20, 0.45);
+            }
+            .sheet {
+                position: absolute;
+                inset: auto 0 0 0;
+                border-radius: 26px 26px 0 0;
+                background: rgba(10, 16, 38, 0.92);
+                padding: 18px 18px 22px;
+                display: grid;
+                gap: 10px;
+            }
+            .sheet h4 {
+                margin: 0;
+                padding-right: 40px;
+                font-size: 22px;
+                font-weight: 900;
+                font-stretch: 115%;
+                line-height: 1.15;
+            }
+            .sheet p {
+                font-size: 14px;
+                line-height: 1.4;
+            }
+            .top {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+                padding-right: 36px;
+            }
+            .ico {
+                width: 44px;
+                height: 44px;
+                flex: none;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+                display: grid;
+                place-items: center;
+                font-size: 20px;
+            }
+            .pas {
+                height: 18px;
+                border-radius: 9px;
+                background: linear-gradient(90deg, rgba(255, 255, 255, 0.15) 0 30%, #ffd166 30% 62%, rgba(124, 196, 255, 0.6) 62% 100%);
+            }
+            .pbtn {
+                height: 44px;
+                border-radius: 22px;
+                background: #fff;
+                color: #0b1226;
+                font-weight: 800;
+                display: grid;
+                place-items: center;
+                font-size: 15px;
+            }
+            .pbtn.ghost {
+                background: transparent;
+                color: #fff;
+                border: 1.5px solid rgba(255, 255, 255, 0.5);
+            }
+            /* X – tri varianty vzhľadu. Plocha na ťuknutie je vždy 44 × 44 px (prerušovaný rám ju ukazuje). */
+            .x {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                width: 44px;
+                height: 44px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+            }
+            .x svg {
+                width: 14px;
+                height: 14px;
+                stroke: #fff;
+                stroke-width: 2.4;
+                stroke-linecap: round;
+                fill: none;
+            }
+            .x.v1 {
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .x.v1 svg {
+                width: 18px;
+                height: 18px;
+            }
+            .x.v2 i {
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+                display: grid;
+                place-items: center;
+            }
+            .x.v2 svg {
+                width: 12px;
+                height: 12px;
+            }
+            .x.v3 svg {
+                width: 14px;
+                height: 14px;
+                stroke: rgba(255, 255, 255, 0.8);
+            }
+            .plocha .x {
+                outline: 1px dashed rgba(255, 209, 102, 0.7);
+            }
+            /* Bublina stavu merania pod hlavičkou. */
+            .tip {
+                position: absolute;
+                top: 44px;
+                left: 16px;
+                right: 16px;
+                border-radius: 18px;
+                background: rgba(10, 16, 38, 0.92);
+                padding: 14px 16px;
+                display: grid;
+                gap: 6px;
+                font-size: 14px;
+            }
+            .tip b {
+                padding-right: 34px;
+            }
+            .tip .x {
+                top: 4px;
+                right: 4px;
+            }
+            .bublina {
+                position: absolute;
+                left: 16px;
+                right: 16px;
+                bottom: 86px;
+                border-radius: 18px;
+                background: rgba(10, 16, 38, 0.92);
+                padding: 12px 16px;
+                display: flex;
+                gap: 10px;
+                align-items: center;
+                font-size: 14px;
+            }
+            .bublina .vrat {
+                margin-left: auto;
+                font-weight: 800;
+                text-decoration: underline;
+            }
+            .bublina.s-x {
+                padding-right: 48px;
+            }
+            .bublina.s-x .x {
+                top: 50%;
+                right: 2px;
+                transform: translateY(-50%);
+            }
+            .nav {
+                position: absolute;
+                inset: auto 0 0 0;
+                height: 70px;
+                background: rgba(10, 16, 38, 0.6);
+            }
+            .karta {
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 18px;
+                display: grid;
+                gap: 8px;
+            }
+            .karta ul {
+                padding-left: 20px;
+            }
+            .odpor {
+                border-color: rgba(143, 227, 111, 0.6);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Zatváranie popupov</h1>
+                <p class="dim">
+                    Návrh 22. 11. 2026. Každý popup dostane vpravo hore malé X, ktorým sa zavrie. Ostáva aj ťuknutie vedľa, Escape a
+                    tlačidlo Späť. X ide cez ten istý krok ako Späť (<code>stepBack</code>), inak by Späť zatvorený panel znovu otvorilo.
+                </p>
+            </section>
+
+            <section>
+                <h2>Čo dnes v appke je</h2>
+                <div class="tw">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Popup</th>
+                                <th>Kde</th>
+                                <th>X dnes</th>
+                                <th>Vedľa / Esc</th>
+                                <th>Späť</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Detail spotrebiča (<code>#tz-vec-sheet</code>)</td>
+                                <td>Teraz</td>
+                                <td class="no">nie</td>
+                                <td class="ok">áno</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Bojler dnes (<code>#tz-bojler-sheet</code>)</td>
+                                <td>Teraz</td>
+                                <td class="no">nie</td>
+                                <td class="ok">áno</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Elektrina teraz (<code>#tz-tok-sheet</code>)</td>
+                                <td>Teraz</td>
+                                <td class="no">nie</td>
+                                <td class="ok">áno</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Trieda dňa (<code>#mz-trieda-sheet</code>)</td>
+                                <td>Dnes</td>
+                                <td class="no">nie</td>
+                                <td class="ok">áno</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Graf dňa (<code>#gr-sheet</code>)</td>
+                                <td>Dnes</td>
+                                <td class="no">nie</td>
+                                <td class="ok">áno</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Zdieľať appku (<code>#ns-share-sheet</code>)</td>
+                                <td>Nastavenie</td>
+                                <td class="ok">áno (veľké, 44 px kruh)</td>
+                                <td class="ok">áno</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Vymazať údaje (<code>#ns-reset-sheet</code>)</td>
+                                <td>Nastavenie</td>
+                                <td class="no">nie (má „Zrušiť“)</td>
+                                <td class="ok">áno</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Sprievodca (<code>#wizard</code>)</td>
+                                <td>Nastavenie</td>
+                                <td class="ok">áno (iný vzhľad)</td>
+                                <td class="dim">celá obrazovka, „vedľa“ nie je</td>
+                                <td class="ok">áno</td>
+                            </tr>
+                            <tr>
+                                <td>Bublina stavu merania (<code>#hdr-tip</code>)</td>
+                                <td>hlavička</td>
+                                <td class="no">nie</td>
+                                <td class="ok">áno</td>
+                                <td class="no">nie – nie je krok navigácie, Späť ide o krok späť a bublina ostane</td>
+                            </tr>
+                            <tr>
+                                <td>Bublina „Nastavené“ s „Vrátiť“ (<code>#vec-bublina</code>)</td>
+                                <td>Teraz</td>
+                                <td class="no">nie</td>
+                                <td class="dim">zmizne sama</td>
+                                <td class="dim">–</td>
+                            </tr>
+                            <tr>
+                                <td>Bublina „Meranie pripojené“ (<code>#pripojene</code>)</td>
+                                <td>nad navigáciou</td>
+                                <td class="no">nie</td>
+                                <td class="dim">zmizne sama alebo ťuknutím</td>
+                                <td class="dim">–</td>
+                            </tr>
+                            <tr>
+                                <td>Bublina „Ďalším stlačením sa appka zatvorí“ (<code>#spat-bublina</code>)</td>
+                                <td>Teraz</td>
+                                <td class="no">nie</td>
+                                <td class="dim">zmizne sama</td>
+                                <td class="dim">ďalšie Späť zavrie appku</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="dim">
+                    Náhľad grafu pri ťuknutí (tooltip) a zbaliteľné sekcie Nastavenia za popup nepovažujem – nie sú to okná nad obsahom.
+                </p>
+            </section>
+
+            <section>
+                <h2>1. Vzhľad X</h2>
+                <p class="dim">
+                    Plocha na ťuknutie je vo všetkých troch 44 × 44 px (na druhom riadku ju ukazuje prerušovaný rám), líši sa len to, čo je
+                    vidieť.
+                </p>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="hl"><span>RAY-MON</span><span>Bratislava</span></div>
+                            <div class="tma"></div>
+                            <div class="sheet">
+                                <span class="x v1"
+                                    ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg
+                                ></span>
+                                <div class="top">
+                                    <span class="ico">🧺</span>
+                                    <div>
+                                        <h4>Práčka</h4>
+                                        <p class="dim">dnes 11:30 – 13:00 zo slnka</p>
+                                    </div>
+                                </div>
+                                <div class="pas"></div>
+                                <span class="pbtn">Už beží</span>
+                                <p>Okolo poludnia je najviac slnka, práčka sa zmestí celá.</p>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>V1 – ako Zdieľať dnes.</b> Kruh 44 px so sklom. Dobre vidno, no nie je „malé“ a pri ikone spotrebiča pôsobí
+                            ako druhá ikona.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="hl"><span>RAY-MON</span><span>Bratislava</span></div>
+                            <div class="tma"></div>
+                            <div class="sheet">
+                                <span class="x v2"
+                                    ><i
+                                        ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg></i
+                                ></span>
+                                <div class="top">
+                                    <span class="ico">🧺</span>
+                                    <div>
+                                        <h4>Práčka</h4>
+                                        <p class="dim">dnes 11:30 – 13:00 zo slnka</p>
+                                    </div>
+                                </div>
+                                <div class="pas"></div>
+                                <span class="pbtn">Už beží</span>
+                                <p>Okolo poludnia je najviac slnka, práčka sa zmestí celá.</p>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>V2 – malý kruh 28 px.</b> Viditeľný na každom pozadí (aj na oblohe Grafu dňa), nekričí. Plocha na prst ostáva
+                            44 px.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="hl"><span>RAY-MON</span><span>Bratislava</span></div>
+                            <div class="tma"></div>
+                            <div class="sheet">
+                                <span class="x v3"
+                                    ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg
+                                ></span>
+                                <div class="top">
+                                    <span class="ico">🧺</span>
+                                    <div>
+                                        <h4>Práčka</h4>
+                                        <p class="dim">dnes 11:30 – 13:00 zo slnka</p>
+                                    </div>
+                                </div>
+                                <div class="pas"></div>
+                                <span class="pbtn">Už beží</span>
+                                <p>Okolo poludnia je najviac slnka, práčka sa zmestí celá.</p>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>V3 – holé X.</b> Najnenápadnejšie. Na svetlej oblohe Grafu dňa a na svetlom skle v noci sa môže stratiť.
+                        </figcaption>
+                    </figure>
+                </div>
+                <div class="phones plocha">
+                    <figure>
+                        <div class="tel" style="height: 200px">
+                            <div class="sheet">
+                                <span class="x v1"
+                                    ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg
+                                ></span>
+                                <h4>Zdieľať appku</h4>
+                                <p class="dim">V1 – plocha</p>
+                            </div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <div class="tel" style="height: 200px">
+                            <div class="sheet">
+                                <span class="x v2"
+                                    ><i
+                                        ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg></i
+                                ></span>
+                                <h4>Zdieľať appku</h4>
+                                <p class="dim">V2 – plocha</p>
+                            </div>
+                        </div>
+                    </figure>
+                    <figure>
+                        <div class="tel" style="height: 200px">
+                            <div class="sheet">
+                                <span class="x v3"
+                                    ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg
+                                ></span>
+                                <h4>Zdieľať appku</h4>
+                                <p class="dim">V3 – plocha</p>
+                            </div>
+                        </div>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>2. Ktoré popupy dostanú X</h2>
+                <div class="phones">
+                    <figure>
+                        <div class="tel">
+                            <div class="hl"><span>RAY-MON</span><span>Bratislava ●</span></div>
+                            <div class="tip">
+                                <span class="x v2"
+                                    ><i
+                                        ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg></i
+                                ></span>
+                                <b>● Meranie 12:05</b>
+                                <span class="dim">Údaje z meniča prišli pred 3 minútami.</span>
+                            </div>
+                            <div class="nav"></div>
+                        </div>
+                        <figcaption><b>Bublina stavu merania s X.</b> Pri rozsahu A aj B.</figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="hl"><span>RAY-MON</span><span>Bratislava</span></div>
+                            <div class="bublina">
+                                <span class="ok">✓</span><span>Práčka beží do 13:00</span><span class="vrat">Vrátiť</span>
+                            </div>
+                            <div class="nav"></div>
+                        </div>
+                        <figcaption>
+                            <b>A – samozhasínacie bubliny bez X.</b> „Nastavené“, „Meranie pripojené“ a „Ďalším stlačením…“ zmiznú samy do
+                            pár sekúnd.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="hl"><span>RAY-MON</span><span>Bratislava</span></div>
+                            <div class="bublina s-x">
+                                <span class="ok">✓</span><span>Práčka beží do 13:00</span><span class="vrat">Vrátiť</span>
+                                <span class="x v2"
+                                    ><i
+                                        ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg></i
+                                ></span>
+                            </div>
+                            <div class="nav"></div>
+                        </div>
+                        <figcaption>
+                            <b>B – X všade, aj v bublinách.</b> Doslova „všetky“. V bubline s „Vrátiť“ sú potom dve tlačidlá tesne vedľa
+                            seba.
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <div class="tel">
+                            <div class="hl"><span>RAY-MON</span><span>Bratislava</span></div>
+                            <div class="tma"></div>
+                            <div class="sheet">
+                                <span class="x v2"
+                                    ><i
+                                        ><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></svg></i
+                                ></span>
+                                <h4>Vymazať všetky údaje?</h4>
+                                <p>Nastavenie, história aj behy spotrebičov z tohto telefónu zmiznú.</p>
+                                <span class="pbtn">Vymazať</span>
+                                <span class="pbtn ghost">Zrušiť</span>
+                            </div>
+                        </div>
+                        <figcaption>
+                            <b>Vymazať údaje:</b> X pribudne, „Zrušiť“ ostane (je to potvrdenie, tlačidlo zrušenia patrí k nemu).
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>3. Ako to postaviť</h2>
+                <div class="karta odpor">
+                    <h3>K1 – X vloží spoločné <code>initSheet</code> (web/sheet.js)</h3>
+                    <ul>
+                        <li>
+                            Jedno miesto: každý <code>&lt;dialog class="sheet"&gt;</code> dostane to isté tlačidlo pri štarte a zatvára ho
+                            tá istá funkcia ako ťuknutie vedľa a Escape.
+                        </li>
+                        <li>Nový panel X dostane sám, nedá sa naň zabudnúť.</li>
+                        <li>
+                            Nevýhoda: tlačidlo nie je vidieť v <code>index.html</code>; Zdieľať a sprievodca by svoje X stratili v prospech
+                            spoločného.
+                        </li>
+                    </ul>
+                </div>
+                <div class="karta">
+                    <h3>K2 – X napísané v HTML každého panelu</h3>
+                    <ul>
+                        <li>Ako dnes Zdieľať: všetko vidieť v <code>index.html</code>, každé X má vlastné id v <code>dom.js</code>.</li>
+                        <li>Nevýhoda: 7 rovnakých kúskov HTML a 7 väzieb; nový panel bez X prejde, ak to nestráži test.</li>
+                    </ul>
+                </div>
+                <div class="karta">
+                    <h3>K3 – K1 + e2e test „každý popup má X a X ho zavrie“</h3>
+                    <ul>
+                        <li>
+                            Ako test na <code>.hidden</code>: prejde všetky dialógy, otvorí ich, ťukne na X a overí, že sa zavreli a Späť
+                            ich znovu neotvorí.
+                        </li>
+                        <li>Najrobustnejšie, viac práce na teste.</li>
+                    </ul>
+                </div>
+                <p class="dim">
+                    Bublina stavu merania dnes Späť nezavrie (nie je krok navigácie). Keď má platiť „ostáva aj Späť“, musí sa stať krokom
+                    (<code>navStep</code>) – položka histórie vzniká pri ťuknutí na bodku, takže pravidlo Chrome to dovolí.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>

@@ -15,6 +15,7 @@ import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
 import { zacniOdznova } from './ucenie.js';
 import { clearStored, saveBojlerPrahy, saveDoma, saveLook } from './storage.js';
 import { stepBack } from './nav-back.js';
+import { initSheet } from './sheet.js';
 import { NS_FOLDS, panelChange } from './state.js';
 
 /** @typedef {import('./state.js').Store} Store */
@@ -174,16 +175,8 @@ function initAppSheets(store, dom) {
     const bezMerania = { shareKiosk: false, sharePecat: null, shareKioskFail: false };
     dom.nsShare.addEventListener('click', () => store.setState({ appSheet: 'share', ...bezMerania }));
     dom.nsReset.addEventListener('click', () => store.setState({ appSheet: 'reset' }));
-    for (const d of [dom.nsShareSheet, dom.nsResetSheet]) {
-        // Ťuknutie vedľa okna (na stmavenú stránku) trafí samotný dialóg, nie jeho obsah.
-        d.addEventListener('click', (e) => e.target === d && close());
-        // Escape: dialóg zavrie render podľa stavu, nie prehliadač sám.
-        d.addEventListener('cancel', (e) => {
-            e.preventDefault();
-            close();
-        });
-    }
-    dom.nsShareX.addEventListener('click', close);
+    initSheet(dom.nsShareSheet, close);
+    initSheet(dom.nsResetSheet, close);
     dom.nsResetCancel.addEventListener('click', close);
     dom.nsShareSettings.addEventListener('change', () => store.setState({ shareSettings: dom.nsShareSettings.checked }));
     dom.nsShareKiosk.addEventListener('change', async () => {

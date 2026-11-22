@@ -388,7 +388,6 @@ function nastavenieSekcieDom() {
         nsShareText: byId('ns-share-text'),
         nsShareSettingsLabel: byId('ns-share-settings-label'),
         nsShareKioskLabel: byId('ns-share-kiosk-label'),
-        nsShareX: byId('ns-share-x'),
         nsShareOpts: byId('ns-share-opts'),
         nsShareSettings: input('ns-share-settings'),
         nsShareKiosk: input('ns-share-kiosk'),

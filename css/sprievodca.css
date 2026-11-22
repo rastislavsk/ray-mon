@@ -21,24 +21,9 @@
     text-transform: uppercase;
     color: #fff;
 }
+/* Vzhľad krížika je spoločný s panelmi (.sheet-x v statistika.css). */
 .wz .x {
     flex: none;
-    display: grid;
-    place-items: center;
-    width: 44px;
-    height: 44px;
-    border: 0;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.14);
-    cursor: pointer;
-}
-.wz .x svg {
-    width: 20px;
-    height: 20px;
-    fill: none;
-    stroke: #fff;
-    stroke-width: 2.2;
-    stroke-linecap: round;
 }
 /* Ukazovateľ postupu: sedem častí, hotové a súčasná biele. */
 .wz-prog {
