@@ -194,7 +194,7 @@ const vypnuteOd = (den) => {
 /**
  * Dlaždica v ručnom režime (docs/navrhy/teraz-auto-tok.html, ručný režim): na skle, bez rady -
  * hreje (príkon a od kedy), voda nahriata (dnešné kWh spolu) alebo vypnutý (od kedy). Že je to ručne,
- * ukáže značka v rohu dlaždice (`rezim`), nie text.
+ * ukáže značka pri ikone dlaždice (`rezim`), nie text.
  * @param {BojlerInfo} b @param {'hreje' | 'hotovo' | 'caka' | 'vypnuty'} stav @param {import('./bojler.js').Den | null} den
  */
 function dlazdicaRucne(b, stav, den) {
@@ -221,11 +221,11 @@ function dlazdicaRucne(b, stav, den) {
 
 /**
  * Dlaždica Bojler (docs/navrhy/teraz-dlazdice-odrazky.html): tón ako ostatné dlaždice (`go` hreje, `next`
- * čaká, `tiche` nahriata, `chyba` mlčí), bodka stavu pri ikone (`bezi`, `caka`, `vyp`, `mlci`), veľké
+ * čaká, `tiche` nahriata, `chyba` mlčí), stav relé (`bezi` - dlaždica je zapnutá, zelená ikona; `caka`, `vyp`, `mlci`), veľké
  * číslo, meno, pásik (koľko dnes išlo zo slnka, `podiel` v %, kým dnes nehrial null) a najviac dve odrážky. Keď
  * Plán dňa vie, kedy zásuvka bojler zapne (`plan`, docs/navrhy/plan-dna-zive-data.html), čakajúci bojler povie
  * „zapne okolo …“ namiesto prahu.
- * `rezim` je značka v rohu: kto bojler zapína (pri tichej zásuvke nevieme, null).
+ * `rezim` je značka pri ikone: kto bojler zapína (pri tichej zásuvke nevieme, null).
  * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./plan-dna.js').BojlerPlan | null} [plan]
  * @returns {{ tone: string, riadi: string, rezim: 'appka' | 'rucne' | null, velky: string, meno: string, odr: string[], podiel: number | null }}
  */

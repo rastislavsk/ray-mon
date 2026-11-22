@@ -91,7 +91,6 @@ function terazBojlerDom() {
     return {
         tzScena: /** @type {HTMLButtonElement} */ (byId('tz-scena')),
         tzScenaKresba: byId('tz-scena-kresba'),
-        tzScenaCisla: byId('tz-scena-cisla'),
         tzTokSheet: /** @type {HTMLDialogElement} */ (byId('tz-tok-sheet')),
         tzTokIco: byId('tz-tok-ico'),
         tzTokTtl: byId('tz-tok-ttl'),
@@ -149,6 +148,7 @@ function terazDom() {
         tzCo: byId('tz-co'),
         tzHreben: byId('tz-hreben'),
         tzHrebenDni: byId('tz-hreben-dni'),
+        tzTok: /** @type {HTMLButtonElement} */ (byId('tz-tok')),
         tzDen: byId('tz-den'),
         tzDenNazov: byId('tz-den-nazov'),
         tzDenPod: byId('tz-den-pod'),

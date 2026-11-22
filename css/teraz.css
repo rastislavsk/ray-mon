@@ -99,6 +99,8 @@
     justify-content: space-between;
     gap: 2px 10px;
     min-height: 44px;
+    /* O 8 px nižšie ako 44 px vysoké pole toku dneška (odstup dotykových plôch) - dlaždice stoja v každom dni rovnako. */
+    margin-bottom: 8px;
     padding: 6px 6px 0;
     text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
 }
@@ -110,6 +112,113 @@
     font-size: 0.8125rem;
     font-weight: 700;
     color: var(--dim);
+}
+/* Pole toku energie pri dnešku (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť s číslami a vedením
+   medzi nimi. Je presne také vysoké ako hlavička iného dňa (.den-h), aby dlaždice stáli v každom dni na tej istej
+   výške. Na holej oblohe, preto biele čísla s tieňom. Impulz beží po vedení smerom toku: zo slnka a do siete
+   zlatý, zo siete modrobiely; pri obmedzenom pohybe namiesto neho stojí šípka. */
+.tok-pole {
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin-bottom: 8px;
+    padding: 0 4px;
+    border: 0;
+    background: none;
+    color: #fff;
+    cursor: pointer;
+    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+    -webkit-tap-highlight-color: transparent;
+}
+.tok-pole:disabled {
+    cursor: default;
+}
+.tp {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 100%;
+}
+.tp-u {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+    white-space: nowrap;
+}
+.tp-u .vi {
+    align-self: center;
+    width: 22px;
+    height: 22px;
+    margin-right: 4px;
+}
+.tp-u b {
+    font-size: 1.0625rem;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    font-variant-numeric: tabular-nums;
+}
+.tp-u small {
+    font-size: 0.75rem;
+    font-weight: 800;
+}
+.tp-v {
+    position: relative;
+    flex: 1;
+    min-width: 16px;
+    height: 10px;
+    overflow: hidden;
+}
+.tp-v::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 4px;
+    border-top: 1.5px solid rgba(255, 255, 255, 0.4);
+}
+.tp-imp {
+    position: absolute;
+    top: 2px;
+    left: 0;
+    width: 16px;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, transparent, #ffd166);
+    animation: tp-imp 1.6s linear infinite;
+}
+.tp-v[data-smer='dnu'] .tp-imp {
+    background: linear-gradient(270deg, transparent, #a8dcff);
+    animation-direction: reverse;
+}
+.tp-sipka {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: calc(50% - 5px);
+    width: 0;
+    height: 0;
+    border-block: 5px solid transparent;
+    border-left: 8px solid #ffd166;
+}
+.tp-v[data-smer='dnu'] .tp-sipka {
+    border-left: 0;
+    border-right: 8px solid #a8dcff;
+}
+@keyframes tp-imp {
+    from {
+        left: -16px;
+    }
+    to {
+        left: 100%;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .tp-imp {
+        display: none;
+    }
+    .tp-sipka {
+        display: block;
+    }
 }
 /* Čo zapnúť (docs/navrhy/teraz-dlazdice-stlpce.html): dva stĺpce, aj v širokom rozložení. Každá dlaždica či dvojica
    má svoj stĺpec (`data-stlpec`) a rad, ktorému jeden stĺpec chýba, ostane v druhom prázdny. */
@@ -204,6 +313,11 @@
     color: #fff;
     text-align: left;
     cursor: pointer;
+}
+/* V noci svetlé sklo (docs/navrhy/teraz-pole-noc-bezi.html, 2B): tmavé by na nočnej oblohe zmizlo. Biela vrstva ide
+   na tmavé sklo, nie priamo na oblohu - za súmraku je obloha ešte svetlá a biely text by nemal dosť kontrastu. */
+#tz-co[data-noc] .dl {
+    background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), var(--glass);
 }
 .dl > span:not(.dl-ico) {
     display: contents;
@@ -420,9 +534,6 @@
     height: 100%;
     overflow: visible;
 }
-#tz-scena-cisla {
-    pointer-events: none;
-}
 /* Zem je plná, aby za ňou nebolo vidno dážď, sneh ani oblaky (docs/navrhy/teraz-scena-zem.html). Farbu berie
    zo spodku oblohy (--s2), takže v noci, za šera aj pod sivou oblohou stmavne s ňou; k spodku scény sa
    rozplynie (maska #sc-zem-m), aby nemala hranu nad hrebeňom dní. */
@@ -613,27 +724,6 @@
 .sc-ziara {
     opacity: 0.9;
 }
-/* Čísla po ťuknutí: bez slov - čo znamenajú, hovorí miesto. Dvojitý tieň drží čitateľnosť na jasnej oblohe. */
-.sc-cislo {
-    fill: #fff;
-    font-size: 15px;
-    font-weight: 900;
-    font-variation-settings: 'wdth' 118;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
-    text-anchor: middle;
-    dominant-baseline: middle;
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45)) drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
-    animation: sc-cisla 0.25s ease-out;
-}
-.sc-cislo[data-k='dom'] {
-    font-size: 13.5px;
-}
-.sc-kw {
-    font-size: 6.5px;
-    font-weight: 800;
-    letter-spacing: 0;
-}
 @keyframes sc-luc {
     to {
         stroke-dashoffset: -43;
@@ -663,11 +753,6 @@
 @keyframes sc-blik {
     50% {
         opacity: 0.15;
-    }
-}
-@keyframes sc-cisla {
-    from {
-        opacity: 0;
     }
 }
 
@@ -1344,51 +1429,36 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
-/* Bodka pri ikone: bojler riadi zásuvka - beží (zelená), čaká (biela), mlčí (jantárová). */
-.dl-ico[data-riadi] {
+/* Zapnutý spotrebič (docs/navrhy/teraz-pole-noc-bezi.html, 3A): beží, alebo bojleru zásuvka zapla relé. Ikona je
+   zelená na zelenom nádychu kruhu a dlaždica má jemný biely obrys - cez deň aj v noci. Farba stavu je len na ikone,
+   dlaždica ostáva na skle ako ostatné (rozhodnutie 21. 11. 2026, CLAUDE.md). */
+.dl[data-zapnuty] {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+.dl[data-zapnuty] .dl-ico {
+    color: var(--yes);
+    background: rgba(185, 242, 140, 0.2);
+}
+/* Značka režimu bojlera na kraji kruhu s ikonou, kde bývala bodka stavu: ručne biely kruh s rukou, riadi appka
+   slnko na tmavom kruhu. */
+.dl-ico {
     position: relative;
 }
-.dl-ico[data-riadi]::after {
-    content: '';
-    position: absolute;
-    top: 1px;
-    right: 1px;
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 0 0 2px rgba(8, 16, 40, 0.35);
-}
-.dl-ico[data-riadi='bezi']::after {
-    background: #2f8a17;
-    box-shadow: 0 0 0 2px var(--yes);
-}
-.dl-ico[data-riadi='mlci']::after {
-    background: var(--amber-text);
-}
-/* Ručný režim, relé vypnuté: prázdny krúžok. */
-.dl-ico[data-riadi='vyp']::after {
-    background: transparent;
-    box-shadow:
-        inset 0 0 0 2px #fff,
-        0 0 0 2px rgba(8, 16, 40, 0.35);
-}
-/* Značka režimu bojlera v pravom hornom rohu dlaždice (docs/navrhy/teraz-dlazdice-odrazky.html, A): ručne
-   biely kruh s rukou - vidno ho na prvý pohľad; riadi appka len tiché slnko. */
 .dl-rz {
     position: absolute;
-    top: 14px;
-    right: 14px;
-    width: 30px;
-    height: 30px;
+    top: -5px;
+    right: -9px;
+    width: 22px;
+    height: 22px;
     display: grid;
     place-items: center;
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.14);
+    background: #1b2748;
+    color: #fff;
 }
 .dl-rz .vi {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
 }
 .dl-rz[data-rezim='rucne'] {
     background: #fff;

@@ -140,10 +140,10 @@
             <section id="panel-terazky" class="panel teraz" aria-labelledby="ttl-terazky">
                 <h1 id="ttl-terazky" class="sr">Teraz</h1>
                 <!-- Scéna toku energie (docs/navrhy/teraz-tok-energie.html, návrh 1): slnko a elektráreň vľavo, náš dom
-                     vpravo. Ťuknutie ukáže čísla v scéne, ďalšie otvorí panel Elektrina teraz (s elektromerom), inak ich skryje.
-                     Kreslí render/teraz-scena.js, čo kresliť, počíta shared/teraz-scena.js. -->
+                     vpravo. Čísla nemá, sú v poli toku pod pásom dní (#tz-tok); ťuknutie otvorí panel Elektrina teraz
+                     (s elektromerom). Kreslí render/teraz-scena.js, čo kresliť, počíta shared/teraz-scena.js. -->
                 <button type="button" id="tz-scena" class="scena hidden">
-                    <span id="tz-scena-kresba"></span><span id="tz-scena-cisla"></span>
+                    <span id="tz-scena-kresba"></span>
                 </button>
                 <!-- Kým appka čaká na prvé dáta, v strede obrazovky obiehajú slnko a mesiac okolo obzoru
                      (docs/navrhy/nacitanie-stred.html, variant C). Je viditeľné už v statickom HTML, skryje ho
@@ -195,14 +195,17 @@
                     <button type="button" id="tz-ask-btn" class="pbtn"></button>
                 </div>
                 <!-- Čo zapnúť: pás dní (počasie a kedy slnko stačí na veľké spotrebiče; ťuknutie
-                     na deň ukáže jeho plán), pri inom dni jeho hlavička, pri dnešku riadok nad dlaždicami
-                     (odkiaľ ide prúd teraz, za „i“ vysvetlenie) a pod tým jedna mriežka dlaždíc: čo ide
+                     na deň ukáže jeho plán), pri inom dni jeho hlavička, pri dnešku pole toku energie
+                     (koľko vyrábajú panely, berie dom a ide do siete či zo siete) a pod tým jedna mriežka dlaždíc: čo ide
                      teraz (alebo najbližšia vec), Bojler a ďalšie spotrebiče zvoleného dňa. Dlaždica otvorí
                      detail spotrebiča. -->
                 <div id="tz-co" class="co hidden">
                     <div id="tz-hreben" class="hreben hidden">
                         <div id="tz-hreben-dni" class="hreben-dni" role="group"></div>
                     </div>
+                    <!-- Pri dnešku pole toku energie (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť s číslami
+                         a impulzmi, rovnako vysoké ako hlavička iného dňa, aby dlaždice stáli vždy na tom istom mieste. -->
+                    <button type="button" id="tz-tok" class="tok-pole hidden"></button>
                     <div id="tz-den" class="den-h hidden">
                         <h2 id="tz-den-nazov"></h2>
                         <span id="tz-den-pod"></span>
