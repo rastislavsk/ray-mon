@@ -1012,6 +1012,7 @@
     flex-wrap: wrap;
     align-items: flex-start;
     gap: 4px 12px;
+    padding-right: 36px;
 }
 .c-kw {
     display: grid;

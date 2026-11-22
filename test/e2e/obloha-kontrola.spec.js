@@ -149,7 +149,7 @@ async function kazdaKarta(page, check) {
     await expect(page.locator('#ns-share-sheet')).toBeVisible();
     await page.locator('#ns-share-settings').check();
     await check('Nastavenie › Zdieľať appku');
-    await page.locator('#ns-share-x').click();
+    await page.locator('#ns-share-sheet .sheet-x').click();
     await page.locator('#ns-reset').click();
     await expect(page.locator('#ns-reset-sheet')).toBeVisible();
     await check('Nastavenie › Vymazať údaje');

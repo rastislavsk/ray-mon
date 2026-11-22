@@ -970,7 +970,6 @@
              knižnice ostane len odkaz. -->
         <dialog id="ns-share-sheet" class="sheet" aria-labelledby="ns-share-title" aria-describedby="ns-share-text">
             <div class="sheet-in">
-                <button type="button" id="ns-share-x" class="x" aria-label="Zavrieť"><span aria-hidden="true">×</span></button>
                 <h2 id="ns-share-title"></h2>
                 <p id="ns-share-text"></p>
                 <div id="ns-share-opts" class="chks">
@@ -1005,8 +1004,7 @@
 
         <!-- Graf dňa (docs/navrhy/dnes-predpoved-graf.html): panel zdola z karty Graf dňa na karte Dnes. Hore výkon
              a odkiaľ je (vľavo) a čas (vpravo), pod tým krivka dňa (posúvač času: prst, kurzor aj šípky ukážu iný čas),
-             legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. Tlačidlo Zavrieť nemá
-             (ako ani ostatné panely kariet Teraz a Dnes) - zavrie ho ťuknutie vedľa, Escape a Späť. Píše ho render/graf.js z grafModel v shared/teraz.js. -->
+             legenda a pätka s radou alebo „Späť na teraz“. Pozadie je obloha zvoleného času. Zavrie ho krížik vpravo hore (web/sheet.js), ťuknutie vedľa, Escape a Späť. Píše ho render/graf.js z grafModel v shared/teraz.js. -->
         <dialog id="gr-sheet" class="sheet graf-sheet" aria-labelledby="gr-ttl">
             <section id="gr-den" class="sheet-in grden">
                 <!-- Obloha zvoleného času: tá istá kresba počasia ako pozadie (web/pocasie.js), len v paneli. -->
