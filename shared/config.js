@@ -635,9 +635,9 @@ export const BOJLER_STORAGE_KEY = 'bojler-v1';
  * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1; docs/navrhy/spotrebic-koniec-opakovanie.html):
  * „Už beží“ v detaile spotrebiča na karte Teraz zapíše beh a Plán dňa s ním ráta (shared/bezi.js). Len `veci` -
  * bojler riadi zásuvka a auto zatiaľ nie. Pri `zvysok` (práčka, sušička - ukazujú ho na displeji) sa appka pýta, koľko
- * programu zostáva - kolieskami hodín a minút, od `minZvysokMin` do `maxZvysokMin`. Umývačka zvyšok neukazuje: pýta sa,
- * kedy ju človek zapol, výberom času telefónu (docs/navrhy/spotrebic-cas-nastavenie.html, A + D). Uloží až „Nastaviť“,
- * ktoré zavrie panel a ukáže na `bublinaMs` bublinu s tým, čo sa nastavilo, a s „Vrátiť“ (P1).
+ * programu zostáva - kolieskami hodín a minút, od `minZvysokMin` (1 - pri 0 by už dobehla) do `maxZvysokMin`. Umývačka
+ * zvyšok neukazuje: pýta sa, kedy ju človek zapol, výberom času telefónu (docs/navrhy/spotrebic-cas-nastavenie.html,
+ * A + D). Uloží až „Nastaviť“, ktoré zavrie panel a ukáže na `bublinaMs` bublinu s tým, čo sa nastavilo, a s „Vrátiť“ (P1).
  * Zápis platí len v ten deň a do odkazu s nastavením nejde. Pri Huawei Northbound ho telefóny domácnosti zdieľajú cez
  * Durable Object účtu (WORKER_BEZI_PATH, docs/navrhy/bezi-spolocne.html); zmenu, ktorú Worker ešte nepotvrdil, si telefón
  * pamätá v BEZI_CAKA_STORAGE_KEY a pošle ju znova.
@@ -645,7 +645,7 @@ export const BOJLER_STORAGE_KEY = 'bojler-v1';
 export const BEZI = {
     veci: ['pracka', 'umyvacka', 'susicka'],
     zvysok: ['pracka', 'susicka'],
-    minZvysokMin: 5,
+    minZvysokMin: 1,
     maxZvysokMin: 360,
     bublinaMs: 6000,
 };

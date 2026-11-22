@@ -92,6 +92,9 @@ test('navrhBehu: práčka a sušička zo zvyšku programu v hraniciach, začiato
     assert.deepEqual(navrhBehu([], 'pracka', D, 600, 60), { id: 'pracka', d: D, m: 540, k: 660 }, 'kratší zvyšok: začala skôr');
     assert.deepEqual(navrhBehu([], 'pracka', D, 600, 180), { id: 'pracka', d: D, m: 600, k: 780 }, 'dlhší program začal teraz');
     assert.equal(navrhBehu([], 'pracka', D, 600, 0).k, 600 + BEZI.minZvysokMin, 'najmenej minZvysokMin');
+    // Posledná minúta programu sa dá nastaviť a spotrebič ešte beží.
+    const posledna = nastav([], 'pracka', D, 600, 1);
+    assert.deepEqual(beziaci(posledna, 'pracka', D, 600), { id: 'pracka', d: D, m: 481, k: 601 });
     assert.equal(navrhBehu([], 'pracka', D, 600, 999).k, 600 + BEZI.maxZvysokMin, 'najviac maxZvysokMin');
     assert.equal(navrhBehu([], 'pracka', D, 50, 10).m, 0, 'nie pred polnoc');
     const list = [{ id: 'susicka', d: D, m: 500, k: 650 }];
