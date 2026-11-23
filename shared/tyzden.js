@@ -257,7 +257,7 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
 
 /**
  * Plán iného dňa pre kartu Teraz: spotrebiče do mriežky - najprv čo ide v ten deň zo slnka, potom čo aspoň
- * najmenej zo siete - a detaily spotrebičov pre panel. Hlášku nad nimi skladá shared/den-hlaska.js.
+ * najmenej zo siete - a detaily spotrebičov pre panel. Hláška nad nimi je trieda dňa (shared/teraz.js).
  * @param {DenTyzdna} d @param {readonly string[]} devices @param {Voice} [voice]
  */
 export function denInyModel(d, devices, voice = 'drzy') {

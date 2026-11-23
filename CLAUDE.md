@@ -107,11 +107,9 @@ Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull reques
 
 ## Hláška iného dňa na karte Teraz
 
-Rozhodnuté 23. 11. 2026 (`docs/navrhy/teraz-hlaska-dna.html`, A + N, spôsob 1): iný deň v páse nemá nad dlaždicami meno
-a dátum (to povie zvolený čip), ale jednu krátku vetu o dni (`shared/den-hlaska.js`). Keď pre deň platí niečo nové, čo
-dlaždice ani pásik nepovedia - najlepší deň zo 7, posledné či prvé slnko pred / po dňoch bez slnka, dážď celý deň, sneh,
-mráz v silný deň (prahy `HLASKA_DNA`) - povie sa to, inak trieda dňa (`denTriedaDna`). Deň bez slnka je trieda nanič.
-Vety musia na telefóne ostať v jednom riadku. Dnešok má pod pásom ďalej pole toku.
+Iný deň v páse nemá nad dlaždicami meno a dátum (to povie zvolený čip), ale hlášku podľa triedy dňa (`denTriedaDna`)
+zo sady `DEN_WORDS.iny` - bez mena dňa, aby sedela na zajtra aj o tri dni (23. 11. 2026). Pravidlá s „novou vecou“
+(najlepší deň, posledné slnko, dážď…) z PR #525 boli zrušené, používateľovi sa nepáčili. Dnešok má pod pásom pole toku.
 
 ## Dlaždice bez farby stavu
 
