@@ -165,7 +165,7 @@ const rezimHtml = (rezim) => (rezim ? `<i class="dl-rz" data-rezim="${rezim}">${
 const rezimSr = (rezim) => (rezim ? `<span class="sr">, ${escapeHtml(TERAZ_BOJLER_TEXTS.rezim[rezim])}</span>` : '');
 
 /**
- * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri inom dni jeho hlavička, pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
+ * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri inom dni hláška dňa (docs/navrhy/teraz-hlaska-dna.html), pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
  * vľavo práčka so sušičkou ako dvojica polovičných dlaždíc a umývačka podľa času, vpravo bojler a pod ním auto.
  * Poradie, z ktorého ľavý stĺpec vychádza: čo beží, čo ide teraz (alebo najbližšia vec), ďalšie spotrebiče
  * zvoleného dňa, čo dobehlo. Každá dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
@@ -177,8 +177,7 @@ function renderCo(co, dom, bojler, ciel) {
     show(dom.tzCo, !!co);
     if (!co) return;
     show(dom.tzDen, !!co.den);
-    setText(dom.tzDenNazov, co.den?.nazov ?? '');
-    setText(dom.tzDenPod, co.den?.pod ?? '');
+    setText(dom.tzDenHlaska, co.den ?? '');
     const veci = dlazdiceCo(co, bojler);
     const html = dlazdiceHtml(veci, ozivenie(ciel, co, veci));
     setHtml(dom.tzDlazdice, html);

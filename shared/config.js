@@ -939,6 +939,14 @@ export const VYHLAD = { maxDni: 3 };
  */
 export const TYZDEN = { dni: 4, minPodiel: 0.25 };
 
+/**
+ * Hláška iného dňa na karte Teraz namiesto mena a dátumu (docs/navrhy/teraz-hlaska-dna.html, A + N, spôsob 1).
+ * `bezDni`: od koľkých dní bez slnka za sebou je deň so slnkom „posledné“ či „konečne“ slnko. `dazdPodiel`: časť
+ * hodín svetla s dažďom, od ktorej „prší celý deň“. `snehHodin`: hodín svetla so snehom, od ktorých „sneží“.
+ * `mrazC`: najvyššia teplota dňa, do ktorej je silný deň „mráz a jasno“.
+ */
+export const HLASKA_DNA = { bezDni: 2, dazdPodiel: 0.8, snehHodin: 2, mrazC: 3 };
+
 export const OZNAMENIA = {
     hours: [7, 8, 9],
     hour: 9,

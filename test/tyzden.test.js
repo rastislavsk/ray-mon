@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN_DNA, PLANT, SITE, TARIFF, TYZDEN } from '../shared/config.js';
-import { terazDenHlavickaText, terazNudzaText, terazPotomText } from '../shared/messages.js';
+import { terazNudzaText, terazPotomText } from '../shared/messages.js';
 import { dayCtx } from '../shared/mozem-jadro.js';
 import { terazModel } from '../shared/teraz.js';
 import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzoveCasy } from '../shared/tyzden.js';
@@ -190,10 +190,9 @@ test('núdzový čas bez lacného pásma: bežná elektrina, pri jednej cene s t
     assert.deepEqual([nt.zdroj, nt.start, nt.end], ['lacna', 23 * 60 + 30, 25 * 60 + 30]);
 });
 
-test('denInyModel: hlavička dňa, čo ide zo slnka a čo najmenej zo siete, detaily s dňom pri čase', () => {
+test('denInyModel: čo ide zo slnka a čo najmenej zo siete, detaily s dňom pri čase', () => {
     const dni = dniTyzdna(input(DVA_DNI), DEVICES);
-    const utorok = denInyModel(dni[3], DEVICES, true);
-    assert.deepEqual(utorok.hlavicka, { nazov: 'Utorok', pod: '8.9. · o 3 dni' });
+    const utorok = denInyModel(dni[3], DEVICES);
     // Všetko ide zo slnka - mriežka bez núdzových časov.
     const riadky = utorok.riadky;
     assert.deepEqual(riadky.map((r) => r.id).sort(), [...DEVICES].sort());
@@ -208,8 +207,7 @@ test('denInyModel: hlavička dňa, čo ide zo slnka a čo najmenej zo siete, det
 
 test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štartu bez úseku', () => {
     const dni = dniTyzdna(input(DVA_DNI), DEVICES);
-    const nedela = denInyModel(dni[1], DEVICES, false, 'slusny');
-    assert.deepEqual(nedela.hlavicka, { nazov: 'Zajtra', pod: 'nedeľa 6.9. · pod hranicou' });
+    const nedela = denInyModel(dni[1], DEVICES, 'slusny');
     assert.ok(nedela.riadky.every((r) => r.kind === 'nudza'));
     assert.deepEqual(nedela.riadky[1], {
         id: 'pracka',
@@ -235,7 +233,7 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
     );
     assert.deepEqual([v?.slot?.tone, v?.slot?.dnes], ['cheap', false]);
     // Auto v noci je mimo osi dňa len sčasti - úsek ostáva; núdzový čas bez štartu úsek nemá.
-    const jedna = denInyModel(dniTyzdna(input(DVA_DNI, RANO, JEDNA), ['auto'])[1], ['auto'], false);
+    const jedna = denInyModel(dniTyzdna(input(DVA_DNI, RANO, JEDNA), ['auto'])[1], ['auto']);
     assert.deepEqual(jedna.riadky[0], {
         id: 'auto',
         name: 'Auto',
@@ -294,12 +292,12 @@ test('karta Teraz so zvoleným dňom: plán toho dňa, dnešok ostáva v hornej 
     const i = input(DVA_DNI);
     const utorok = terazModel(i, { den: 3 });
     assert.equal(utorok.hreben?.zvoleny, 3);
-    assert.deepEqual(utorok.co?.den, { nazov: 'Utorok', pod: '8.9. · o 3 dni' });
+    assert.equal(utorok.co?.den, 'Konečne slnko, po 2 dňoch.');
     assert.ok(utorok.co?.riadky.every((r) => r.kind === 'later'));
     assert.ok(utorok.veci.every((v) => v.den === 'Utorok'));
     assert.equal(utorok.num, terazModel(i).num, 'číslo je vždy teraz');
     const nedela = terazModel(i, { den: 1 });
-    assert.equal(nedela.co?.den?.pod, 'nedeľa 6.9. · pod hranicou');
+    assert.equal(nedela.co?.den, 'Zamračené, veľké veci zo siete.');
     assert.ok(nedela.co?.riadky.every((r) => r.kind === 'nudza'));
     const mimo = terazModel(i, { den: 99 });
     assert.equal(mimo.hreben?.zvoleny, 0);
@@ -310,13 +308,9 @@ test('karta Teraz so zvoleným dňom: plán toho dňa, dnešok ostáva v hornej 
     assert.equal(poPolnoci.co?.den, null);
 });
 
-test('texty týždňa: odznak, hlavička dňa a núdzový čas v oboch tónoch', () => {
+test('texty týždňa: odznak a núdzový čas v oboch tónoch', () => {
     assert.deepEqual(terazPotomText(null), { text: 'tento týždeň už nie', dlho: true });
     assert.deepEqual(terazPotomText({ name: 'Piatok', index: 2 }), { text: 'potom v piatok', dlho: false });
-    assert.deepEqual(terazDenHlavickaText({ date: '2026-09-10', index: 5, nad: false }), {
-        nazov: 'Štvrtok',
-        pod: '10.9. · o 5 dní · pod hranicou',
-    });
     /** @param {Partial<Parameters<typeof terazNudzaText>[0]>} r */
     const n = (r) => terazNudzaText({ start: 750, end: 870, podiel: 0.5, zdroj: 'slnko', dnes: true, potom: 'Pondelok', ...r });
     assert.deepEqual(n({}), {

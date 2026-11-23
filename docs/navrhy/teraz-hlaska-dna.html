@@ -1,0 +1,866 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Teraz – hláška dňa</title>
+        <style>
+            /* Návrh (23. 11. 2026): karta Teraz – v inom dni namiesto mena dňa a dátumu krátka hláška, ktorá deň opíše
+               (tvar dňa B, záloha trieda dňa A). Pole toku ostáva v dnešku pod pásom.
+               Samostatný súbor, nič neimportuje z appky. Čísla a časy v telefónoch sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --sun: #ffd166;
+                --siet: rgba(124, 196, 255, 0.75);
+                --zelena: #8fe36f;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            p {
+                margin: 0;
+                max-width: 74ch;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .phones {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                width: 300px;
+                max-width: 100%;
+            }
+            figcaption {
+                font-size: 14px;
+            }
+            figcaption b {
+                display: block;
+                font-size: 16px;
+            }
+            .plus,
+            .minus {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--zelena);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+            .par-tel {
+                display: flex;
+                gap: 14px;
+            }
+            .par-tel .phone {
+                width: 300px;
+            }
+            .varianta {
+                display: grid;
+                gap: 10px;
+                width: 614px;
+                max-width: 100%;
+            }
+            .varianta .par-tel {
+                overflow-x: auto;
+            }
+
+            /* ===== telefón ===== */
+            .phone {
+                --glass: rgba(8, 16, 40, 0.3);
+                position: relative;
+                flex: none;
+                width: 300px;
+                max-width: 100%;
+                height: 600px;
+                overflow: hidden;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f62b5, #5d8fd8 60%, #6f9cdc);
+                font-size: 13px;
+            }
+            .phone[data-mrak] {
+                background: linear-gradient(180deg, #56657f, #7d8ba3 60%, #8794a9);
+            }
+            .scena {
+                position: relative;
+                height: 200px;
+                padding: 14px 16px;
+            }
+            .scena .app {
+                font-weight: 900;
+                letter-spacing: 0.04em;
+            }
+            .scena .miesto {
+                font-size: 11px;
+            }
+            .scena .zem {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 58px;
+                background: #2e4a7c;
+                border-radius: 60% 60% 0 0 / 30px 30px 0 0;
+            }
+            .phone[data-mrak] .scena .zem {
+                background: #4b5873;
+            }
+            .scena .dom {
+                position: absolute;
+                right: 24px;
+                bottom: 34px;
+                width: 70px;
+                height: 52px;
+                border: 2px solid rgba(255, 255, 255, 0.85);
+                border-radius: 4px;
+                background: #3b578a;
+            }
+            .scena .dom::before {
+                content: '';
+                position: absolute;
+                left: -8px;
+                right: -8px;
+                top: -26px;
+                height: 26px;
+                background:
+                    linear-gradient(to top right, transparent 49%, rgba(255, 255, 255, 0.85) 50%, transparent 53%),
+                    linear-gradient(to top left, transparent 49%, rgba(255, 255, 255, 0.85) 50%, transparent 53%);
+                background-size: 50% 100%;
+                background-position:
+                    0 0,
+                    100% 0;
+                background-repeat: no-repeat;
+            }
+            .scena .slnko {
+                position: absolute;
+                left: 22px;
+                top: 46px;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: #fff3c4;
+                box-shadow: 0 0 30px 10px rgba(255, 230, 150, 0.55);
+            }
+            .scena .stlp {
+                position: absolute;
+                left: 60px;
+                bottom: 36px;
+                width: 2px;
+                height: 54px;
+                background: rgba(255, 255, 255, 0.85);
+            }
+            .scena .vedenie {
+                position: absolute;
+                left: 60px;
+                right: 94px;
+                bottom: 84px;
+                border-top: 1.5px solid rgba(255, 255, 255, 0.6);
+            }
+            .obsah {
+                padding: 0 12px;
+            }
+            .pas {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+                margin: 0 -4px 6px;
+            }
+            .pas div {
+                height: 60px;
+                padding: 7px 7px 9px;
+                border-radius: 12px;
+                background: rgba(10, 20, 50, 0.38);
+                display: grid;
+                grid-template-rows: 1fr auto;
+                font-size: 10px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+            }
+            .pas div[data-zvoleny] {
+                background: linear-gradient(rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.14)), rgba(10, 20, 50, 0.38);
+                box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
+            }
+            .pas i {
+                display: block;
+                height: 7px;
+                border-radius: 4px;
+                background: rgba(180, 195, 220, 0.35);
+            }
+
+            /* Pole 44 px - toľko mala hlavička iného dňa aj pole toku. */
+            .pole {
+                height: 44px;
+                display: flex;
+                align-items: center;
+                margin-bottom: 4px;
+            }
+            .pole[data-prazdne] {
+                height: 0;
+                margin: 0;
+            }
+            .pole-den {
+                justify-content: space-between;
+                align-items: baseline;
+                padding: 6px 6px 0;
+            }
+            .pole-den b {
+                font-size: 20px;
+                font-weight: 900;
+            }
+            .pole-den span {
+                font-size: 12px;
+                font-weight: 700;
+            }
+
+            /* Pole toku (tak, ako je dnes pod pásom). */
+            .pole-tok {
+                gap: 6px;
+                padding: 0 4px;
+            }
+            .tok-u {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                font-weight: 800;
+                font-variant-numeric: tabular-nums;
+                white-space: nowrap;
+            }
+            .tok-u[data-von] b {
+                color: var(--sun);
+            }
+            .tok-v {
+                flex: 1;
+                height: 10px;
+                position: relative;
+                min-width: 20px;
+            }
+            .tok-v::before {
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 4.5px;
+                border-top: 1.5px solid rgba(255, 255, 255, 0.35);
+            }
+            .tok-v::after {
+                content: '';
+                position: absolute;
+                top: 2px;
+                width: 14px;
+                height: 6px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, transparent, var(--sun));
+                animation: impulz 1.4s linear infinite;
+            }
+            .tok-v[data-spat]::after {
+                background: linear-gradient(270deg, transparent, var(--siet));
+                animation-direction: reverse;
+            }
+            @keyframes impulz {
+                from {
+                    left: -14px;
+                }
+                to {
+                    left: 100%;
+                }
+            }
+            /* Pole toku nad pásom: mierne menšie a tlmenejšie, patrí k scéne nad ním. */
+            .pole-tok[data-hore] {
+                height: 36px;
+                margin: -6px 0 4px;
+                font-size: 12.5px;
+            }
+
+            /* ===== H1: krivka dňa s oknom ===== */
+            .h-krivka {
+                position: relative;
+                padding: 0 4px;
+                gap: 8px;
+            }
+            .h-krivka svg {
+                flex: 1;
+                height: 40px;
+                overflow: visible;
+            }
+            .h-krivka .kwh {
+                font-weight: 900;
+                font-size: 17px;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+                text-align: right;
+                white-space: nowrap;
+            }
+            .h-krivka .kwh small {
+                display: block;
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--dim);
+                margin-top: 2px;
+            }
+            .k-cas {
+                font-size: 9.5px;
+                font-weight: 700;
+                fill: #fff;
+                font-family: var(--font);
+            }
+
+            /* ===== H2: jedna veta ===== */
+            .h-veta {
+                gap: 10px;
+                padding: 0 6px;
+                font-weight: 800;
+                font-size: 14.5px;
+                line-height: 1.2;
+            }
+            .h-veta .vi {
+                flex: none;
+                width: 24px;
+                height: 24px;
+            }
+
+            /* ===== H3: číslo a slnečné okno ===== */
+            .h-okno {
+                gap: 12px;
+                padding: 0 6px;
+            }
+            .h-okno .kwh {
+                font-size: 24px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .h-okno .kwh small {
+                font-size: 12px;
+            }
+            .h-okno .okno {
+                display: grid;
+                gap: 1px;
+                font-size: 12px;
+                font-weight: 700;
+                line-height: 1.25;
+            }
+            .h-okno .okno b {
+                font-size: 14px;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+            }
+
+            /* ===== H4: počasie cez deň ===== */
+            .h-pocasie {
+                display: grid;
+                grid-template-columns: repeat(5, 1fr);
+                align-items: center;
+                padding: 0 2px;
+            }
+            .h-pocasie span {
+                display: grid;
+                justify-items: center;
+                gap: 1px;
+                font-size: 10px;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .h-pocasie .vi {
+                width: 22px;
+                height: 22px;
+                color: #fff;
+            }
+            .h-pocasie span[data-teraz] {
+                color: #fff;
+            }
+            .h-pocasie span[data-teraz] .vi {
+                filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
+            }
+
+            /* ===== dlaždice ===== */
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                align-items: start;
+            }
+            .dl {
+                position: relative;
+                padding: 11px;
+                border-radius: 20px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                min-height: 152px;
+            }
+            .par {
+                display: grid;
+                gap: 6px;
+            }
+            .par .dl {
+                min-height: 0;
+                display: grid;
+                grid-template-columns: 30px 1fr;
+                column-gap: 8px;
+                border-radius: 20px 20px 4px 4px;
+            }
+            .par .dl + .dl {
+                border-radius: 4px 4px 20px 20px;
+            }
+            .ico {
+                width: 36px;
+                height: 36px;
+                margin-bottom: 14px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .par .ico {
+                width: 30px;
+                height: 30px;
+                margin: 0;
+            }
+            .vi {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .par .ico .vi {
+                width: 17px;
+                height: 17px;
+            }
+            .velky {
+                display: block;
+                font-size: 22px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .meno {
+                display: block;
+                font-size: 15px;
+                font-weight: 800;
+                margin-top: 2px;
+            }
+            .podiel {
+                display: block;
+                height: 5px;
+                margin: 6px 0 3px;
+                border-radius: 3px;
+                background: var(--sun);
+            }
+            .podiel[data-siet] {
+                background: linear-gradient(90deg, var(--sun) 0 30%, var(--siet) 30%);
+            }
+            .odr {
+                display: block;
+                font-size: 11.5px;
+                font-weight: 600;
+            }
+            .par .text {
+                min-width: 0;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .tok-v::after {
+                    animation: none;
+                    display: none;
+                }
+            }
+            /* ===== hláška dňa (namiesto mena dňa a dátumu) ===== */
+            .h-hlaska {
+                padding: 0 6px;
+                font-weight: 800;
+                font-size: 15px;
+                line-height: 1.2;
+                text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
+            }
+            .h-dva {
+                display: grid;
+                align-content: center;
+                gap: 1px;
+            }
+            .h-dva small {
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--sun);
+            }
+            .katalog {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                gap: 18px;
+            }
+            .karta {
+                display: grid;
+                gap: 8px;
+                align-content: start;
+                padding: 12px;
+                border-radius: 16px;
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid var(--line);
+            }
+            .karta .kde {
+                font-size: 12px;
+                font-weight: 700;
+                color: var(--dim);
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+            }
+            .karta .pravidlo {
+                font-size: 13px;
+                color: var(--dim);
+            }
+            /* Výrez telefónu: pás dní a pole pod ním. */
+            .vyrez {
+                width: 276px;
+                max-width: 100%;
+                padding: 10px 12px 2px;
+                border-radius: 14px;
+                background: linear-gradient(180deg, #4a7cc9, #5d8fd8);
+                font-size: 13px;
+            }
+            .vyrez .pas {
+                margin: 0 -4px 6px;
+            }
+            .vyrez .pole {
+                margin: 0;
+            }
+            /* Os dňa: šedé = okno, ktoré by dala jasná obloha, zlaté = okno podľa predpovede. */
+            .os {
+                position: relative;
+                height: 14px;
+                border-radius: 7px;
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .os .j {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 7px;
+                border: 1.5px dashed rgba(255, 255, 255, 0.45);
+            }
+            .os .o {
+                position: absolute;
+                top: 3px;
+                bottom: 3px;
+                border-radius: 4px;
+                background: var(--sun);
+            }
+            .legenda {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px 18px;
+                font-size: 13px;
+                color: var(--dim);
+            }
+            .legenda i {
+                display: inline-block;
+                width: 22px;
+                height: 10px;
+                margin-right: 6px;
+                vertical-align: -1px;
+                border-radius: 4px;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 6px 14px 6px 0;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+            }
+            .tabulka {
+                overflow-x: auto;
+            }
+            .zlom {
+                color: #ffb38a;
+                font-size: 12px;
+                font-weight: 700;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 12px">
+                <h1>Karta Teraz: hláška dňa namiesto mena a dátumu</h1>
+                <p class="dim">
+                    Návrh 23. 11. 2026. Pole toku energie ostáva v dnešku pod pásom tak, ako je. V inom dni namiesto „Zajtra · nedeľa 6. 9.“
+                    je krátka veta o dni. Telefóny sú zjednodušené (scéna je len náznak), čísla, časy a dni sú ilustračné. Texty viet sú môj
+                    návrh. Verzia 3: hlavná hláška je trieda dňa (A), k nej niečo nové (N), čo dlaždice nepovedia.
+                </p>
+            </header>
+
+            <div class="odpor">
+                <b>Rozhodnuté 23. 11. 2026: spôsob 1 (A + N, nové má prednosť).</b> Pole toku sa nepresúva (nad pásom nevyzeralo dobre),
+                tvar dňa (B) len opakoval dlaždice. Kód: <code>shared/den-hlaska.js</code>, prahy <code>HLASKA_DNA</code> v
+                <code>shared/config.js</code>, texty <code>terazHlaskaText</code>.
+            </div>
+
+            <section>
+                <h2>Spôsob 1: nové má prednosť</h2>
+                <p>
+                    Keď pre deň platí niečo z N, ukáže sa to namiesto A. Inak A. Vždy jeden riadok. Dni: nedeľa je výborná, najlepšia v
+                    týždni a po nej dva dni bez slnka; v pondelok prší celý deň; utorok je len zamračený.
+                </p>
+                <div class="phones" id="p1"></div>
+            </section>
+
+            <section>
+                <h2>Spôsob 2: A vždy, nové pod ňou</h2>
+                <p>A ostáva vždy hore, N je pod ňou menším písmom, keď platí. Do 44 px sa zmestia dva riadky. Tie isté dni.</p>
+                <div class="phones" id="p2"></div>
+            </section>
+
+            <section>
+                <h2>A – trieda dňa</h2>
+                <p>
+                    Trieda dňa (výborný / dobrý / slabý / nanič) je tá istá, ktorú appka už počíta pre kartu Dnes a pre večerný zajtrajšok
+                    (<code>denTriedaDna</code>). Je vždy, keď je predpoveď.
+                </p>
+                <div class="legenda">
+                    <span><i style="border: 1.5px dashed rgba(255, 255, 255, 0.45)"></i>okno jasnej oblohy v ten deň</span>
+                    <span><i style="background: var(--sun)"></i>okno podľa predpovede</span>
+                </div>
+                <div class="katalog" id="ka"></div>
+            </section>
+
+            <section>
+                <h2>N – čo nové povedať</h2>
+                <p>
+                    Veci, ktoré dlaždice ani pásik nepovedia: ako je deň na tom voči ostatným dňom a počasie, ktoré nie je o slnku. Poradie
+                    je zároveň priorita, keď ich platí viac naraz. Všetko je z predpovede, ktorú appka už sťahuje (7 dní, po hodinách
+                    oblačnosť, zrážky a teplota).
+                </p>
+                <div class="tabulka">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>hláška</th>
+                                <th>keď</th>
+                                <th>prečo je to nové</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tn"></tbody>
+                    </table>
+                </div>
+                <p class="dim">
+                    „Bez slnka“ je deň bez okna na veľké spotrebiče, rovnako ako pri výhľade v rannom oznámení
+                    (<code>shared/vyhlad.js</code>). Počty dní a prahy (80 % hodín s dažďom, 3 °C) sú odhad.
+                </p>
+            </section>
+        </main>
+
+        <script>
+            // Telefóny a karty skladá tento skript. Len pre návrh, appka ho nemá.
+            const I = {
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>',
+                susicka:
+                    '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01"/><circle cx="12" cy="14" r="4"/><path d="M9.6 14.2c.8-.9 1.6.9 2.4 0s1.6.9 2.4 0"/>',
+                auto: '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
+                slnko: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/>',
+                dom: '<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+                stlp: '<path d="M12 2.5 7.5 21.5M12 2.5l4.5 19"/><path d="M5 7h14M6.5 11.5h11M9 16.5h6"/><path d="M5 7v2M19 7v2"/>',
+            };
+            const vi = (id) => `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true">${I[id]}</svg>`;
+
+            // Okno jasnej oblohy na osi pásika (0 až 1 od svitania po súmrak) - v novembri asi 9:30 – 14:30.
+            const J = [0.3, 0.8];
+
+            const A = {
+                drzy: {
+                    vyborny: 'Slnko utiahne všetko.',
+                    dobry: 'Na veľké veci to stačí.',
+                    slaby: 'Slnko len na chvíľu.',
+                    nanic: 'Zamračené, veľké veci zo siete.',
+                },
+                slusny: {
+                    vyborny: 'Slnko utiahne všetko.',
+                    dobry: 'Slnka bude na veľké veci dosť.',
+                    slaby: 'Slnka bude len na chvíľu.',
+                    nanic: 'Zamračené, veľké veci pôjdu zo siete.',
+                },
+            };
+            const TRIEDY = { vyborny: 'výborný', dobry: 'dobrý', slaby: 'slabý', nanic: 'nanič' };
+
+            // Prepočet z okna jasnej oblohy na os pásika v čipe.
+            const naOs = ([s, e]) => [J[0] + s * (J[1] - J[0]), J[0] + e * (J[1] - J[0])];
+            const pasik = (o) => {
+                if (!o.length) return 'background: rgba(180,195,220,.35)';
+                const sivy = 'rgba(180,195,220,.35)';
+                let g = [];
+                let x = 0;
+                for (const w of o) {
+                    const [a, b] = naOs(w).map((v) => v * 100);
+                    g.push(`${sivy} ${x}% ${a}%`, `var(--sun) ${a}% ${b}%`);
+                    x = b;
+                }
+                g.push(`${sivy} ${x}% 100%`);
+                return `background: linear-gradient(90deg, ${g.join(', ')})`;
+            };
+            const DNI = ['SO', 'NE', 'PO', 'UT'];
+            const pas = (zvoleny, o) =>
+                '<div class="pas">' +
+                DNI.map((d, i) => {
+                    const w = i === zvoleny ? o : [[[0.05, 0.95]], [[0.05, 0.95]], [], []][i];
+                    return `<div${i === zvoleny ? ' data-zvoleny' : ''}>${d}<i style="${pasik(w)}"></i></div>`;
+                }).join('') +
+                '</div>';
+            const hlaska = (t) => `<div class="pole h-hlaska">${t}</div>`;
+            const os = (o) =>
+                `<div class="os"><span class="j" style="left:${J[0] * 100}%;width:${(J[1] - J[0]) * 100}%"></span>${o
+                    .map((w) => {
+                        const [a, b] = naOs(w);
+                        return `<span class="o" style="left:${a * 100}%;width:${(b - a) * 100}%"></span>`;
+                    })
+                    .join('')}</div>`;
+
+            // ----- telefóny -----
+            const scena =
+                '<div class="scena"><div class="app">RAY-MON</div><div class="miesto">Dvorany nad Nitrou</div><div class="slnko"></div><div class="vedenie"></div><div class="stlp"></div><div class="zem"></div><div class="dom"></div></div>';
+            const tok = `<div class="pole pole-tok"><span class="tok-u">${vi('slnko')}<b>3,2</b></span><span class="tok-v"></span><span class="tok-u">${vi('dom')}<b>0,8</b></span><span class="tok-v"></span><span class="tok-u" data-von>${vi('stlp')}<b>2,4</b></span></div>`;
+            const pol = (id, cas, meno, odr, siet) =>
+                `<div class="dl"><span class="ico">${vi(id)}</span><span class="text"><span class="velky">${cas}</span><span class="meno">${meno}</span><span class="podiel"${siet ? ' data-siet' : ''}></span><span class="odr">• ${odr}</span></span></div>`;
+            const dl = (id, cas, meno, odr, siet) =>
+                `<div class="dl"><span class="ico">${vi(id)}</span><span class="velky">${cas}</span><span class="meno">${meno}</span><span class="podiel"${siet ? ' data-siet' : ''}></span><span class="odr">• ${odr}</span></div>`;
+            const slnecne = (a, b, c) =>
+                '<div class="mriezka"><div class="par">' +
+                pol('pracka', a, 'Práčka', 'zo slnka') +
+                pol('susicka', b, 'Sušička', 'po práčke') +
+                '</div>' +
+                dl('auto', c, 'Auto', '~50 km zo slnka') +
+                '</div>';
+            const siet =
+                '<div class="mriezka"><div class="par">' +
+                pol('pracka', '11:00', 'Práčka', 'najlacnejšie', true) +
+                pol('susicka', '13:00', 'Sušička', 'po práčke', true) +
+                '</div>' +
+                dl('auto', '22:00', 'Auto', 'nízka tarifa', true) +
+                '</div>';
+            const phone = (zvoleny, o, pole, dlazdice) =>
+                `<div class="phone">${scena}<div class="obsah">${pas(zvoleny, o)}${pole}${dlazdice}</div></div>`;
+            const fig = (cap, html) => `<figure>${html}<figcaption>${cap}</figcaption></figure>`;
+
+            // Dni: nedeľa výborná, najlepšia v týždni, po nej dva dni bez slnka; pondelok prší celý deň; utorok len zamračený.
+            const N = [
+                ['Najlepší deň týždňa.', 'deň má najviac kWh zo 7 dní predpovede a nie je slabý', 'pás ukazuje 4 dni a kWh nemá'],
+                ['Posledné slnko, potom 2 dni bez.', 'deň má okno a aspoň 2 dni po ňom nie', 'čip vidí len svoj deň, nie čo príde po ňom'],
+                ['Konečne slnko, po 3 dňoch.', 'deň má okno a aspoň 2 dni pred ním nie', 'to isté odzadu'],
+                ['Prší celý deň.', 'dážď aspoň v 80 % hodín od svitania po súmrak', 'dlaždice ukážu len, že pôjde zo siete'],
+                [
+                    'Sneží, panely môžu zapadnúť.',
+                    'sneh v predpovedi (predpoveď o snehu na paneloch nevie)',
+                    'predpoveď výroby sneh na paneloch nepočíta',
+                ],
+                [
+                    'Mráz a jasno, panely to majú radi.',
+                    'najvyššia teplota do 3 °C a deň výborný alebo dobrý',
+                    'zaujímavosť, v zime panely dajú viac na watt slnka',
+                ],
+            ];
+            const DNI_N = [
+                { cap: 'Nedeľa · výborný', o: [[0.05, 0.95]], a: A.drzy.vyborny, n: N[0][0], dl: slnecne('10:00', '12:00', '12:30') },
+                { cap: 'Pondelok · nanič', o: [], a: A.drzy.nanic, n: N[3][0], dl: siet },
+                { cap: 'Utorok · nanič', o: [], a: A.drzy.nanic, n: null, dl: siet },
+            ];
+            const dnes = fig('<b>Dnes</b>Pole toku ako teraz.', phone(0, [[0.05, 0.95]], tok, slnecne('11:30', '13:30', '12:15')));
+            const dva = (a, n) => (n ? `<div class="pole h-hlaska h-dva"><span>${a}</span><small>${n}</small></div>` : hlaska(a));
+            document.getElementById('p1').innerHTML =
+                dnes +
+                DNI_N.map((d, i) =>
+                    fig(
+                        `<b>${d.cap}</b>${d.n ? 'Platí N, A sa neukáže.' : 'N neplatí, ostáva A.'}`,
+                        phone(i + 1, d.o, hlaska(d.n ?? d.a), d.dl),
+                    ),
+                ).join('');
+            document.getElementById('p2').innerHTML =
+                dnes + DNI_N.map((d, i) => fig(`<b>${d.cap}</b>`, phone(i + 1, d.o, dva(d.a, d.n), d.dl))).join('');
+
+            // ----- katalóg -----
+            const karta = (kde, pravidlo, o, text, zvoleny = 1) =>
+                `<div class="karta"><span class="kde">${kde}</span>${os(o)}<div class="vyrez">${pas(zvoleny, o)}${hlaska(text)}</div><span class="pravidlo">${pravidlo}</span></div>`;
+
+            // A: typické okno pre každú triedu.
+            const TYPICKE = { vyborny: [[0.05, 0.95]], dobry: [[0.2, 0.7]], slaby: [[0.4, 0.55]], nanic: [] };
+            document.getElementById('ka').innerHTML = Object.keys(TRIEDY)
+                .map((t) => {
+                    const drzy = A.drzy[t];
+                    const slusny = A.slusny[t];
+                    const ina = slusny === drzy ? 'v slušnom tóne rovnako' : `slušne: „${slusny}“`;
+                    return karta(`trieda ${TRIEDY[t]}`, ina, TYPICKE[t], drzy);
+                })
+                .join('');
+
+            document.getElementById('tn').innerHTML = N.map(
+                ([h, k, p], i) => `<tr><td>${i + 1}</td><td><b>${h}</b></td><td>${k}</td><td>${p}</td></tr>`,
+            ).join('');
+        </script>
+    </body>
+</html>

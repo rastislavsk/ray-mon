@@ -88,6 +88,14 @@ Oznámenie o konci (`web/koniec.js`, `POST /koniec`) posiela Durable Object `Bud
 ohrevu (`zmenaOhrevu` v `shared/bojler.js`) telefónom, ktoré si to zaplí v paneli Bojler dnes (`POST /bojler-oznamenia`).
 Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull requestom (`worker/README.md`).
 
+## Hláška iného dňa na karte Teraz
+
+Rozhodnuté 23. 11. 2026 (`docs/navrhy/teraz-hlaska-dna.html`, A + N, spôsob 1): iný deň v páse nemá nad dlaždicami meno
+a dátum (to povie zvolený čip), ale jednu krátku vetu o dni (`shared/den-hlaska.js`). Keď pre deň platí niečo nové, čo
+dlaždice ani pásik nepovedia - najlepší deň zo 7, posledné či prvé slnko pred / po dňoch bez slnka, dážď celý deň, sneh,
+mráz v silný deň (prahy `HLASKA_DNA`) - povie sa to, inak trieda dňa (`denTriedaDna`). Deň bez slnka je trieda nanič.
+Vety musia na telefóne ostať v jednom riadku. Dnešok má pod pásom ďalej pole toku.
+
 ## Dlaždice bez farby stavu
 
 Rozhodnuté 21. 11. 2026: dlaždice spotrebičov na karte Teraz sú všetky na skle s bielym textom - farba nehovorí,

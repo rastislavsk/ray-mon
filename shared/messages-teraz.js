@@ -1,7 +1,7 @@
 // Texty karty Teraz: číslo a stav a čo zapnúť. Čisté funkcie bez DOM.
 
 import { MINUTES_PER_DAY, PLAN_DNA } from './config.js';
-import { fmt1, kwpRoughText, weekDateLabel, weekDayName } from './format.js';
+import { fmt1, kwpRoughText } from './format.js';
 import { MOZEM_ITEM_TEXTS, MOZEM_SKY_TEXTS, PLAN_AFTER, PLAN_PO_BOJLERI, countdownText } from './messages-mozem.js';
 import { andList, cap, dniSlovo, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
 
@@ -242,15 +242,34 @@ function odrazkyDomu(r, kolko) {
 }
 
 /**
- * Hlavička plánu iného dňa na karte Teraz (docs/navrhy/teraz-vyhlad-alternativy.html, C): meno dňa
- * a pod ním dátum (pri zajtrajšku aj meno dňa - nadpis je „Zajtra“), o koľko dní to je a keď slnko
- * na veľké spotrebiče v ten deň nestačí (`nad` false), aj to.
- * @param {{ date: string, index: number, nad: boolean }} d
+ * Hláška iného dňa na karte Teraz namiesto mena a dátumu (docs/navrhy/teraz-hlaska-dna.html, A + N, spôsob 1):
+ * trieda dňa (v tónoch sa líši) alebo nová vec o dni (rovnaká v oboch tónoch, nikoho neoslovuje). Krátka, aby
+ * sa na telefóne zmestila do jedného riadku.
  */
-export function terazDenHlavickaText({ date, index, nad }) {
-    const datum = index === 1 ? `${weekDayName(date, 2).toLowerCase()} ${weekDateLabel(date)}` : weekDateLabel(date);
-    const pod = [datum, index > 1 ? `o ${index} ${dniSlovo(index)}` : '', nad ? '' : 'pod hranicou'].filter(Boolean).join(' · ');
-    return { nazov: weekDayName(date, index), pod };
+const HLASKA_TRIEDA = {
+    drzy: {
+        vyborny: 'Slnko utiahne všetko.',
+        dobry: 'Na veľké veci to stačí.',
+        slaby: 'Slnko len na chvíľu.',
+        nanic: 'Zamračené, veľké veci zo siete.',
+    },
+    slusny: {
+        vyborny: 'Slnko utiahne všetko.',
+        dobry: 'Slnka bude na veľké veci dosť.',
+        slaby: 'Slnka bude len na chvíľu.',
+        nanic: 'Zamračené, veľké veci pôjdu zo siete.',
+    },
+};
+
+/** @param {import('./den-hlaska.js').Hlaska} h @param {import('./messages-zaklad.js').Voice} [voice] */
+export function terazHlaskaText({ druh, cls, pocet }, voice = 'drzy') {
+    if (druh === 'najlepsi') return 'Najlepší deň týždňa.';
+    if (druh === 'posledne') return `Posledné slnko, potom ${pocet} ${dniSlovo(pocet)} bez.`;
+    if (druh === 'konecne') return `Konečne slnko, po ${pocet} dňoch.`;
+    if (druh === 'prsi') return 'Prší celý deň.';
+    if (druh === 'sneh') return 'Sneží, panely môžu zapadnúť.';
+    if (druh === 'mraz') return 'Mráz a jasno, panely to majú radi.';
+    return HLASKA_TRIEDA[voice][cls];
 }
 
 /** Hrebeň týždňa na karte Teraz: meno skupiny tlačidiel dní a čo čítačka povie o dni pod hranicou. */
