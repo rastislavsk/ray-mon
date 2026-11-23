@@ -7,7 +7,7 @@ import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
 import { interpolate } from './chart-model.js';
 import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayPlan } from './day-plan.js';
-import { dniHlasky, hlaskaDna } from './den-hlaska.js';
+import { denTriedaDna } from './den-trieda.js';
 import { heroModel } from './hero-model.js';
 import {
     terazBehText,
@@ -15,7 +15,6 @@ import {
     terazCitanieText,
     terazDalsiText,
     terazDlazdicaText,
-    terazHlaskaText,
     terazHotoveText,
     terazKonciText,
     terazNoteText,
@@ -84,7 +83,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
 
 /**
  * Hrebeň týždňa a plán zvoleného dňa: dnes čo zapnúť, iný deň (`den`, poradie od dneška) jeho plán
- * s hláškou dňa (`co.den`, shared/den-hlaska.js); detaily spotrebičov patria zvolenému dňu. Deň mimo predpovede je dnešok.
+ * s hláškou podľa triedy dňa namiesto mena a dátumu (`co.den`, DEN_WORDS.iny); detaily spotrebičov patria zvolenému dňu. Deň mimo predpovede je dnešok.
  * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {Parameters<typeof coZapnutModel>[1]} teraz
  * @param {{ span: { from: number, to: number }, devices: readonly string[], den: number, voice: import('./messages.js').Voice }} o
  */
@@ -96,7 +95,7 @@ function tyzdenOf(input, rows, teraz, { span, devices, den, voice }) {
     const iny = hreben && zvoleny > 0 ? denInyModel(dni[zvoleny], devices, voice) : null;
     const hlaska =
         iny && input.forecast
-            ? terazHlaskaText(hlaskaDna(dniHlasky({ ...input, forecast: input.forecast }, devices), zvoleny), voice)
+            ? voiceTexts(voice).DEN_WORDS.iny[denTriedaDna({ ...input, forecast: input.forecast }, zvoleny, devices)]
             : null;
     return {
         co: { ...dnes.co, den: hlaska, riadky: iny ? iny.riadky : dnes.co.riadky },

@@ -24,7 +24,8 @@ export const MOZEM_WORDS_SLUSNE = {
 
 /**
  * Veľké slovo o celom dni (shared/den-trieda.js, docs/navrhy/dnes-hlasky-dna.html): ráno a cez
- * deň podľa triedy dňa, cez deň zmena oproti rannej triede, večer zhodnotenie nameraného.
+ * deň podľa triedy dňa, cez deň zmena oproti rannej triede, večer zhodnotenie nameraného. `iny`: hláška
+ * iného dňa na karte Teraz namiesto mena a dátumu - bez mena dňa, aby sedela na zajtra aj o tri dni.
  * Rozdiel NAGOVNO / NAHOVNO je zámerný.
  */
 export const DEN_WORDS = {
@@ -49,6 +50,12 @@ export const DEN_WORDS = {
         dobry: 'Zajtra not baaad',
         slaby: 'Zajtra NAGOVNO DEŇ',
         nanic: 'Zajtra ÚPLNE NAHOVNO DEŇ',
+    },
+    iny: {
+        vyborny: 'Oskar pujde na plný koule',
+        dobry: 'Not baaad',
+        slaby: 'NAGOVNO DEŇ',
+        nanic: 'ÚPLNE NAHOVNO DEŇ',
     },
 };
 
@@ -75,6 +82,12 @@ export const DEN_WORDS_SLUSNE = {
         dobry: 'Zajtra bude dobrý deň',
         slaby: 'Zajtra bude slabý deň',
         nanic: 'Zajtra takmer nič nevyrobíme',
+    },
+    iny: {
+        vyborny: 'Výborný deň',
+        dobry: 'Dobrý deň',
+        slaby: 'Slabý deň',
+        nanic: 'Takmer nič nevyrobíme',
     },
 };
 

@@ -3,7 +3,7 @@
 import { MINUTES_PER_DAY, PLAN_DNA } from './config.js';
 import { fmt1, kwpRoughText } from './format.js';
 import { MOZEM_ITEM_TEXTS, MOZEM_SKY_TEXTS, PLAN_AFTER, PLAN_PO_BOJLERI, countdownText } from './messages-mozem.js';
-import { andList, cap, dniSlovo, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
+import { andList, cap, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
 
 // ---- Karta Teraz -----------------------------------------------------
 // Výkon, odporúčanie a plán dňa počíta heroModel a
@@ -239,37 +239,6 @@ function odrazkyDomu(r, kolko) {
     const dobehne = `dobehne ${hm(r.end)}`;
     if (r.kind === 'sun' && r.poBojleri) return [PLAN_PO_BOJLERI, ...(kolko.length ? kolko : [dobehne])];
     return [dobehne, ...kolko];
-}
-
-/**
- * Hláška iného dňa na karte Teraz namiesto mena a dátumu (docs/navrhy/teraz-hlaska-dna.html, A + N, spôsob 1):
- * trieda dňa (v tónoch sa líši) alebo nová vec o dni (rovnaká v oboch tónoch, nikoho neoslovuje). Krátka, aby
- * sa na telefóne zmestila do jedného riadku.
- */
-const HLASKA_TRIEDA = {
-    drzy: {
-        vyborny: 'Slnko utiahne všetko.',
-        dobry: 'Na veľké veci to stačí.',
-        slaby: 'Slnko len na chvíľu.',
-        nanic: 'Zamračené, veľké veci zo siete.',
-    },
-    slusny: {
-        vyborny: 'Slnko utiahne všetko.',
-        dobry: 'Slnka bude na veľké veci dosť.',
-        slaby: 'Slnka bude len na chvíľu.',
-        nanic: 'Zamračené, veľké veci pôjdu zo siete.',
-    },
-};
-
-/** @param {import('./den-hlaska.js').Hlaska} h @param {import('./messages-zaklad.js').Voice} [voice] */
-export function terazHlaskaText({ druh, cls, pocet }, voice = 'drzy') {
-    if (druh === 'najlepsi') return 'Najlepší deň týždňa.';
-    if (druh === 'posledne') return `Posledné slnko, potom ${pocet} ${dniSlovo(pocet)} bez.`;
-    if (druh === 'konecne') return `Konečne slnko, po ${pocet} dňoch.`;
-    if (druh === 'prsi') return 'Prší celý deň.';
-    if (druh === 'sneh') return 'Sneží, panely môžu zapadnúť.';
-    if (druh === 'mraz') return 'Mráz a jasno, panely to majú radi.';
-    return HLASKA_TRIEDA[voice][cls];
 }
 
 /** Hrebeň týždňa na karte Teraz: meno skupiny tlačidiel dní a čo čítačka povie o dni pod hranicou. */

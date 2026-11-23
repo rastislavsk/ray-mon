@@ -292,12 +292,14 @@ test('karta Teraz so zvoleným dňom: plán toho dňa, dnešok ostáva v hornej 
     const i = input(DVA_DNI);
     const utorok = terazModel(i, { den: 3 });
     assert.equal(utorok.hreben?.zvoleny, 3);
-    assert.equal(utorok.co?.den, 'Konečne slnko, po 2 dňoch.');
+    assert.equal(utorok.co?.den, 'Oskar pujde na plný koule');
     assert.ok(utorok.co?.riadky.every((r) => r.kind === 'later'));
     assert.ok(utorok.veci.every((v) => v.den === 'Utorok'));
     assert.equal(utorok.num, terazModel(i).num, 'číslo je vždy teraz');
     const nedela = terazModel(i, { den: 1 });
-    assert.equal(nedela.co?.den, 'Zamračené, veľké veci zo siete.');
+    assert.equal(nedela.co?.den, 'ÚPLNE NAHOVNO DEŇ');
+    assert.equal(terazModel(i, { den: 1, voice: 'slusny' }).co?.den, 'Takmer nič nevyrobíme');
+    assert.equal(terazModel(i, { den: 3, voice: 'slusny' }).co?.den, 'Výborný deň');
     assert.ok(nedela.co?.riadky.every((r) => r.kind === 'nudza'));
     const mimo = terazModel(i, { den: 99 });
     assert.equal(mimo.hreben?.zvoleny, 0);
