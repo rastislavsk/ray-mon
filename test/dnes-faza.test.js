@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLAN_DNA, PLANT, PREDPOVED_HODINY, SITE, TARIFF } from '../shared/config.js';
-import { denVysvetlenie, dnesFaza } from '../shared/dnes-faza.js';
+import { denVysvetlenie, dnesFaza, dnesKarty } from '../shared/dnes-faza.js';
 import { denTrieda, denTriedaDna, denTriedaVeci, silnyDen } from '../shared/den-trieda.js';
 import {
     countdownText,
@@ -17,6 +17,7 @@ import {
 } from '../shared/messages.js';
 import { weekDayName } from '../shared/format.js';
 import { dnesDay, mozemModel } from '../shared/mozem.js';
+import { mozemSkyModel } from '../shared/mozem-sky.js';
 import { fixtureData, pvAt } from './helpers.js';
 
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
@@ -369,4 +370,53 @@ test('trieda s vecami: ktoré sa zmestia, a bez spotrebičov doma predvolené', 
     const nic = denTriedaVeci(tma, PLAN_DNA.devices);
     assert.equal(nic.cls, 'nanic');
     assert.ok(nic.veci.every((x) => !x.ok));
+});
+
+/** Pás karty Dnes tak, ako ho skladá appka (render/mozem.js). @param {ReturnType<typeof input>} i */
+function pas(i) {
+    const sky = mozemSkyModel(i);
+    const d = sky.state === 'loading' ? null : dnesFaza(i, sky.den, sky.window);
+    return { sky, d, karty: dnesKarty(sky, d) };
+}
+
+test('pás: ráno Dnes, Veľké veci s plánom a Dnes zo strechy pred kartami časti dňa', () => {
+    const { sky, d, karty } = pas(input(at('05:30')));
+    assert.ok(d && sky.den && sky.day);
+    assert.deepEqual(
+        karty.map((k) => k.kind),
+        ['dnes', 'velke', 'strecha', ...d.karty.map((k) => k.kind)],
+    );
+    assert.deepEqual(karty[0], { kind: 'dnes', title: DNES_TEXTS.plan, chip: d.chip, cls: sky.den.cls, word: sky.word, text: '' });
+    assert.deepEqual(karty[1], { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: d.line });
+    assert.deepEqual(karty[2], { kind: 'strecha', title: sky.day.label, value: sky.day.value, text: '', eq: sky.day.eq });
+});
+
+test('pás: cez deň odpočet okna vo Veľkých veciach, po okne veta o ňom', () => {
+    const { d, karty } = pas(input(at('13:00')));
+    assert.ok(d?.count);
+    assert.deepEqual(karty[1], { kind: 'velke', title: DNES_TEXTS.velke, value: d.count.value, text: d.count.text });
+    assert.equal(karty[0].title, DNES_TEXTS.dnes);
+    const po = pas(input(at('18:30')));
+    if (po.d?.faza === 'den') assert.deepEqual(po.karty[1], { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: po.d.line });
+});
+
+test('pás: večer Ako dopadol dnešok, namerané s predpoveďou a Zajtra', () => {
+    const { sky, d, karty } = pas(input(at('21:00')));
+    assert.ok(d?.tomorrow && d.grade && sky.day);
+    assert.deepEqual(
+        karty.map((k) => k.kind),
+        ['dnes', 'strecha', 'zajtra', ...d.karty.map((k) => k.kind)],
+    );
+    assert.equal(karty[0].title, DNES_TEXTS.grade);
+    assert.deepEqual(karty[1], { kind: 'strecha', title: sky.day.label, value: d.grade, text: d.line, eq: sky.day.eq });
+    const t = d.tomorrow;
+    assert.deepEqual(karty[2], { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, word: t.word, text: t.text });
+});
+
+test('pás: bez dát len Dnes so slovom a vetou prečo; kým sa načítava a bez slova nič', () => {
+    const offline = pas(input(at('13:00'), { forecast: null, pv: null }));
+    assert.deepEqual(offline.karty, [
+        { kind: 'dnes', title: DNES_TEXTS.dnes, chip: '', cls: null, word: offline.sky.word, text: offline.sky.lead },
+    ]);
+    assert.deepEqual(dnesKarty({ word: '', lead: '', day: null, den: null }, null), []);
 });

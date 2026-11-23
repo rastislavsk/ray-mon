@@ -12,6 +12,7 @@ import { setupInit } from '../shared/setup-flow.js';
 /**
  * Stav. `mzGraf` otvorený panel s grafom dňa na karte Dnes (docs/navrhy/dnes-predpoved-graf.html) a `terazPreview`
  * zvolený čas v ňom (minúta dňa, null = teraz; meno ostalo z čias, keď bol graf na karte Teraz), `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
+ * `mzCas` čas zvolený posuvníkom dňa hore na karte Dnes (minúta dňa, null = teraz; docs/navrhy/dnes-tlacidlo-teraz.html, T4c) - s kartou sa vráti na teraz,
  * `tzDen` deň zvolený v hrebeni týždňa karty Teraz (poradie od dneška, 0 = dnes; docs/navrhy/teraz-vyhlad-alternativy.html),
  * `tzOziv` na čo sa ťuklo v oznámení, kým čaká alebo beží oživená ikona dlaždice (docs/navrhy/oznamenia-animacie.html, web/oznamenia-klik.js),
  * `tzChip` otvorený panel Elektrina teraz zo scény či poľa toku energie karty Teraz (`tok`),
@@ -43,6 +44,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   tariff: import('../shared/config.js').Tariff,
  *   mzGraf: boolean,
  *   terazPreview: number | null,
+ *   mzCas: number | null,
  *   tzVec: string | null,
  *   tzDen: number,
  *   tzOziv: import('../shared/oznamenia.js').Ciel | null,
@@ -263,6 +265,7 @@ export function panelChange(from, to) {
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
         mzGraf: false,
         terazPreview: /** @type {number | null} */ (null),
+        mzCas: /** @type {number | null} */ (null),
         tzVec: /** @type {string | null} */ (null),
         tzDen: 0,
         tzOziv: /** @type {import('../shared/oznamenia.js').Ciel | null} */ (null),
@@ -492,6 +495,8 @@ export function navChange(state, step) {
     return {
         ...panelChange(state.panel, panel),
         terazPreview: step.graf ? state.terazPreview : null,
+        // Krok späť na tej istej karte (zatvorenie panelu) nechá čas posuvníka karty Dnes, iná karta ho vráti na teraz.
+        mzCas: panel === state.panel ? state.mzCas : null,
         weekDetail: step.detail,
         setupStep: step.setup,
         setupRoof: step.roof,

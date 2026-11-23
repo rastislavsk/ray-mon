@@ -18,12 +18,14 @@ import { show } from './write.js';
  * v navigácii a počasie na <html>; prechod
  * medzi farbami robí CSS (zaregistrované --s1 a --s2 v css/), takže pri útlme pohybu ho
  * vypne to isté pravidlo ako všetky ostatné prechody. Nebo je v tej istej chvíli a s tým istým
- * počasím ako kresba na karte Teraz.
+ * počasím ako kresba na karte Teraz; na karte Dnes v čase jej posuvníka (`mzCas`, docs/navrhy/dnes-tlacidlo-teraz.html).
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderSky(state, dom) {
-    // Nebo je vždy z tejto chvíle - zvolený čas v grafe dňa má vlastnú oblohu len panel s grafom.
-    const chvila = { ...state, previewMinutes: null };
+    // Nebo je z tejto chvíle, na karte Dnes z času jej posuvníka - zvolený čas v grafe dňa má vlastnú oblohu len
+    // panel s grafom. `?? null`: starý web/state.js z cache po nasadení pole mzCas nemá (CLAUDE.md, Nasadenie a cache).
+    const dnes = shows(state, 'mozem') && !dashboard(state);
+    const chvila = { ...state, previewMinutes: dnes ? (state.mzCas ?? null) : null };
     const sky = skyNow(chvila, state.liveSky, pocasieTeraz(chvila));
     dom.root.style.setProperty('--s1', sky.top);
     dom.root.style.setProperty('--s2', sky.bottom);
@@ -50,8 +52,8 @@ function renderPanels(state, dom) {
     dom.page.dataset.panel = state.panel;
     dom.page.dataset.dir = state.panelDir > 0 ? 'next' : 'prev';
     dom.dashTitle.classList.toggle('hidden', !dash);
-    // Počasie v pozadí patrí len karte Teraz - na nej ho zapne render/teraz.js.
-    if (!shows(state, 'terazky')) show(dom.wx, false);
+    // Počasie v pozadí patrí kartám Teraz a Dnes - zapne ho render/teraz.js a render/mozem.js.
+    if (!shows(state, 'terazky') && !shows(state, 'mozem')) show(dom.wx, false);
     for (const p of PANELS) {
         const column = dash && isColumn(p);
         dom.panels[p].classList.toggle('hidden', !shows(state, p) || !ready(state, p));

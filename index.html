@@ -84,42 +84,43 @@
                  majú spoločný nadpis a ich vlastné nadpisy sú o úroveň nižšie (render/index.js). -->
             <h1 id="ttl-prehlad" class="sr hidden">RAY-MON</h1>
             <!-- Karta Dnes (kódové meno mozem, doteraz Môžem?): texty a stav skladá render (web/render/mozem.js)
-                 z shared/mozem-sky.js a shared/dnes-faza.js, tu sú len nosiče. Veľké slovo je na oblohe pod oblúkom slnka,
-                 pod ním čo dá strecha za celý deň (docs/navrhy/dnes-a-teraz.html); zvyšok sa mení s časťou dňa - ráno plán,
-                 cez deň odpočet okna, večer ako dopadol dnešok a zajtrajšok (docs/navrhy/dnes-tri-smery.html, smer C).
-                 Pod číslami pás kariet na posúvanie a ťuknutie na odznak vysvetlí triedu dňa (docs/navrhy/dnes-upravy.html).
-                 Nadpis karty je len pre čítačku. -->
+                 z shared/mozem-sky.js, shared/dnes-faza.js a shared/dnes-nebo.js, tu sú len nosiče. Hore veľký výkon
+                 zvoleného času na živej oblohe (pozadie appky a kresba počasia #wx sú vtedy v tej chvíli), pod ním
+                 posuvník dňa s východom a západom a pod ním pás dlaždíc: Dnes (odznak a veľké slovo), Veľké veci,
+                 Dnes zo strechy, večer Zajtra, potom karty časti dňa (docs/navrhy/dnes-obloha-posuvnik.html, A,
+                 docs/navrhy/dnes-tlacidlo-teraz.html, T4c). Nadpis karty je len pre čítačku. -->
             <section id="panel-mozem" class="panel mozem hidden" aria-labelledby="ttl-mozem">
                 <h1 id="ttl-mozem" class="sr">Dnes</h1>
-                <div id="mz-arc" class="arc" aria-hidden="true"></div>
-                <div id="mz-answer" class="big">
-                    <!-- Tlačidlo má výšku na prst (44 px), odznak v ňom je menší. -->
-                    <button type="button" id="mz-chip" class="chip-tap" aria-haspopup="dialog">
-                        <span id="mz-chip-text" class="chip info"></span>
-                    </button>
-                    <p id="mz-kick" class="kick"></p>
-                    <p id="mz-word" class="word"></p>
-                    <p id="mz-count" class="count"><b id="mz-count-val"></b><span id="mz-count-text"></span></p>
-                    <p id="mz-line" class="line"></p>
-                    <p id="mz-lead" class="line"></p>
-                    <!-- Bublina: čo dá strecha za celý deň, večer namerané (docs/navrhy/dnes-zo-strechy-bublina.html). -->
-                    <div id="mz-day" class="den glass">
-                        <p class="den-cislo"><span id="mz-day-label"></span><b id="mz-day-val"></b></p>
-                        <ul id="mz-day-eq" class="eq"></ul>
+                <div id="mz-nebo" class="mz-nebo">
+                    <p id="mz-kw" class="mz-kw"></p>
+                    <p id="mz-stav" class="mz-stav"></p>
+                </div>
+                <!-- Posuvník dňa (0 – 24 h): deň od východu po západ sýtejšia biela, pod čiarou ich časy. Bežec je zvolený
+                     čas; keď odíde, na teraz po ňom ostane odtlačok a ťuknutie naň ho vráti (web/mozem-interactions.js). -->
+                <div id="mz-os-obal" class="mz-os-obal">
+                    <div id="mz-os" class="mz-os" role="slider" tabindex="0" aria-valuemin="0" aria-valuemax="1435">
+                        <i class="mz-os-ciara"></i>
+                        <i id="mz-os-den" class="mz-os-den"></i>
+                        <span id="mz-os-vychod" class="mz-os-cas vychod" aria-hidden="true"></span>
+                        <span id="mz-os-zapad" class="mz-os-cas zapad" aria-hidden="true"></span>
+                        <i id="mz-bezec" class="mz-bezec"></i>
                     </div>
+                    <!-- Mimo posuvníka: jeho obsah čítačka neberie ako ovládanie. Pod bežcom - ten je vždy nad ním. -->
+                    <button type="button" id="mz-odtlacok" class="mz-odtlacok hidden"></button>
                 </div>
-                <!-- Večer zajtrajšok nad pásom, v páse potom len Graf dňa a Predpoveď na zajtra (shared/dnes-faza.js). -->
-                <div id="mz-tom" class="glass tom">
-                    <button type="button" id="mz-tom-chip" class="chip-tap" aria-haspopup="dialog">
-                        <span id="mz-tom-chip-text" class="chip info"></span>
-                    </button>
-                    <p id="mz-tom-word" class="word"></p>
-                    <p id="mz-tom-text" class="line"></p>
-                </div>
-                <!-- Pás kariet: posúva ho prehliadač (scroll-snap), bodky ukazujú, kde si, a ťuknutím na kartu
-                     preskočia (render/mozem.js, mozem-interactions.js). Ťah do strán je tu druhý v appke. -->
+                <!-- Pás kariet: posúva ho prehliadač (scroll-snap), bodky ukazujú, kde si, a šípky po stranách ho posunú
+                     o kartu - pre myš (render/mozem.js, mozem-karty.js). Ťah do strán je tu druhý v appke. Šípky Tab
+                     preskočí: klávesnica pás posúva šípkami, keď je na ňom fokus. -->
                 <div id="mz-karty" class="karty" tabindex="0" role="group"></div>
-                <div id="mz-bodky" class="bodky"></div>
+                <div id="mz-pas-ovladanie" class="pas-ovladanie">
+                    <button type="button" id="mz-pas-spat" class="pas-sipka" data-smer="-1" tabindex="-1">
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5" /></svg>
+                    </button>
+                    <div id="mz-bodky" class="bodky" aria-hidden="true"></div>
+                    <button type="button" id="mz-pas-dalej" class="pas-sipka" data-smer="1" tabindex="-1">
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" /></svg>
+                    </button>
+                </div>
                 <!-- Pre čítačku: ohlási len zmenu odpovede, ktorá príde sama (čas, nové meranie). -->
                 <p id="mz-live" class="sr" role="status"></p>
                 <button type="button" id="mz-retry" class="pbtn retry"></button>

@@ -258,7 +258,7 @@ test.describe('sprievodca od nuly', () => {
             forecast: buildForecast(weather, FIXED_NOW, saved.site, saved.plant),
         });
         await expect(page.locator('#mz-word')).toHaveText(m.word);
-        await expect(page.locator('#mz-day-val')).toHaveText(m.day?.value ?? '');
+        await expect(page.locator('#mz-karty [data-kind="strecha"] .k-val')).toHaveText(m.day?.value ?? '');
         await expect(page.locator('#mz-guess')).toBeHidden();
         expect(errors).toEqual([]);
     });

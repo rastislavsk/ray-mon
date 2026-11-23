@@ -1,5 +1,6 @@
 // Pás kariet na karte Dnes (docs/navrhy/dnes-upravy.html): posúva ho prehliadač sám (CSS scroll-snap),
-// tu sa len zladia bodky s tým, kde pás stojí, a ťuknutie na bodku pás posunie. Posun pásu nie je
+// tu sa len zladia bodky a šípky s tým, kde pás stojí, a šípka ho posunie o kartu (pre myš; bodky sú len
+// ukazovateľ - pri ôsmich kartách by sa ako tlačidlá na prst do riadku nezmestili). Posun pásu nie je
 // v stave appky - ako posun dňa počas ťahu v detaile karty 7 dní; v stave sú len karty samotné.
 
 /**
@@ -19,26 +20,30 @@ function aktivna(pas) {
 }
 
 /**
- * Rozsvieti bodku karty, na ktorej pás stojí. Volá ho render po prepísaní bodiek aj posúvanie pásu.
- * @param {HTMLElement} pas @param {HTMLElement} bodky
+ * Rozsvieti bodku karty, na ktorej pás stojí, a vypne šípku, za ktorou už karta nie je. Volá ho render po
+ * prepísaní bodiek aj posúvanie pásu.
+ * @param {HTMLElement} pas @param {HTMLElement} bodky @param {HTMLButtonElement[]} [sipky] späť a ďalej
  */
-export function syncBodky(pas, bodky) {
+export function syncBodky(pas, bodky, sipky = []) {
     if (!bodky.children.length) return;
     const i = aktivna(pas);
-    [...bodky.children].forEach((b, k) => b.toggleAttribute('aria-current', k === i));
+    [...bodky.children].forEach((b, k) => b.toggleAttribute('data-on', k === i));
+    const [spat, dalej] = sipky;
+    if (spat) spat.disabled = i === 0;
+    if (dalej) dalej.disabled = i === bodky.children.length - 1;
 }
 
 /**
- * Posúvanie pásu rozsvieti bodku; ťuknutie na bodku posunie pás na jej kartu.
- * @param {HTMLElement} pas @param {HTMLElement} bodky
+ * Posúvanie pásu rozsvieti bodku; šípka posunie pás na susednú kartu.
+ * @param {HTMLElement} pas @param {HTMLElement} bodky @param {HTMLButtonElement[]} sipky späť a ďalej
  */
-export function bindKarty(pas, bodky) {
-    pas.addEventListener('scroll', () => syncBodky(pas, bodky), { passive: true });
-    bodky.addEventListener('click', (e) => {
-        const btn = e.target instanceof Element ? e.target.closest('[data-i]') : null;
-        const card = btn instanceof HTMLElement ? /** @type {HTMLElement | undefined} */ (pas.children[Number(btn.dataset.i)]) : undefined;
-        if (!card) return;
-        const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-        pas.scrollTo({ left: card.offsetLeft - parseFloat(getComputedStyle(pas).paddingLeft), behavior: smooth ? 'smooth' : 'auto' });
-    });
+export function bindKarty(pas, bodky, sipky) {
+    pas.addEventListener('scroll', () => syncBodky(pas, bodky, sipky), { passive: true });
+    for (const s of sipky)
+        s.addEventListener('click', () => {
+            const card = /** @type {HTMLElement | undefined} */ (pas.children[aktivna(pas) + Number(s.dataset.smer)]);
+            if (!card) return;
+            const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+            pas.scrollTo({ left: card.offsetLeft - parseFloat(getComputedStyle(pas).paddingLeft), behavior: smooth ? 'smooth' : 'auto' });
+        });
 }

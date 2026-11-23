@@ -32,10 +32,12 @@ v karte Nastavenie ostávajú zavreté – QR kód v Zdieľať appku kreslí kni
   z predpovede) a čas, pod nimi krivka dňa (oblačnosť, predpoveď, nameraná krivka, hranica veľkých
   spotrebičov, slnko a cena siete). Ťahom prstom alebo kurzorom (aj šípkami) si v nej pozrieš iný
   čas; číslo hore ostáva teraz, „Späť na teraz“ čas vráti.
-- **Dnes** (kedysi Môžem?) – oblúk slnka a jedno veľké slovo o celom dni podľa triedy dňa: ráno podľa
-  predpovede, cez deň, keď sa deň oproti ránu zlepší či pokazí, a večer podľa nameraného. Trieda dňa
-  je podľa toho, koľko spotrebičov sa za deň zmestí na slnko. Pod slovom, čo dá strecha za celý deň
-  v jednotkách, ktoré pozná každý: nabité mobily, km elektrickým autom a CO2eq menej.
+- **Dnes** (kedysi Môžem?) – hore veľký výkon elektrárne na živej oblohe a pod ním posuvník dňa s časmi východu
+  a západu: posunutím bežca ukáže výkon a oblohu s počasím v inom čase (dozadu namerané, dopredu predpoveď), odtlačok
+  bežca na teraz ho vráti. Pod tým pás dlaždíc: jedno veľké slovo o celom dni podľa triedy dňa (ráno podľa predpovede,
+  cez deň, keď sa deň oproti ránu zlepší či pokazí, a večer podľa nameraného), okno na veľké veci, čo dá strecha
+  za celý deň v jednotkách, ktoré pozná každý (nabité mobily, km elektrickým autom a CO2eq menej), večer zajtrajšok
+  a ďalšie karty. Trieda dňa je podľa toho, koľko spotrebičov sa za deň zmestí na slnko.
 - **Radar** – dážď a oblaky nad mapou. Časová os ukazuje posledné 2 hodiny merania a odhad na ďalšie 2 hodiny,
   prepnúť sa dá na predpoveď na dnes a zajtra. Pauza, ťah prstom po osi a rýchlosť 1×/2×/3×. Oblaky sa dajú vypnúť.
   Dáta: radarová sieť EUMETNET OPERA a model ICON-EU cez Open-Meteo, mapa OpenFreeMap a MapLibre.

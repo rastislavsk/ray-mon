@@ -630,6 +630,8 @@ export function renderTeraz(state, dom) {
 function renderPocasie(state, m, dom) {
     const p = state.liveSky && !dashboard(state) ? m.pocasie : null;
     show(dom.wx, !!p);
+    // Slnko stojí v rohu; na karte Dnes ho posúva čas jej posuvníka (render/mozem.js).
+    dom.wx.removeAttribute('data-dnes');
     if (p) kresliPocasie(dom.wx, p);
 }
 

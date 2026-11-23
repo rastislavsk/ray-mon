@@ -39,6 +39,16 @@ naraz, keď os stojí.
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
 sa preto vždy píše „predpoveď“, nikdy nie „radar“.
 
+## Karta Dnes: obloha a posuvník dňa
+
+Návrhy a rozhodnutia: `docs/navrhy/dnes-obloha-posuvnik.html` (A) a `docs/navrhy/dnes-tlacidlo-teraz.html` (T4c), 23. 11. 2026.
+Všetko, čo bolo nad pásom (odznak a veľké slovo, odpočet okna, Dnes zo strechy, večer zajtrajšok), sú prvé dlaždice pásu
+(`dnesKarty` v `shared/dnes-faza.js`), oblúk slnka je preč. Hore je veľký výkon a pod ním posuvník dňa 0 – 24 h: deň od
+východu po západ sýtejšia biela, pod čiarou len ich časy, bežec je plný kruh a keď odíde, na teraz po ňom ostane odtlačok
+(ťuknutie ho vráti). Zvolený čas je `mzCas` v stave (nie krok navigácie, iná karta ho vráti na teraz); výkon, farby neba
+aj kresba počasia `#wx` sú vtedy v tej chvíli (`shared/dnes-nebo.js`, `render/index.js`, `render/mozem.js`). Graf dňa
+(Kheinshmetke) zatiaľ ostáva tak, ako je, so svojím vlastným časom (`terazPreview`).
+
 ## Bojler na prebytky
 
 Návrh a rozhodnutia: `docs/navrhy/bojler-prebytky.html`. Zásuvka Shelly s bojlerom má skript (`shared/bojler-skript.js`),
@@ -234,8 +244,8 @@ Mapa a časová os karty Radar majú `touch-action: none`: karta zaberá celú o
 **Karty sa ťahom prsta nelistujú**, len ťuknutím v navigácii. Ťah do strán má
 dve miesta: dni v detaile dňa karty 7 dní (`web/day-pager.js`, rozhodnutia v `shared/day-pager.js`)
 a pás kariet pod číslami na karte Dnes. Pás posúva prehliadač sám (CSS scroll-snap, `web/mozem-karty.js`
-len zladí bodky), žiadny vlastný kód nad touch udalosťami; zvislý ťah cez neho posúva stránku a myš
-ho posúva ťuknutím na bodky. Ďalšie miesto pridávaj len s rovnakým rozmyslom
+len zladí bodky a šípky), žiadny vlastný kód nad touch udalosťami; zvislý ťah cez neho posúva stránku a myš
+ho posúva šípkami ‹ › po stranách bodiek (bodky sú len ukazovateľ - pri ôsmich kartách by sa ako tlačidlá na prst nezmestili). Ďalšie miesto pridávaj len s rovnakým rozmyslom
 (návrh: `docs/navrhy/dnes-upravy.html`). Pri dňoch v detaile karty 7 dní platí:
 Obsah dňa ide za prstom a vedľa neho stojí susedný deň, ktorý nakreslil ten istý render (appka ho na
 chvíľu zavolá so susedným dňom a výsledok skopíruje) – iný kód na kreslenie dňa preto nepíš. Kópie

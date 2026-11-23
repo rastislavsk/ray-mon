@@ -189,7 +189,7 @@ async function expectTextyKariet(page) {
     const v = vstup(NOON);
     const mozem = mozemSkyModel(v);
     await expect(page.locator('#mz-word')).toHaveText(mozem.word);
-    await expect(page.locator('#mz-day-val')).toHaveText(mozem.day?.value ?? '');
+    await expect(page.locator('#mz-karty [data-kind="strecha"] .k-val')).toHaveText(mozem.day?.value ?? '');
     const teraz = terazModel({ ...v, previewMinutes: null });
     await expect(page.locator('#tz-scena')).toHaveAccessibleName(
         scenaModel({ vyrobaKw: teraz.vykon, odhad: teraz.odhadVykonu, sietKw: null }).popis,
@@ -443,9 +443,14 @@ test.describe('klávesnica na počítači', () => {
         ).toBe(true);
         const stlpce = vStlpcoch.map((k) => k.column);
         expect(stlpce).toEqual([...stlpce].sort((a, b) => a - b));
-        // V stĺpci Dnes odznak triedy dňa, pás kariet (posúva sa šípkami) a v ňom karta Graf dňa; bodky
-        // pod ním Tab preskočí.
-        expect(vStlpcoch.filter((k) => k.column === 0).map((k) => k.name)).toEqual(['mz-chip', 'mz-karty', 'button.k-otvor']);
+        // V stĺpci Dnes posuvník dňa, pás kariet (posúva sa šípkami) a v ňom odznak triedy dňa a karta Graf dňa;
+        // odtlačok bežca (len keď bežec odíde z teraz) a bodky pod pásom Tab preskočí.
+        expect(vStlpcoch.filter((k) => k.column === 0).map((k) => k.name)).toEqual([
+            'mz-os',
+            'mz-karty',
+            'button.chip-tap',
+            'button.k-otvor',
+        ]);
         // V stĺpci Teraz je prvá scéna toku energie (ťuknutie ukáže čísla).
         expect(vStlpcoch.find((k) => k.column === 1)?.name).toBe('tz-scena');
         expect(new Set(stlpce)).toEqual(new Set([0, 1, 2]));

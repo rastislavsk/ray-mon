@@ -107,7 +107,28 @@ export const DNES_TEXTS = {
     slnko: 'Najviac slnka',
     karty: 'Viac o dnešku',
     stupnica: 'Ako appka deň hodnotí',
+    /** Dlaždice z polí, ktoré boli nad pásom (docs/navrhy/dnes-obloha-posuvnik.html, A). */
+    dnes: 'Dnes',
+    velke: 'Veľké veci',
+    /** Posuvník dňa nad pásom a odtlačok bežca na teraz (docs/navrhy/dnes-tlacidlo-teraz.html, T4c). */
+    os: 'Čas dňa, šípkami si pozrieš iný',
+    naTeraz: 'Vrátiť na teraz',
+    /** Šípky po stranách bodiek pod pásom - posunú ho o kartu. */
+    pasSpat: 'Predchádzajúca karta',
+    pasDalej: 'Ďalšia karta',
 };
+
+/**
+ * Riadok pod výkonom hore na karte Dnes (docs/navrhy/dnes-tlacidlo-teraz.html, T4c): čo číslo je a kedy -
+ * teraz s tým, odkiaľ je (`zdroj` ako na karte Teraz), inak namerané alebo predpoveď vo zvolenom čase. `veta` je
+ * hodnota posuvníka pre čítačku.
+ * @param {{ druh: 'teraz' | 'namerane' | 'predpoved', min: number, zdroj: string, kw: string }} c
+ */
+export function dnesNeboText({ druh, min, zdroj, kw }) {
+    const slovo = druh === 'teraz' ? 'Teraz' : druh === 'namerane' ? 'Namerané' : 'Predpoveď';
+    const cas = druh === 'teraz' && zdroj ? `${hm(min)} · ${zdroj}` : hm(min);
+    return { slovo, cas, veta: `${slovo} ${hm(min)}, ${kw} kW` };
+}
 
 /**
  * Stupnica tried dňa vo vysvetlení odznaku (docs/navrhy/dnes-upravy.html): krátke meno a čo trieda znamená

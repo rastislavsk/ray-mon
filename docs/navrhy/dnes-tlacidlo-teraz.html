@@ -1,0 +1,1444 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Dnes – tlačidlo Teraz</title>
+        <style>
+            /* Návrh (23. 11. 2026): karta Dnes podľa návrhu A z dnes-obloha-posuvnik.html (zvolené A, Graf dňa ostáva,
+               obloha s počasím zvoleného času). Tu len kam s tlačidlom Teraz, aby nebolo voľne pohodené v priestore:
+               T1 štítok pod číslom, T2 vlajka na záreze teraz, T3 „naživo“ na konci posuvníka, T4 odtlačok bežca. Samostatný súbor, nič
+               neimportuje z appky. Čísla, časy, krivka výkonu a počasie sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --sun: #ffd166;
+                --zelena: #8fe36f;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 17px;
+                font-weight: 800;
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 74ch;
+            }
+            ul {
+                padding-left: 0;
+                list-style: none;
+                display: grid;
+                gap: 6px;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .plus,
+            .minus,
+            .pozn {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--zelena);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .pozn::before {
+                content: '→ ';
+                color: var(--sun);
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+            .kritik {
+                padding: 14px 16px;
+                border-left: 3px solid #ff9b8a;
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+                display: grid;
+                gap: 8px;
+            }
+            .scenare {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                align-items: center;
+            }
+            .scenare button {
+                font: inherit;
+                font-size: 14px;
+                font-weight: 700;
+                color: #fff;
+                background: rgba(255, 255, 255, 0.08);
+                border: 1px solid var(--line);
+                border-radius: 999px;
+                padding: 6px 14px;
+                cursor: pointer;
+            }
+            .scenare button[aria-pressed='true'] {
+                background: var(--sun);
+                color: #1a1a1a;
+                border-color: var(--sun);
+            }
+            .dva {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 40px;
+                align-items: flex-start;
+            }
+            .stlpec {
+                display: grid;
+                gap: 16px;
+                width: 320px;
+                max-width: 100%;
+            }
+            .stlpec.siroky {
+                width: 520px;
+            }
+
+            /* ===== telefón ===== */
+            .phone {
+                --glass: rgba(8, 16, 40, 0.3);
+                --d1: #2f62b5;
+                --d2: #6f9cdc;
+                position: relative;
+                width: 320px;
+                max-width: 100%;
+                height: 660px;
+                overflow: hidden;
+                border-radius: 30px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, var(--d1), var(--d2));
+                font-size: 13px;
+                display: flex;
+                flex-direction: column;
+                transition: background 0.4s;
+            }
+            .hlava {
+                position: relative;
+                z-index: 3;
+                padding: 14px 18px 0;
+            }
+            .hlava b {
+                display: block;
+                font-weight: 900;
+                letter-spacing: 0.04em;
+                font-size: 15px;
+            }
+            .hlava span {
+                font-size: 11px;
+                color: var(--dim);
+            }
+
+            /* Obloha: oblaky, hviezdy, slnko, mesiac. */
+            .nebo {
+                position: relative;
+                flex: none;
+                overflow: hidden;
+            }
+            .hviezdy {
+                position: absolute;
+                inset: 0;
+                background-image:
+                    radial-gradient(1.2px 1.2px at 12% 20%, #fff, transparent), radial-gradient(1px 1px at 30% 60%, #fff, transparent),
+                    radial-gradient(1.4px 1.4px at 52% 30%, #fff, transparent), radial-gradient(1px 1px at 70% 14%, #fff, transparent),
+                    radial-gradient(1.2px 1.2px at 86% 52%, #fff, transparent), radial-gradient(1px 1px at 64% 74%, #fff, transparent),
+                    radial-gradient(1px 1px at 22% 84%, #fff, transparent), radial-gradient(1.3px 1.3px at 92% 24%, #fff, transparent);
+                opacity: var(--noc, 0);
+                transition: opacity 0.4s;
+            }
+            .oblak {
+                position: absolute;
+                height: 26px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.55);
+                filter: blur(6px);
+                opacity: calc(0.25 + 0.6 * (1 - var(--noc, 0)));
+                animation: plavba linear infinite;
+            }
+            .oblak::after {
+                content: '';
+                position: absolute;
+                left: 22%;
+                top: -12px;
+                width: 46%;
+                height: 26px;
+                border-radius: 999px;
+                background: inherit;
+            }
+            @keyframes plavba {
+                from {
+                    transform: translateX(-160px);
+                }
+                to {
+                    transform: translateX(380px);
+                }
+            }
+            .slnko {
+                position: absolute;
+                width: 34px;
+                height: 34px;
+                margin: -17px 0 0 -17px;
+                border-radius: 50%;
+                background: #fff4c4;
+                box-shadow:
+                    0 0 0 10px rgba(255, 240, 190, 0.18),
+                    0 0 40px 18px rgba(255, 220, 140, 0.35);
+                transition:
+                    left 0.15s,
+                    top 0.15s;
+            }
+            .mesiac {
+                position: absolute;
+                width: 22px;
+                height: 22px;
+                margin: -11px 0 0 -11px;
+                border-radius: 50%;
+                box-shadow: inset -6px 2px 0 0 #e8ecff;
+                opacity: var(--noc, 0);
+            }
+            .oblukdraha {
+                position: absolute;
+                inset: 0;
+                pointer-events: none;
+            }
+            .oblukdraha path {
+                fill: none;
+                stroke: rgba(255, 255, 255, 0.28);
+                stroke-width: 1.5;
+                stroke-dasharray: 2 6;
+            }
+
+            /* Odčítanie: veľký výkon vľavo hore. */
+            .citanie {
+                position: absolute;
+                z-index: 2;
+                left: 18px;
+                top: 10px;
+                display: grid;
+                gap: 2px;
+            }
+            .kw {
+                font-size: 58px;
+                font-weight: 900;
+                font-stretch: 90%;
+                line-height: 1;
+                letter-spacing: -0.02em;
+                text-shadow: 0 2px 14px rgba(0, 0, 0, 0.18);
+            }
+            .kw small {
+                font-size: 24px;
+                font-weight: 800;
+                margin-left: 4px;
+            }
+            .kw[data-druh='predpoved'] {
+                color: rgba(255, 255, 255, 0.82);
+            }
+            .stav {
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+            .stav i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--zelena);
+                box-shadow: 0 0 0 3px rgba(143, 227, 111, 0.25);
+            }
+            .stav[data-druh='nameranie'] i {
+                background: #fff;
+                box-shadow: none;
+            }
+            .stav[data-druh='predpoved'] i {
+                background: transparent;
+                border: 1.5px dashed #fff;
+                box-shadow: none;
+            }
+            .stav em {
+                font-style: normal;
+                font-weight: 600;
+                letter-spacing: 0;
+                text-transform: none;
+                color: var(--dim);
+                font-size: 12px;
+            }
+
+            /* ===== A: posuvník dňa nad pásom ===== */
+            .posA {
+                position: relative;
+                flex: none;
+                height: 64px;
+                margin: 0 18px;
+            }
+            .posA .draha {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 22px;
+                height: 4px;
+                border-radius: 4px;
+                background: rgba(255, 255, 255, 0.22);
+            }
+            .posA .svetlo {
+                position: absolute;
+                top: 22px;
+                height: 4px;
+                background: rgba(255, 244, 196, 0.6);
+            }
+            .posA .minule {
+                position: absolute;
+                left: 0;
+                top: 22px;
+                height: 4px;
+                border-radius: 4px 0 0 4px;
+                background: #fff;
+            }
+            .posA .znacka {
+                position: absolute;
+                top: 0;
+                transform: translateX(-50%);
+                display: grid;
+                justify-items: center;
+                font-size: 10px;
+                color: var(--dim);
+                line-height: 1.1;
+            }
+            .posA .znacka svg {
+                width: 16px;
+                height: 12px;
+            }
+            .posA .znacka svg path {
+                fill: none;
+                stroke: rgba(255, 244, 196, 0.85);
+                stroke-width: 1.6;
+                stroke-linecap: round;
+            }
+            .posA .zn-cas {
+                position: absolute;
+                top: 34px;
+                transform: translateX(-50%);
+                font-size: 10px;
+                color: var(--dim);
+            }
+            .posA .teraz-zarez {
+                position: absolute;
+                top: 17px;
+                width: 2px;
+                height: 14px;
+                margin-left: -1px;
+                background: var(--zelena);
+                border-radius: 2px;
+            }
+            .posA .hodiny {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 48px;
+                display: flex;
+                justify-content: space-between;
+                font-size: 10px;
+                color: rgba(255, 255, 255, 0.5);
+            }
+            .posA .bezec {
+                position: absolute;
+                top: 24px;
+                width: 22px;
+                height: 22px;
+                margin: -11px 0 0 -11px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                pointer-events: none;
+            }
+            .rozsah {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                margin: 0;
+                opacity: 0;
+                cursor: grab;
+                touch-action: none;
+            }
+
+            /* ===== B: posuvník je obzor - krivka dňa ===== */
+            .posB {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 92px;
+                z-index: 2;
+            }
+            .posB svg {
+                position: absolute;
+                inset: 0;
+                width: 100%;
+                height: 100%;
+                overflow: visible;
+            }
+            .posB .zem {
+                fill: rgba(8, 16, 40, 0.28);
+            }
+            .posB .namerane {
+                fill: rgba(255, 255, 255, 0.55);
+            }
+            .posB .predpoved {
+                fill: rgba(255, 255, 255, 0.16);
+                stroke: rgba(255, 255, 255, 0.7);
+                stroke-width: 1.2;
+                stroke-dasharray: 3 3;
+            }
+            .posB .ciara {
+                stroke: #fff;
+                stroke-width: 1.5;
+            }
+            .posB .gulka {
+                fill: #fff;
+            }
+            .posB .zarez {
+                stroke: var(--zelena);
+                stroke-width: 2;
+            }
+            .posB text {
+                fill: rgba(255, 255, 255, 0.7);
+                font-size: 10px;
+                font-family: var(--font);
+            }
+            .posB .vz {
+                fill: rgba(255, 244, 196, 0.9);
+            }
+            .spat {
+                position: absolute;
+                z-index: 3;
+                right: 14px;
+                top: 14px;
+                font: inherit;
+                font-size: 12px;
+                font-weight: 800;
+                color: #fff;
+                background: var(--glass);
+                border: 1px solid rgba(255, 255, 255, 0.5);
+                border-radius: 999px;
+                padding: 5px 12px;
+                cursor: pointer;
+                backdrop-filter: blur(8px);
+            }
+            .spat[hidden] {
+                display: none;
+            }
+
+            /* ===== pás dlaždíc ===== */
+            .pas {
+                flex: none;
+                display: flex;
+                gap: 10px;
+                overflow-x: auto;
+                scroll-snap-type: x mandatory;
+                padding: 4px 18px 6px;
+                scroll-padding: 0 18px;
+                scrollbar-width: none;
+            }
+            .pas::-webkit-scrollbar {
+                display: none;
+            }
+            .dl {
+                flex: none;
+                width: 236px;
+                height: 196px;
+                scroll-snap-align: start;
+                border-radius: 18px;
+                padding: 14px 16px;
+                background: var(--glass);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                overflow: hidden;
+            }
+            .dl h4 {
+                margin: 0;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .dl .val {
+                font-size: 32px;
+                font-weight: 900;
+                line-height: 1.05;
+                font-stretch: 92%;
+            }
+            .dl .val small {
+                font-size: 15px;
+                font-weight: 800;
+            }
+            .dl .txt {
+                font-size: 12.5px;
+                color: rgba(255, 255, 255, 0.86);
+                line-height: 1.35;
+            }
+            .dl .txt b {
+                color: #fff;
+            }
+            .dl .chip {
+                align-self: flex-start;
+                padding: 3px 9px;
+                border-radius: 999px;
+                font-size: 10.5px;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                background: var(--sun);
+                color: #222;
+            }
+            .dl .chip[data-cls='slaby'] {
+                background: rgba(255, 255, 255, 0.85);
+            }
+            .dl .slovo {
+                font-size: 30px;
+                font-weight: 900;
+                line-height: 1.02;
+                font-stretch: 88%;
+            }
+            .dl .eq {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                margin-top: auto;
+                font-size: 10.5px;
+                color: var(--dim);
+                line-height: 1.2;
+            }
+            .dl .eq b {
+                display: block;
+                font-size: 14px;
+                color: #fff;
+            }
+            .dl .bar {
+                height: 6px;
+                border-radius: 6px;
+                background: rgba(255, 255, 255, 0.2);
+                overflow: hidden;
+            }
+            .dl .bar i {
+                display: block;
+                height: 100%;
+                background: var(--sun);
+            }
+            .dl .tepl {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 800;
+            }
+            .dl .tepl i {
+                flex: 1;
+                height: 5px;
+                border-radius: 5px;
+                background: linear-gradient(90deg, #8fd3ff, #ffd166);
+            }
+            .dl .wx {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                font-size: 16px;
+                font-weight: 800;
+            }
+            .dl .wx span {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: radial-gradient(circle, #ffe27a 45%, rgba(255, 226, 122, 0.25) 46%, transparent 70%);
+            }
+            .dl .wx span[data-w='oblak'] {
+                background:
+                    radial-gradient(circle at 40% 55%, #e6ecf5 40%, transparent 42%),
+                    radial-gradient(circle at 65% 45%, #e6ecf5 34%, transparent 36%);
+            }
+            .dl[data-k='graf'] {
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+            }
+            .dl .lesk {
+                font-size: 26px;
+                font-weight: 200;
+                line-height: 1.1;
+                background: linear-gradient(100deg, #fff 40%, #fff6c8 50%, #fff 60%) 0 0 / 300% 100%;
+                -webkit-background-clip: text;
+                background-clip: text;
+                color: transparent;
+                animation: lesk 6s ease-in-out infinite;
+            }
+            @keyframes lesk {
+                0%,
+                60% {
+                    background-position: 100% 0;
+                }
+                100% {
+                    background-position: 0 0;
+                }
+            }
+            .dl .obruc {
+                width: 34px;
+                height: 34px;
+                border: 1.5px solid rgba(255, 255, 255, 0.7);
+                border-radius: 50%;
+                display: grid;
+                place-items: center;
+                margin-top: 8px;
+            }
+            .dl .obruc svg {
+                width: 16px;
+                height: 16px;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 2;
+            }
+            .dl.hero {
+                width: 262px;
+            }
+            .dl .riadok {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+                border-top: 1px solid rgba(255, 255, 255, 0.16);
+                padding-top: 6px;
+                margin-top: auto;
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .dl .riadok b {
+                font-size: 15px;
+                color: #fff;
+            }
+            .dl .odp {
+                font-size: 24px;
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            .bodky {
+                flex: none;
+                display: flex;
+                justify-content: center;
+                gap: 6px;
+                padding: 4px 0 0;
+            }
+            .bodky i {
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.35);
+            }
+            .bodky i[data-on] {
+                background: #fff;
+            }
+            .nav {
+                margin-top: auto;
+                flex: none;
+                display: flex;
+                justify-content: space-around;
+                padding: 10px 6px 14px;
+                background: rgba(8, 16, 40, 0.45);
+                font-size: 10.5px;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .nav span[data-on] {
+                color: #fff;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .oblak,
+                .dl .lesk {
+                    animation: none !important;
+                }
+            }
+
+            .tri {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: flex-start;
+            }
+            .tri figure {
+                margin: 0;
+                display: grid;
+                gap: 12px;
+                width: 320px;
+                max-width: 100%;
+            }
+            figcaption {
+                display: grid;
+                gap: 6px;
+                font-size: 14px;
+            }
+            figcaption b {
+                font-size: 16px;
+            }
+
+            /* Počasie zvoleného času: hustejšie oblaky a dážď. */
+            .oblaky {
+                position: absolute;
+                inset: 0;
+                opacity: var(--obl, 0);
+                transition: opacity 0.4s;
+            }
+            .oblaky .oblak {
+                background: rgba(225, 232, 244, 0.8);
+            }
+            .zaves {
+                position: absolute;
+                inset: 0;
+                background: linear-gradient(180deg, rgba(110, 125, 150, 0.55), rgba(110, 125, 150, 0.2));
+                opacity: calc(var(--obl, 0) * (1 - var(--noc, 0) * 0.6));
+                transition: opacity 0.4s;
+            }
+            .dazd {
+                position: absolute;
+                inset: -40px 0 0;
+                background-image: repeating-linear-gradient(
+                    105deg,
+                    transparent 0 9px,
+                    rgba(210, 225, 255, 0.45) 9px 10px,
+                    transparent 10px 23px
+                );
+                background-size: 100% 60px;
+                opacity: var(--dazd, 0);
+                animation: dazd 0.6s linear infinite;
+                transition: opacity 0.4s;
+            }
+            @keyframes dazd {
+                to {
+                    background-position: -16px 60px;
+                }
+            }
+            .pocasie {
+                font-size: 12px;
+                color: var(--dim);
+                margin-top: 2px;
+            }
+
+            /* T1: štítok pod číslom je tlačidlo, keď bežec odíde. */
+            .stav-t1 {
+                justify-self: start;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                font: inherit;
+                color: #fff;
+                background: none;
+                border: 1px solid transparent;
+                border-radius: 999px;
+                padding: 0;
+                cursor: default;
+                transition:
+                    background 0.2s,
+                    padding 0.2s;
+            }
+            .stav-t1[data-mimo] {
+                background: var(--glass);
+                border-color: rgba(255, 255, 255, 0.45);
+                padding: 5px 6px 5px 12px;
+                backdrop-filter: blur(8px);
+                cursor: pointer;
+            }
+            .stav-t1 .spat-t1 {
+                display: none;
+                align-items: center;
+                gap: 4px;
+                border-left: 1px solid rgba(255, 255, 255, 0.35);
+                padding: 1px 8px 1px 8px;
+                font-size: 12px;
+                font-weight: 800;
+            }
+            .stav-t1[data-mimo] .spat-t1 {
+                display: inline-flex;
+            }
+            .spat-t1 i {
+                width: 7px;
+                height: 7px;
+                border-radius: 50%;
+                background: var(--zelena);
+            }
+
+            /* T2: vlajka nad zárezom teraz, súčasť posuvníka. */
+            .vlajka {
+                position: absolute;
+                top: 34px;
+                transform: translateX(-50%);
+                z-index: 2;
+                font: inherit;
+                font-size: 10.5px;
+                font-weight: 800;
+                color: #10301a;
+                background: var(--zelena);
+                border: 0;
+                border-radius: 6px;
+                padding: 1px 7px;
+                cursor: pointer;
+                white-space: nowrap;
+            }
+            .vlajka::before {
+                content: '';
+                position: absolute;
+                left: 50%;
+                top: -4px;
+                margin-left: -4px;
+                border: 4px solid transparent;
+                border-top: 0;
+                border-bottom-color: var(--zelena);
+            }
+            .vlajka[data-na] {
+                background: rgba(143, 227, 111, 0.25);
+                color: #fff;
+            }
+            .vlajka[data-na]::before {
+                border-bottom-color: rgba(143, 227, 111, 0.25);
+            }
+            .posA[data-t='2'] .hodiny {
+                visibility: hidden;
+            }
+
+            /* T3: „naživo“ na konci posuvníka ako pri videu. */
+            .riadokT3 {
+                flex: none;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin: 0 18px;
+            }
+            .riadokT3 .posA {
+                flex: 1;
+                margin: 0;
+            }
+            .zivo {
+                flex: none;
+                align-self: flex-start;
+                margin-top: 9px;
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                height: 30px;
+                font: inherit;
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: rgba(255, 255, 255, 0.55);
+                background: var(--glass);
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                border-radius: 999px;
+                padding: 0 11px;
+                cursor: pointer;
+                backdrop-filter: blur(8px);
+            }
+            .zivo i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.45);
+            }
+            .zivo[data-na] {
+                color: #fff;
+                border-color: transparent;
+                background: none;
+                cursor: default;
+            }
+            .zivo[data-na] i {
+                background: var(--zelena);
+                box-shadow: 0 0 0 3px rgba(143, 227, 111, 0.25);
+            }
+            .zivo:not([data-na]) {
+                color: #fff;
+                border-color: rgba(255, 255, 255, 0.55);
+            }
+            .zivo:not([data-na]) i {
+                background: transparent;
+                border: 1.5px solid #fff;
+            }
+            /* T4: odtlačok bežca na teraz. Bežec ostáva plný kruh a je vždy nad odtlačkom. */
+            .posA[data-t^='4'] .teraz-zarez {
+                display: none;
+            }
+            .posA[data-t^='4'] .bezec {
+                z-index: 3;
+            }
+            .odtlacok {
+                position: absolute;
+                z-index: 2;
+                top: 24px;
+                width: 44px;
+                height: 44px;
+                margin: -22px 0 0 -22px;
+                padding: 0;
+                border: 0;
+                background: none;
+                pointer-events: none;
+                cursor: pointer;
+            }
+            .odtlacok::before {
+                content: '';
+                position: absolute;
+                left: 50%;
+                top: 50%;
+                width: 16.5px;
+                height: 16.5px;
+                margin: -8.25px 0 0 -8.25px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.5);
+                box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+                transition: transform 0.2s;
+            }
+            .odtlacok[data-mimo] {
+                pointer-events: auto;
+            }
+            /* Východ a západ čiarkami (T4a) alebo ikonkami slnka a mesiaca (T4b). */
+            .posA[data-t='4a'] .znacka {
+                display: none;
+            }
+            .ciarka {
+                position: absolute;
+                top: 15px;
+                width: 1.5px;
+                height: 18px;
+                margin-left: -0.75px;
+                border-radius: 1px;
+                background: rgba(255, 244, 196, 0.85);
+            }
+            .posA[data-t='4b'] .znacka {
+                top: 3px;
+            }
+            .posA[data-t='4b'] .znacka svg {
+                width: 13px;
+                height: 13px;
+            }
+            .znacka .ik-slnko {
+                fill: #ffe27a;
+            }
+            .znacka .ik-luc {
+                stroke: #ffe27a;
+                stroke-width: 1.4;
+                stroke-linecap: round;
+            }
+            .znacka .ik-mesiac {
+                fill: #e8ecff;
+            }
+            /* T4c: jedna čistá čiara - noc bledšia, deň sýtejšia biela, pod ňou len časy východu a západu. */
+            .posA[data-t='4c'] .znacka,
+            .posA[data-t='4c'] .hodiny,
+            .posA[data-t='4c'] .minule {
+                display: none;
+            }
+            .posA[data-t='4c'] .draha {
+                background: rgba(255, 255, 255, 0.25);
+            }
+            .posA[data-t='4c'] .svetlo {
+                background: rgba(255, 255, 255, 0.85);
+            }
+            .posA[data-t='4c'] .zn-cas {
+                top: 36px;
+                font-size: 11px;
+            }
+            @media (prefers-reduced-motion: reduce) {
+                .dazd {
+                    animation: none !important;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Karta Dnes – tlačidlo Teraz</h1>
+                <p class="dim">
+                    Návrh 23. 11. 2026, pokračovanie <code>dnes-obloha-posuvnik.html</code>. Zvolené A, Graf dňa ostáva ako je a obloha
+                    ukazuje aj počasie zvoleného času. Otvorené ostáva, kam s tlačidlom Teraz, aby bolo súčasťou niečoho a nie voľne na
+                    oblohe. Štyri možnosti (T4 v dvoch podobách), všetky v tom istom telefóne A.
+                </p>
+                <p class="dim">
+                    Posuň bežec preč z teraz a ťukni na Teraz. Počasie je ilustračné: dopoludnia mrak okolo 10:30, popoludní oblačno a od
+                    18:00 dážď (to už je predpoveď). Bežec sa vo všetkých prilepí k teraz, keď ho pustíš do 10 minút od neho.
+                </p>
+                <div class="scenare" role="group" aria-label="Kedy otváraš kartu">
+                    <span class="dim">Kartu otváraš o:</span>
+                    <button type="button" data-teraz="490">8:10 ráno</button>
+                    <button type="button" data-teraz="760" aria-pressed="true">12:40 cez deň</button>
+                    <button type="button" data-teraz="1110">18:30 večer</button>
+                </div>
+            </section>
+
+            <section>
+                <div class="tri" id="tri"></div>
+            </section>
+
+            <section>
+                <h2>Porovnanie</h2>
+                <ul>
+                    <li class="pozn">
+                        <b>T1 – štítok pod číslom.</b> Tlačidlo je tam, kde sa číta, čo vidíš („Namerané 10:00“). Štítok sa mení na kapsulu
+                        s dvoma časťami: čo vidíš | ↺ Teraz.
+                    </li>
+                    <span class="plus">Spája otázku „čo to je za číslo“ s odpoveďou „vráť ma“. Na posuvníku nepribúda nič.</span>
+                    <span class="minus">Je ďaleko od prsta, ktorý práve ťahá posuvník (o ~ 250 px vyššie).</span>
+                    <li class="pozn">
+                        <b>T2 – vlajka na záreze teraz.</b> Zelený zárez dostane štítok „Teraz“ pod dráhou. Keď na ňom bežec stojí, vlajka
+                        je tlmená; keď odíde, svieti a ťuknutie bežec vráti.
+                    </li>
+                    <span class="plus">Ukazuje, kde teraz je, a zároveň tam vracia – jedna vec, dve úlohy. Je pri prste.</span>
+                    <span class="minus"
+                        >Vlajka sa hýbe s časom a cez deň sa môže stretnúť so značkou západu (napr. o 16:00). Hodiny 0 – 24 pod dráhou musia
+                        preč, inak sa bijú.</span
+                    >
+                    <li class="pozn">
+                        <b>T3 – „Teraz“ na konci posuvníka</b>, ako „Naživo“ pri videu: na teraz je to zelená bodka a slovo, po posunutí sa
+                        z neho stane kapsula s prázdnym krúžkom.
+                    </li>
+                    <span class="plus"
+                        >Známy vzor z prehrávačov, stojí vždy na tom istom mieste. Zároveň nahrádza zelenú bodku v štítku (ten môže ostať
+                        len „Teraz 12:40“).</span
+                    >
+                    <span class="minus">Posuvník je o ~ 80 px kratší, deň sa ťahá na menšej dĺžke.</span>
+                    <li class="pozn">
+                        <b>T4 – odtlačok bežca</b> (doplnené na tvoje zadanie): bežec je plný kruh. Keď ho posunieš, na teraz po ňom ostane
+                        odtlačok o 25 % menší; ťuknutie naň bežec vráti. Bežec je vždy nad odtlačkom, takže pri ďalšom ťahu z teraz chytíš
+                        bežec. Zelený zárez teraz už netreba. Údaje pod výkonom ako v T2. Východ a západ: čiarky cez dráhu (T4a) alebo malé
+                        slnko a mesiac nad dráhou (T4b), čas pod nimi v oboch.
+                    </li>
+                    <span class="plus"
+                        >Žiadny text ani nový prvok navyše – teraz označuje to isté, čím sa ťahá. Funguje rovnako ráno, cez deň aj večer,
+                        nič sa s ničím nestretne.</span
+                    >
+                    <span class="minus"
+                        >Odtlačok má na pohľad 16 px; aby sa naň dalo trafiť prstom, ťukacia plocha okolo neho je 44 px (neviditeľná). Bez
+                        slova „Teraz“ treba raz prísť na to, že odtlačok sa dá ťuknúť – pomáha, že po ťuknutí bežec skočí späť hneď.</span
+                    >
+                    <span class="minus"
+                        >T4b: mesiac pri západe môže zmiasť – mesiac nevychádza pri západe slnka každý deň. Je to značka, nie skutočný
+                        Mesiac (ten je na oblohe).</span
+                    >
+                </ul>
+                <div class="odpor">
+                    <p>
+                        <b>T4c (doplnené na tvoje zadanie):</b> jedna čistá čiara bez značiek a bez hodín 0 – 24. Deň od východu po západ je
+                        sýtejšia biela, noc bledšia, pod čiarou len dva časy. Odtlačok a bežec ako v T4.
+                    </p>
+                    <span class="plus">Najtichší posuvník zo všetkých – na čiare je len bežec a odtlačok, deň vidno z jasu čiary.</span>
+                    <span class="minus"
+                        >Uplynulá časť dňa už nie je odlíšená – kde je teraz, povie len odtlačok (a bežec, keď na ňom stojí).</span
+                    >
+                    <span class="minus"
+                        >Bez hodín sa iný čas hľadá podľa čísla v štítku pod výkonom, nie podľa čiary – na „okolo 15:00“ to stačí.</span
+                    >
+                    <p>
+                        <b>Odporúčam T4c.</b> Je to T4a bez čiarok a hodín, ktoré po odtlačku už nič nepridávali. Ak by ti chýbala uplynulá
+                        časť dňa, dá sa vrátiť ako jemne sýtejšia biela po teraz. Predtým som odporúčal T4a, pred ním T2.
+                    </p>
+                </div>
+                <p class="dim">
+                    Rozhodnutie je tvoje; kým nevyberieš, nič nekódujem. Pri kódovaní by sa obloha (farby, slnko, oblaky, dážď) aj číslo
+                    brali z tých istých výpočtov ako panel Graf dňa (skyNow, kresliPocasie, grafModel), aby karta a panel ukazovali to isté.
+                </p>
+            </section>
+        </main>
+        <template id="tel">
+            <div class="phone">
+                <div class="hlava"><b>RAY-MON</b><span>Dvorany nad Nitrou</span></div>
+                <div class="nebo" style="height: 230px">
+                    <div class="hviezdy"></div>
+                    <div class="zaves"></div>
+                    <div class="oblak" style="top: 70px; width: 90px; animation-duration: 70s; animation-delay: -20s"></div>
+                    <div class="oblak" style="top: 140px; width: 120px; animation-duration: 95s; animation-delay: -60s"></div>
+                    <div class="mesiac" style="left: 250px; top: 60px"></div>
+                    <div class="slnko"></div>
+                    <div class="oblaky">
+                        <div class="oblak" style="top: 40px; width: 150px; animation-duration: 60s; animation-delay: -10s"></div>
+                        <div class="oblak" style="top: 95px; width: 180px; animation-duration: 80s; animation-delay: -45s"></div>
+                        <div class="oblak" style="top: 150px; width: 140px; animation-duration: 66s; animation-delay: -30s"></div>
+                        <div class="oblak" style="top: 115px; width: 160px; animation-duration: 90s; animation-delay: -75s"></div>
+                    </div>
+                    <div class="dazd"></div>
+                    <div class="citanie">
+                        <div class="kw"></div>
+                        <div class="stav"><i></i><span class="druh"></span><em class="cas"></em></div>
+                        <p class="pocasie"></p>
+                    </div>
+                </div>
+                <div class="posA">
+                    <div class="draha"></div>
+                    <div class="svetlo"></div>
+                    <div class="minule"></div>
+                    <div class="znacka vychod">
+                        <svg viewBox="0 0 16 12"><path d="M2 10h12M5 10a3 3 0 0 1 6 0M8 2v3" /></svg>
+                    </div>
+                    <div class="znacka zapad">
+                        <svg viewBox="0 0 16 12"><path d="M2 10h12M5 10a3 3 0 0 1 6 0M8 5V2" /></svg>
+                    </div>
+                    <div class="zn-cas vychod">7:02</div>
+                    <div class="zn-cas zapad">16:04</div>
+                    <div class="teraz-zarez"></div>
+                    <div class="hodiny"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>
+                    <div class="bezec"></div>
+                    <input class="rozsah" type="range" min="0" max="1439" step="5" aria-label="Čas dňa" />
+                </div>
+                <div class="pas"></div>
+                <div class="bodky"></div>
+                <div class="nav">
+                    <span>Teraz</span><span data-on>Dnes</span><span>Radar</span><span>7 dní</span><span>Štatistika</span
+                    ><span>Nastavenie</span>
+                </div>
+            </div>
+        </template>
+        <script>
+            const VYCHOD = 422;
+            const ZAPAD = 964;
+            const VRCHOL = 4.6;
+            let teraz = 760;
+
+            const fmtCas = (m) => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, '0')}`;
+            const fmtKw = (v) => v.toFixed(1).replace('.', ',');
+
+            /** Oblačnosť 0..1 a dážď 0..1 v čase m (ilustračné). */
+            function pocasie(m) {
+                const mrak = Math.exp(-Math.pow((m - 630) / 30, 2));
+                const popol = Math.min(1, Math.max(0, (m - 840) / 180)) * 0.75;
+                const obl = Math.min(1, 0.08 + 0.8 * mrak + popol);
+                const dazd = m >= 1080 ? Math.min(1, (m - 1080) / 30) : 0;
+                return { obl: Math.max(obl, dazd), dazd };
+            }
+            const popisPocasia = (p) =>
+                p.dazd > 0.3 ? 'Dážď, 4°' : p.obl > 0.6 ? 'Zamračené, 5°' : p.obl > 0.3 ? 'Polojasno, 6°' : 'Jasno, 6°';
+
+            function predpoved(m) {
+                if (m <= VYCHOD || m >= ZAPAD) return 0;
+                return (
+                    VRCHOL *
+                    Math.pow(Math.sin((Math.PI * (m - VYCHOD)) / (ZAPAD - VYCHOD)), 1.6) *
+                    (1 - 0.6 * pocasie(m).obl * (m > 840 ? 1 : 0))
+                );
+            }
+            function namerane(m) {
+                const mrak = 1 - 0.45 * Math.exp(-Math.pow((m - 630) / 28, 2));
+                return predpoved(m) * mrak * (1 + 0.04 * Math.sin(m / 7));
+            }
+            const naTeraz = (m) => Math.abs(m - teraz) <= 5;
+            const vykon = (m) => (naTeraz(m) ? namerane(teraz) : m < teraz ? namerane(m) : predpoved(m));
+
+            const FARBY = {
+                noc: ['#050a1a', '#101b3a'],
+                usvit: ['#3a4f97', '#f0a878'],
+                den: ['#2f62b5', '#7aa6e0'],
+                sumrak: ['#463c8c', '#f08a5a'],
+            };
+            const mix = (a, b, t) => {
+                const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+                const [x, y] = [p(a), p(b)];
+                return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',')})`;
+            };
+            function obloha(m) {
+                const k = (a, b, t) => [mix(a[0], b[0], t), mix(a[1], b[1], t)];
+                const okno = 50;
+                if (m < VYCHOD - okno || m > ZAPAD + okno) return { f: FARBY.noc, noc: 1 };
+                if (m < VYCHOD) return { f: k(FARBY.noc, FARBY.usvit, (m - VYCHOD + okno) / okno), noc: 1 - (m - VYCHOD + okno) / okno };
+                if (m < VYCHOD + okno) return { f: k(FARBY.usvit, FARBY.den, (m - VYCHOD) / okno), noc: 0 };
+                if (m < ZAPAD - okno) return { f: FARBY.den, noc: 0 };
+                if (m < ZAPAD) return { f: k(FARBY.den, FARBY.sumrak, (m - ZAPAD + okno) / okno), noc: 0 };
+                return { f: k(FARBY.sumrak, FARBY.noc, (m - ZAPAD) / okno), noc: (m - ZAPAD) / okno };
+            }
+            function slnko(m, w, obzor) {
+                const t = (m - VYCHOD) / (ZAPAD - VYCHOD);
+                return {
+                    x: 30 + t * (w - 60),
+                    y: obzor - Math.sin(Math.PI * Math.min(1, Math.max(0, t))) * (obzor - 115),
+                    vidno: t > -0.03 && t < 1.03,
+                };
+            }
+
+            // Dlaždice ako v návrhu A.
+            const DL = {
+                dnes: (d) =>
+                    `<div class="dl"><h4>Dnes</h4><span class="chip" data-cls="${d.cls}">${d.chip}</span><p class="slovo">${d.slovo}</p></div>`,
+                velke: (d) => `<div class="dl"><h4>Veľké veci</h4><p class="val">${d.val}</p><p class="txt">${d.txt}</p></div>`,
+                strecha: (d) =>
+                    `<div class="dl"><h4>${d.ttl}</h4><p class="val">${d.val} <small>kWh</small></p>` +
+                    `<div class="eq"><span><b>~1 370</b>nabitých mobilov</span><span><b>~125 km</b>elektrickým autom</span><span><b>~1,3 kg</b>CO2eq menej</span></div></div>`,
+                predpoved: (d) =>
+                    `<div class="dl"><h4>${d.ttl}</h4><div class="wx"><span data-w="${d.w}"></span>${d.popis}</div><p class="tepl">${d.min}<i></i>${d.max}</p><p class="txt">oblačnosť ${d.obl} %</p></div>`,
+                slnko: () =>
+                    `<div class="dl"><h4>Najviac slnka</h4><p class="val">11:00 – 12:00</p><p class="txt">Strecha vtedy dá až ~4,6 kW. Auto alebo dve veci naraz daj sem.</p></div>`,
+                nabehlo: () =>
+                    `<div class="dl"><h4>Nabehlo</h4><p class="val">11,2 <small>kWh</small></p><div class="bar"><i style="width:58%"></i></div><p class="txt">58 % z ~19 kWh na celý deň.</p></div>`,
+                lepsie: () =>
+                    `<div class="dl"><h4>Kedy lepšie</h4><p class="val">štvrtok</p><p class="txt">Najbližší silný deň, okolo 17 kWh. Aj dnešok je dobrý.</p></div>`,
+                zajtra: () =>
+                    `<div class="dl"><h4>Zajtra</h4><span class="chip" data-cls="slaby">Slabý deň</span><p class="slovo">Skôr nič</p><p class="txt">Pranie radšej v <b>štvrtok</b>.</p></div>`,
+                graf: () =>
+                    `<div class="dl" data-k="graf"><span class="lesk">for Kheinshmetke only</span><span class="obruc"><svg viewBox="0 0 20 20"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></span></div>`,
+            };
+            const DNES = { cls: 'dobry', chip: 'Dobrý deň', slovo: 'Not baaad dneskaj' };
+            const PRED = { ttl: 'Predpoveď', w: 'slnko', popis: 'Polojasno', min: '−1°', max: '7°', obl: 38 };
+            const PRED_Z = { ttl: 'Predpoveď na zajtra', w: 'oblak', popis: 'Zamračené', min: '2°', max: '6°', obl: 92 };
+            function dlazdice() {
+                if (teraz < VYCHOD + 60)
+                    return [
+                        DL.dnes(DNES),
+                        DL.velke({ val: '10:15 – 14:30', txt: 'Okno na veľké veci. Práčku zapni od <b>10:15</b>.' }),
+                        DL.strecha({ ttl: 'Dnes zo strechy', val: '~19' }),
+                        DL.predpoved(PRED),
+                        DL.slnko(),
+                        DL.lepsie(),
+                        DL.graf(),
+                    ];
+                if (teraz < ZAPAD)
+                    return [
+                        DL.dnes(DNES),
+                        DL.velke({ val: '1 h 50 min', txt: 'ešte slnka na veľké veci, do <b>14:30</b>' }),
+                        DL.strecha({ ttl: 'Dnes zo strechy', val: '~19' }),
+                        DL.predpoved(PRED),
+                        DL.slnko(),
+                        DL.nabehlo(),
+                        DL.lepsie(),
+                        DL.graf(),
+                    ];
+                return [
+                    DL.dnes({ cls: 'dobry', chip: 'Dobrý deň', slovo: 'Vyšlo to' }),
+                    DL.strecha({ ttl: 'Dnes namerané', val: '18,7' }),
+                    DL.zajtra(),
+                    DL.predpoved(PRED_Z),
+                    DL.graf(),
+                ];
+            }
+
+            const VARIANTY = [
+                { t: '1', nazov: 'T1 – štítok pod číslom', pod: 'Keď bežec odíde, štítok sa zmení na kapsulu: čo vidíš | ↺ Teraz.' },
+                {
+                    t: '2',
+                    nazov: 'T2 – vlajka na záreze teraz',
+                    pod: 'Zelený zárez má pod dráhou štítok Teraz; keď bežec odíde, rozsvieti sa.',
+                },
+                {
+                    t: '3',
+                    nazov: 'T3 – „Teraz“ na konci posuvníka',
+                    pod: 'Ako „Naživo“ pri videu: zelená bodka na teraz, inak kapsula s krúžkom.',
+                },
+                {
+                    t: '4a',
+                    nazov: 'T4a – odtlačok, východ a západ čiarkami',
+                    pod: 'Na teraz ostane odtlačok bežca o štvrtinu menší; ťuknutie naň vráti bežec.',
+                },
+                {
+                    t: '4b',
+                    nazov: 'T4b – odtlačok, slnko a mesiac',
+                    pod: 'To isté, východ je malé slnko a západ malý mesiac nad dráhou.',
+                },
+                {
+                    t: '4c',
+                    nazov: 'T4c – odtlačok, jedna čistá čiara',
+                    pod: 'Deň je sýtejšia biela, noc bledšia; pod čiarou len časy východu a západu.',
+                },
+            ];
+            const pct = (m) => `${(m / 1440) * 100}%`;
+            const tele = VARIANTY.map((v) => {
+                const fig = document.createElement('figure');
+                fig.innerHTML = `<figcaption><b>${v.nazov}</b><span class="dim">${v.pod}</span></figcaption>`;
+                const tel = document.getElementById('tel').content.firstElementChild.cloneNode(true);
+                fig.prepend(tel);
+                document.getElementById('tri').append(fig);
+                const pos = tel.querySelector('.posA');
+                pos.dataset.t = v.t;
+                const inp = pos.querySelector('.rozsah');
+                const spat = () => {
+                    inp.value = String(teraz);
+                    kresli();
+                };
+                if (v.t === '1') {
+                    const st = tel.querySelector('.stav');
+                    const b = document.createElement('button');
+                    b.type = 'button';
+                    b.className = 'stav-t1';
+                    st.replaceWith(b);
+                    b.append(st);
+                    b.insertAdjacentHTML('beforeend', '<span class="spat-t1"><i></i>Teraz</span>');
+                    b.addEventListener('click', () => b.hasAttribute('data-mimo') && spat());
+                }
+                if (v.t === '2') {
+                    const f = document.createElement('button');
+                    f.type = 'button';
+                    f.className = 'vlajka';
+                    f.textContent = 'Teraz';
+                    pos.append(f);
+                    f.addEventListener('click', spat);
+                }
+                if (v.t === '3') {
+                    const r = document.createElement('div');
+                    r.className = 'riadokT3';
+                    pos.replaceWith(r);
+                    r.append(pos);
+                    r.insertAdjacentHTML('beforeend', '<button type="button" class="zivo"><i></i>Teraz</button>');
+                    r.querySelector('.zivo').addEventListener('click', spat);
+                }
+                if (v.t.startsWith('4')) {
+                    const o = document.createElement('button');
+                    o.type = 'button';
+                    o.className = 'odtlacok';
+                    o.setAttribute('aria-label', 'Späť na teraz');
+                    pos.append(o);
+                    o.addEventListener('click', spat);
+                    if (v.t === '4a') pos.insertAdjacentHTML('afterbegin', '<i class="ciarka vychod"></i><i class="ciarka zapad"></i>');
+                    else if (v.t === '4b') {
+                        const luce = [0, 45, 90, 135, 180, 225, 270, 315]
+                            .map((u) => `<path class="ik-luc" d="M8 1.6v1.6" transform="rotate(${u} 8 8)"/>`)
+                            .join('');
+                        pos.querySelector('.znacka.vychod svg').outerHTML =
+                            `<svg viewBox="0 0 16 16"><circle class="ik-slnko" cx="8" cy="8" r="3.4"/>${luce}</svg>`;
+                        pos.querySelector('.znacka.zapad svg').outerHTML =
+                            '<svg viewBox="0 0 16 16"><path class="ik-mesiac" d="M10.5 2.2a6 6 0 1 0 3.3 9.6A5 5 0 0 1 10.5 2.2z"/></svg>';
+                    }
+                }
+                function kresli() {
+                    const m = Number(inp.value);
+                    const nb = tel.querySelector('.nebo');
+                    const o = obloha(m);
+                    const p = pocasie(m);
+                    tel.style.setProperty('--d1', o.f[0]);
+                    tel.style.setProperty('--d2', o.f[1]);
+                    tel.style.setProperty('--noc', String(Math.max(0, Math.min(1, o.noc))));
+                    tel.style.setProperty('--obl', String(p.obl));
+                    tel.style.setProperty('--dazd', String(p.dazd));
+                    const s = slnko(m, nb.clientWidth, 210);
+                    const sl = tel.querySelector('.slnko');
+                    sl.style.left = `${s.x}px`;
+                    sl.style.top = `${s.y}px`;
+                    sl.style.opacity = s.vidno ? String(1 - 0.7 * p.obl) : '0';
+                    const druh = naTeraz(m) ? 'teraz' : m < teraz ? 'nameranie' : 'predpoved';
+                    const kw = tel.querySelector('.kw');
+                    kw.dataset.druh = druh;
+                    kw.innerHTML = `${fmtKw(vykon(m))}<small>kW</small>`;
+                    const st = tel.querySelector('.stav');
+                    st.dataset.druh = druh;
+                    st.querySelector('.druh').textContent = { teraz: 'Teraz', nameranie: 'Namerané', predpoved: 'Predpoveď' }[druh];
+                    st.querySelector('.cas').textContent =
+                        druh === 'teraz' ? `${fmtCas(teraz)}${v.t === '3' ? '' : ' · živé meranie'}` : fmtCas(m);
+                    // V T3 nesie zelenú bodku tlačidlo na konci posuvníka.
+                    st.querySelector('i').style.display = v.t === '3' && druh === 'teraz' ? 'none' : '';
+                    tel.querySelector('.pocasie').textContent = popisPocasia(p);
+                    pos.querySelector('.svetlo').style.left = pct(VYCHOD);
+                    pos.querySelector('.svetlo').style.width = `${((ZAPAD - VYCHOD) / 1440) * 100}%`;
+                    pos.querySelector('.minule').style.width = pct(teraz);
+                    pos.querySelectorAll('.vychod').forEach((e) => (e.style.left = pct(VYCHOD)));
+                    pos.querySelectorAll('.zapad').forEach((e) => (e.style.left = pct(ZAPAD)));
+                    pos.querySelector('.teraz-zarez').style.left = pct(teraz);
+                    pos.querySelector('.bezec').style.left = pct(m);
+                    tel.querySelector('.stav-t1')?.toggleAttribute('data-mimo', druh !== 'teraz');
+                    const f = pos.querySelector('.vlajka');
+                    if (f) {
+                        f.style.left = pct(teraz);
+                        f.toggleAttribute('data-na', druh === 'teraz');
+                        // Vlajka zakryje čas západu, keď sa stretnú.
+                        pos.querySelector('.zn-cas.zapad').style.visibility = Math.abs(teraz - ZAPAD) < 70 ? 'hidden' : '';
+                        pos.querySelector('.zn-cas.vychod').style.visibility = Math.abs(teraz - VYCHOD) < 70 ? 'hidden' : '';
+                    }
+                    tel.querySelector('.zivo')?.toggleAttribute('data-na', druh === 'teraz');
+                    const od = pos.querySelector('.odtlacok');
+                    if (od) {
+                        od.style.left = pct(teraz);
+                        od.toggleAttribute('data-mimo', druh !== 'teraz');
+                    }
+                }
+                inp.addEventListener('input', kresli);
+                // Prilepenie k teraz po pustení, do 10 minút.
+                inp.addEventListener('change', () => {
+                    if (Math.abs(Number(inp.value) - teraz) <= 10) spat();
+                });
+                return {
+                    otvor() {
+                        inp.value = String(teraz);
+                        const pas = tel.querySelector('.pas');
+                        const bod = tel.querySelector('.bodky');
+                        const html = dlazdice();
+                        pas.innerHTML = html.join('');
+                        pas.scrollLeft = 0;
+                        bod.innerHTML = html.map((_, i) => `<i${i ? '' : ' data-on'}></i>`).join('');
+                        pas.onscroll = () => {
+                            const w = pas.firstElementChild.getBoundingClientRect().width + 10;
+                            const i = Math.round(pas.scrollLeft / w);
+                            [...bod.children].forEach((x, j) => x.toggleAttribute('data-on', j === i));
+                        };
+                        kresli();
+                    },
+                };
+            });
+            const otvor = () => tele.forEach((t) => t.otvor());
+            document.querySelectorAll('[data-teraz]').forEach((btn) =>
+                btn.addEventListener('click', () => {
+                    teraz = Number(btn.dataset.teraz);
+                    document.querySelectorAll('[data-teraz]').forEach((x) => x.setAttribute('aria-pressed', String(x === btn)));
+                    otvor();
+                }),
+            );
+            otvor();
+        </script>
+    </body>
+</html>
