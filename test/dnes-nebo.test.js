@@ -42,7 +42,8 @@ test('teraz: výkon z toho istého výpočtu ako karta Teraz, odkiaľ je, bežec
     assert.equal(n.druh, 'teraz');
     assert.equal(n.kw, fmt1(hero.power));
     assert.equal(n.slovo, 'Teraz');
-    assert.equal(n.cas, `13:00 · ${terazSourceText(/** @type {'live'} */ (hero.source))}`);
+    assert.equal(hero.source, 'live');
+    assert.equal(n.cas, '13:00');
     assert.equal(n.veta, `Teraz 13:00, ${fmt1(hero.power)} kW`);
     assert.deepEqual(n.pocasie, pocasieTeraz({ ...i, previewMinutes: null }));
     const { rise, set } = sunTimes(SITE, localDateKey(i.now, SITE.timezone));
@@ -80,6 +81,8 @@ test('iný čas: dozadu namerané, dopredu predpoveď, bežec v ňom a teraz ost
 test('typická strecha je odhad s vlnovkou; bez polohy a bez predpovede nič', () => {
     const n = dnesNeboModel(input(at('13:00'), { known: 'poloha', pv: null, zdroj: null }), null);
     assert.match(n?.kw ?? '', /^~\d/);
+    // Odhad sa na rozdiel od živého merania píše aj slovami.
+    assert.equal(n?.cas, `13:00 · ${terazSourceText('forecast')}`);
     assert.equal(dnesNeboModel(input(at('13:00'), { known: 'nic' }), null), null);
     assert.equal(dnesNeboModel(input(at('13:00'), { forecast: null }), null), null);
 });
