@@ -22,6 +22,20 @@
 :root:not([data-dash]) .page:has(> .mozem:not(.hidden)) {
     width: 100%;
 }
+/* Posuvník dňa stojí v rovnakej výške ako pole toku na karte Teraz (docs/navrhy/dnes-nizsie-dlazdice.html, Z2):
+   obloha nad ním je presne taká vysoká ako scéna toku (--scena-h) a všetko, čo je na Teraz medzi scénou a stredom
+   poľa toku (okraje scény, pás dní, medzery). Prepnutie kariet tak posuvníkom nepohne; drží to e2e test. */
+:root:not([data-dash]) .mozem:not(.hidden) > .mz-nebo {
+    flex: none;
+    /* 126 px: na Teraz okraje scény (8 + 10), odsadenie dlaždíc (20), pás dní (74), medzera (12) a pol poľa
+       toku (22), mínus stred čiary posuvníka od vrchu jeho obalu (20). */
+    height: calc(var(--scena-h) + 126px);
+}
+/* Riadok miesta v hlavičke je na Teraz vysoký ako bodka stavu merania (24 px), na Dnes ju nemá - bez tejto
+   výšky by bola hlavička Dnes nižšia a posuvník by stál nad poľom toku. */
+:root:not([data-dash]) body:has(> .page > .mozem:not(.hidden)) .st .miesto {
+    min-height: 24px;
+}
 /* Hore veľký výkon zvoleného času na živej oblohe (docs/navrhy/dnes-obloha-posuvnik.html, A, a
    docs/navrhy/dnes-tlacidlo-teraz.html, T4c). Pod číslom voľná obloha, na ktorej je slnko a počasie tej chvíle;
    jej spodok, čiara posuvníka, je obzor kresby počasia (web/mozem-obzor.js). */
@@ -234,30 +248,6 @@
 .cas {
     font-weight: 800;
 }
-.eq {
-    display: grid;
-    margin: 0;
-    padding-left: 0;
-    list-style: none;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.25);
-}
-/* Číslo sa na úzkom displeji zmenší, aby sa „~4 090“ zmestilo do tretiny aj na 320 px. */
-.eq b {
-    display: block;
-    font-size: min(1.375rem, 5.4vw);
-    font-weight: 900;
-    font-variation-settings: 'wdth' 100;
-    white-space: nowrap;
-    line-height: 1.1;
-}
-.eq span {
-    display: block;
-    margin-top: 2px;
-    font-size: 0.8125rem;
-    line-height: 1.25;
-}
 /* Štítok s triedou dňa v dlaždici Dnes a Zajtra (docs/navrhy/dnes-tri-smery.html, smer C). */
 .mozem .chip {
     justify-self: start;
@@ -307,41 +297,15 @@
     border-color: #ffc94a;
     color: #3a2a00;
 }
-/* Veľké slovo v dlaždici Dnes a Zajtra: veľkosť podľa dĺžky (--word z renderu), na úzkom displeji ešte menšia
-   podľa najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo - dlaždica je o 52 px užšia ako karta a má
-   po 16 px odsadenie. Široké verzálky majú na znak takmer 1 em, preto delenie počtom znakov bez rezervy navyše. */
-.k-slovo {
-    font-size: min(var(--word, 38px), calc((min(100vw, 640px) - 124px) / var(--word-len, 10)));
-    font-weight: 900;
-    font-variation-settings: 'wdth' 125;
-    letter-spacing: -0.02em;
-    line-height: 0.95;
-    text-wrap: balance;
-}
-/* Tri prirovnania pod číslom v dlaždici Dnes zo strechy, oddelené čiarou. */
-.karta .eq {
-    margin-top: 4px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    text-shadow: none;
-}
-/* V dlaždici je tretina užšia ako bola bublina - číslo aj slovo prirovnania sú menšie, aby sa „~370 km elektrickým“ zmestilo aj na 320 px. */
-.karta .eq b {
-    font-size: min(1.25rem, 4.4vw);
-}
-.karta .eq span {
-    font-size: min(0.8125rem, 3.75vw);
-}
-.karta .k-val small {
-    font-size: 1rem;
-    font-weight: 800;
-}
-/* Pás kariet pod posuvníkom (docs/navrhy/dnes-upravy.html): posúva ho prehliadač, karta zastane na
-   začiatku pásu a susedná vykukuje sprava. Zvislý ťah cez pás posúva stránku - touch-action netreba. */
+/* Pás dlaždíc pod posuvníkom (docs/navrhy/dnes-upravy.html, nižšie dlaždice docs/navrhy/dnes-nizsie-dlazdice.html, D):
+   posúva ho prehliadač, dlaždica zastane na začiatku pásu a susedná vykukuje sprava. Zvislý ťah cez pás posúva
+   stránku - touch-action netreba. Na telefóne dostane pás všetku výšku pod posuvníkom (Z2 vyššie), dlaždica ju
+   vyplní; aspoň min-height, inak sa stránka posúva. */
 .karty {
     position: relative;
     display: flex;
     gap: 10px;
+    min-height: 124px;
     margin-top: 14px;
     padding: 0 14px;
     overflow-x: auto;
@@ -349,6 +313,9 @@
     scroll-padding-inline: 14px;
     overscroll-behavior-x: contain;
     scrollbar-width: none;
+}
+:root:not([data-dash]) .mozem:not(.hidden) > .karty {
+    flex: 1 0 auto;
 }
 .karty::-webkit-scrollbar {
     display: none;
@@ -359,171 +326,182 @@
     outline-offset: -3px;
     border-radius: 22px;
 }
-.karta {
+/* Dlaždica nesie jednu kartu, alebo dvojicu vedľa seba s tenkou čiarou medzi nimi. Dve triedy: okraj skla (.glass nižšie
+   v súbore) by jej inak pridal 12 px navrch a dlaždica by nevyplnila výšku pásu. */
+.karty > .karta {
     flex: 0 0 calc(100% - 52px);
-    align-content: start;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 12px;
     margin: 0;
+    padding: 12px 14px;
     scroll-snap-align: start;
 }
-/* Jediná karta (večer bez zajtrajška) má celú šírku - nie je k čomu posúvať. */
+.karta[data-dvoj] {
+    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
+}
+/* Jediná dlaždica (večer bez zajtrajška) má celú šírku - nie je k čomu posúvať. */
 .karta:only-child {
     flex-basis: 100%;
 }
+.deli {
+    margin: 2px 0;
+    background: rgba(255, 255, 255, 0.22);
+}
+/* Karta v dlaždici: nadpis hore, obsah pod ním v strede zvyšnej výšky. Je kontajner - hodnota a slovo sa
+   zmenšia podľa jej šírky, nie okna, takže sa zmestia aj do polovice dlaždice. */
+.cast {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+    container-type: inline-size;
+}
+.cast > :nth-child(2) {
+    margin-top: auto;
+}
+.cast > :last-child {
+    margin-bottom: auto;
+}
+/* V polovici dlaždice redšie písmo nadpisu - „Najviac slnka“ sa musí zmestiť aj na 320 px. */
+.karta[data-dvoj] .glass-ttl {
+    letter-spacing: 0.05em;
+}
 .karta .glass-ttl {
     margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+/* Nadpis Dnes a Zajtra s odznakom triedy dňa v jednom riadku. */
+.k-hlava {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+/* Veľké slovo v dlaždici Dnes a Zajtra: veľkosť podľa dĺžky (--word z renderu), v úzkej karte ešte menšia podľa
+   najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo. Široké verzálky majú na znak takmer 1 em. */
+.k-slovo {
+    font-size: min(var(--word, 38px), calc(100cqi / var(--word-len, 10)));
+    font-weight: 900;
+    font-variation-settings: 'wdth' 125;
+    letter-spacing: -0.02em;
+    line-height: 0.95;
+    text-wrap: balance;
 }
 .k-val {
-    font-size: 2rem;
+    font-size: min(1.75rem, 15cqi);
     font-weight: 900;
     font-variation-settings: 'wdth' 112;
     line-height: 1;
+    white-space: nowrap;
+}
+.k-val small {
+    font-size: 0.75rem;
+    font-weight: 800;
 }
 .k-text {
-    font-size: 0.9375rem;
-    line-height: 1.35;
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 0.8125rem;
+    line-height: 1.3;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
 }
-/* Predpoveď (docs/navrhy/dnes-predpoved-graf.html, B): ikona a popis, teplomer od najnižšej po najvyššiu
-   teplotu a oblačnosť dňa. Pásiky sú len obraz, čísla pri nich sú text. */
-.k-wx {
+/* Oblačnosť: ikona oblaku pri čísle, pod ním pásik (sivý, nie zelený - nie je to výkon). */
+.k-ikona {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 }
-.k-wx .wi {
+.k-ikona .wi {
     flex: none;
-    width: 52px;
-    height: 52px;
+    width: 1.2em;
+    height: 1.2em;
 }
-.k-popis {
-    font-size: 1.125rem;
-    font-weight: 800;
-    line-height: 1.2;
-}
-.k-teplo,
-.k-obl {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-    font-variant-numeric: tabular-nums;
-}
-.k-teplo {
-    font-size: 1.25rem;
-    font-weight: 900;
-}
-.k-teplo > i {
-    height: 8px;
-    border-radius: 4px;
-    background: linear-gradient(90deg, var(--cheap), var(--amber-text));
-}
-.k-obl {
-    font-size: 0.875rem;
-}
-.k-obl > span:last-child {
-    font-weight: 800;
-}
-.k-obl > i {
-    height: 6px;
-    border-radius: 3px;
-    background: rgba(255, 255, 255, 0.22);
-}
-.k-obl b {
-    display: block;
-    height: 100%;
-    border-radius: 3px;
+.cast[data-kind='oblacnost'] .bar i {
     background: rgba(210, 218, 235, 0.9);
 }
-/* Graf dňa (docs/navrhy/dnes-graf-tajomno.html, D): celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel
-   s grafom. Tlačidlo vyplní kartu aj s jej odsadením. Vidno len venovanie, veľké a tenké, ktorým raz za pár
-   sekúnd prebehne lesk, a šípku v tenkej obruči. Pri ťuknutí karta stmavne. */
-.karta[data-kind='graf'] {
-    align-content: stretch;
+/* Ako keby: mobil, auto a lístok s číslom - slovo, za čo číslo je, má len čítačka. */
+.eq {
+    display: grid;
+    gap: 4px;
+    margin: 0;
     padding: 0;
+    list-style: none;
 }
-.k-otvor {
-    position: relative;
-    display: grid;
-    place-items: center;
-    width: 100%;
-    height: 100%;
-    padding: 30px 44px;
-    border: 0;
-    border-radius: inherit;
-    background: none;
-    color: inherit;
-    font: inherit;
-    text-align: center;
-    cursor: pointer;
-    transition: background-color 0.12s;
+.eq li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    /* Aspoň 12 px ako všetok text appky; v úzkej polovici užšie písmo, aby sa „~4,0 kg CO2“ zmestilo aj na 320 px. */
+    font-size: max(0.75rem, min(0.9375rem, 11cqi));
+    font-weight: 800;
+    font-variation-settings: 'wdth' 88;
+    white-space: nowrap;
 }
-.k-otvor:active {
-    background: rgba(8, 16, 40, 0.3);
-}
-.k-otvor:focus-visible {
-    outline: 3px solid #fff;
-    outline-offset: -3px;
-}
-.k-obruc {
-    position: absolute;
-    top: 12px;
-    right: 12px;
-    display: grid;
-    place-items: center;
-    width: 30px;
-    height: 30px;
-    border: 1.5px solid rgba(255, 255, 255, 0.6);
-    border-radius: 50%;
-}
-.k-obruc svg {
-    width: 15px;
-    height: 15px;
+.eq .vi {
+    flex: none;
+    width: 16px;
+    height: 16px;
     fill: none;
     stroke: currentColor;
-    stroke-width: 2.2;
+    stroke-width: 1.8;
     stroke-linecap: round;
     stroke-linejoin: round;
 }
-.k-lesk {
-    font-size: 1.3rem;
-    font-weight: 300;
-    font-variation-settings: 'wdth' 125;
-    letter-spacing: 0.06em;
+/* Predpoveď (docs/navrhy/dnes-predpoved-graf.html, B): ikona a popis, pod tým teplomer od najnižšej po
+   najvyššiu teplotu. Pásik je len obraz, čísla pri ňom sú text. */
+.k-wx {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.k-wx .wi {
+    flex: none;
+    width: 30px;
+    height: 30px;
+}
+.k-popis {
+    overflow: hidden;
+    font-size: min(1.125rem, 13cqi);
+    font-weight: 800;
     line-height: 1.15;
-    text-wrap: balance;
-    background: linear-gradient(100deg, rgba(255, 255, 255, 0.72) 40%, #fff 48%, #ffe7a8 50%, #fff 52%, rgba(255, 255, 255, 0.72) 60%) 100%
-        0 / 300% 100%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    animation: lesk 6s ease-in-out infinite;
+    text-overflow: ellipsis;
 }
-@keyframes lesk {
-    0%,
-    55% {
-        background-position: 100% 0;
-    }
-    100% {
-        background-position: 0 0;
-    }
+.k-teplo {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.875rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
 }
-.k-stlpce i[data-preslo] {
-    opacity: 0.45;
+.k-teplo > i {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--cheap), var(--amber-text));
 }
-/* Stĺpce výkonu po hodinách, najsilnejšia hodina zelená. */
+/* Stĺpce výkonu po hodinách, najsilnejšia hodina zelená, čo už prešlo, stlmené. */
 .k-stlpce {
     display: grid;
     grid-auto-columns: minmax(0, 1fr);
     grid-auto-flow: column;
     align-items: end;
-    gap: 3px;
-    height: 44px;
+    gap: 2px;
+    height: 24px;
 }
 .k-stlpce i {
-    border-radius: 3px 3px 0 0;
+    border-radius: 2px 2px 0 0;
     background: rgba(255, 255, 255, 0.4);
 }
 .k-stlpce i[data-max] {
     background: var(--yes);
+}
+.k-stlpce i[data-preslo] {
+    opacity: 0.45;
 }
 /* Bodky pod pásom: kde pás stojí; ťuknutím preskočia na kartu. Tlačidlo má plochu na prst (44 px),
    bodka v ňom je malá. */

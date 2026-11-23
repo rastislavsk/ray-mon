@@ -96,14 +96,15 @@ export const DEN_NAZVY = { vyborny: 'výborný deň', dobry: 'dobrý deň', slab
 export const DNES_TEXTS = {
     plan: 'Plán na dnes',
     grade: 'Ako dopadol dnešok',
-    zoStrechy: 'Dnes zo strechy',
+    zoStrechy: 'Zo strechy',
+    /** Prirovnania vedľa Zo strechy (docs/navrhy/dnes-nizsie-dlazdice.html, D): mobily, auto, CO2 ikonami. */
+    akoKeby: 'Ako keby',
+    /** Riadok pod číslom Zo strechy cez deň - večer je tam, čo sľubovala predpoveď. */
+    celyDen: 'za celý deň',
     later: 'Kedy lepšie',
     predpoved: 'Predpoveď',
-    predpovedZajtra: 'Predpoveď na zajtra',
-    oblacnost: 'oblačnosť',
-    graf: 'Graf dňa',
-    /** Venovanie - jediný viditeľný text karty Graf dňa (docs/navrhy/dnes-graf-tajomno.html, D). */
-    grafStitok: 'Kheinshmetke only',
+    predpovedZajtra: 'Na zajtra',
+    oblacnost: 'Oblačnosť',
     slnko: 'Najviac slnka',
     karty: 'Viac o dnešku',
     stupnica: 'Ako appka deň hodnotí',
@@ -167,10 +168,9 @@ export function denVysvetlenieText(cls, kedy, voice) {
     return { title, text, note };
 }
 
-/** Ráno: kedy dnes pustiť veľké veci. @param {{ from: number, to: number } | null} w @param {import('./messages-zaklad.js').Voice} voice */
-export function dnesPlanText(w, voice) {
-    if (!w) return 'Okno na veľké veci dnes nebude.';
-    return `Veľké veci ${polite(voice) ? 'dajte' : 'daj'} medzi ${spanText(w)}.`;
+/** Ráno: kedy dnes pustiť veľké veci, krátko pod nadpisom Veľké veci. @param {{ from: number, to: number } | null} w */
+export function dnesPlanText(w) {
+    return w ? `medzi ${spanText(w)}` : 'dnes nebude okno';
 }
 
 /**
@@ -178,7 +178,7 @@ export function dnesPlanText(w, voice) {
  * @param {'go' | 'wait'} kind @param {{ from: number, to: number }} w @param {number} left minúty
  */
 export function dnesCountText(kind, w, left) {
-    const text = kind === 'go' ? `ešte slnka na veľké veci, do ${endHm(w.to)}` : `do okna na veľké veci ${spanText(w)}`;
+    const text = kind === 'go' ? `do ${endHm(w.to)}` : `okno ${spanText(w)}`;
     return { value: countdownText(left), text };
 }
 
@@ -187,11 +187,11 @@ export function dnesCountText(kind, w, left) {
  * @param {{ forecastKwh: number, doneKwh: number, measured: boolean, pct: number | null }} d
  */
 export function dnesNabehloText({ forecastKwh, doneKwh, measured, pct }) {
-    const z = `z ~${fmtSum(Math.round(forecastKwh), 0)} kWh na celý deň`;
+    const z = `z ~${fmtSum(Math.round(forecastKwh), 0)} kWh`;
     return {
         title: measured ? 'Nabehlo' : 'Nabehlo asi',
         value: `${fmt1(doneKwh)} kWh`,
-        text: `${pct === null ? z.charAt(0).toUpperCase() + z.slice(1) : `${pct} % ${z}`}${measured ? '' : ', podľa predpovede'}.`,
+        text: pct === null ? z : `${pct} % ${z}`,
     };
 }
 
@@ -211,7 +211,8 @@ export function dnesZajtraText({ cls, kwh, window }, voice) {
     const okolo = `Okolo ${fmtSum(Math.round(kwh), 0)} kWh`;
     return {
         kick: 'Zajtra',
-        chip: `zajtra ${DEN_NAZVY[cls]}`,
+        // Nadpis dlaždice už hovorí Zajtra - odznak nesie len triedu dňa.
+        chip: DEN_NAZVY[cls],
         word: mozemTexts(voice).DEN_WORDS.zajtra[cls],
         text: window ? `${okolo}, veľké veci ${spanText(window)}.` : `${okolo}, okno na veľké veci nebude.`,
     };
@@ -772,9 +773,9 @@ export function dnesDayText({ kwh, phones, km, co2Kg }) {
         label: DNES_TEXTS.zoStrechy,
         value: `~${fmtSum(Math.round(kwh), 0)} kWh`,
         eq: [
-            { value: `~${tens(phones)}`, label: 'nabitých mobilov' },
-            { value: `~${tens(km)} km`, label: 'elektrickým autom' },
-            { value: posterCo2Value(co2Kg), label: 'CO2eq menej' },
+            { ikona: 'mobil', value: `~${tens(phones)}`, label: 'nabitých mobilov' },
+            { ikona: 'auto', value: `~${tens(km)} km`, label: 'elektrickým autom' },
+            { ikona: 'co2', value: `${posterCo2Value(co2Kg)} CO2`, label: 'menej' },
         ],
     };
 }

@@ -10,8 +10,7 @@ import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
 import { setupInit } from '../shared/setup-flow.js';
 
 /**
- * Stav. `mzGraf` otvorený panel s grafom dňa na karte Dnes (docs/navrhy/dnes-predpoved-graf.html) a `terazPreview`
- * zvolený čas v ňom (minúta dňa, null = teraz; meno ostalo z čias, keď bol graf na karte Teraz), `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
+ * Stav. `tzVec` otvorený detail spotrebiča (id veci z MOZEM_ITEMS),
  * `mzCas` čas zvolený posuvníkom dňa hore na karte Dnes (minúta dňa, null = teraz; docs/navrhy/dnes-tlacidlo-teraz.html, T4c) - s kartou sa vráti na teraz,
  * `tzDen` deň zvolený v hrebeni týždňa karty Teraz (poradie od dneška, 0 = dnes; docs/navrhy/teraz-vyhlad-alternativy.html),
  * `tzOziv` na čo sa ťuklo v oznámení, kým čaká alebo beží oživená ikona dlaždice (docs/navrhy/oznamenia-animacie.html, web/oznamenia-klik.js),
@@ -42,8 +41,6 @@ import { setupInit } from '../shared/setup-flow.js';
  *   panelDir: 1 | -1,
  *   layout: Layout,
  *   tariff: import('../shared/config.js').Tariff,
- *   mzGraf: boolean,
- *   terazPreview: number | null,
  *   mzCas: number | null,
  *   tzVec: string | null,
  *   tzDen: number,
@@ -94,9 +91,8 @@ import { setupInit } from '../shared/setup-flow.js';
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
  */
 /**
- * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci, panel s grafom
- * dňa na karte Dnes (`graf`) a detail karty 7 dní. Zvolený čas v grafe krokom nie je - posun po grafe
- * ani „Späť na teraz“ do histórie nič nepridajú, Späť zavrie celý graf naraz. Rovnako pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
+ * Krok navigácie, na ktorý sa dá vrátiť tlačidlom Späť: karta, otvorený panel veci a detail karty 7 dní.
+ * Pri detaile dňa: listovanie po dňoch je stále ten istý krok, Späť z ktoréhokoľvek
  * dňa vráti do prehľadu. Obrazovka sprievodcu
  * nastavením aj s plochou panelov je krok tiež, takže Späť vracia o obrazovku sprievodcu. Okno sekcie
  * Appka (`sheet`) rovnako - Späť ho zavrie, a rozbalená sekcia karty Nastavenie (`fold`) - Späť ju zbalí. Otvorený detail spotrebiča na karte Teraz (`vec`)
@@ -105,7 +101,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * stĺpcu, ktorý je práve aktívny. Mimo prehľadu v kroku nie je - položky histórie telefónu ostávajú, aké boli.
  * @typedef {{ panel: Panel, detail: WeekDetail | null,
  *   setup: import('../shared/setup.js').SetupStep | null, roof: number, sheet: AppSheet | null, fold: NsFold | null,
- *   vec: string | null, chip: TzChip | null, trieda: MzChip | null, graf: boolean, dash?: true }} NavStep
+ *   vec: string | null, chip: TzChip | null, trieda: MzChip | null, dash?: true }} NavStep
  */
 
 /**
@@ -256,15 +252,13 @@ export function initialState(
 
 /**
  * Zmena karty aj so smerom podľa poradia v navigácii. Zvolený deň, detail spotrebiča a vysvetlenie
- * patria karte Teraz, zvolený čas grafu a vysvetlenie odznaku karte Dnes a detail karte 7 dní - s kartou sa zatvoria.
+ * patria karte Teraz, zvolený čas posuvníka a vysvetlenie odznaku karte Dnes a detail karte 7 dní - s kartou sa zatvoria.
  * @param {Panel} from @param {Panel} to
  */
 export function panelChange(from, to) {
     return {
         panel: to,
         panelDir: /** @type {1 | -1} */ (PANELS.indexOf(to) < PANELS.indexOf(from) ? -1 : 1),
-        mzGraf: false,
-        terazPreview: /** @type {number | null} */ (null),
         mzCas: /** @type {number | null} */ (null),
         tzVec: /** @type {string | null} */ (null),
         tzDen: 0,
@@ -361,7 +355,6 @@ export function navStep(state) {
         vec: state.tzVec,
         chip: state.tzChip,
         trieda: state.mzChip,
-        graf: state.mzGraf,
         ...(dashboard(state) ? { dash: /** @type {const} */ (true) } : {}),
     };
 }
@@ -375,7 +368,7 @@ export function sameNavStep(a, b) {
 }
 
 /** Časti kroku, ktoré musia byť rovnaké, aby to bol ten istý krok. @type {(keyof NavStep)[]} */
-const ROVNAKE_V_KROKU = ['detail', 'setup', 'roof', 'sheet', 'fold', 'vec', 'chip', 'trieda', 'graf'];
+const ROVNAKE_V_KROKU = ['detail', 'setup', 'roof', 'sheet', 'fold', 'vec', 'chip', 'trieda'];
 
 /**
  * Detail z položky histórie. Patrí len karte 7 dní (v prehľade ktorémukoľvek stĺpcu - 7 dní je
@@ -418,12 +411,6 @@ const tzChipOf = (panel, dash, chip) => ((panel === 'terazky' || dash) && chip =
 const mzChipOf = (panel, dash, trieda) => ((panel === 'mozem' || dash) && (trieda === 'dnes' || trieda === 'zajtra') ? trieda : null);
 
 /**
- * Otvorený panel s grafom dňa z položky histórie. Patrí karte Dnes (v prehľade ktorémukoľvek stĺpcu);
- * položka zo skoršej verzie ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} graf
- */
-const mzGrafOf = (panel, dash, graf) => (panel === 'mozem' || dash) && graf === true;
-
-/**
  * Obrazovka sprievodcu a plocha z položky histórie. Položka zo skoršej verzie sprievodcu nepozná -
  * chýbajúci krok je prehľad karty. Cudzia hodnota je null.
  * @param {unknown} setup @param {unknown} roof
@@ -452,16 +439,16 @@ export function navStepOf(raw) {
     if (!raw || typeof raw !== 'object') return null;
     // Panel veci karty Môžem? (`item`) zanikol s jej dlaždicami, Plán dňa (`plan`) a zoznam pod grafom
     // (`legend`) s prestavbou karty Teraz; položka, ktorá ich ešte nesie, vráti len kartu. Zvolený čas
-    // v grafe (`preview`) krokom býval - položka, ktorá ho nesie, vráti graf bez neho.
-    const { panel, detail, setup, roof, sheet, fold, vec, chip, trieda, graf, dash } =
+    // v grafe (`preview`) krokom býval a panel s grafom dňa karty Dnes (`graf`) zanikol - položka, ktorá ich nesie,
+    // vráti kartu bez nich.
+    const { panel, detail, setup, roof, sheet, fold, vec, chip, trieda, dash } =
         /** @type {{ panel?: unknown, detail?: unknown, setup?: unknown, roof?: unknown,
-         *   sheet?: unknown, fold?: unknown, vec?: unknown, chip?: unknown, trieda?: unknown, graf?: unknown, dash?: unknown }} */ (raw);
+         *   sheet?: unknown, fold?: unknown, vec?: unknown, chip?: unknown, trieda?: unknown, dash?: unknown }} */ (raw);
     const p = PANELS.find((x) => x === panel);
     const place = setupPlaceOf(setup, roof);
     if (!p || !place) return null;
     const d = dashOf(p, dash);
     const inDash = !!d.dash;
-    const g = mzGrafOf(p, inDash, graf);
     return {
         panel: p,
         detail: weekDetailOf(p, inDash, detail),
@@ -471,7 +458,6 @@ export function navStepOf(raw) {
         vec: tzVecOf(p, inDash, vec),
         chip: tzChipOf(p, inDash, chip),
         trieda: mzChipOf(p, inDash, trieda),
-        graf: g,
         ...d,
     };
 }
@@ -483,8 +469,7 @@ export const navStepFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /
 export const navPrevFrom = (raw) => navStepOf(raw && typeof raw === 'object' ? /** @type {{ prev?: unknown }} */ (raw).prev : null);
 
 /**
- * Návrat na krok z histórie (tlačidlo Späť): karta, detaily a panely tak, ako boli. Zvolený čas
- * v grafe ostane, kým je graf otvorený, so zatvoreným grafom sa vráti na teraz; detail dňa na dni, kde sa naposledy
+ * Návrat na krok z histórie (tlačidlo Späť): karta, detaily a panely tak, ako boli; detail dňa na dni, kde sa naposledy
  * stálo. Úprava jedného kroku sprievodcu končí zhrnutím alebo prehľadom - návrat na ne ju ukončí.
  * Návrat v prehľade na krok prehľadu nechá aktívny stĺpec, aký je - stĺpec nebol krokom.
  * @param {AppState} state @param {NavStep} step
@@ -494,7 +479,6 @@ export function navChange(state, step) {
     const panel = !!step.dash && dashboard(state) ? state.panel : step.panel;
     return {
         ...panelChange(state.panel, panel),
-        terazPreview: step.graf ? state.terazPreview : null,
         // Krok späť na tej istej karte (zatvorenie panelu) nechá čas posuvníka karty Dnes, iná karta ho vráti na teraz.
         mzCas: panel === state.panel ? state.mzCas : null,
         weekDetail: step.detail,
@@ -507,7 +491,6 @@ export function navChange(state, step) {
         tzDen: panel === state.panel ? state.tzDen : 0,
         tzChip: step.chip,
         mzChip: step.trieda,
-        mzGraf: step.graf,
         ...(endsEdit ? { setupReturn: /** @type {null} */ (null) } : {}),
     };
 }

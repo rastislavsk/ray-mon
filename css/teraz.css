@@ -1,4 +1,4 @@
-/* Štýly karty Teraz a grafu dňa. */
+/* Štýly karty Teraz. */
 /* ===== Karta Teraz ===== */
 /* Čo zapnúť (docs/navrhy/teraz-navrh-2.html, docs/navrhy/teraz-dlazdice.html): mriežka dlaždíc. Kontajner - mená v dlaždiciach sa zmenšia s jeho šírkou, nie s oknom, a široký má dlaždice po troch. */
 #tz-co {
@@ -607,7 +607,7 @@
     position: relative;
     display: block;
     width: 100%;
-    height: clamp(180px, calc(40svh - 63px - max(16px, env(safe-area-inset-top))), 340px);
+    height: var(--scena-h);
     margin: 8px 0 10px;
     padding: 0;
     border: 0;
@@ -899,145 +899,6 @@
         transform: rotate(360deg);
     }
 }
-/* Graf dňa je posúvač času. Zvislý ťah cez neho posúva stránku (pan-y), vodorovný je náhľad -
-   ten obsluhuje JS (teraz-interactions.js). */
-.day-scrub {
-    margin-top: 14px;
-    padding: 10px 8px 6px;
-    touch-action: pan-y;
-    cursor: ew-resize;
-    user-select: none;
-    -webkit-user-select: none;
-}
-.day-scrub:focus-visible {
-    outline: 3px solid #fff;
-    outline-offset: 2px;
-}
-/* Prst aj kurzor trafia vždy rámček grafu, nie graf v ňom (SVG s popiskami): render ho pri každom
-   posune náhľadu vymení a prst by inak ostal na prvku, ktorý už v stránke nie je - ďalšie touchmove
-   by k rámčeku nedošli a náhľad by zamrzol po prvom pohybe. */
-.day-scrub .dc-box {
-    pointer-events: none;
-}
-.day-scrub svg {
-    display: block;
-    width: 100%;
-    height: auto;
-}
-/* Panel s grafom dňa na karte Dnes (docs/navrhy/dnes-predpoved-graf.html, predtým karta Deň na karte
-   Teraz): výkon a čas, krivka (posúvač času), legenda, pätka. Obsah panelu nesie aj oblohu - zaoblený
-   je ako panel, aby ho obloha nepresahovala. */
-.grden {
-    border-radius: inherit;
-}
-/* Obloha zvoleného času v paneli s grafom: farby neba (--d1, --d2) a stmavený spodok (--d3, skyShade -
-   biely text má kontrast v každej výške) prelína CSS ako pozadie appky, pod obsahom je kresba
-   počasia. Obsah je izolovaný, kresba a stmavenie stoja pod ním (z-index -1). */
-/* Poloha slnka kresby je zaregistrovaná, aby sa v paneli slnko pri ťahu posúvalo plynule. */
-@property --wx-sx {
-    syntax: '<length-percentage>';
-    inherits: true;
-    initial-value: 0px;
-}
-@property --wx-sy {
-    syntax: '<length-percentage>';
-    inherits: true;
-    initial-value: 0px;
-}
-@property --d1 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: #1767c9;
-}
-@property --d2 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: #4fa3e2;
-}
-@property --d3 {
-    syntax: '<color>';
-    inherits: true;
-    initial-value: rgba(5, 10, 30, 0.13);
-}
-.grden.nebo {
-    isolation: isolate;
-    overflow: hidden;
-    background: linear-gradient(180deg, var(--d1), var(--d2));
-    transition:
-        --d1 0.7s,
-        --d2 0.7s,
-        --d3 0.7s;
-}
-.grden.nebo::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(180deg, rgba(8, 16, 40, 0.2), var(--d3));
-    pointer-events: none;
-}
-/* Kresba počasia v paneli: v ňom, nie cez obrazovku; obzor a koniec zrážok na spodku panelu. Slnko
-   (--wx-sx, --wx-sy) dáva render podľa zvoleného času. */
-.wx.wx-den {
-    position: absolute;
-    z-index: -1;
-    inset: 0;
-    width: auto;
-    height: auto;
-    --wx-obzor: 100%;
-    --wx-prec-h: 100%;
-    -webkit-mask-image: none;
-    mask-image: none;
-    transition:
-        --wx-sx 0.7s,
-        --wx-sy 0.7s;
-}
-/* Lúče sú dve otáčajúce sa plochy 1040 × 1040 px - v paneli by sa krútili druhýkrát popri pozadí
-   a zdvojnásobili prácu telefónu aj pri ťahu. Slnko v karte je žiara bez lúčov. */
-/* Špecificita prebije pravidlá „čo je v ktorom stave vidno“ vo css/pocasie.css (0,4,0). */
-.grden .wx.wx-den[data-wx] :is(.wx-r1, .wx-r2, .wx-flare) {
-    display: none;
-}
-/* Hlava grafu dňa: výkon a odkiaľ je vľavo, čas vpravo. Bežne jeden riadok, takže sa posúvač pod
-   prstom nepohne, keď sa zmení zvolený čas; s veľkým písmom v systéme zíde čas pod výkon. */
-.citanie {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: flex-start;
-    gap: 4px 12px;
-    padding-right: 36px;
-}
-.c-kw {
-    display: grid;
-    gap: 4px;
-}
-.c-kw b,
-.c-cas {
-    font-weight: 900;
-    font-variation-settings: 'wdth' 112;
-    font-variant-numeric: tabular-nums;
-    line-height: 1;
-}
-.c-kw b {
-    font-size: 1.75rem;
-}
-.c-kw span {
-    font-size: 0.8125rem;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--dim);
-}
-/* Čas o štvrtinu menší ako výkon, vždy vpravo. Dve triedy: v paneli by ich inak prebilo `.sheet p`. */
-.citanie .c-cas {
-    margin-left: auto;
-    font-size: 1.3125rem;
-    line-height: 1;
-}
-.grden .day-scrub {
-    margin-top: 0;
-    padding: 0;
-}
 /* Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, plný úsek spotrebiča,
    pri dnešku biela čiara „teraz“ a hodiny pod tým. Polohy sú v % osi. */
 .os {
@@ -1087,67 +948,6 @@
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
     color: var(--dim);
-}
-.leg {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 2px 12px;
-    font-size: 0.75rem;
-    color: var(--dim);
-}
-.leg span {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-}
-.leg i {
-    width: 12px;
-    height: 8px;
-    border-radius: 2px;
-}
-.leg [data-l='go'] {
-    background: var(--yes);
-}
-.leg [data-l='part'] {
-    background: rgba(255, 238, 190, 0.6);
-}
-.leg [data-l='cheap'] {
-    background: var(--cheap);
-}
-.leg [data-l='costly'] {
-    background: var(--costly);
-}
-.leg [data-l='power'] {
-    height: 3px;
-    background: var(--yes);
-}
-.leg [data-l='forecast'] {
-    height: 0;
-    border-top: 2px dashed rgba(185, 242, 140, 0.6);
-    border-radius: 0;
-}
-.leg [data-l='limit'] {
-    height: 0;
-    border-top: 1.5px dashed #fff;
-    border-radius: 0;
-}
-.pata {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    font-size: 0.8125rem;
-    color: var(--dim);
-}
-.spat {
-    min-height: 44px;
-    padding: 6px 16px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--amber-text);
-    color: var(--ink);
-    font-size: 0.875rem;
-    font-weight: 800;
-    cursor: pointer;
 }
 /* Oblačnosť po hodinách nad krivkou: jasno svetlé, zamračené tmavosivé (`--c` je oblačnosť v %,
    web/day-chart.js), bunka pod čiarou náhľadu má okraj. */

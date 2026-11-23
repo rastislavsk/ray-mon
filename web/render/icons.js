@@ -83,3 +83,20 @@ export const rezimIcon = (rezim) =>
     rezim === 'rucne'
         ? `<svg class="vi" data-ikona="ruka" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${RUKA}</svg>`
         : tokIcon('slnko');
+
+/**
+ * Prirovnania na karte Dnes (Ako keby, docs/navrhy/dnes-nizsie-dlazdice.html, D): mobil, auto a lístok za CO2 -
+ * čiarou ako spotrebiče. Ikona nahrádza slovo, ktoré má čítačka v texte vedľa nej.
+ * @type {Record<string, string>}
+ */
+const KARTA = {
+    mobil: '<rect x="7" y="2.5" width="10" height="19" rx="2.2"/><path d="M11 18.5h2"/>',
+    auto: VECI.auto,
+    co2: '<path d="M5 19.5c0-8.5 5.5-14 14.5-15-1 9-6.5 14.5-14.5 15z"/><path d="M5 19.5l7.5-7.5"/>',
+};
+
+/** Ikona prirovnania na karte Dnes; neznáma ikonu nemá. @param {string} id */
+export function kartaIcon(id) {
+    const inner = KARTA[id];
+    return inner ? `<svg class="vi" data-ikona="${id}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${inner}</svg>` : '';
+}

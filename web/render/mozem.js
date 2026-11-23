@@ -1,7 +1,7 @@
 // Karta Dnes (kódové meno mozem): hore veľký výkon zvoleného času na živej oblohe a posuvník dňa s odtlačkom bežca
 // na teraz (docs/navrhy/dnes-obloha-posuvnik.html, A, docs/navrhy/dnes-tlacidlo-teraz.html, T4c), pod ním pás dlaždíc -
-// Dnes (odznak a veľké slovo), Veľké veci, Dnes zo strechy, večer Zajtra a karty časti dňa (docs/navrhy/dnes-tri-smery.html,
-// docs/navrhy/dnes-upravy.html), medzi nimi Graf dňa, ktorý otvorí panel s grafom (render/graf.js). Všetko počíta
+// Dnes (odznak a veľké slovo), Veľké veci, Zo strechy, večer Zajtra a karty časti dňa (docs/navrhy/dnes-tri-smery.html,
+// docs/navrhy/dnes-upravy.html), po jednej alebo po dvoch na dlaždici (docs/navrhy/dnes-nizsie-dlazdice.html, D). Všetko počíta
 // shared/mozem-sky.js, shared/dnes-faza.js a shared/dnes-nebo.js, texty sú v shared/messages.js - tu sa len
 // zapisuje do DOM.
 
@@ -12,7 +12,7 @@ import { DNES_TEXTS, voiceTexts } from '../../shared/messages-core.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { syncBodky } from '../mozem-karty.js';
 import { dashboard, shows } from '../state.js';
-import { vecIcon, weatherIcon } from './icons.js';
+import { kartaIcon, vecIcon, weatherIcon } from './icons.js';
 import { kresliPocasie } from './teraz.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
@@ -22,12 +22,13 @@ import { dialog, setHtml, setText, show } from './write.js';
 /** @typedef {import('../dom.js').Dom} Dom */
 
 /**
- * Veľkosť veľkého slova v dlaždici Dnes či Zajtra v px podľa jeho dĺžky: krátke slovo najväčšie. Na úzkom
+ * Veľkosť veľkého slova v dlaždici Dnes či Zajtra v px podľa jeho dĺžky: krátke slovo najväčšie, dlhé (aj tri riadky)
+ * také, aby sa zmestilo do nízkej dlaždice (docs/navrhy/dnes-nizsie-dlazdice.html). Na úzkom
  * displeji ho štýl zmenší ešte podľa najdlhšieho slova v ňom (`--word-len`), aby sa nikdy neorezalo.
  * @param {string} word
  */
 export function wordSize(word) {
-    return word.length <= 7 ? 46 : word.length <= 11 ? 38 : 32;
+    return word.length <= 7 ? 46 : word.length <= 11 ? 38 : word.length <= 16 ? 32 : 26;
 }
 
 /** Atribút style veľkého slova: veľkosť podľa dĺžky a najdlhšie slovo v ňom. @param {string} word */
@@ -97,94 +98,77 @@ function renderPocasie(state, n, dom) {
 
 /**
  * Karta Predpoveď (docs/navrhy/dnes-predpoved-graf.html, B): ikona a popis počasia, pod tým teplomer od
- * najnižšej po najvyššiu teplotu a oblačnosť dňa. Pásiky sú len obraz - čísla pri nich sú text.
+ * najnižšej po najvyššiu teplotu. Pásik je len obraz - čísla pri ňom sú text.
  * @param {Extract<Karta, { kind: 'predpoved' }>} k
  */
 function predpovedHtml(k) {
-    const obl =
-        k.oblacnost === null
-            ? ''
-            : `<p class="k-obl"><span>${escapeHtml(DNES_TEXTS.oblacnost)}</span>` +
-              `<i aria-hidden="true"><b style="width:${k.oblacnost}%"></b></i><span>${k.oblacnost} %</span></p>`;
     return (
         `<div class="k-wx">${k.weather ? weatherIcon(k.weather) : ''}<p class="k-popis">${escapeHtml(k.popis)}</p></div>` +
         `<p class="k-teplo"><span><span class="sr">najnižšia </span>${escapeHtml(k.min)}</span><i aria-hidden="true"></i>` +
-        `<span><span class="sr">najvyššia </span>${escapeHtml(k.max)}</span></p>${obl}`
+        `<span><span class="sr">najvyššia </span>${escapeHtml(k.max)}</span></p>`
     );
 }
 
 /**
- * Karta Graf dňa: celá karta je tlačidlo - ťuknutie kdekoľvek otvorí panel s grafom (render/graf.js).
- * Vidno len venovanie s leskom a šípku v obruči (docs/navrhy/dnes-graf-tajomno.html, D); meno „Graf dňa“
- * má len čítačka, aby vedela, čo ťuknutie otvorí.
- * @param {Extract<Karta, { kind: 'graf' }>} k
+ * Obsah jednej karty pod jej nadpisom: veľká hodnota alebo obrázok a krátky riadok. Obrázky (stĺpce, pásiky,
+ * ikony) sú pre čítačku skryté - to isté povie text vedľa nich. @param {Karta} k
  */
-function grafHtml(k) {
-    return (
-        `<button type="button" class="k-otvor" aria-haspopup="dialog"><span class="sr">${escapeHtml(k.title)} – </span>` +
-        `<span class="k-obruc" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M7.5 4.5 13 10l-5.5 5.5"/></svg></span>` +
-        `<span class="k-lesk">${escapeHtml(k.stitok)}</span></button>`
-    );
-}
-
-/**
- * Jedna karta pásu: nadpis, veľká hodnota alebo obrázok a veta. Obrázky (stĺpce, teplomer) sú pre
- * čítačku skryté - to isté povie veta či text vedľa nich. @param {Karta} k
- */
-function kartaHtml(k) {
-    if (k.kind === 'graf') return `<section class="karta glass" data-kind="graf">${grafHtml(k)}</section>`;
-    const head = `<h2 class="glass-ttl">${escapeHtml(k.title)}</h2>`;
-    if (k.kind === 'dnes' || k.kind === 'zajtra' || k.kind === 'strecha' || k.kind === 'velke')
-        return `<section class="karta glass" data-kind="${k.kind}">${head}${dnesnyHtml(k)}</section>`;
-    if (k.kind === 'predpoved') return `<section class="karta glass" data-kind="predpoved">${head}${predpovedHtml(k)}</section>`;
-    const text = `<p class="k-text">${escapeHtml(k.text)}</p>`;
-    const val = (/** @type {string} */ v) => `<p class="k-val">${escapeHtml(v)}</p>`;
-    /** @type {string} */ let body;
-    if (k.kind === 'nabehlo')
-        body = `${val(k.value)}${k.pct === null ? '' : `<div class="bar" aria-hidden="true"><i style="width:${k.pct}%"></i></div>`}`;
-    else if (k.kind === 'lepsie') body = val(k.value);
-    else
-        body =
+function obsahHtml(k) {
+    const text = (/** @type {string} */ t) => (t ? `<p class="k-text">${sCasmi(t)}</p>` : '');
+    const val = (/** @type {string} */ v) => (v ? `<p class="k-val">${escapeHtml(v).replace(/ kWh$/, ' <small>kWh</small>')}</p>` : '');
+    const bar = (/** @type {number | null} */ pct) =>
+        pct === null ? '' : `<div class="bar" aria-hidden="true"><i style="width:${pct}%"></i></div>`;
+    if (k.kind === 'dnes' || k.kind === 'zajtra')
+        return `<p${k.kind === 'dnes' ? ' id="mz-word"' : ''} class="k-slovo" style="${wordStyle(k.word)}">${escapeHtml(k.word)}</p>${text(k.text)}`;
+    if (k.kind === 'predpoved') return predpovedHtml(k);
+    if (k.kind === 'oblacnost') return `<p class="k-val k-ikona">${weatherIcon('zamracene')}${escapeHtml(k.value)}</p>${bar(k.pct)}`;
+    if (k.kind === 'eq')
+        return `<ul class="eq">${k.eq
+            .map((e) => `<li>${kartaIcon(e.ikona)}<b>${escapeHtml(e.value)}</b><span class="sr"> ${escapeHtml(e.label)}</span></li>`)
+            .join('')}</ul>`;
+    if (k.kind === 'nabehlo') return `${val(k.value)}${bar(k.pct)}${text(k.text)}`;
+    if (k.kind === 'slnko')
+        return (
             val(k.value) +
             `<div class="k-stlpce" aria-hidden="true">${k.stlpce
-                .map((s) => `<i style="height:${Math.max(4, s.pct)}%"${s.max ? ' data-max' : ''}${s.preslo ? ' data-preslo' : ''}></i>`)
-                .join('')}</div>`;
-    return `<section class="karta glass" data-kind="${k.kind}">${head}${body}${text}</section>`;
+                .map((x) => `<i style="height:${Math.max(4, x.pct)}%"${x.max ? ' data-max' : ''}${x.preslo ? ' data-preslo' : ''}></i>`)
+                .join('')}</div>${text(k.text)}`
+        );
+    return `${val(k.value)}${text(k.text)}`;
 }
 
 /**
- * Dlaždice z polí, ktoré boli nad pásom (docs/navrhy/dnes-obloha-posuvnik.html, A): odznak s triedou dňa ako
- * tlačidlo na jej vysvetlenie (`data-trieda`), veľké slovo, odpočet či veta s časmi tučne a čo dá strecha.
- * @param {Extract<Karta, { kind: 'dnes' | 'zajtra' | 'strecha' | 'velke' }>} k
+ * Nadpis karty. Pri Dnes a Zajtra je v ňom aj odznak triedy dňa - tlačidlo na jej vysvetlenie (`data-trieda`).
+ * @param {Karta} k
  */
-function dnesnyHtml(k) {
-    const text = (/** @type {string} */ t) => (t ? `<p class="k-text">${sCasmi(t)}</p>` : '');
-    if (k.kind === 'velke') return `${k.value ? `<p class="k-val">${escapeHtml(k.value)}</p>` : ''}${text(k.text)}`;
-    if (k.kind === 'strecha') {
-        // Jednotka je menšia ako číslo.
-        const val = escapeHtml(k.value).replace(/ kWh$/, ' <small>kWh</small>');
-        const eq = k.eq.map((e) => `<li><b>${escapeHtml(e.value)}</b><span>${escapeHtml(e.label)}</span></li>`).join('');
-        return `<p class="k-val">${val}</p>${text(k.text)}<ul class="eq">${eq}</ul>`;
-    }
-    const kedy = k.kind === 'dnes' ? 'dnes' : 'zajtra';
-    const chip = k.chip
-        ? `<button type="button" class="chip-tap" data-trieda="${kedy}" aria-haspopup="dialog">` +
-          `<span class="chip info"${k.cls ? ` data-cls="${k.cls}"` : ''}>${escapeHtml(k.chip)}</span></button>`
-        : '';
-    // Slovo dneška je v páse raz - nesie id, podľa ktorého ho nájdu testy a odkazy v komentároch (#mz-word).
-    const id = kedy === 'dnes' ? ' id="mz-word"' : '';
-    return `${chip}<p${id} class="k-slovo" style="${wordStyle(k.word)}">${escapeHtml(k.word)}</p>${text(k.text)}`;
+function nadpisHtml(k) {
+    const head = `<h2 class="glass-ttl">${escapeHtml(k.title)}</h2>`;
+    if ((k.kind !== 'dnes' && k.kind !== 'zajtra') || !k.chip) return head;
+    return (
+        `<div class="k-hlava">${head}<button type="button" class="chip-tap" data-trieda="${k.kind}" aria-haspopup="dialog">` +
+        `<span class="chip info"${k.cls ? ` data-cls="${k.cls}"` : ''}>${escapeHtml(k.chip)}</span></button></div>`
+    );
 }
 
 /**
- * Pás kariet pod posuvníkom a pod ním bodky so šípkami (jedna karta bez nich).
+ * Dlaždica pásu (docs/navrhy/dnes-nizsie-dlazdice.html, D): jedna karta, alebo dvojica vedľa seba s tenkou čiarou
+ * medzi nimi. Každá karta má svoj nadpis a `data-kind`. Slovo dneška nesie id, podľa ktorého ho nájdu testy (#mz-word).
+ * @param {Karta[]} d
+ */
+function dlazdicaHtml(d) {
+    const cast = (/** @type {Karta} */ k) => `<div class="cast" data-kind="${k.kind}">${nadpisHtml(k)}${obsahHtml(k)}</div>`;
+    return `<section class="karta glass"${d.length > 1 ? ' data-dvoj' : ''}>${d.map(cast).join('<i class="deli" aria-hidden="true"></i>')}</section>`;
+}
+
+/**
+ * Pás dlaždíc pod posuvníkom a pod ním bodky so šípkami (jedna dlaždica bez nich).
  * Ktorá bodka svieti, závisí od posunu pásu - nastaví ju syncBodky (aj pri posúvaní, mozem-interactions.js).
- * @param {Karta[]} k @param {Dom} dom
+ * @param {Karta[][]} k @param {Dom} dom
  */
 function renderKarty(k, dom) {
     show(dom.mzKarty, k.length > 0);
     dom.mzKarty.setAttribute('aria-label', DNES_TEXTS.karty);
-    setHtml(dom.mzKarty, k.map(kartaHtml).join(''));
+    setHtml(dom.mzKarty, k.map(dlazdicaHtml).join(''));
     show(dom.mzPasOvladanie, k.length > 1);
     dom.mzPasSpat.setAttribute('aria-label', DNES_TEXTS.pasSpat);
     dom.mzPasDalej.setAttribute('aria-label', DNES_TEXTS.pasDalej);

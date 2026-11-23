@@ -91,9 +91,9 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `sky.js`                                                                     | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                                            |
 | `mozem-sky.js`                                                               | Karta Dnes novej appky: model z `mozem.js` poskladaný pre nový vzhľad (slovo, deň v číslach, výzvy).                                   |
 | `dnes-nebo.js`                                                               | Karta Dnes hore: výkon, počasie a slnko v čase posuvníka dňa, východ a západ na ňom a kam bežec skočí pod prstom.                      |
-| `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, pás odporúčaní; graf dňa (`grafModel`).          |
+| `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, pás odporúčaní.                                  |
 | `teraz-scena.js`                                                             | Scéna toku energie na karte Teraz: výroba, dom a sieť ako čísla bez slov, počet lúčov a bodov na vedení, veta pre čítačku.             |
-| `day-chart.js`                                                               | Graf dňa (panel karty Dnes, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno.                |
+| `day-chart.js`                                                               | Graf dňa v detaile dňa karty 7 dní: oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno.                     |
 | `setup-flow.js`                                                              | Sprievodca nastavením ako zmeny stavu: čo urobí každé tlačidlo a pole, kam ide „Ďalej“ a „Späť“. Pre obe appky.                        |
 | `setup-texts.js`                                                             | Texty a čísla sprievodcu: otázky, nápisy tlačidiel, hlásenia pod poľami, riadky zhrnutia. Pre obe appky.                               |
 | `nastavenie.js`                                                              | Karta Nastavenie novej appky: karta strechy, riadky ELEKTRÁREŇ, výzva dokončiť a záložky pri úprave.                                   |
@@ -310,10 +310,9 @@ v `NavStep`).
 Karta Teraz má v oboch appkách to isté rozloženie (súčasná vo vlastných farbách,
 návrh A v `docs/navrhy/terazky-ako-obloha.html`). Ciferník a denný prstenec zanikli, ich úlohu
 preberá graf dňa. `terazModel` v `shared/teraz.js` berie výkon, pásmo a odporúčanie z `heroModel`
-a plán z `dayPlan`. Graf dňa (`grafModel`, aj náhľad iného času cez `previewMinutes`) je od 11. 11. 2026
-v paneli zdola na karte Dnes – otvorí ho karta Graf dňa v páse (`web/render/graf.js`,
-`docs/navrhy/dnes-predpoved-graf.html`). Graf kreslí `web/day-chart.js` a ťah po ňom
-obsluhuje `web/teraz-gestures.js`, oba neutrálne moduly spoločné pre obe appky. Meranie, ktoré mlčí (`pvFreshness`), už nie
+a plán z `dayPlan`. Graf dňa bol od 11. 11. 2026 v paneli zdola na karte Dnes; 23. 11. 2026 zanikol
+(`docs/navrhy/dnes-nizsie-dlazdice.html`) a krivku dňa ukazuje už len detail dňa karty 7 dní. Kreslí ju
+`web/day-chart.js`; ťah po čase obsluhuje `web/teraz-gestures.js` - dnes pre posuvník dňa karty Dnes. Meranie, ktoré mlčí (`pvFreshness`), už nie
 je výkon „teraz“ v žiadnej appke (`freshPowerKw` v `shared/hero-model.js`): číslo, graf aj veta
 karty Môžem? vtedy počítajú z krivky dňa a povedia, že je to odhad a odkedy meranie mlčí. Geometriu grafu kreslí
 `shared/day-chart.js` (návrh C2 v `docs/navrhy/terazky-casova-os.html`): hore oblačnosť po hodinách

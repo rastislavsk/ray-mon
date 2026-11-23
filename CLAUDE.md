@@ -46,8 +46,16 @@ Všetko, čo bolo nad pásom (odznak a veľké slovo, odpočet okna, Dnes zo str
 (`dnesKarty` v `shared/dnes-faza.js`), oblúk slnka je preč. Hore je veľký výkon a pod ním posuvník dňa 0 – 24 h: deň od
 východu po západ sýtejšia biela, pod čiarou len ich časy, bežec je plný kruh a keď odíde, na teraz po ňom ostane odtlačok
 (ťuknutie ho vráti). Zvolený čas je `mzCas` v stave (nie krok navigácie, iná karta ho vráti na teraz); výkon, farby neba
-aj kresba počasia `#wx` sú vtedy v tej chvíli (`shared/dnes-nebo.js`, `render/index.js`, `render/mozem.js`). Graf dňa
-(Kheinshmetke) zatiaľ ostáva tak, ako je, so svojím vlastným časom (`terazPreview`).
+aj kresba počasia `#wx` sú vtedy v tej chvíli (`shared/dnes-nebo.js`, `render/index.js`, `render/mozem.js`).
+
+Nižšie dlaždice a zarovnanie s Teraz: `docs/navrhy/dnes-nizsie-dlazdice.html` (D + Z2), 23. 11. 2026. Graf dňa (Kheinshmetke)
+je zrušený aj s panelom, `grafModel` a stavom `terazPreview`; krivku dňa kreslí ďalej detail dňa karty 7 dní. Dlaždica pásu
+nesie jednu kartu alebo dvojicu s tenkou čiarou medzi nimi (`DVOJICE` v `shared/dnes-faza.js`: Veľké veci | Nabehlo,
+Zo strechy | Ako keby, Predpoveď | Oblačnosť, Najviac slnka | Kedy lepšie); keď druhá chýba, prvá je na dlaždici sama.
+Texty kariet sú krátke, prirovnania sú ikony. Posuvník dňa stojí presne vo výške stredu poľa toku karty Teraz: obloha nad ním
+je `--scena-h` (výška scény Teraz, `css/zaklad.css`) + 126 px, pás dlaždíc vyplní zvyšok (najmenej 124 px, potom sa
+stránka posúva). Keď sa na Teraz zmení niečo nad poľom toku, zmeň aj tých 126 px v `css/dnes.css` - stráži to e2e
+„posuvník dňa vo výške poľa toku karty Teraz“.
 
 ## Bojler na prebytky
 
@@ -242,7 +250,7 @@ s dotykovým displejom sú bežné. Z toho istého dôvodu nie je v `css/` ani j
 
 V CSS to isté hovorí `touch-action`. `none` znamená, že prehliadač nad prvkom nesmie nič, ani
 posunúť stránku – patrí len úchytkám na ťahanie (kruh rozvrhu tarify v sprievodcovi). Plochy,
-cez ktoré človek scrolluje popri ceste, majú `pan-y` (graf dňa `.day-scrub` v paneli karty Dnes, pás dňa
+cez ktoré človek scrolluje popri ceste, majú `pan-y` (posuvník dňa `.mz-os` na karte Dnes, pás dňa
 `.day-track` v detaile dňa karty 7 dní): zvislé posúvanie si necháva
 prehliadač, vodorovné gesto JS. Kde `touch-action` nie je, rozhoduje prehliadač o oboch smeroch –
 to je pre bežný obsah správne, dopisovať ho netreba.
@@ -263,8 +271,8 @@ z detailu von vedie šípka späť (prvý čip v riadku dní). Myš ťahať nemu
 V prehľade so stĺpcami sa dni listujú ťahom v stĺpci 7 dní, pás je v ňom.
 Návrh: `docs/navrhy/7dni-listovanie-dni.html`.
 
-Kontrolujú to e2e testy v skupinách „ťah prstom a tlačidlo Späť“ a „graf dňa prstom“: ťuknutie bez jediného pohybu
-prsta musí náhľad ukázať a nechať svietiť, zvislý ťah cez graf ho nesmie ukázať.
+Kontrolujú to e2e testy v skupinách „ťah prstom a tlačidlo Späť“ a „posuvník dňa prstom“: ťuknutie bez jediného pohybu
+prsta musí bežec presunúť a nechať ho tam, zvislý ťah cez posuvník čas nesmie zmeniť.
 
 ## Ako overovať
 

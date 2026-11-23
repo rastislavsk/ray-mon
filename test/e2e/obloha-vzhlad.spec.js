@@ -27,7 +27,7 @@ import { settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { pocasieTeraz } from '../../shared/teraz.js';
 import { buildForecast } from '../../shared/solar.js';
-import { FIXED_NOW, fixture, fixtureData, otvorGraf, podvrhniQr } from '../helpers.js';
+import { FIXED_NOW, fixture, fixtureData, podvrhniQr } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -123,14 +123,12 @@ const modelMozem = (time, voice) =>
     );
 
 test.describe('tón hlášok', () => {
-    test('Slušný zmení slovo na Dnes a radu v grafe dňa aj pätu plagátu a po obnovení ostane', async ({ page }) => {
+    test('Slušný zmení slovo na Dnes aj pätu plagátu a po obnovení ostane', async ({ page }) => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
         expect(slusny.word).toBe('Dnes bude dobrý deň');
-        await otvorGraf(page);
-        await expect(page.locator('#gr-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
-        await page.keyboard.press('Escape');
+        await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(drzy.word);
 
         await karta(page, 'nastavenie');
@@ -145,15 +143,10 @@ test.describe('tón hlášok', () => {
 
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
-        await otvorGraf(page);
-        await expect(page.locator('#gr-hint')).toHaveText('Ťahajte prstom po grafe a pozrite si iný čas.');
-        await page.keyboard.press('Escape');
 
         await page.reload();
         await appReady(page);
-        await otvorGraf(page);
-        await expect(page.locator('#gr-hint')).toHaveText('Ťahajte prstom po grafe a pozrite si iný čas.');
-        await page.keyboard.press('Escape');
+        await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(slusny.word);
         expect(errors).toEqual([]);
     });

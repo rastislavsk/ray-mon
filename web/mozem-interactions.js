@@ -1,7 +1,6 @@
 // Poslucháče karty Dnes (kódové meno mozem): „Skúsiť znova“, posuvník dňa hore a odtlačok bežca na teraz
-// (docs/navrhy/dnes-tlacidlo-teraz.html, T4c), vysvetlenie odznaku triedy dňa, pás kariet a panel s grafom dňa -
-// zvolený čas v ňom (prst, kurzor, klávesnica po krivke) a „Späť na teraz“.
-// Každý končí volaním setState (alebo krokom v histórii); kreslí render/mozem.js a render/graf.js.
+// (docs/navrhy/dnes-tlacidlo-teraz.html, T4c), vysvetlenie odznaku triedy dňa a pás kariet.
+// Každý končí volaním setState (alebo krokom v histórii); kreslí render/mozem.js.
 // Pravidlá dotyku sú v CLAUDE.md, časť Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
 
 import { dnesOsMinuta } from '../shared/dnes-nebo.js';
@@ -38,7 +37,6 @@ export function initMozem(store, dom, refresh) {
     bindKarty(dom.mzKarty, dom.mzBodky, [dom.mzPasSpat, dom.mzPasDalej]);
     sledujObzor(dom.panels.mozem, dom.mzOs, dom.wx);
     initOs(store, dom);
-    initGraf(store, dom);
 }
 
 /**
@@ -63,34 +61,5 @@ function initOs(store, dom) {
         store.setState({ mzCas: null });
         // Odtlačok po návrate zmizne; fokus ostane na posuvníku, z ktorého sa dá pokračovať.
         dom.mzOs.focus();
-    });
-}
-
-/**
- * Graf dňa: ťuknutie kdekoľvek na kartu Graf dňa v páse otvorí panel (krok navigácie, zatvorenie ťuknutím
- * vedľa, Escape a Späť), v ňom krivka ako posúvač času a „Späť na teraz“.
- * @param {Store} store @param {Dom} dom
- */
-function initGraf(store, dom) {
-    dom.mzKarty.addEventListener('click', (e) => {
-        if (e.target instanceof Element && e.target.closest('[data-kind="graf"]')) store.setState({ mzGraf: true, panel: 'mozem' });
-    });
-    // Zatvorenie vráti aj zvolený čas na teraz - otvorený graf ukáže vždy teraz.
-    initSheet(dom.grSheet, () => stepBack(store, { mzGraf: false, terazPreview: null }));
-    bindDayScrub(dom.grChart, {
-        active: () => {
-            const s = store.get();
-            return s.mzGraf && shows(s, 'mozem') && s.known !== 'nic' && !!s.forecast;
-        },
-        current: () => store.get().terazPreview,
-        nowMin: () => localMinutes(store.get().now, store.get().site.timezone),
-        preview: (min) => store.setState({ terazPreview: min, panel: 'mozem' }),
-        // Zvolený čas nie je krok navigácie (NavStep) - návrat na teraz ide priamo cez setState.
-        reset: () => store.setState({ terazPreview: null }),
-    });
-    dom.grReset.addEventListener('click', () => {
-        store.setState({ terazPreview: null });
-        // Tlačidlo po návrate zmizne; fokus ostane na posúvači, z ktorého sa dá pokračovať.
-        dom.grChart.focus();
     });
 }
