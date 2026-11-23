@@ -6,14 +6,14 @@
 
 import { VOICES, WORKER_BOJLER_URL } from '../shared/config.js';
 import { posunPrahy } from '../shared/bojler.js';
-import { skriptBojlera } from '../shared/bojler-skript.js';
+import { adresaTeplomera, skriptBojlera } from '../shared/bojler-skript.js';
 import { backAction } from '../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
 import { prepniSpotrebic } from '../shared/doma.js';
 import { bojlerPecat, zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
 import { zacniOdznova } from './ucenie.js';
-import { clearStored, saveBojlerPrahy, saveDoma, saveLook } from './storage.js';
+import { clearStored, saveBojlerPrahy, saveDoma, saveLook, saveTeplomer } from './storage.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 import { NS_FOLDS, panelChange } from './state.js';
@@ -88,9 +88,9 @@ function initDoma(store, dom) {
 }
 
 /**
- * Bojler na prebytky: prahy (uložia sa, bojler-v1) a „Skopíruj skript“ - appka si od Workera
- * vypýta pečať pre zásuvku, poskladá skript a dá ho do schránky. Kde schránka nie je, skript
- * ukáže v poli na ručné skopírovanie.
+ * Bojler na prebytky: prahy (uložia sa, bojler-v1), teplomer (prepínač a adresa, teplomer-v1; heslo sa len prečíta
+ * z poľa) a „Skopíruj skript“ - appka si od Workera vypýta pečať pre zásuvku, poskladá skript a dá ho do schránky.
+ * Kde schránka nie je, skript ukáže v poli na ručné skopírovanie.
  * @param {Store} store @param {Dom} dom
  */
 function initBojler(store, dom) {
@@ -103,14 +103,32 @@ function initBojler(store, dom) {
         // Starý skript má staré prahy - pole s ním zmizne.
         store.setState({ bojlerPrahy, bojlerSkript: { stav: 'nic', text: '', schranka: false } });
     });
+    /** Starý skript nemá nový teplomer - pole s ním zmizne. @param {import('../shared/nastavenie-bojler.js').Teplomer} teplomer */
+    const ulozTeplomer = (teplomer) => {
+        saveTeplomer(teplomer);
+        store.setState({ teplomer, bojlerSkript: { stav: 'nic', text: '', schranka: false } });
+    };
+    dom.nsTeplomer.addEventListener('click', () => {
+        const t = store.get().teplomer;
+        ulozTeplomer({ ...t, on: !t.on });
+    });
+    dom.nsTeplomerIp.addEventListener('change', () => {
+        const ip = dom.nsTeplomerIp.value.trim();
+        if (ip !== store.get().teplomer.ip) ulozTeplomer({ ...store.get().teplomer, ip });
+    });
     // Učenie z histórie: odteraz sa appka učí len z nových dní (web/ucenie.js).
     dom.nsUcenieOdznova.addEventListener('click', () => void zacniOdznova(store));
     dom.nsBojlerSkript.addEventListener('click', async () => {
-        const { zdroj, bojlerPrahy } = store.get();
+        const { zdroj, bojlerPrahy, teplomer } = store.get();
         if (!zdroj) return;
+        const sTeplomerom = teplomer.on ? { ip: dom.nsTeplomerIp.value, heslo: dom.nsTeplomerHeslo.value } : null;
+        if (sTeplomerom && !adresaTeplomera(sTeplomerom)) {
+            store.setState({ bojlerSkript: { stav: 'teplomer', text: '', schranka: false } });
+            return;
+        }
         store.setState({ bojlerSkript: { stav: 'robim', text: '', schranka: false } });
         const pecat = await bojlerPecat(zdroj.pecat);
-        const text = pecat && skriptBojlera({ url: WORKER_BOJLER_URL, pecat, ...bojlerPrahy });
+        const text = pecat && skriptBojlera({ url: WORKER_BOJLER_URL, pecat, ...bojlerPrahy, teplomer: sTeplomerom });
         if (!text) {
             store.setState({ bojlerSkript: { stav: 'chyba', text: '', schranka: false } });
             return;

@@ -486,6 +486,28 @@
                                         <span><b id="ns-bojler-zasuvka"></b><small id="ns-bojler-stav"></small></span>
                                     </div>
                                     <p id="ns-bojler-ine" class="wz-msg hidden"></p>
+                                    <!-- Teplomer v bojleri (docs/navrhy/bojler-teplota.html, N2): adresa a heslo len do skriptu zásuvky. -->
+                                    <button type="button" id="ns-teplomer" class="it" role="switch" aria-checked="false">
+                                        <span><b id="ns-teplomer-label"></b><small id="ns-teplomer-small"></small></span>
+                                        <i class="tg" aria-hidden="true"></i>
+                                    </button>
+                                    <div id="ns-teplomer-polia" class="ns-teplomer hidden">
+                                        <label class="ns-pole">
+                                            <span id="ns-teplomer-ip-l"></span>
+                                            <input
+                                                id="ns-teplomer-ip"
+                                                class="fld"
+                                                inputmode="decimal"
+                                                autocomplete="off"
+                                                spellcheck="false"
+                                            />
+                                        </label>
+                                        <label class="ns-pole">
+                                            <span id="ns-teplomer-heslo-l"></span>
+                                            <input id="ns-teplomer-heslo" class="fld" type="password" autocomplete="off" />
+                                        </label>
+                                        <p id="ns-teplomer-pozn" class="oznam-note"></p>
+                                    </div>
                                     <div class="btns"><button type="button" id="ns-bojler-skript" class="pbtn"></button></div>
                                     <p id="ns-bojler-sprava" class="wz-msg hidden" role="status"></p>
                                     <textarea
@@ -1054,6 +1076,8 @@
                         <p id="tz-bojler-plan" class="vec-kedy hidden"></p>
                     </div>
                 </div>
+                <!-- Teplota vody dnes z teplomera v bojleri (docs/navrhy/bojler-teplota.html, P1). Bez teplomera skrytá. -->
+                <div id="tz-bojler-voda" class="bj-voda hidden" role="img"></div>
                 <!-- Kto zapína bojler: appka podľa prebytku, alebo človek (ručne, časovačom v appke Shelly) - vtedy
                      skript v zásuvke len hlási. Texty dopĺňa render (TERAZ_BOJLER_TEXTS.rezim). -->
                 <div id="tz-bojler-rezim" class="bj-rezim" role="group" aria-labelledby="tz-bojler-rezim-n">

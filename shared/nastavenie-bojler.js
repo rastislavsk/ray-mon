@@ -4,17 +4,30 @@
 
 import { BOJLER } from './config.js';
 import { bojlerStav } from './bojler.js';
+import { stupne, vodaTeraz } from './bojler-voda.js';
 import { fmt1, minutesToTimeStr } from './format.js';
 import { polite } from './messages-core.js';
 import { localDateKey, localMinutes } from './solar.js';
+import { isObj } from './valid.js';
 
 /** @typedef {import('./bojler.js').Prahy} Prahy */
 /** @typedef {import('./bojler.js').BojlerInfo} BojlerInfo */
 /**
  * Príprava skriptu: `nic` ešte nebola, `robim` appka pýta pečať, `hotovo` skript je v schránke
- * (a v `text` na ručné skopírovanie), `chyba` nevyšlo.
- * @typedef {{ stav: 'nic' | 'robim' | 'hotovo' | 'chyba', text: string, schranka: boolean }} BojlerSkript
+ * (a v `text` na ručné skopírovanie), `chyba` nevyšlo, `teplomer` chýba adresa či heslo teplomera.
+ * @typedef {{ stav: 'nic' | 'robim' | 'hotovo' | 'chyba' | 'teplomer', text: string, schranka: boolean }} BojlerSkript
  */
+/**
+ * Teplomer v bojleri (docs/navrhy/bojler-teplota.html, N2): či ho človek má a jeho adresa v domácej sieti. Heslo
+ * appka nedrží - je len v poli formulára a v skripte.
+ * @typedef {{ on: boolean, ip: string }} Teplomer
+ */
+
+/** Teplomer z úložiska, alebo vypnutý bez adresy. @param {unknown} raw @returns {Teplomer} */
+export function teplomerZ(raw) {
+    const o = isObj(raw) ? /** @type {Record<string, unknown>} */ (raw) : {};
+    return { on: o.on === true, ip: typeof o.ip === 'string' ? o.ip.slice(0, 63) : '' };
+}
 
 /** @param {string | [string, string]} t @param {import('./messages-core.js').Voice} voice */
 const inVoice = (t, voice) => (typeof t === 'string' ? t : t[polite(voice) ? 1 : 0]);
@@ -54,6 +67,17 @@ export const BOJLER_TEXTS = {
         'Skript sa nepodarilo pripraviť. Skús to znova o chvíľu.',
         'Skript sa nepodarilo pripraviť. Skúste to znova o chvíľu.',
     ]),
+    teplomer: {
+        label: 'Mám teplomer v bojleri',
+        small: 'zásuvka prečíta teplotu vody zo Shelly s Add-onom',
+        voda: (/** @type {string} */ t, /** @type {string} */ kedy) => `voda ${t} o ${kedy}`,
+        mlci: (/** @type {string} */ kedy) => `neodpovedá od ${kedy} – skontroluj adresu a heslo`,
+        caka: 'zatiaľ bez teploty – vlož skript do zásuvky znova',
+        ip: 'Adresa teplomera v domácej sieti',
+        heslo: 'Heslo teplomera (meno admin)',
+        pozn: 'Heslo appka neuloží, ide len do skriptu zásuvky.',
+        chyba: /** @type {[string, string]} */ (['Doplň adresu a heslo teplomera.', 'Doplňte adresu a heslo teplomera.']),
+    },
     kroky: /** @type {Array<[string, string]>} */ ([
         [
             'V prehliadači otvor zásuvku cez jej adresu v domácej sieti a choď do Scripts › Create script.',
@@ -94,9 +118,21 @@ function stavZasuvky(b, now, tz) {
 }
 
 /**
+ * Riadok pod prepínačom teplomera: posledná teplota, alebo odkedy teplomer mlčí; bez teplomera čo robí.
+ * @param {BojlerInfo | null} b @param {boolean} on @param {Date} now @param {string} tz
+ */
+function stavTeplomera(b, on, now, tz) {
+    const T = BOJLER_TEXTS.teplomer;
+    const voda = b ? vodaTeraz(b, now.getTime()) : null;
+    if (voda) return T.voda(stupne(voda.t), kedy(voda.at, now, tz));
+    if (b?.voda) return T.mlci(kedy(b.voda.at, now, tz));
+    return on ? T.caka : T.small;
+}
+
+/**
  * Sekcia bojlera, alebo null, keď sa riadiť nedá (iný zdroj merania, bojler nie je doma).
  * @param {{ zdroj: { sposob: string } | null, doma: readonly string[], bojler: BojlerInfo | null, bojlerPrahy: Prahy,
- *   bojlerSkript: BojlerSkript, now: Date, site: { timezone: string }, voice: import('./messages-core.js').Voice }} s
+ *   bojlerSkript: BojlerSkript, now: Date, site: { timezone: string }, voice: import('./messages-core.js').Voice, teplomer?: Teplomer }} s
  */
 export function bojlerSekcia(s) {
     if (s.zdroj?.sposob !== 'huawei-northbound' || !s.doma.includes('bojler')) return null;
@@ -116,7 +152,15 @@ export function bojlerSekcia(s) {
             ? v(T.ine).replace('{zap}', fmt1(b.prahy.zapKw)).replace('{vyp}', fmt1(b.prahy.vypKw))
             : '';
     const sk = s.bojlerSkript;
-    const sprava = { nic: '', robim: T.robim, hotovo: v(sk.schranka ? T.hotovo : T.rucne), chyba: v(T.chyba) }[sk.stav];
+    const sprava = {
+        nic: '',
+        robim: T.robim,
+        hotovo: v(sk.schranka ? T.hotovo : T.rucne),
+        chyba: v(T.chyba),
+        teplomer: v(T.teplomer.chyba),
+    }[sk.stav];
+    // `?? `: starý web/state.js z cache po nasadení teplomer nemá (CLAUDE.md, Nasadenie a cache).
+    const tp = s.teplomer ?? teplomerZ(null);
     return {
         title: T.title,
         intro: T.intro,
@@ -129,7 +173,16 @@ export function bojlerSekcia(s) {
         ine,
         tlacidlo: v(T.tlacidlo),
         robim: sk.stav === 'robim',
-        sprava: sprava ? { text: sprava, chyba: sk.stav === 'chyba' } : null,
+        sprava: sprava ? { text: sprava, chyba: sk.stav === 'chyba' || sk.stav === 'teplomer' } : null,
+        teplomer: {
+            label: T.teplomer.label,
+            small: stavTeplomera(b, tp.on, s.now, s.site.timezone),
+            on: tp.on,
+            ip: tp.ip,
+            ipLabel: T.teplomer.ip,
+            hesloLabel: T.teplomer.heslo,
+            pozn: T.teplomer.pozn,
+        },
         skript: sk.stav === 'hotovo' && !sk.schranka ? sk.text : '',
         kroky: T.kroky.map(v),
     };

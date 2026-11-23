@@ -132,6 +132,16 @@ function renderBojler(b, dom) {
     setHtml(dom.nsBojlerStav, `<span data-tone="${b.stav.tone}">${escapeHtml(b.stav.text)}</span>`);
     show(dom.nsBojlerIne, !!b.ine);
     setText(dom.nsBojlerIne, b.ine);
+    const t = b.teplomer;
+    setText(dom.nsTeplomerLabel, t.label);
+    setText(dom.nsTeplomerSmall, t.small);
+    dom.nsTeplomer.setAttribute('aria-checked', String(t.on));
+    show(dom.nsTeplomerPolia, t.on);
+    setText(dom.nsTeplomerIpL, t.ipLabel);
+    setText(dom.nsTeplomerHesloL, t.hesloLabel);
+    setText(dom.nsTeplomerPozn, t.pozn);
+    // Kým človek píše, pole neprepisovať - adresa sa uloží až pri opustení poľa.
+    if (document.activeElement !== dom.nsTeplomerIp && dom.nsTeplomerIp.value !== t.ip) dom.nsTeplomerIp.value = t.ip;
     setText(dom.nsBojlerSkript, b.tlacidlo);
     dom.nsBojlerSkript.disabled = b.robim;
     show(dom.nsBojlerSprava, !!b.sprava);

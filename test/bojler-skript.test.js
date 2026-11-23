@@ -3,14 +3,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import { skriptBojlera } from '../shared/bojler-skript.js';
+import { adresaTeplomera, skriptBojlera } from '../shared/bojler-skript.js';
 import { BOJLER, WORKER_BOJLER_URL } from '../shared/config.js';
 
 /**
- * Zásuvka s relé a skriptom. `odpoved` rozhodne, čo vráti Worker (null = chyba spojenia).
+ * Zásuvka s relé a skriptom. `odpoved` rozhodne, čo vráti Worker (null = chyba spojenia), `teplomer` čo vráti
+ * teplomer v domácej sieti.
  * @param {string} kod @param {(telo: any) => { code: number, body: string } | null} odpoved
+ * @param {(url: string) => { code: number, body: string } | null} [teplomer]
  */
-function zasuvka(kod, odpoved) {
+function zasuvka(kod, odpoved, teplomer) {
     const z = { output: false, apower: 0, aenergy: { total: 1234.5 } };
     /** @type {any[]} */ const dopyty = [];
     /** @type {Array<() => void>} */ const casovace = [];
@@ -20,6 +22,11 @@ function zasuvka(kod, odpoved) {
             if (metoda === 'Switch.Set') {
                 z.output = p.on;
                 z.apower = p.on ? 2200 : 0;
+                return;
+            }
+            if (metoda === 'HTTP.GET' && teplomer) {
+                const t = teplomer(p.url);
+                cb(t, t ? 0 : -114, t ? '' : 'chyba');
                 return;
             }
             assert.equal(metoda, 'HTTP.POST');
@@ -93,4 +100,47 @@ test('skript: pečať ani adresa s úvodzovkami sa do skriptu nedostanú', () =>
 test('skript: jazyk Shelly - bez šípok, let/const, čiarok pred zátvorkou a šablón', () => {
     const kod = /** @type {string} */ (skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT, zapKw: 2.3, vypKw: 2 }));
     assert.doesNotMatch(kod, /=>|\blet\b|\bconst\b|,\s*[)}\]]|`/);
+});
+
+const TEPLOMER = { ip: '10.10.10.50', heslo: "tajn'e @heslo" };
+
+test('skript s teplomerom: prečíta teplotu v domácej sieti a pošle ju, bez nej pošle null', () => {
+    const kod = /** @type {string} */ (skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT, zapKw: 2.3, vypKw: 2, teplomer: TEPLOMER }));
+    assert.doesNotMatch(kod, /=>|let|const|,s*[)}]]|`/);
+    /** @type {string[]} */ const adresy = [];
+    let teplota = /** @type {{ code: number, body: string } | null} */ ({ code: 200, body: '{"id":100,"tC":60.5,"tF":140.9}' });
+    const s = zasuvka(
+        kod,
+        () => ({ code: 200, body: '{"zapni":true}' }),
+        (url) => (adresy.push(url), teplota),
+    );
+    assert.equal(adresy[0], 'http://admin:tajn%27e%20%40heslo@10.10.10.50/rpc/Temperature.GetStatus?id=' + BOJLER.teplomerId);
+    assert.equal(s.dopyty[0].telo.t, 60.5);
+    assert.equal(s.z.output, true, 'poslúchne ako bez teplomera');
+    teplota = null;
+    s.minuta();
+    assert.equal(s.dopyty[1].telo.t, null, 'teplomer bez spojenia - hlásenie ide aj tak');
+    teplota = { code: 401, body: '' };
+    s.minuta();
+    teplota = { code: 200, body: 'nie json' };
+    s.minuta();
+    teplota = { code: 200, body: '{"tC":null}' };
+    s.minuta();
+    assert.deepEqual(
+        s.dopyty.slice(2).map((d) => d.telo.t),
+        [null, null, null],
+    );
+});
+
+test('adresa teplomera: len IP či meno a neprázdne heslo', () => {
+    assert.equal(
+        adresaTeplomera({ ip: ' 10.10.10.50 ', heslo: 'abc' }),
+        'http://admin:abc@10.10.10.50/rpc/Temperature.GetStatus?id=' + BOJLER.teplomerId,
+    );
+    assert.equal(adresaTeplomera({ ip: 'bojler-teplomer.local', heslo: 'abc' })?.includes('@bojler-teplomer.local/'), true);
+    assert.equal(adresaTeplomera({ ip: '10.10.10.50', heslo: '' }), null);
+    assert.equal(adresaTeplomera({ ip: '', heslo: 'abc' }), null);
+    assert.equal(adresaTeplomera({ ip: "10.0.0.1/x'", heslo: 'abc' }), null);
+    assert.equal(adresaTeplomera({ ip: 'a@b', heslo: 'abc' }), null);
+    assert.equal(skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT, zapKw: 2.3, vypKw: 2, teplomer: { ip: '', heslo: 'x' } }), null);
 });

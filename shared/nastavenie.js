@@ -30,7 +30,8 @@ import { ucenieSekcia } from './nastavenie-ucenie.js';
  * @typedef {SetupState & { pv: import('./kiosk.js').PvData | null, loading: boolean, voice: Voice, doma: readonly string[],
  *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean, shareKioskFail: boolean,
  *   bojler: import('./bojler.js').BojlerInfo | null, bojlerPrahy: import('./bojler.js').Prahy,
- *   bojlerSkript: import('./nastavenie-bojler.js').BojlerSkript, ucenie: import('./ucenie.js').Naucene | null }} NastavenieState
+ *   bojlerSkript: import('./nastavenie-bojler.js').BojlerSkript, teplomer?: import('./nastavenie-bojler.js').Teplomer,
+ *   ucenie: import('./ucenie.js').Naucene | null }} NastavenieState
  */
 /**
  * Riadok sekcie Elektráreň. `edit` je krok, ktorý riadok otvorí na úpravu uloženej elektrárne

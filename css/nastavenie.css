@@ -618,3 +618,15 @@
     stroke: #fff;
     stroke-width: 2.5;
 }
+/* Teplomer v bojleri (docs/navrhy/bojler-teplota.html, N2): adresa a heslo pod prepínačom. */
+.ns-teplomer {
+    display: grid;
+    gap: 10px;
+    padding: 4px 0 8px;
+}
+.ns-pole {
+    display: grid;
+    gap: 4px;
+    font-size: 0.85rem;
+    color: var(--dim);
+}

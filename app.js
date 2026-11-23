@@ -8,6 +8,7 @@ import {
     dropOldStored,
     loadDayLog,
     loadBojlerPrahy,
+    loadTeplomer,
     loadDoma,
     loadBezi,
     loadBojlerOznam,
@@ -71,6 +72,7 @@ const store = createStore(
         // Čo človek dnes zapol („Už beží“) - Plán dňa s tým ráta.
         bezi: loadBezi(),
         bojlerOznam: loadBojlerOznam(),
+        teplomer: loadTeplomer(),
     }),
 );
 

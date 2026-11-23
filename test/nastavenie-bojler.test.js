@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { bojlerInfoZ, posunPrahy } from '../shared/bojler.js';
 import { BOJLER, SITE } from '../shared/config.js';
-import { BOJLER_TEXTS, bojlerSekcia } from '../shared/nastavenie-bojler.js';
+import { BOJLER_TEXTS, bojlerSekcia, teplomerZ } from '../shared/nastavenie-bojler.js';
 
 const NOW = new Date('2026-11-15T11:00:00Z'); // 12:00 SEČ
 const MIN = 60000;
@@ -118,4 +118,36 @@ test('stav bojlera z Workera: kontrola tvaru, záznam dňa len s platnými behmi
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, rucne: true })?.rucne, true);
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, prebytokKw: 1, den: { den: 5 } })?.den, null);
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, den: { den: 'd', behy: [], posledneAt: 1 } })?.den?.hotovo, null);
+});
+
+test('teplomer: prepínač, adresa a riadok so stavom teploty', () => {
+    const tp = (/** @type {object} */ o) => /** @type {any} */ (bojlerSekcia(stav(o))).teplomer;
+    assert.deepEqual(tp({}), {
+        label: 'Mám teplomer v bojleri',
+        small: 'zásuvka prečíta teplotu vody zo Shelly s Add-onom',
+        on: false,
+        ip: '',
+        ipLabel: 'Adresa teplomera v domácej sieti',
+        hesloLabel: 'Heslo teplomera (meno admin)',
+        pozn: 'Heslo appka neuloží, ide len do skriptu zásuvky.',
+    });
+    const on = { teplomer: { on: true, ip: '10.10.10.50' } };
+    assert.equal(tp({ ...on, bojler: info() }).small, 'zatiaľ bez teploty – vlož skript do zásuvky znova');
+    assert.equal(tp({ ...on, bojler: info({ voda: { t: 60.5, at: NOW.getTime() - MIN } }) }).small, 'voda 61 °C o 11:59');
+    assert.equal(
+        tp({ ...on, bojler: info({ voda: { t: 60.5, at: NOW.getTime() - 40 * MIN } }) }).small,
+        'neodpovedá od 11:20 – skontroluj adresu a heslo',
+    );
+    const chyba = /** @type {any} */ (bojlerSekcia(stav({ ...on, bojlerSkript: { stav: 'teplomer', text: '', schranka: false } })));
+    assert.deepEqual(chyba.sprava, { text: 'Doplň adresu a heslo teplomera.', chyba: true });
+    assert.deepEqual(teplomerZ({ on: true, ip: '10.10.10.50', heslo: 'x' }), { on: true, ip: '10.10.10.50' });
+    assert.deepEqual(teplomerZ('nič'), { on: false, ip: '' });
+});
+
+test('stav bojlera z Workera: teplota vody a dnešné body len s platným tvarom', () => {
+    const z = bojlerInfoZ({ ...info(), rucne: false, voda: { t: 60.5, at: 5 }, teploty: [[600, 44], [605, 'x'], [610]] });
+    assert.deepEqual([z?.voda, z?.teploty], [{ t: 60.5, at: 5 }, [[600, 44]]]);
+    const bez = bojlerInfoZ({ ...info(), voda: { t: '60' }, teploty: 'nie' });
+    assert.equal(bez && 'voda' in bez, false);
+    assert.equal(bez && 'teploty' in bez, false);
 });

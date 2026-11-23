@@ -84,6 +84,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   bojlerSkript: import('../shared/nastavenie-bojler.js').BojlerSkript,
  *   bojlerRezim: 'uklada' | 'chyba' | 'ulozene' | null,
  *   bojlerOznam: boolean,
+ *   teplomer: import('../shared/nastavenie-bojler.js').Teplomer,
  *   bojlerOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
  *   trasy: import('../shared/trasy.js').UlozeneTrasy | null,
  *   ucenie: import('../shared/ucenie.js').Naucene | null,
@@ -117,7 +118,8 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
  * spotrebiče doma (Nastavenie › Čo máš doma) - s nimi ráta Plán dňa aj ranné oznámenie -, prahy
  * bojlera na prebytky (do skriptu zásuvky) a čo človek zapol („Už beží“ v detaile spotrebiča, shared/bezi.js).
  * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[],
- *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean }} o
+ *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean,
+ *   teplomer?: import('../shared/nastavenie-bojler.js').Teplomer }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
@@ -126,6 +128,7 @@ const telefon = ({
     bojlerPrahy = { zapKw: BOJLER.zapKw, vypKw: BOJLER.vypKw },
     bezi = [],
     bojlerOznam = false,
+    teplomer = { on: false, ip: '' },
 }) => ({
     oznamenia,
     oznamStav,
@@ -148,6 +151,8 @@ const telefon = ({
     bojlerRezim: /** @type {'uklada' | 'chyba' | 'ulozene' | null} */ (null),
     // Oznámenia bojlera na tomto telefóne (web/bojler-oznam.js) a či sa práve ukladajú, alebo prečo nie.
     bojlerOznam,
+    // Teplomer v bojleri (Nastavenie, docs/navrhy/bojler-teplota.html, N2): či ho človek má a jeho adresa. Heslo nie.
+    teplomer,
     bojlerOznamStav: /** @type {'uklada' | 'zakazane' | 'chyba' | null} */ (null),
 });
 
@@ -176,7 +181,7 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy,
- *   bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean }} start
+ *   bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean, teplomer?: import('../shared/nastavenie-bojler.js').Teplomer }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)

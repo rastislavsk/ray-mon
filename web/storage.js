@@ -13,6 +13,7 @@ import {
     DOMA_STORAGE_KEY,
     HISTORIA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
+    TEPLOMER_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
     OLD_STORAGE_KEYS,
@@ -40,6 +41,7 @@ import { parsePredpovedHist, pridajBehy, snimkaPredpovede } from '../shared/hist
 import { parseHistoria } from '../shared/ucenie.js';
 import { DATE_RE } from '../shared/valid.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
+import { teplomerZ } from '../shared/nastavenie-bojler.js';
 import { parseRanna } from '../shared/den-trieda.js';
 import { parseOznamenia } from '../shared/oznamenia.js';
 import { parseUlozenyModel } from '../shared/radar-data.js';
@@ -408,4 +410,14 @@ export function loadBojlerPrahy() {
 /** @param {import('../shared/bojler.js').Prahy} prahy @returns {boolean} podarilo sa? */
 export function saveBojlerPrahy(prahy) {
     return write(BOJLER_STORAGE_KEY, JSON.stringify(prahy));
+}
+
+/** Teplomer v bojleri (TEPLOMER_STORAGE_KEY): či ho človek má a adresa; bez úložiska vypnutý. */
+export function loadTeplomer() {
+    return readJson(TEPLOMER_STORAGE_KEY, teplomerZ, teplomerZ(null));
+}
+
+/** @param {import('../shared/nastavenie-bojler.js').Teplomer} t @returns {boolean} podarilo sa? */
+export function saveTeplomer(t) {
+    return write(TEPLOMER_STORAGE_KEY, JSON.stringify(t));
 }

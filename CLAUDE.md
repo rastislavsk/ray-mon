@@ -73,6 +73,12 @@ Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má d
 Stav bojlera chodí s meraním Huawei len raz za 5 minút, preto sa appka medzi meraniami pýta každú minútu na
 `/bojler-stav` (len stav z objektu, na Huawei nejde nič; `cerstvyBojler` vo `web/refresh.js`) a push o zmene
 ohrevu (`OZNAMENIA.bojler`) pošle `sw.js` aj otvoreným oknám, ktoré si stav stiahnu hneď.
+Teplomer vo vode (`docs/navrhy/bojler-teplota.html`, B2 + T1 + P1 + N2, 23. 11. 2026): DS18B20 na Shelly 1 Gen3 s Add-onom
+v domácej sieti (snímač `temperature:100`, heslo zapnuté). Teplotu číta skript zásuvky (`HTTP.GET` s `admin:heslo@` v adrese)
+a posiela ju ako `t` s hlásením; bez teplomera je skript bajtovo ten istý ako predtým. Worker drží poslednú (`voda` v `b:`)
+a bod každých 5 minút za 7 dní (`bt:`, `shared/bojler-voda.js`), appke dá dnešné body (`teploty`). Heslo teplomera appka
+neukladá, len adresu (`teplomer-v1`). Hranica teploty zatiaľ len kreslí čiaru (`BOJLER.vodaCielC`); termostat na bojleri je
+nastavený vyššie ako poistka.
 
 ## Spotrebič beží
 
