@@ -130,6 +130,7 @@ test('teplomer: prepínač, adresa a riadok so stavom teploty', () => {
         ipLabel: 'Adresa teplomera v domácej sieti',
         hesloLabel: 'Heslo teplomera (meno admin)',
         pozn: 'Heslo appka neuloží, ide len do skriptu zásuvky.',
+        hranica: null,
     });
     const on = { teplomer: { on: true, ip: '10.10.10.50' } };
     assert.equal(tp({ ...on, bojler: info() }).small, 'zatiaľ bez teploty – vlož skript do zásuvky znova');
@@ -150,4 +151,17 @@ test('stav bojlera z Workera: teplota vody a dnešné body len s platným tvarom
     const bez = bojlerInfoZ({ ...info(), voda: { t: '60' }, teploty: 'nie' });
     assert.equal(bez && 'voda' in bez, false);
     assert.equal(bez && 'teploty' in bez, false);
+});
+
+test('hranica teploty (H2 + D1): vypnutá, kým ju človek nenastaví; posun, krajné hodnoty a chyba uloženia', () => {
+    const h = (/** @type {object} */ o) =>
+        /** @type {any} */ (bojlerSekcia(stav({ teplomer: { on: true, ip: '10.10.10.50' }, ...o }))).teplomer.hranica;
+    const vyp = h({ bojler: info() });
+    assert.deepEqual([vyp.value, vyp.small, vyp.menej, vyp.viac], ['vypnutá', 'hreje až po termostat', false, true]);
+    const na60 = h({ bojler: info({ hranica: 60 }) });
+    assert.deepEqual([na60.value, na60.small, na60.menej, na60.viac], ['60 °C', 'znova zapne pod 55 °C', true, true]);
+    assert.equal(h({ bojler: info({ hranica: BOJLER.vodaMaxC }) }).viac, false);
+    const uklada = h({ bojler: info({ hranica: 60 }), bojlerHranica: 'uklada' });
+    assert.deepEqual([uklada.menej, uklada.viac], [false, false]);
+    assert.equal(h({ bojler: info(), bojlerHranica: 'chyba' }).chyba, 'Hranicu sa nepodarilo uložiť, skús znova.');
 });

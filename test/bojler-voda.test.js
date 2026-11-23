@@ -1,7 +1,17 @@
 // Teplota vody v bojleri (docs/navrhy/bojler-teplota.html): body vo Workeri, dnešok pre appku a krivka v paneli.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { krivkaVody, pridajTeplotu, stupne, teplotaZ, teplotyDna, vodaTeraz } from '../shared/bojler-voda.js';
+import {
+    hranicaZ,
+    krivkaVody,
+    posunHranicu,
+    pridajTeplotu,
+    strazVodu,
+    stupne,
+    teplotaZ,
+    teplotyDna,
+    vodaTeraz,
+} from '../shared/bojler-voda.js';
 import { BOJLER } from '../shared/config.js';
 
 const MIN = 60 * 1000;
@@ -65,7 +75,15 @@ test('krivka: úseky po medzerách, plocha, čiara cieľa, bod teraz a popis', (
     assert.equal(k.ciary.length, 3, 'medzera dlhšia ako 20 min čiaru preruší');
     assert.equal(k.plochy.length, 3);
     assert.match(k.plochy[0], /Z$/);
-    assert.equal(k.ciel?.text, '55 °C');
+    assert.equal(k.ciel?.text, 'hranica 55 °C');
+    assert.equal(
+        krivkaVody(
+            k.ticks.map((_, i) => [i * 5, 50]),
+            null,
+        )?.ciel,
+        null,
+        'bez hranice čiara nie je',
+    );
     assert.ok(k.ciel && k.ciel.y > 0 && k.ciel.y < k.h);
     assert.deepEqual(k.bod.text, '68 °C');
     assert.equal(k.bod.x, Math.round((845 / 1440) * k.w * 10) / 10);
@@ -83,4 +101,23 @@ test('krivka: úseky po medzerách, plocha, čiara cieľa, bod teraz a popis', (
         10,
     );
     assert.equal(horuca?.ciel, null);
+});
+
+test('hranica: rozsah, posun a stráženie s návratom o BOJLER.vodaHystC nižšie', () => {
+    assert.equal(hranicaZ(60), 60);
+    assert.deepEqual(
+        [hranicaZ(60.5), hranicaZ(BOJLER.vodaMinC - 1), hranicaZ(BOJLER.vodaMaxC + 1), hranicaZ('60'), hranicaZ(null)],
+        [null, null, null, null, null],
+    );
+    assert.equal(posunHranicu(null, 1), BOJLER.vodaStartC);
+    assert.equal(posunHranicu(null, -1), null);
+    assert.equal(posunHranicu(60, 1), 61);
+    assert.equal(posunHranicu(BOJLER.vodaMinC, -1), null);
+    assert.equal(posunHranicu(BOJLER.vodaMaxC, 1), BOJLER.vodaMaxC);
+    assert.equal(strazVodu(false, 60, 60), true);
+    assert.equal(strazVodu(true, 57, 60), true, 'medzi hranicou a návratom ostáva');
+    assert.equal(strazVodu(false, 57, 60), false);
+    assert.equal(strazVodu(true, 60 - BOJLER.vodaHystC, 60), false, 'na návrate pustí');
+    assert.equal(strazVodu(true, null, 60), false, 'teplomer mlčí - stráži termostat');
+    assert.equal(strazVodu(true, 70, null), false, 'bez hranice');
 });

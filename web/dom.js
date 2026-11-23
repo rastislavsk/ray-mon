@@ -301,6 +301,13 @@ function teplomerDom() {
         nsTeplomerHesloL: byId('ns-teplomer-heslo-l'),
         nsTeplomerHeslo: /** @type {HTMLInputElement} */ (byId('ns-teplomer-heslo')),
         nsTeplomerPozn: byId('ns-teplomer-pozn'),
+        nsHranica: byId('ns-hranica'),
+        nsHranicaL: byId('ns-hranica-l'),
+        nsHranicaSmall: byId('ns-hranica-small'),
+        nsHranicaV: byId('ns-hranica-v'),
+        nsHranicaMenej: /** @type {HTMLButtonElement} */ (byId('ns-hranica-menej')),
+        nsHranicaViac: /** @type {HTMLButtonElement} */ (byId('ns-hranica-viac')),
+        nsHranicaChyba: byId('ns-hranica-chyba'),
     };
 }
 

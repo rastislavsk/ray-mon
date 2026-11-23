@@ -23,6 +23,8 @@ export const TERAZ_BOJLER_TEXTS = {
     hrejeSiet: 'hreje aj zo siete',
     caka: 'čaká na slnko',
     hotovo: 'nahriata',
+    /** Voda dosiahla hranicu teploty (docs/navrhy/bojler-hranica.html). */
+    hotovoNa: (/** @type {string} */ t) => `nahriata na ${t}`,
     mlci: 'zásuvka mlčí',
     od: 'od',
     zapnePri: 'zapne pri',
@@ -48,6 +50,7 @@ export const TERAZ_BOJLER_TEXTS = {
         hreje: 'hreje od',
         caka: 'čaká na prebytok',
         hotovo: 'voda nahriata o',
+        hotovoNa: (/** @type {string} */ t) => `voda nahriata na ${t}`,
         mlci: 'zásuvka sa neozýva od',
         vypnuty: 'vypnutý od',
         vypnutyBez: 'vypnutý',
@@ -167,20 +170,28 @@ function podielDnes(den) {
 
 /**
  * Dlaždica nahriatej vody: koľko išlo dnes zo slnka a kedy bola voda nahriata. S teplomerom je veľké číslo teplota
- * a kWh zo slnka idú do odrážky.
- * @param {import('./bojler.js').Den | null} den @param {boolean} sVodou
+ * a kWh zo slnka idú do odrážky. Keď vodu zastavila hranica teploty, povie „nahriata na 60 °C“.
+ * @param {BojlerInfo} b @param {import('./bojler.js').Den | null} den @param {boolean} sVodou
  */
-function dlazdicaHotovo(den, sVodou) {
+function dlazdicaHotovo(b, den, sVodou) {
     const T = TERAZ_BOJLER_TEXTS;
     const kedy = den?.hotovo ?? null;
     const kwh = fmt1(den ? suctyDna(den).slnkoKwh : 0);
+    const prva = naHranici(b)
+        ? T.hotovoNa(stupne(/** @type {number} */ (b.hranica)))
+        : kedy === null
+          ? T.hotovo
+          : `${T.hotovo} ${T.o} ${minutesToTimeStr(kedy)}`;
     return {
         tone: 'tiche',
         riadi: 'caka',
         velky: `${kwh} kWh`,
-        odr: [kedy === null ? T.hotovo : `${T.hotovo} ${T.o} ${minutesToTimeStr(kedy)}`, sVodou ? T.dnesKwhSlnko(kwh) : T.dnesZoSlnka],
+        odr: [prva, sVodou ? T.dnesKwhSlnko(kwh) : T.dnesZoSlnka],
     };
 }
+
+/** Zastavila bojler hranica teploty (relé vypnuté, voda nahriata na hranicu)? @param {BojlerInfo} b */
+const naHranici = (b) => !b.rele && !!b.nahriata && typeof b.hranica === 'number';
 
 /** Dlaždica bojlera, ktorý hreje. @param {BojlerInfo} b @param {import('./bojler.js').Den | null} den */
 function dlazdicaHreje(b, den) {
@@ -273,7 +284,7 @@ export function bojlerDlazdica(b, now, tz, plan = null) {
                   ],
               }
             : stav === 'hotovo'
-              ? dlazdicaHotovo(den, !!voda)
+              ? dlazdicaHotovo(b, den, !!voda)
               : dlazdicaHreje(b, den);
     return { ...sVodou(t), rezim: 'appka', meno, podiel };
 }
@@ -322,6 +333,7 @@ function podDetail(b, den, now, tz) {
     const stav = bojlerStav(b, now.getTime());
     if (stav === 'mlci') return `${T.mlci} ${cas(b.kontaktAt, now, tz)}`;
     if (b.rucne) return `${TERAZ_BOJLER_TEXTS.rucne} · ${podStavu(stav, den)}`;
+    if (stav === 'hotovo' && naHranici(b)) return TERAZ_BOJLER_TEXTS.detailPod.hotovoNa(stupne(/** @type {number} */ (b.hranica)));
     return podStavu(stav, den);
 }
 
@@ -396,7 +408,7 @@ export function bojlerDetail(b, now, tz, plan = null) {
         nadpis: T.detail,
         pod: podDetail(b, den, now, tz),
         plan: planText(plan, vodaTeraz(b, now.getTime())),
-        voda: krivkaVody(b.teploty ?? [], BOJLER.vodaCielC),
+        voda: krivkaVody(b.teploty ?? [], b.hranica ?? null),
         rezim: { rucne: b.rucne, popis: b.rucne ? T.rezim.popisRucne : T.rezim.popisAppka(fmt1(b.prahy.zapKw), fmt1(b.prahy.vypKw)) },
         pas: pasDna(den, localMinutes(now, tz)),
         cisla: [

@@ -83,6 +83,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   bojlerPrahy: import('../shared/bojler.js').Prahy,
  *   bojlerSkript: import('../shared/nastavenie-bojler.js').BojlerSkript,
  *   bojlerRezim: 'uklada' | 'chyba' | 'ulozene' | null,
+ *   bojlerHranica: 'uklada' | 'chyba' | null,
  *   bojlerOznam: boolean,
  *   teplomer: import('../shared/nastavenie-bojler.js').Teplomer,
  *   bojlerOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
@@ -149,6 +150,8 @@ const telefon = ({
     bojlerSkript: /** @type {import('../shared/nastavenie-bojler.js').BojlerSkript} */ ({ stav: 'nic', text: '', schranka: false }),
     // Prepínač režimu v paneli Bojler dnes: ukladá sa, alebo sa uložiť nepodarilo.
     bojlerRezim: /** @type {'uklada' | 'chyba' | 'ulozene' | null} */ (null),
+    // Hranica teploty v Nastavení (docs/navrhy/bojler-hranica.html): ukladá sa, alebo sa uložiť nepodarilo.
+    bojlerHranica: /** @type {'uklada' | 'chyba' | null} */ (null),
     // Oznámenia bojlera na tomto telefóne (web/bojler-oznam.js) a či sa práve ukladajú, alebo prečo nie.
     bojlerOznam,
     // Teplomer v bojleri (Nastavenie, docs/navrhy/bojler-teplota.html, N2): či ho človek má a jeho adresa. Heslo nie.

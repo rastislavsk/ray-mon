@@ -9,6 +9,7 @@ import {
     handleBojlerOznam,
     handleBojlerPecat,
     handleBojlerRezim,
+    handleBojlerHranica,
     handleBojlerStav,
     handleHistoria,
     handlePripoj,
@@ -1169,6 +1170,33 @@ test('teplomer: zásuvka pošle teplotu vody, objekt drží bod každých 5 min�
         await handleBojlerRezim(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: true })), env, po(15))
     ).json();
     assert.equal(rezim.bojler.teploty.length, 3, 'aj po zmene režimu');
+});
+
+test('hranica teploty: telefón ju nastaví, Worker ju pošle zásuvke a pri nej bojler nepustí', async () => {
+    const { env, telefon, zasuvka } = await sBojlerom({ sietW: () => 3000 });
+    const hranica = (/** @type {unknown} */ h, /** @type {string} */ pecat = telefon) =>
+        handleBojlerHranica(post('/bojler-hranica', JSON.stringify({ pecat, hranica: h })), env, po(1));
+    // Zásuvka sa ešte neozvala: hranica sa uloží, stav nie je.
+    assert.deepEqual(await (await hranica(60)).json(), { ok: true, bojler: null });
+    const hlas = async (/** @type {number} */ min, /** @type {number} */ t, /** @type {boolean} */ rele) =>
+        (await handleBojler(bojlerReq({ pecat: zasuvka, rele, w: rele ? 2200 : 0, e: 1, t, zapKw: 2.3, vypKw: 2 }), env, po(min))).json();
+    const r = await hlas(2, 61, false);
+    assert.deepEqual([r.zapni, r.maxC, r.minC], [false, 60, 55]);
+    assert.equal((await hlas(7, 61, false)).zapni, false, 'prebytok by stačil, voda je nahriata');
+    const stav = (await (await handleBojlerStav(post('/bojler-stav', JSON.stringify({ pecat: telefon })), env, po(8))).json()).bojler;
+    assert.deepEqual([stav.hranica, stav.nahriata], [60, true]);
+    // Bez hranice ide podľa prebytku.
+    const bez = await (await hranica(null)).json();
+    assert.deepEqual([bez.ok, bez.bojler.hranica], [true, null]);
+    assert.equal((await hlas(12, 61, false)).maxC, null);
+    assert.equal((await hranica(39)).status, 400, 'mimo rozsahu');
+    assert.equal((await hranica('60')).status, 400);
+    assert.equal(
+        (await handleBojlerHranica(post('/bojler-hranica', JSON.stringify({ pecat: telefon, hranica: 60 })), ENV, NOW)).status,
+        503,
+    );
+    const cez = await handleRequest(post('/bojler-hranica', JSON.stringify({ pecat: telefon, hranica: 60 })), env, po(13));
+    assert.equal(cez.status, 200);
 });
 
 test('oznámenia bojlera: telefón si ich zapne, pri každej zmene ohrevu príde push s dôvodom; vypnuté či neplatné nechodia', async () => {

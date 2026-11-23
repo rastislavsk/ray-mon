@@ -236,10 +236,11 @@ export function koniecText({ id, name, caka }) {
 /**
  * Zmena ohrevu bojlera: zapol sa, vypol sa a prečo.
  * `appka` - prepla ho appka podľa prebytku (`kw`), `termostat` - voda je nahriata či znova chladne,
- * `rucne` - prepnutý v Shelly pri ručnom režime, `spojenie` - zásuvka nemala spojenie a vypla sa sama.
- * @param {{ zapol: boolean, dovod: 'appka' | 'termostat' | 'rucne' | 'spojenie', kw: number | null }} z
+ * `rucne` - prepnutý v Shelly pri ručnom režime, `spojenie` - zásuvka nemala spojenie a vypla sa sama, `hranica` - voda
+ * dosiahla hranicu teploty (docs/navrhy/bojler-hranica.html).
+ * @param {{ zapol: boolean, dovod: 'appka' | 'termostat' | 'rucne' | 'spojenie' | 'hranica', kw: number | null, hranica?: number | null }} z
  */
-export function bojlerZmenaText({ zapol, dovod, kw }) {
+export function bojlerZmenaText({ zapol, dovod, kw, hranica }) {
     const title = zapol ? 'Bojler sa zapol' : 'Bojler sa vypol';
     const prebytok = kw === null ? '' : `${fmt1(kw)} kW`;
     /** @type {Record<typeof dovod, string>} */
@@ -248,6 +249,7 @@ export function bojlerZmenaText({ zapol, dovod, kw }) {
         termostat: zapol ? 'Voda chladne, termostat znova kúri.' : 'Voda je nahriata (termostat).',
         rucne: 'Prepnutý ručne v Shelly.',
         spojenie: 'Zásuvka nemala spojenie, vypla sa pre istotu.',
+        hranica: `Voda má ${hranica ?? ''} °C, viac nehreje.`,
     };
     return { title, body: body[dovod] };
 }

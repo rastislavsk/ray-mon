@@ -492,6 +492,16 @@
                                         <i class="tg" aria-hidden="true"></i>
                                     </button>
                                     <div id="ns-teplomer-polia" class="ns-teplomer hidden">
+                                        <!-- Hranica teploty, ktorú stráži zásuvka (docs/navrhy/bojler-hranica.html, H2 + D1). -->
+                                        <div id="ns-hranica" class="it pick hidden">
+                                            <span><b id="ns-hranica-l"></b><small id="ns-hranica-small"></small></span>
+                                            <span class="minis prah">
+                                                <button type="button" class="mini" id="ns-hranica-menej" data-hranica="-1">-</button>
+                                                <b id="ns-hranica-v" class="prah-v"></b>
+                                                <button type="button" class="mini" id="ns-hranica-viac" data-hranica="1">+</button>
+                                            </span>
+                                        </div>
+                                        <p id="ns-hranica-chyba" class="wz-msg err hidden" role="status"></p>
                                         <label class="ns-pole">
                                             <span id="ns-teplomer-ip-l"></span>
                                             <input

@@ -31,6 +31,7 @@ import { ucenieSekcia } from './nastavenie-ucenie.js';
  *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean, shareKioskFail: boolean,
  *   bojler: import('./bojler.js').BojlerInfo | null, bojlerPrahy: import('./bojler.js').Prahy,
  *   bojlerSkript: import('./nastavenie-bojler.js').BojlerSkript, teplomer?: import('./nastavenie-bojler.js').Teplomer,
+ *   bojlerHranica?: 'uklada' | 'chyba' | null,
  *   ucenie: import('./ucenie.js').Naucene | null }} NastavenieState
  */
 /**

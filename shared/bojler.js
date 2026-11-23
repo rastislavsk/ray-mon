@@ -49,7 +49,9 @@ export const prebytokBezBojlera = (sietKw, rele, w) => Math.round((sietKw + (rel
  * (`rucne`, prepínač v appke) nechá relé, ako je - počítanie merania beží ďalej, aby sa po návrate
  * k riadeniu nezačínalo od nuly.
  * @param {Pamat} pamat
- * @param {{ rele: boolean, w: number, sietKw: number | null, meranieAt: number, now: number, prahy: Prahy, rucne?: boolean }} v
+ * S teplomerom a hranicou (`nahriata`, docs/navrhy/bojler-hranica.html) vypne a nezapne, ani keď prebytok stačí.
+ * @param {{ rele: boolean, w: number, sietKw: number | null, meranieAt: number, now: number, prahy: Prahy, rucne?: boolean,
+ *   nahriata?: boolean }} v
  * @returns {{ zapni: boolean, pamat: Pamat, prebytokKw: number | null }}
  */
 export function rozhodni(pamat, v) {
@@ -61,7 +63,8 @@ export function rozhodni(pamat, v) {
     const nad = nove ? (prebytokKw >= v.prahy.zapKw - 1e-9 ? pamat.nad + 1 : 0) : pamat.nad;
     const pod = nove ? (prebytokKw < v.prahy.vypKw - 1e-9 ? pamat.pod + 1 : 0) : pamat.pod;
     const p = { meranieAt: v.meranieAt, nad, pod, rele: v.rele, zmenaAt };
-    return vysledok(v.rucne ? v.rele : zapnut(p, v.rele, v.now - zmenaAt), p, v, prebytokKw);
+    const zapni = v.rucne ? v.rele : !v.nahriata && zapnut(p, v.rele, v.now - zmenaAt);
+    return vysledok(zapni, p, v, prebytokKw);
 }
 
 /**
@@ -168,18 +171,20 @@ function zapocitaj(beh, v, cas, hreje, min) {
  * (docs/navrhy/bojler-teplota.html) aj posledná teplota vody (`voda`, °C a kedy) a dnešné body [minúta dňa, °C]
  * (`teploty`, pridá ich Worker až do odpovede, v objekte ich niet). Bez teplomera, či od staršieho Workera, nič.
  * @typedef {{ kontaktAt: number, rele: boolean, w: number, prebytokKw: number | null, prahy: Prahy, den: Den | null, rucne: boolean,
- *   voda?: { t: number, at: number } | null, teploty?: Array<[number, number]> }} BojlerInfo
+ *   voda?: { t: number, at: number } | null, teploty?: Array<[number, number]>, hranica?: number | null, nahriata?: boolean }} BojlerInfo
+ * `hranica` je hranica teploty (null - nie je) a `nahriata`, že ju voda dosiahla a zásuvka bojler nepúšťa
+ * (docs/navrhy/bojler-hranica.html).
  */
 
 /**
  * Čo dlaždica Bojler ukáže: `mlci` zásuvka sa dlhšie neozvala, `hreje` relé zapnuté a bojler berie,
- * `hotovo` relé zapnuté, ale termostat vypol (voda nahriata), `caka` relé vypnuté a appka čaká na
- * prebytok, `vypnuty` relé vypnuté v ručnom režime.
+ * `hotovo` relé zapnuté, ale termostat vypol (voda nahriata), alebo vypnuté, lebo voda dosiahla hranicu, `caka` relé
+ * vypnuté a appka čaká na prebytok, `vypnuty` relé vypnuté v ručnom režime.
  * @param {BojlerInfo} b @param {number} now @returns {'mlci' | 'hreje' | 'hotovo' | 'caka' | 'vypnuty'}
  */
 export function bojlerStav(b, now) {
     if (now - b.kontaktAt > BOJLER.tichoMin * MIN) return 'mlci';
-    if (!b.rele) return b.rucne ? 'vypnuty' : 'caka';
+    if (!b.rele) return b.rucne ? 'vypnuty' : b.nahriata ? 'hotovo' : 'caka';
     return b.w >= BOJLER.hotovoW ? 'hreje' : 'hotovo';
 }
 
@@ -189,18 +194,23 @@ const hrejeTo = (b) => b.rele && b.w >= BOJLER.hotovoW;
 /**
  * Zmena ohrevu medzi dvoma hláseniami zásuvky pre oznámenie (docs/navrhy/spotrebic-koniec-opakovanie.html): zapol sa či
  * vypol a prečo - termostat (relé ostalo zapnuté), ručne v Shelly (ručný režim), zásuvka nemala spojenie (od
- * predchádzajúceho hlásenia prešlo viac než BOJLER.tichoMin - vypla sa sama), inak appka podľa prebytku `kw`.
+ * predchádzajúceho hlásenia prešlo viac než BOJLER.tichoMin - vypla sa sama), voda dosiahla hranicu `hranica`, inak
+ * appka podľa prebytku `kw`.
  * Bez predchádzajúceho hlásenia či bez zmeny null.
  * @param {BojlerInfo | null} stary @param {BojlerInfo} novy
- * @returns {{ zapol: boolean, dovod: 'appka' | 'termostat' | 'rucne' | 'spojenie', kw: number | null } | null}
+ * @returns {{ zapol: boolean, dovod: 'appka' | 'termostat' | 'rucne' | 'spojenie' | 'hranica', kw: number | null,
+ *   hranica: number | null } | null}
  */
 export function zmenaOhrevu(stary, novy) {
+    /** Hranica, na ktorú voda práve dosiahla (appka bojler vypla), inak null. @param {BojlerInfo} s @param {BojlerInfo} n */
+    const zastavilaHranica = (s, n) => (!n.rucne && n.nahriata && !s.nahriata ? (n.hranica ?? null) : null);
     if (!stary || hrejeTo(stary) === hrejeTo(novy)) return null;
     const zapol = hrejeTo(novy);
     const rele = zapol ? stary.rele : novy.rele;
     const ticho = novy.kontaktAt - stary.kontaktAt > BOJLER.tichoMin * MIN;
-    const dovod = rele ? 'termostat' : !zapol && ticho ? 'spojenie' : novy.rucne ? 'rucne' : 'appka';
-    return { zapol, dovod, kw: novy.prebytokKw };
+    const hranica = zapol ? null : zastavilaHranica(stary, novy);
+    const dovod = rele ? 'termostat' : !zapol && ticho ? 'spojenie' : novy.rucne ? 'rucne' : hranica !== null ? 'hranica' : 'appka';
+    return { zapol, dovod, kw: novy.prebytokKw, hranica };
 }
 
 /**
@@ -255,6 +265,8 @@ export function bojlerInfoZ(raw) {
         rucne: o.rucne === true,
         // Teplota vody len s teplomerom (docs/navrhy/bojler-teplota.html) - bez neho tie polia nie sú vôbec.
         ...vodaZ(o.voda, o.teploty),
+        ...(typeof o.hranica === 'number' ? { hranica: o.hranica } : {}),
+        ...(o.nahriata === true ? { nahriata: true } : {}),
     };
 }
 

@@ -6,11 +6,12 @@
 
 import { VOICES, WORKER_BOJLER_URL } from '../shared/config.js';
 import { posunPrahy } from '../shared/bojler.js';
+import { posunHranicu } from '../shared/bojler-voda.js';
 import { adresaTeplomera, skriptBojlera } from '../shared/bojler-skript.js';
 import { backAction } from '../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
 import { prepniSpotrebic } from '../shared/doma.js';
-import { bojlerPecat, zdielajPecat } from './data.js';
+import { bojlerPecat, ulozHranicuBojlera, zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
 import { zacniOdznova } from './ucenie.js';
 import { clearStored, saveBojlerPrahy, saveDoma, saveLook, saveTeplomer } from './storage.js';
@@ -115,6 +116,21 @@ function initBojler(store, dom) {
     dom.nsTeplomerIp.addEventListener('change', () => {
         const ip = dom.nsTeplomerIp.value.trim();
         if (ip !== store.get().teplomer.ip) ulozTeplomer({ ...store.get().teplomer, ip });
+    });
+    // Hranica teploty (docs/navrhy/bojler-hranica.html): drží ju Worker, zásuvka ju dostane pri ďalšom hlásení.
+    dom.nsHranica.addEventListener('click', async (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-hranica]') : null;
+        const { zdroj, bojler, bojlerHranica } = store.get();
+        if (!(btn instanceof HTMLElement) || !zdroj || !bojler || bojlerHranica === 'uklada') return;
+        const hranica = posunHranicu(bojler.hranica ?? null, btn.dataset.hranica === '-1' ? -1 : 1);
+        store.setState({ bojler: { ...bojler, hranica }, bojlerHranica: 'uklada' });
+        const r = await ulozHranicuBojlera(zdroj.pecat, hranica);
+        const teraz = store.get().bojler;
+        store.setState(
+            r
+                ? { bojler: r.bojler ?? teraz, bojlerHranica: null }
+                : { bojler: teraz && { ...teraz, hranica: bojler.hranica ?? null }, bojlerHranica: 'chyba' },
+        );
     });
     // Učenie z histórie: odteraz sa appka učí len z nových dní (web/ucenie.js).
     dom.nsUcenieOdznova.addEventListener('click', () => void zacniOdznova(store));
