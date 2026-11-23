@@ -101,6 +101,7 @@ function terazBojlerDom() {
         tzBojlerRezimOk: byId('tz-bojler-rezim-ok'),
         tzBojlerRezimOkT: byId('tz-bojler-rezim-ok-t'),
         tzBojlerPas: byId('tz-bojler-pas'),
+        tzBojlerVoda: byId('tz-bojler-voda'),
         tzBojlerCisla: byId('tz-bojler-cisla'),
         tzBojlerBehy: byId('tz-bojler-behy'),
         tzBojlerOznam: /** @type {HTMLButtonElement} */ (byId('tz-bojler-oznam')),
@@ -288,6 +289,21 @@ function ucenieDom() {
     };
 }
 
+/** Teplomer v bojleri v Nastavení (docs/navrhy/bojler-teplota.html, N2): prepínač, adresa a heslo. */
+function teplomerDom() {
+    return {
+        nsTeplomer: byId('ns-teplomer'),
+        nsTeplomerLabel: byId('ns-teplomer-label'),
+        nsTeplomerSmall: byId('ns-teplomer-small'),
+        nsTeplomerPolia: byId('ns-teplomer-polia'),
+        nsTeplomerIpL: byId('ns-teplomer-ip-l'),
+        nsTeplomerIp: /** @type {HTMLInputElement} */ (byId('ns-teplomer-ip')),
+        nsTeplomerHesloL: byId('ns-teplomer-heslo-l'),
+        nsTeplomerHeslo: /** @type {HTMLInputElement} */ (byId('ns-teplomer-heslo')),
+        nsTeplomerPozn: byId('ns-teplomer-pozn'),
+    };
+}
+
 /** Karta Nastavenie: prehľad elektrárne a ponuka prevziať nastavenie z odkazu. */
 function nastavenieDom() {
     return {
@@ -323,6 +339,7 @@ function nastavenieDom() {
         nsBojlerSprava: byId('ns-bojler-sprava'),
         nsBojlerText: /** @type {HTMLTextAreaElement} */ (byId('ns-bojler-text')),
         nsBojlerKroky: byId('ns-bojler-kroky'),
+        ...teplomerDom(),
         ...ucenieDom(),
         nsLookTitle: byId('ns-look-title'),
         nsLookHint: byId('ns-look-hint'),

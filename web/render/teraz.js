@@ -506,6 +506,7 @@ function renderBojlerSheet(state, dom, plan) {
         setText(dom.tzBojlerPod, d.pod);
         setText(dom.tzBojlerPlan, d.plan);
         show(dom.tzBojlerPlan, !!d.plan);
+        renderVoda(d.voda, dom.tzBojlerVoda);
         const R = TERAZ_BOJLER_TEXTS.rezim;
         setText(dom.tzBojlerRezimN, R.nazov);
         // Biela plocha pod zvoleným tlačidlom prejde na druhú stranu (css/teraz.css, .bj-rezim::before).
@@ -554,6 +555,31 @@ function renderBojlerSheet(state, dom, plan) {
         );
     }
     dialog(dom.tzBojlerSheet, !!b, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="bojler"]') : null));
+}
+
+/**
+ * Krivka teploty vody dnes (docs/navrhy/bojler-teplota.html, P1): čiara a plocha v SVG natiahnutom na šírku panela,
+ * čiara cieľa, bod teraz a popisky v HTML, aby sa písmo nenaťahovalo so SVG.
+ * @param {ReturnType<typeof bojlerDetail>['voda']} v @param {HTMLElement} el
+ */
+function renderVoda(v, el) {
+    show(el, !!v);
+    if (!v) return;
+    el.setAttribute('aria-label', v.popis);
+    const pct = (/** @type {number} */ y) => Math.round((y / v.h) * 10000) / 100;
+    const bod = `left:${Math.round((v.bod.x / v.w) * 10000) / 100}%;top:${pct(v.bod.y)}%`;
+    const ciel = v.ciel
+        ? `<i class="bj-voda-ciel" style="top:${pct(v.ciel.y)}%"></i><span class="bj-voda-ct" style="top:${pct(v.ciel.y)}%">${escapeHtml(v.ciel.text)}</span>`
+        : '';
+    setHtml(
+        el,
+        `<div class="bj-voda-plocha"><svg viewBox="0 0 ${v.w} ${v.h}" preserveAspectRatio="none" aria-hidden="true">` +
+            v.plochy.map((d) => `<path class="bj-voda-p" d="${d}"/>`).join('') +
+            v.ciary.map((d) => `<path class="bj-voda-c" d="${d}" vector-effect="non-scaling-stroke"/>`).join('') +
+            `</svg>${ciel}<i class="bj-voda-bod" style="${bod}"></i>` +
+            `<b class="bj-voda-t" style="${bod}">${escapeHtml(v.bod.text)}</b></div>` +
+            `<div class="bj-voda-osi" aria-hidden="true">${v.ticks.map((t) => `<span style="left:${t.at}%">${t.label}</span>`).join('')}</div>`,
+    );
 }
 
 /**

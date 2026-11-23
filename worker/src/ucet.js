@@ -20,6 +20,7 @@
 import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zmenaOhrevu } from '../../shared/bojler.js';
 import { zapisZmeny } from '../../shared/bezi.js';
+import { pridajTeplotu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
 import { domBezBojlera, sBojlerom, zapisMeranie } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
 import { bojlerZmenaText } from '../../shared/messages-oznamenia.js';
@@ -72,7 +73,7 @@ export class UcetHuawei {
                     : path === '/rezim'
                       ? await this.rezim(req, now)
                       : path === '/stav'
-                        ? await this.stav(req)
+                        ? await this.stav(req, now)
                         : path === '/oznam'
                           ? await this.oznam(req)
                           : path === '/historia'
@@ -190,15 +191,16 @@ export class UcetHuawei {
      */
     async pv(pristup, now) {
         const r = await this.meraj(pristup, now);
-        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${String(pristup.plant ?? '')}`));
+        const bojler = await this.sTeplotami(String(pristup.plant ?? ''), now);
         const zmeneny = JSON.stringify(r.pristup) !== JSON.stringify(pristup);
-        return { pv: r.pv, ...(zmeneny ? { pristup: r.pristup } : {}), bojler: bojler ?? null };
+        return { pv: r.pv, ...(zmeneny ? { pristup: r.pristup } : {}), bojler };
     }
 
     /**
      * Dopyt zásuvky: rozhodnutie a záznam dňa. Keď meranie nevyjde, rozhoduje z posledného
      * (rozhodni ho po BOJLER.tichoMin nechá vypnúť).
-     * @param {{ pristup: Record<string, unknown>, rele: unknown, w: unknown, e: unknown, prahy: unknown }} req @param {Date} now
+     * Teplotu vody (`t`) pošle len skript s teplomerom (docs/navrhy/bojler-teplota.html); bez nej ostáva posledná.
+     * @param {{ pristup: Record<string, unknown>, rele: unknown, w: unknown, e: unknown, prahy: unknown, t?: unknown }} req @param {Date} now
      */
     async bojler(req, now) {
         const plant = String(req.pristup.plant ?? '');
@@ -217,15 +219,42 @@ export class UcetHuawei {
         const stary = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
         const energiaWh = cislo(req.e);
         const den = zaznamenaj(stary?.den ?? null, { now, tz: NB.pasmo, rele, w, energiaWh, sietKw });
-        /** @type {BojlerInfo} */ const info = { kontaktAt: now.getTime(), rele, w, prebytokKw: r.prebytokKw, prahy, den, rucne };
+        const v = await this.voda(plant, req.t, stary, now);
+        /** @type {BojlerInfo} */ const info = {
+            kontaktAt: now.getTime(),
+            rele,
+            w,
+            prebytokKw: r.prebytokKw,
+            prahy,
+            den,
+            rucne,
+            voda: v.voda,
+        };
         await this.storage.put({
             [`bp:${plant}`]: r.pamat,
             [`b:${plant}`]: info,
+            ...v.zapis,
             ...(await this.koniecDna(plant, stary, den)),
         });
         const zmena = zmenaOhrevu(stary ?? null, info);
         if (zmena) await this.oznamZmenu(plant, bojlerZmenaText(zmena), now);
         return { zapni: r.zapni, rucne, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin };
+    }
+
+    /**
+     * Teplota vody z hlásenia zásuvky (docs/navrhy/bojler-teplota.html): posledná (bez novej ostáva stará) a čo zapísať
+     * do bodov `bt:`.
+     * @param {string} plant @param {unknown} raw @param {BojlerInfo | undefined} stary @param {Date} now
+     */
+    async voda(plant, raw, stary, now) {
+        const t = teplotaZ(raw);
+        const body =
+            /** @type {import('../../shared/bojler-voda.js').BodyVody | undefined} */ (await this.storage.get(`bt:${plant}`)) ?? [];
+        const nove = pridajTeplotu(body, t, now.getTime());
+        return {
+            voda: t === null ? (stary?.voda ?? null) : { t, at: now.getTime() },
+            zapis: nove === body ? {} : { [`bt:${plant}`]: nove },
+        };
     }
 
     /**
@@ -264,24 +293,34 @@ export class UcetHuawei {
 
     /**
      * Stav bojlera pre appku: posledné hlásenie zásuvky (null, keď sa ešte neozvala), bez merania - na Huawei nejde nič.
-     * @param {{ pristup: Record<string, unknown> }} req
+     * @param {{ pristup: Record<string, unknown> }} req @param {Date} now
      */
-    async stav(req) {
-        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${String(req.pristup.plant ?? '')}`));
-        return { bojler: bojler ?? null };
+    async stav(req, now) {
+        return { bojler: await this.sTeplotami(String(req.pristup.plant ?? ''), now) };
+    }
+
+    /**
+     * Stav bojlera pre telefón: posledné hlásenie zásuvky a dnešné body teploty vody (null, keď sa ešte neozvala).
+     * @param {string} plant @param {Date} now @returns {Promise<BojlerInfo | null>}
+     */
+    async sTeplotami(plant, now) {
+        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        if (!bojler) return null;
+        const body = /** @type {import('../../shared/bojler-voda.js').BodyVody | undefined} */ (await this.storage.get(`bt:${plant}`));
+        return body?.length ? { ...bojler, teploty: teplotyDna(body, now, NB.pasmo) } : bojler;
     }
 
     /**
      * Režim od appky: ručne (skript relé neprepína) alebo riadi appka. Uloží ho a vráti stav bojlera
      * s novým režimom (null, keď sa zásuvka ešte neozvala).
-     * @param {{ pristup: Record<string, unknown>, rucne: unknown }} req @param {Date} _now
+     * @param {{ pristup: Record<string, unknown>, rucne: unknown }} req @param {Date} now
      */
-    async rezim(req, _now) {
+    async rezim(req, now) {
         const plant = String(req.pristup.plant ?? '');
         const rucne = req.rucne === true;
         const stary = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
         const bojler = stary ? { ...stary, rucne } : null;
         await this.storage.put({ [`br:${plant}`]: rucne, ...(bojler ? { [`b:${plant}`]: bojler } : {}) });
-        return { bojler };
+        return { bojler: await this.sTeplotami(plant, now) };
     }
 }

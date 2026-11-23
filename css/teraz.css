@@ -1554,3 +1554,76 @@
     cursor: default;
     opacity: 0.6;
 }
+/* Teplota vody dnes v paneli Bojler dnes (docs/navrhy/bojler-teplota.html, P1): krivka cez celý deň, čiarkovaná
+   čiara cieľa a bod teraz s teplotou. SVG je natiahnuté na šírku, písmo je mimo neho. */
+.bj-voda {
+    margin: 4px 0 14px;
+}
+.bj-voda-plocha {
+    position: relative;
+    height: 104px;
+}
+.bj-voda-plocha svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.bj-voda-p {
+    fill: rgba(255, 255, 255, 0.12);
+}
+.bj-voda-c {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2;
+    stroke-linejoin: round;
+}
+.bj-voda-ciel {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1.5px dashed rgba(255, 255, 255, 0.55);
+}
+.bj-voda-ct {
+    position: absolute;
+    right: 0;
+    transform: translateY(-120%);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--dim);
+}
+.bj-voda-bod {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    margin: -4.5px 0 0 -4.5px;
+    border-radius: 50%;
+    background: #fff;
+}
+.bj-voda-t {
+    position: absolute;
+    transform: translate(-110%, -130%);
+    font-size: 0.85rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.bj-voda-osi {
+    position: relative;
+    height: 16px;
+    margin-top: 4px;
+}
+.bj-voda-osi span {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--dim);
+}
+.bj-voda-osi span:first-child {
+    transform: none;
+}
+.bj-voda-osi span:last-child {
+    transform: translateX(-100%);
+}

@@ -164,8 +164,11 @@ function zapocitaj(beh, v, cas, hreje, min) {
 }
 
 /**
- * Stav bojlera pre appku: čo hlásila zásuvka naposledy, záznam dňa a či bojler zapína človek (`rucne`).
- * @typedef {{ kontaktAt: number, rele: boolean, w: number, prebytokKw: number | null, prahy: Prahy, den: Den | null, rucne: boolean }} BojlerInfo
+ * Stav bojlera pre appku: čo hlásila zásuvka naposledy, záznam dňa a či bojler zapína človek (`rucne`). S teplomerom
+ * (docs/navrhy/bojler-teplota.html) aj posledná teplota vody (`voda`, °C a kedy) a dnešné body [minúta dňa, °C]
+ * (`teploty`, pridá ich Worker až do odpovede, v objekte ich niet). Bez teplomera, či od staršieho Workera, nič.
+ * @typedef {{ kontaktAt: number, rele: boolean, w: number, prebytokKw: number | null, prahy: Prahy, den: Den | null, rucne: boolean,
+ *   voda?: { t: number, at: number } | null, teploty?: Array<[number, number]> }} BojlerInfo
  */
 
 /**
@@ -250,6 +253,8 @@ export function bojlerInfoZ(raw) {
         den: denZ(o.den),
         // Starší Worker režim neposiela - vtedy riadi appka.
         rucne: o.rucne === true,
+        // Teplota vody len s teplomerom (docs/navrhy/bojler-teplota.html) - bez neho tie polia nie sú vôbec.
+        ...vodaZ(o.voda, o.teploty),
     };
 }
 
@@ -307,6 +312,21 @@ function krokZasuvky(z, sietKw, prikon, t, prahy) {
     const r = rozhodni(z.pamat, { rele: z.rele, w: z.rele ? prikon * 1000 : 0, sietKw, meranieAt: t, now: t, prahy });
     z.pamat = r.pamat;
     z.rele = r.zapni;
+}
+
+/**
+ * Posledná teplota vody a dnešné body z odpovede Workera - len tie, ktoré majú platný tvar.
+ * @param {unknown} voda @param {unknown} teploty
+ * @returns {{ voda?: { t: number, at: number }, teploty?: Array<[number, number]> }}
+ */
+function vodaZ(voda, teploty) {
+    const num = (/** @type {unknown} */ v) => typeof v === 'number' && Number.isFinite(v);
+    const v = isObj(voda) ? /** @type {Record<string, unknown>} */ (voda) : {};
+    const body = Array.isArray(teploty) ? teploty.filter((b) => Array.isArray(b) && b.length === 2 && b.every(num)) : [];
+    return {
+        ...(num(v.t) && num(v.at) ? { voda: { t: /** @type {number} */ (v.t), at: /** @type {number} */ (v.at) } } : {}),
+        ...(body.length ? { teploty: /** @type {Array<[number, number]>} */ (body) } : {}),
+    };
 }
 
 /** Záznam dňa z odpovede Workera, alebo null. @param {unknown} raw @returns {Den | null} */

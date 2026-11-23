@@ -1151,6 +1151,26 @@ test('stav bojlera: telefón dostane posledné hlásenie zásuvky bez merania na
     assert.equal(cez.status, 200);
 });
 
+test('teplomer: zásuvka pošle teplotu vody, objekt drží bod každých 5 minút a telefón dostane dnešné body', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom({ sietW: () => 100 });
+    const hlas = (/** @type {number} */ min, /** @type {unknown} */ t) =>
+        handleBojler(bojlerReq({ pecat: zasuvka, rele: false, w: 0, e: 1, t }), env, po(min));
+    for (let min = 1; min <= 11; min++) assert.equal((await hlas(min, 50 + min / 10)).status, 200);
+    // Teplomer neodpovedal (null) a nezmysel: posledná teplota ostáva.
+    await hlas(12, null);
+    await hlas(13, 'x');
+    const b = (await (await handleBojlerStav(post('/bojler-stav', JSON.stringify({ pecat: telefon })), env, po(13))).json()).bojler;
+    assert.deepEqual(b.voda, { t: 51.1, at: po(11).getTime() });
+    assert.equal(b.teploty.length, 3, 'body v 1., 6. a 11. minúte');
+    assert.equal(b.teploty[0][1], 50.1);
+    const m = await (await handlePv(pvRequest(telefon), env, po(14), s.impl)).json();
+    assert.equal(m.bojler.teploty.length, 3, 'aj s meraním');
+    const rezim = await (
+        await handleBojlerRezim(post('/bojler-rezim', JSON.stringify({ pecat: telefon, rucne: true })), env, po(15))
+    ).json();
+    assert.equal(rezim.bojler.teploty.length, 3, 'aj po zmene režimu');
+});
+
 test('oznámenia bojlera: telefón si ich zapne, pri každej zmene ohrevu príde push s dôvodom; vypnuté či neplatné nechodia', async () => {
     let status = 201;
     const { s, env, telefon, zasuvka } = await sBojlerom({ sietW: () => 100, pushStatus: () => status }, { VAPID_JWK: await vapidTest() });

@@ -213,3 +213,31 @@ test('panel: nahriata voda, mlčiaca zásuvka a deň bez behov', () => {
     const noc = bojlerDetail(info({ den: null }), new Date('2026-11-15T20:00:00Z'), TZ);
     assert.equal(noc.pas.teraz, null);
 });
+
+test('teplomer (T1): veľké číslo je teplota vody, kým ju zásuvka hlási; nahriata má kWh zo slnka v odrážke', () => {
+    const voda = { t: 52.4, at: NOW.getTime() - MIN };
+    assert.equal(bojlerDlazdica(info({ voda }), NOW, TZ).velky, '52 °C');
+    assert.equal(bojlerDlazdica(info({ voda, rele: false, w: 0 }), NOW, TZ).velky, '52 °C');
+    assert.equal(bojlerDlazdica(info({ voda, rucne: true }), NOW, TZ).velky, '52 °C');
+    const hotovo = bojlerDlazdica(info({ voda, w: 3, den: { ...DEN, hotovo: 835 } }), NOW, TZ);
+    assert.deepEqual([hotovo.velky, hotovo.odr], ['52 °C', ['nahriata o 13:55', 'dnes 3,6 kWh zo slnka']]);
+    // Stará teplota (teplomer mlčí) sa neukáže, mlčiaca zásuvka ukazuje ticho ako vždy.
+    assert.equal(bojlerDlazdica(info({ voda: { t: 52, at: NOW.getTime() - 20 * MIN } }), NOW, TZ).velky, '2,2 kW');
+    assert.equal(bojlerDlazdica(info({ voda, kontaktAt: NOW.getTime() - 18 * MIN }), NOW, TZ).velky, '18 min');
+});
+
+test('teplomer (P1): krivka v paneli a plán s teplotou vody', () => {
+    const voda = { t: 47.6, at: NOW.getTime() - MIN };
+    const teploty = /** @type {Array<[number, number]>} */ ([
+        [600, 44],
+        [605, 44.5],
+        [835, 47.6],
+    ]);
+    const d = bojlerDetail(info({ voda, teploty, rele: false, w: 0 }), NOW, TZ, { zapne: 870, dohreje: 900, nahriaty: false });
+    assert.equal(d.plan, 'Voda má 48 °C, podľa plánu dohreje okolo 15:00.');
+    assert.equal(d.voda?.bod.text, '48 °C');
+    const nedohreje = bojlerDetail(info({ voda }), NOW, TZ, { zapne: null, dohreje: null, nahriaty: false });
+    assert.equal(nedohreje.plan, 'Voda má 48 °C, dnes ju slnko asi nedohreje.');
+    assert.equal(nedohreje.voda, null, 'bez bodov krivka nie je');
+    assert.equal(bojlerDetail(info(), NOW, TZ, { zapne: null, dohreje: 900, nahriaty: false }).plan, 'Podľa plánu dohreje okolo 15:00.');
+});

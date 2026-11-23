@@ -12,6 +12,7 @@ import {
     TARIFF,
     BOJLER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
+    TEPLOMER_STORAGE_KEY,
     OZNAMENIA,
     BEZI_CAKA_STORAGE_KEY,
     WORKER_BEZI_URL,
@@ -31,11 +32,11 @@ import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
 import { bojlerDetail, bojlerDlazdica, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { scenaModel } from '../../shared/teraz-scena.js';
-import { kwpText } from '../../shared/format.js';
+import { kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { odmietnute, pristupModel } from '../../shared/pristup.js';
 import { settingsFrom, settingsFromLink, shareUrl, toUser } from '../../shared/settings.js';
-import { buildForecast } from '../../shared/solar.js';
+import { buildForecast, localMinutes } from '../../shared/solar.js';
 import { LINK_ERRORS } from '../../shared/setup-texts.js';
 import { FIXED_NOW, fixture, fixtureData } from '../helpers.js';
 
@@ -1037,6 +1038,74 @@ test.describe('bojler na prebytky', () => {
         await expect(page.locator('#ns-bojler-text')).toBeHidden();
         const axe = await new AxeBuilder({ page }).include('#ns-bojler').analyze();
         expect(axe.violations).toEqual([]);
+        expect(errors).toEqual([]);
+    });
+
+    test('teplomer (docs/navrhy/bojler-teplota.html): teplota na dlaždici, krivka v paneli a skript s teplomerom', async ({ page }) => {
+        // Teplomer hlási 52,4 °C, dnes ráno voda vychladla a teraz ju slnko ohrieva.
+        const teraz = localMinutes(FIXED_NOW, SITE.timezone);
+        const teploty = /** @type {Array<[number, number]>} */ (
+            Array.from({ length: 49 }, (_, i) => [teraz - (48 - i) * 5, 44 + (i / 48) * 8.4])
+        );
+        const info = { ...BOJLER_INFO, rucne: false, voda: { t: 52.4, at: FIXED_NOW.getTime() - 60000 }, teploty };
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'clipboard', {
+                value: { writeText: (/** @type {string} */ t) => /** @type {any} */ ((window.__schranka = t), Promise.resolve()) },
+            });
+        });
+        await page.route(WORKER_BOJLER_PECAT_URL, (route) => route.fulfill({ json: { pecat: PECAT_ZASUVKY } }));
+        await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['bojler']))]);
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ }, bojler: info });
+        // T1: veľké číslo dlaždice je teplota vody.
+        const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
+        await expect(dl.locator('.velky')).toHaveText(bojlerDlazdica(info, FIXED_NOW, SITE.timezone).velky);
+        await expect(dl.locator('.velky')).toHaveText('52 °C');
+        // P1: krivka teploty v paneli Bojler dnes.
+        await dl.click();
+        const d = bojlerDetail(info, FIXED_NOW, SITE.timezone);
+        const voda = page.locator('#tz-bojler-voda');
+        await expect(voda).toBeVisible();
+        await expect(voda).toHaveAccessibleName(/** @type {NonNullable<typeof d.voda>} */ (d.voda).popis);
+        await expect(voda.locator('.bj-voda-c')).toHaveCount(1);
+        await expect(voda.locator('.bj-voda-t')).toHaveText('52 °C');
+        await expect(voda.locator('.bj-voda-ct')).toHaveText('55 °C');
+        expect((await new AxeBuilder({ page }).include('#tz-bojler-sheet').analyze()).violations).toEqual([]);
+        await page.locator('#tz-bojler-sheet').screenshot({ path: test.info().outputPath('bojler-dnes.png') });
+        await page.keyboard.press('Escape');
+        // N2: prepínač ukáže adresu a heslo; bez hesla skript nebude, s heslom ponesie teplomer.
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-doma').click();
+        const prepinac = page.locator('#ns-teplomer');
+        await expect(page.locator('#ns-teplomer-small')).toHaveText(
+            BOJLER_TEXTS.teplomer.voda('52 °C', minutesToTimeStr(localMinutes(new Date(info.voda.at), SITE.timezone))),
+        );
+        await expect(page.locator('#ns-teplomer-polia')).toBeHidden();
+        await prepinac.click();
+        await expect(prepinac).toHaveAttribute('aria-checked', 'true');
+        await expect(page.locator('#ns-teplomer-polia')).toBeVisible();
+        await page.locator('#ns-teplomer-ip').fill('10.10.10.50');
+        await page.locator('#ns-teplomer-heslo').click();
+        expect(await page.evaluate((k) => localStorage.getItem(k), TEPLOMER_STORAGE_KEY)).toBe(
+            JSON.stringify({ on: true, ip: '10.10.10.50' }),
+        );
+        await page.locator('#ns-bojler-skript').click();
+        await expect(page.locator('#ns-bojler-sprava')).toHaveText(BOJLER_TEXTS.teplomer.chyba[0]);
+        await page.locator('#ns-teplomer-heslo').fill('Tajne-heslo1');
+        await page.locator('#ns-bojler-skript').click();
+        await expect(page.locator('#ns-bojler-sprava')).toHaveText(BOJLER_TEXTS.hotovo[0]);
+        const skript = await page.evaluate(() => /** @type {any} */ (window).__schranka);
+        expect(skript).toBe(
+            skriptBojlera({
+                url: WORKER_BOJLER_URL,
+                pecat: PECAT_ZASUVKY,
+                zapKw: 2.3,
+                vypKw: 2,
+                teplomer: { ip: '10.10.10.50', heslo: 'Tajne-heslo1' },
+            }),
+        );
+        expect(JSON.stringify(await page.evaluate(() => ({ ...localStorage })))).not.toContain('Tajne-heslo1');
+        await page.locator('#ns-bojler').screenshot({ path: test.info().outputPath('nastavenie-teplomer.png') });
+        expect((await new AxeBuilder({ page }).include('#ns-bojler').analyze()).violations).toEqual([]);
         expect(errors).toEqual([]);
     });
 

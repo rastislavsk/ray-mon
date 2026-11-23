@@ -1,0 +1,642 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Bojler – teplota vody</title>
+        <style>
+            /* Návrh (23. 11. 2026): teplota vody z teplomera Shelly 1 Gen3 + Add-on (DS18B20) v appke - dlaždica Bojler,
+               panel Bojler dnes a Nastavenie. Zásuvka si teplotu prečíta v domácej sieti a pošle ju s minútovým hlásením (B2).
+               Samostatný súbor, nič neimportuje z appky. Čísla a časy sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --sun: #ffd166;
+                --siet: rgba(124, 196, 255, 0.85);
+                --zelena: #8fe36f;
+                --horuca: #ff8a5c;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            p {
+                margin: 0;
+                max-width: 74ch;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                width: 300px;
+                max-width: 100%;
+            }
+            figcaption {
+                font-size: 14px;
+            }
+            figcaption b {
+                display: block;
+                font-size: 16px;
+            }
+            .plus,
+            .minus {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--zelena);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+
+            /* ===== kúsok obrazovky ===== */
+            .kus {
+                --glass: rgba(8, 16, 40, 0.3);
+                position: relative;
+                width: 300px;
+                max-width: 100%;
+                padding: 12px;
+                border-radius: 24px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f62b5, #5d8fd8 70%, #6f9cdc);
+                font-size: 13px;
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                align-items: start;
+            }
+            .dl {
+                position: relative;
+                padding: 11px;
+                border-radius: 20px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                min-height: 152px;
+            }
+            .dl[data-zapnuty] {
+                box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+            }
+            .dl[data-tlmene] {
+                opacity: 0.55;
+            }
+            .ico {
+                position: relative;
+                width: 36px;
+                height: 36px;
+                margin-bottom: 14px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .dl[data-zapnuty] .ico {
+                color: var(--zelena);
+            }
+            .vi {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .velky {
+                display: block;
+                font-size: 22px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .velky small {
+                font-size: 12px;
+                font-weight: 800;
+            }
+            .meno {
+                display: block;
+                font-size: 15px;
+                font-weight: 800;
+                margin-top: 2px;
+            }
+            .podiel {
+                display: block;
+                height: 5px;
+                margin: 6px 0 3px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, var(--sun) 0 82%, var(--siet) 82%);
+            }
+            .odr {
+                display: block;
+                font-size: 11.5px;
+                font-weight: 600;
+            }
+
+            /* T3: nádrž v ikone, výška vody = teplota (20 – 75 °C) */
+            .nadrz {
+                position: absolute;
+                right: 12px;
+                top: 12px;
+                width: 26px;
+                height: 62px;
+                border: 2px solid rgba(255, 255, 255, 0.85);
+                border-radius: 13px;
+                overflow: hidden;
+            }
+            .nadrz i {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(0deg, #7cc4ff, var(--horuca));
+                background-size: 100% 62px;
+                background-position: bottom;
+            }
+            .nadrz::after {
+                /* ryska 55 °C - „na sprchu stačí“ */
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: calc((55 - 20) / 55 * 100%);
+                border-top: 1.5px dashed rgba(255, 255, 255, 0.7);
+            }
+
+            /* ===== panel zdola ===== */
+            .panel {
+                width: 300px;
+                max-width: 100%;
+                padding: 16px 14px 18px;
+                border-radius: 24px 24px 0 0;
+                background: #16213f;
+                border: 1px solid var(--line);
+                display: grid;
+                gap: 12px;
+                font-size: 13px;
+            }
+            .panel .hlava {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+            }
+            .panel .hlava b {
+                font-size: 18px;
+                font-weight: 900;
+            }
+            .panel .hlava span {
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .krivka svg {
+                width: 100%;
+                height: auto;
+                display: block;
+                overflow: visible;
+            }
+            .k-t {
+                font-size: 9.5px;
+                font-weight: 700;
+                fill: rgba(255, 255, 255, 0.75);
+                font-family: var(--font);
+            }
+            .k-h {
+                font-size: 11px;
+                font-weight: 900;
+                fill: #fff;
+                font-family: var(--font);
+            }
+            .tri {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            .tri div {
+                padding: 10px 8px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.07);
+                display: grid;
+                gap: 2px;
+            }
+            .tri b {
+                font-size: 20px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .tri span {
+                font-size: 11px;
+                color: var(--dim);
+            }
+            .doteraz {
+                font-size: 12px;
+                color: var(--dim);
+                border-top: 1px solid var(--line);
+                padding-top: 10px;
+            }
+
+            /* ===== Nastavenie ===== */
+            .nast {
+                width: 300px;
+                max-width: 100%;
+                padding: 16px 14px;
+                border-radius: 20px;
+                background: #16213f;
+                border: 1px solid var(--line);
+                display: grid;
+                gap: 10px;
+                font-size: 13px;
+            }
+            .nast h4 {
+                margin: 0;
+                font-size: 15px;
+                font-weight: 800;
+            }
+            .nast label {
+                display: grid;
+                gap: 4px;
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .nast input {
+                font: inherit;
+                font-size: 14px;
+                color: #fff;
+                padding: 9px 10px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                background: rgba(0, 0, 0, 0.25);
+            }
+            .nast .pozn {
+                font-size: 11.5px;
+                color: var(--dim);
+            }
+            .nast .btn {
+                justify-self: start;
+                padding: 9px 14px;
+                border-radius: 999px;
+                background: #fff;
+                color: #0b1226;
+                font-weight: 800;
+            }
+            .prepinac {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: 700;
+            }
+            .prepinac i {
+                width: 40px;
+                height: 22px;
+                border-radius: 11px;
+                background: var(--zelena);
+                position: relative;
+            }
+            .prepinac i::after {
+                content: '';
+                position: absolute;
+                right: 3px;
+                top: 3px;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .stav {
+                display: flex;
+                gap: 8px;
+                align-items: baseline;
+                font-size: 12.5px;
+            }
+            .stav::before {
+                content: '';
+                flex: none;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--zelena);
+                transform: translateY(-1px);
+            }
+            .stav[data-chyba]::before {
+                background: #ffb547;
+            }
+            .zlozene {
+                opacity: 0.55;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Bojler – teplota vody</h1>
+                <p class="dim">
+                    Návrh 23. 11. 2026. V bojleri Drazice OKHE 160 je teplomer DS18B20 na Shelly 1 Gen3 s Add-onom (10.10.10.50, s heslom).
+                    Zásuvka s bojlerom si pri každom minútovom hlásení teplotu prečíta v domácej sieti a pošle ju Workerovi spolu so stavom
+                    relé. Worker si drží bod každých 5 minút za 7 dní a k dňom histórie najnižšiu a najvyššiu teplotu. Čísla a časy na
+                    obrázkoch sú vymyslené.
+                </p>
+                <p class="dim">
+                    Na rozhodnutie sú tri veci: <b>dlaždica</b> na karte Teraz (T), <b>panel Bojler dnes</b> (P) a <b>Nastavenie</b> (N).
+                    Lepšie riadenie podľa teploty (napr. zapni, kým voda nemá 55 °C, aj keď slnko nestačí) je ďalší krok. Tu ide len o to,
+                    aby appka teplotu videla a pamätala si ju.
+                </p>
+            </section>
+
+            <section>
+                <h2>T – dlaždica Bojler</h2>
+                <p class="dim">Vľavo vždy ten istý bojler v troch stavoch: hreje zo slnka · čaká · nahriaty.</p>
+                <div class="rad" id="dlazdice"></div>
+            </section>
+
+            <section>
+                <h2>P – panel Bojler dnes</h2>
+                <p class="dim">
+                    Otvorí sa ťuknutím na dlaždicu ako dnes. Prepínač Kto zapína bojler a oznámenia ostávajú pod tým, tu nie sú nakreslené.
+                </p>
+                <div class="rad" id="panely"></div>
+            </section>
+
+            <section>
+                <h2>N – Nastavenie bojlera</h2>
+                <p class="dim">
+                    Adresu a heslo teplomera appka potrebuje len na poskladanie skriptu do zásuvky. Heslo nikam neukladá a Workerovi ho
+                    nepošle, ostane len v skripte zásuvky. Či teplomer odpovedá, appka sama nezistí (stránka na https sa do domácej siete
+                    nedostane), povie to až zásuvka cez Workera.
+                </p>
+                <div class="rad" id="nastavenie"></div>
+            </section>
+
+            <section>
+                <h2>Odporúčanie</h2>
+                <div class="odpor">
+                    <p>
+                        <b>T1 + P1 + N2.</b> Teplota je to, čo ťa na bojleri naozaj zaujíma („je teplá voda?“), takže patrí na miesto
+                        veľkého čísla. Výkon pri ohreve ostáva v paneli a zelená ikona hovorí, že hreje. P1 ukáže zároveň, kedy sa voda
+                        minula a kedy ju slnko dohrialo, a z toho bude neskôr riadenie podľa teploty. N2, lebo teplomer má málokto a nemusí
+                        každému strašiť v Nastavení.
+                    </p>
+                </div>
+                <p class="dim">
+                    Otvorené: Rysku „stačí na sprchu“ (55 °C v T3 a P1) nastaviť pevne, alebo ju dať do Nastavenia? A či sa má pri teplomeri
+                    zmeniť slovo „nahriata“: dnes ho appka hovorí, keď termostat vypne (príkon pod 50 W). S teplomerom by vedela povedať aj
+                    „voda 48 °C, slnko ju ešte dohreje“.
+                </p>
+            </section>
+        </main>
+
+        <script>
+            // Obrázky skladá tento skript, aby sa dlaždice v návrhu neopakovali ručne. Len pre návrh, appka ho nemá.
+            const BOJLER =
+                '<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M7 9h10"/><path d="M10.5 13.5c0 1.2 1.5 1.2 1.5 2.5s-1.5 1.3-1.5 2.5M13.5 13.5c0 1.2 1.5 1.2 1.5 2.5"/>';
+            const AUTO =
+                '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>';
+            const vi = (p) => `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+            const auto = `<div class="dl" data-tlmene><span class="ico">${vi(AUTO)}</span><span class="velky">13:15</span><span class="meno">Auto</span><span class="podiel"></span><span class="odr">• ~50 km zo slnka</span></div>`;
+
+            const STAVY = [
+                { kw: '2,1 kW', t: 52, stav: 'hreje zo slnka', od: 'od 10:55', zap: true },
+                { kw: '0,0 kWh', t: 47, stav: 'čaká na slnko', od: 'zapne okolo 11:30', zap: false },
+                { kw: '4,6 kWh', t: 68, stav: 'nahriata o 13:10', od: 'dnes zo slnka', zap: false },
+            ];
+
+            const dlT1 = (s) =>
+                `<div class="dl"${s.zap ? ' data-zapnuty' : ''}><span class="ico">${vi(BOJLER)}</span><span class="velky">${s.t}<small> °C</small></span><span class="meno">Bojler</span><span class="podiel"></span><span class="odr">• ${s.stav}</span><span class="odr">• ${s.od}</span></div>`;
+            const dlT2 = (s) =>
+                `<div class="dl"${s.zap ? ' data-zapnuty' : ''}><span class="ico">${vi(BOJLER)}</span><span class="velky">${s.kw}</span><span class="meno">Bojler</span><span class="podiel"></span><span class="odr">• ${s.stav}</span><span class="odr">• voda ${s.t} °C</span></div>`;
+            const dlT3 = (s) => {
+                const vyska = Math.max(0, Math.min(100, ((s.t - 20) / 55) * 100));
+                return `<div class="dl"${s.zap ? ' data-zapnuty' : ''}><span class="ico">${vi(BOJLER)}</span><span class="nadrz"><i style="height:${vyska}%"></i></span><span class="velky">${s.t}<small> °C</small></span><span class="meno">Bojler</span><span class="podiel"></span><span class="odr">• ${s.stav}</span></div>`;
+            };
+
+            const varianty = [
+                {
+                    f: dlT1,
+                    n: 'T1 · teplota je veľké číslo',
+                    plus: ['Hneď vidno to podstatné: je teplá voda.', 'Žiadny nový tvar, len iné číslo.'],
+                    minus: ['Výkon pri ohreve (2,1 kW) z dlaždice zmizne, ostáva v paneli.'],
+                },
+                {
+                    f: dlT2,
+                    n: 'T2 · ako dnes, teplota v odrážke',
+                    plus: ['Najmenšia zmena, nič sa nepresúva.'],
+                    minus: ['Teplota je drobným písmom, hoci je to najdôležitejšie číslo.', 'Druhá odrážka vytlačí „od 10:55“.'],
+                },
+                {
+                    f: dlT3,
+                    n: 'T3 · teplota a nádrž',
+                    plus: ['Obraz namiesto čísla: výška vody je teplota, čiarkovaná ryska je 55 °C.', 'Na prvý pohľad aj bez čítania.'],
+                    minus: ['Nový prvok na dlaždici, žiadna iná taký nemá.', 'Menej miesta pre odrážky.'],
+                },
+            ];
+
+            const plusMinus = (v) =>
+                v.plus.map((t) => `<span class="plus">${t}</span>`).join('') +
+                v.minus.map((t) => `<span class="minus">${t}</span>`).join('');
+
+            document.getElementById('dlazdice').innerHTML = varianty
+                .map(
+                    (v) =>
+                        `<figure>${STAVY.map((s) => `<div class="kus"><div class="mriezka">${v.f(s)}${auto}</div></div>`).join('')}<figcaption><b>${v.n}</b>${plusMinus(v)}</figcaption></figure>`,
+                )
+                .join('');
+
+            // ===== krivka teploty =====
+            // Deň: v noci chladne, ráno sprcha, slnko ohrieva 10:55 - 13:10, večer kúpanie. Teraz je 14:05.
+            const BODY = [
+                [0, 58],
+                [6.8, 54.5],
+                [7.2, 44],
+                [10.9, 42.5],
+                [13.15, 68],
+                [14.08, 67.6],
+            ];
+            const teplota = (h) => {
+                for (let i = 1; i < BODY.length; i++) {
+                    const [h0, t0] = BODY[i - 1];
+                    const [h1, t1] = BODY[i];
+                    if (h <= h1) return t0 + ((t1 - t0) * (h - h0)) / (h1 - h0);
+                }
+                return BODY[BODY.length - 1][1];
+            };
+            const W = 272;
+            const H = 120;
+            const x = (h) => (h / 24) * W;
+            const y = (t) => 10 + ((75 - t) / 45) * (H - 30); // 30 - 75 °C
+            const TERAZ = 14.08;
+
+            function krivkaDna() {
+                let d = '';
+                for (let h = 0; h <= TERAZ; h += 0.1) d += `${d ? 'L' : 'M'}${x(h).toFixed(1)} ${y(teplota(h)).toFixed(1)}`;
+                d += `L${x(TERAZ).toFixed(1)} ${y(teplota(TERAZ)).toFixed(1)}`;
+                const plocha = `${d}L${x(TERAZ).toFixed(1)} ${H - 20}L0 ${H - 20}Z`;
+                const ryska = y(55);
+                const osi = [0, 6, 12, 18, 24]
+                    .map(
+                        (h) =>
+                            `<text class="k-t" x="${x(h)}" y="${H - 4}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}">${h}</text>`,
+                    )
+                    .join('');
+                // pás zapnutí: slnko 10:55 - 13:10
+                const zap = `<rect x="${x(10.92)}" y="${H - 18}" width="${x(13.17) - x(10.92)}" height="4" rx="2" fill="var(--sun)"/>`;
+                return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Teplota vody dnes">
+                    <defs><linearGradient id="g1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8a5c" stop-opacity=".45"/><stop offset="1" stop-color="#7cc4ff" stop-opacity=".05"/></linearGradient></defs>
+                    <path d="${plocha}" fill="url(#g1)"/>
+                    <line x1="0" x2="${W}" y1="${ryska}" y2="${ryska}" stroke="rgba(255,255,255,.55)" stroke-dasharray="3 3"/>
+                    <text class="k-t" x="${W}" y="${ryska - 4}" text-anchor="end">55 °C</text>
+                    <path d="${d}" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+                    <circle cx="${x(TERAZ)}" cy="${y(teplota(TERAZ))}" r="4" fill="#fff"/>
+                    <text class="k-h" x="${x(TERAZ) + 7}" y="${y(teplota(TERAZ)) + 4}">68 °C</text>
+                    <text class="k-t" x="${x(7.2) + 3}" y="${y(44) + 12}">sprcha</text>
+                    ${zap}${osi}</svg>`;
+            }
+
+            function krivkaTyzdna() {
+                const dni = ['ST', 'ŠT', 'PI', 'SO', 'NE', 'PO', 'UT'];
+                const maxy = [64, 49, 58, 70, 66, 52, 68];
+                const miny = [41, 38, 40, 45, 43, 39, 42];
+                let d = '';
+                const bx = (i, f) => ((i + f) / 7) * W;
+                dni.forEach((_, i) => {
+                    const pts = [
+                        [0, i === 0 ? 50 : maxy[i - 1] - 14],
+                        [0.3, Math.max(miny[i] + 4, (i === 0 ? 50 : maxy[i - 1] - 14) - 5)],
+                        [0.31, miny[i]],
+                        [0.46, miny[i]],
+                        [0.55, maxy[i]],
+                        [0.84, maxy[i] - 3],
+                        [0.86, maxy[i] - 12],
+                        [1, maxy[i] - 14],
+                    ];
+                    pts.forEach(([f, t]) => (d += `${d ? 'L' : 'M'}${bx(i, f).toFixed(1)} ${y(t).toFixed(1)}`));
+                });
+                const ryska = y(55);
+                const popisy = dni
+                    .map((n, i) => `<text class="k-t" x="${bx(i, 0.5)}" y="${H - 4}" text-anchor="middle">${n}</text>`)
+                    .join('');
+                const deliace = dni
+                    .slice(1)
+                    .map((_, i) => `<line x1="${bx(i + 1, 0)}" x2="${bx(i + 1, 0)}" y1="6" y2="${H - 20}" stroke="rgba(255,255,255,.1)"/>`)
+                    .join('');
+                return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Teplota vody 7 dní">
+                    ${deliace}
+                    <line x1="0" x2="${W}" y1="${ryska}" y2="${ryska}" stroke="rgba(255,255,255,.55)" stroke-dasharray="3 3"/>
+                    <text class="k-t" x="${W}" y="${ryska - 4}" text-anchor="end">55 °C</text>
+                    <path d="${d}" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/>
+                    ${popisy}</svg>`;
+            }
+
+            const hlava = '<div class="hlava"><b>Bojler dnes</b><span>teplomer o 14:05</span></div>';
+            const doteraz = '<div class="doteraz">Pod tým ako dnes: pás dňa so zapnutiami, dnes 4,6 kWh zo slnka.</div>';
+            const panely = [
+                {
+                    n: 'P1 · krivka teploty dnes',
+                    html: `${hlava}<div class="krivka">${krivkaDna()}</div>${doteraz}`,
+                    plus: [
+                        'Vidno, kedy sa voda minula (sprcha) a kedy ju slnko dohrialo.',
+                        'Žltý pás pod krivkou je zapnutie, takže teplota a ohrev sú v jednom obraze.',
+                    ],
+                    minus: ['Len dnešok, porovnanie s inými dňami nie.'],
+                },
+                {
+                    n: 'P2 · 7 dní',
+                    html: `${hlava}<div class="krivka">${krivkaTyzdna()}</div>${doteraz}`,
+                    plus: ['Vidno, ktoré dni slnko nestačilo (ŠT, PO pod ryskou).', 'Využije celú históriu, ktorú Worker drží.'],
+                    minus: ['Jeden deň je úzky, sprcha a ohrev sa zlejú.', 'V paneli „dnes“ je to trochu cudzie.'],
+                },
+                {
+                    n: 'P3 · tri čísla',
+                    html: `${hlava}<div class="tri"><div><b>68°</b><span>teraz</span></div><div><b>42°</b><span>najmenej dnes</span></div><div><b>68°</b><span>najviac dnes</span></div></div>${doteraz}`,
+                    plus: ['Najjednoduchšie, nič nové na kreslenie.'],
+                    minus: ['Text namiesto obrazu, z čísel nevidno priebeh dňa.'],
+                },
+            ];
+            document.getElementById('panely').innerHTML = panely
+                .map((p) => `<figure><div class="panel">${p.html}</div><figcaption><b>${p.n}</b>${plusMinus(p)}</figcaption></figure>`)
+                .join('');
+
+            // ===== Nastavenie =====
+            const polia = `<label>Adresa teplomera v domácej sieti<input value="10.10.10.50" inputmode="decimal"></label>
+                <label>Heslo teplomera (admin)<input type="password" value="••••••••••"></label>
+                <span class="pozn">Heslo appka neuloží, ide len do skriptu zásuvky.</span>`;
+            const zaklad = `<h4>Bojler na prebytky</h4><span class="pozn zlozene">Prahy, zásuvka, stav… (ako dnes)</span>`;
+            const nastav = [
+                {
+                    n: 'N1 · polia vždy',
+                    html: `${zaklad}${polia}<span class="btn">Skopírovať skript</span><span class="stav">Teplomer 68 °C o 14:05</span>`,
+                    plus: ['Nič neskryté, menej ťuknutí.'],
+                    minus: ['Kto teplomer nemá, vidí dve polia, ktoré nepotrebuje.'],
+                },
+                {
+                    n: 'N2 · za prepínačom',
+                    html: `${zaklad}<span class="prepinac">Mám teplomer v bojleri<i></i></span>${polia}<span class="btn">Skopírovať skript</span><span class="stav" data-chyba>Teplomer neodpovedá od 13:52 – skontroluj adresu a heslo</span>`,
+                    plus: ['Bez teplomera sa Nastavenie nemení.', 'Skript bez teplomera ostáva presne ako dnes.'],
+                    minus: ['Jeden prepínač navyše.'],
+                },
+            ];
+            document.getElementById('nastavenie').innerHTML = nastav
+                .map((p) => `<figure><div class="nast">${p.html}</div><figcaption><b>${p.n}</b>${plusMinus(p)}</figcaption></figure>`)
+                .join('');
+        </script>
+    </body>
+</html>

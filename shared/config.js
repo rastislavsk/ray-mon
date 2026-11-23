@@ -501,6 +501,9 @@ export const TRASY_STORAGE_KEY = 'trasy-v1';
  * zapnutom relé znamená, že termostat bojler vypol (voda nahriata). Prahy sa v appke dajú meniť
  * po `krokKw` medzi `minKw` a `maxKw`; vypnutie musí byť aspoň o `medzeraKw` nižšie ako zapnutie.
  * Zásuvka, ktorá sa neozvala `riadenyHod` hodín, bojler už neriadi - appka s ním radí ako predtým.
+ * Teplomer vo vode (docs/navrhy/bojler-teplota.html, B2): zásuvka si pri každom hlásení prečíta teplotu zo Shelly
+ * s Add-onom v domácej sieti (snímač `teplomerId`, najviac `teplomerS` sekúnd) a pošle ju Workerovi. Ten si drží
+ * bod každých `vodaKrokMin` minút za `vodaDni` dní. `vodaCielC` je čiara na krivke teploty v paneli Bojler dnes.
  */
 export const BOJLER = {
     zapKw: 2.3,
@@ -515,6 +518,11 @@ export const BOJLER = {
     maxKw: 5,
     medzeraKw: 0.2,
     riadenyHod: 24,
+    teplomerId: 100,
+    teplomerS: 5,
+    vodaKrokMin: 5,
+    vodaDni: 7,
+    vodaCielC: 55,
 };
 
 /**
@@ -630,6 +638,12 @@ export const DOMA_STORAGE_KEY = 'doma-v1';
 
 /** Prahy bojlera na prebytky (shared/bojler.js), ktoré appka dá do skriptu zásuvky. Patria telefónu. */
 export const BOJLER_STORAGE_KEY = 'bojler-v1';
+
+/**
+ * Teplomer v bojleri (docs/navrhy/bojler-teplota.html, N2): či ho človek má a jeho adresa v domácej sieti, do skriptu
+ * zásuvky. Heslo sa neukladá - ide len do skriptu. Patrí telefónu. Formát: { on, ip }.
+ */
+export const TEPLOMER_STORAGE_KEY = 'teplomer-v1';
 
 /**
  * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1; docs/navrhy/spotrebic-koniec-opakovanie.html):
