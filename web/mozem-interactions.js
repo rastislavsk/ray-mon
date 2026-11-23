@@ -7,6 +7,7 @@
 import { dnesOsMinuta } from '../shared/dnes-nebo.js';
 import { localMinutes } from '../shared/solar.js';
 import { bindKarty } from './mozem-karty.js';
+import { sledujObzor } from './mozem-obzor.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 import { shows } from './state.js';
@@ -35,6 +36,7 @@ export function initMozem(store, dom, refresh) {
     });
     initSheet(dom.mzTriedaSheet, () => stepBack(store, { mzChip: null }));
     bindKarty(dom.mzKarty, dom.mzBodky, [dom.mzPasSpat, dom.mzPasDalej]);
+    sledujObzor(dom.panels.mozem, dom.mzOs, dom.wx);
     initOs(store, dom);
     initGraf(store, dom);
 }

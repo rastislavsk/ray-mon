@@ -31,7 +31,8 @@ export function dnesNeboModel(input, cas, voice = 'drzy') {
     // je odhad s vlnovkou.
     const cislo = Number.isFinite(hero.power) ? fmt1(hero.power) : '–';
     const kw = input.known === 'poloha' && Number.isFinite(hero.power) ? `~${cislo}` : cislo;
-    const zdroj = druh === 'teraz' && hero.source ? terazSourceText(hero.source) : '';
+    // Živé meranie hovorí zelená bodka, slovami sa píše len iný zdroj (najmä odhad, keď meranie mlčí).
+    const zdroj = druh === 'teraz' && hero.source && hero.source !== 'live' ? terazSourceText(hero.source) : '';
     const d = denSvetla(input);
     return {
         kw,

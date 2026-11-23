@@ -4,10 +4,29 @@
 .mozem h2 {
     margin: 0;
 }
+/* Karta na výšku obrazovky (docs/navrhy/dnes-vyska-obrazovky.html, A): pás dlaždíc je vždy dole nad navigáciou,
+   posuvník hneď nad ním a všetko voľné nad posuvníkom je živá obloha (.mz-nebo rastie). Telo, stránka aj karta sú
+   vtedy stĺpec - len kým je karta Dnes vidno a nie je to prehľad so stĺpcami. Na nízkom telefóne má obloha
+   minimum (min-height .mz-nebo) a stránka sa posúva ako predtým. */
+:root:not([data-dash]) body:has(> .page > .mozem:not(.hidden)),
+:root:not([data-dash]) .page:has(> .mozem:not(.hidden)),
+:root:not([data-dash]) .mozem:not(.hidden) {
+    display: flex;
+    flex-direction: column;
+}
+:root:not([data-dash]) .page:has(> .mozem:not(.hidden)),
+:root:not([data-dash]) .mozem:not(.hidden) {
+    flex: 1 0 auto;
+}
+/* Okraje auto (stránka v strede) by v stĺpci zúžili stránku na šírku obsahu - a pás kariet je široký. */
+:root:not([data-dash]) .page:has(> .mozem:not(.hidden)) {
+    width: 100%;
+}
 /* Hore veľký výkon zvoleného času na živej oblohe (docs/navrhy/dnes-obloha-posuvnik.html, A, a
    docs/navrhy/dnes-tlacidlo-teraz.html, T4c). Pod číslom voľná obloha, na ktorej je slnko a počasie tej chvíle;
-   posuvník pod ňou stojí približne na obzore kresby počasia (--wx-obzor v css/zaklad.css). */
+   jej spodok, čiara posuvníka, je obzor kresby počasia (web/mozem-obzor.js). */
 .mz-nebo {
+    flex: 1 0 auto;
     display: grid;
     align-content: start;
     gap: 6px;
@@ -67,10 +86,17 @@
     font-variant-numeric: tabular-nums;
 }
 /* Kresba počasia za kartou Dnes: slnko na dennej dráhe v zvolenom čase - zľava (východ) doprava (západ),
-   najvyššie na poludnie. Polohu na dráhe (--mz-f) a výšku (--mz-h, v noci pod obzorom) dáva render/mozem.js. */
+   najvyššie na poludnie. Polohu na dráhe (--mz-f) a výšku (--mz-h, v noci pod obzorom) dáva render/mozem.js.
+   Obzor je čiara posuvníka (--mz-obzor, web/mozem-obzor.js), slnko na poludnie vystúpi 70 px pod vrch obrazovky,
+   nech je obloha akokoľvek vysoká. Kresba siaha kúsok pod obzor a tam sa stratí. */
 .wx[data-dnes] {
+    --wx-obzor: var(--mz-obzor, calc(max(16px, env(safe-area-inset-top)) + 203px));
+    --wx-prec-h: calc(var(--wx-obzor) - 26px);
+    height: calc(var(--wx-obzor) + 220px);
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 220px), transparent 100%);
+    mask-image: linear-gradient(180deg, #000 calc(100% - 220px), transparent 100%);
     --wx-sx: calc(8% + var(--mz-f, 0.5) * 84%);
-    --wx-sy: calc(var(--wx-obzor) - var(--mz-h, -1) * 150px);
+    --wx-sy: calc(var(--wx-obzor) - var(--mz-h, -1) * (var(--wx-obzor) - 70px));
     --wx-flare-dx: -150px;
     --wx-diff-x: calc(8% + var(--mz-f, 0.5) * 84%);
 }
