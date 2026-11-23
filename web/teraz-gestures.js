@@ -1,4 +1,4 @@
-// Ovládanie grafu dňa (panel karty Dnes) ako posúvača
+// Ovládanie grafu dňa (panel karty Dnes) a posuvníka dňa hore na karte Dnes ako posúvača
 // času (prst, kurzor, klávesnica) a stránka pásu odporúčaní. Neutrálny modul (CLAUDE.md) - stav
 // nepozná, čo s časom spraviť, mu povie appka cez `ScrubHooks`. Pravidlá dotyku sú v CLAUDE.md,
 // časť Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
@@ -13,9 +13,11 @@ import { chartMinutes } from '../shared/day-chart.js';
  *   nowMin: () => number,
  *   preview: (min: number) => void,
  *   reset: () => void,
+ *   naCas?: (rel: number) => number | null,
  * }} ScrubHooks
  * `active`: je graf na obrazovke (bez predpovede nie je čoho); `current`: čas náhľadu, null = teraz;
- * `nowMin`: minúta dňa teraz; `preview`: ukáž náhľad v tom čase; `reset`: späť na teraz.
+ * `nowMin`: minúta dňa teraz; `preview`: ukáž náhľad v tom čase; `reset`: späť na teraz; `naCas`: čas pre miesto
+ * na posúvači ako podiel jeho šírky (null = teraz) - bez neho podľa osi grafu dňa (chartMinutes).
  */
 
 /** Koľko px musí prst prejsť, kým je jasné, či ide do strán (náhľad) alebo zvislo (posun stránky). */
@@ -39,9 +41,12 @@ function previewAt(chart, h, clientX) {
     if (!h.active()) return;
     const svg = chart.querySelector('svg');
     const box = (svg || chart).getBoundingClientRect();
+    const rel = (clientX - box.left) / (box.width || 1);
     const r = rangeOf(chart);
-    const min = chartMinutes((clientX - box.left) / (box.width || 1), { from: r.min, to: r.max + PREVIEW.keyStepMin });
-    if (h.current() !== min) h.preview(min);
+    const min = h.naCas ? h.naCas(rel) : chartMinutes(rel, { from: r.min, to: r.max + PREVIEW.keyStepMin });
+    if (h.current() === min) return;
+    if (min === null) h.reset();
+    else h.preview(min);
 }
 
 /**
@@ -133,7 +138,7 @@ function bindKeys(chart, h) {
     });
 }
 
-/** Graf dňa ako posúvač času: prst, kurzor aj klávesnica. @param {HTMLElement} chart @param {ScrubHooks} hooks */
+/** Graf dňa (aj posuvník dňa na karte Dnes) ako posúvač času: prst, kurzor aj klávesnica. @param {HTMLElement} chart @param {ScrubHooks} hooks */
 export function bindDayScrub(chart, hooks) {
     bindTouch(chart, hooks);
     bindPointer(chart, hooks);

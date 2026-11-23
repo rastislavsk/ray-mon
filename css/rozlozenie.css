@@ -253,8 +253,8 @@
     padding-bottom: 6px;
     border-radius: 28px;
 }
-:root[data-dash] .word {
-    font-size: min(var(--word, 50px), calc((100cqi - 40px) / var(--word-len, 10)));
+:root[data-dash] .k-slovo {
+    font-size: min(var(--word, 38px), calc((100cqi - 124px) / var(--word-len, 10)));
 }
 /* Aktívny stĺpec (vybraný v navigácii, alebo v ňom človek naposledy niečo otvoril) má jemný
    rámik - ten istý, ktorý svieti v navigácii. Fokus z klávesnice je výrazný ako všade. */

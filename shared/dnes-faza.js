@@ -49,7 +49,11 @@ import { dnesCards, todayOf } from './teraz.js';
  *       min: string, max: string, oblacnost: number | null }
  *   | { kind: 'graf', title: string, stitok: string }
  *   | { kind: 'slnko', title: string, value: string, text: string,
- *       stlpce: { hour: number, pct: number, max: boolean, preslo: boolean }[] }} Karta
+ *       stlpce: { hour: number, pct: number, max: boolean, preslo: boolean }[] }
+ *   | { kind: 'dnes', title: string, chip: string, cls: import('./den-trieda.js').DenTrieda | null, word: string, text: string }
+ *   | { kind: 'velke', title: string, value: string, text: string }
+ *   | { kind: 'strecha', title: string, value: string, text: string, eq: { value: string, label: string }[] }
+ *   | { kind: 'zajtra', title: string, chip: string, cls: import('./den-trieda.js').DenTrieda, word: string, text: string }} Karta
  */
 
 /**
@@ -244,6 +248,54 @@ export function denVysvetlenie(input, kedy, { voice = 'drzy', devices = PLAN_DNA
         stupnicaTitle: DNES_TEXTS.stupnica,
         stupnica: DEN_TRIEDY.map((c) => ({ cls: c, ...DEN_STUPNICA[c], on: c === cls })).reverse(),
     };
+}
+
+/**
+ * Celý pás karty Dnes (docs/navrhy/dnes-obloha-posuvnik.html, A): to, čo bolo nad pásom, sú jeho prvé dlaždice -
+ * Dnes (odznak a veľké slovo; večer nadpis Ako dopadol dnešok), Veľké veci (ráno plán, cez deň odpočet okna alebo
+ * veta o ňom), Dnes zo strechy (večer namerané a čo sľubovala predpoveď) a večer Zajtra. Za nimi karty časti
+ * dňa (`d.karty`). Bez časti dňa (načítava sa, dáta nie sú) len Dnes so slovom a vetou, prečo dáta nie sú.
+ * @param {{ word: string, lead: string, day: { label: string, value: string, eq: { value: string, label: string }[] } | null,
+ *   den: Den | null }} sky veľké slovo, veta a čo dá strecha za celý deň (shared/mozem-sky.js)
+ * @param {DnesFaza | null} d časť dňa (dnesFaza) @returns {Karta[]}
+ */
+export function dnesKarty(sky, d) {
+    /** @type {Karta} */
+    const dnes = {
+        kind: 'dnes',
+        title: d?.kick || DNES_TEXTS.dnes,
+        chip: d?.chip ?? '',
+        cls: sky.den ? sky.den.cls : null,
+        word: sky.word,
+        text: sky.day ? '' : sky.lead,
+    };
+    if (!d) return sky.word ? [dnes] : [];
+    const vecer = d.faza === 'vecer';
+    return [dnes, vecer ? null : velkeOf(d), strechaOf(sky.day, d), zajtraOf(d.tomorrow), ...d.karty].flatMap((k) => (k ? [k] : []));
+}
+
+/**
+ * Dlaždica Dnes zo strechy: čo dá strecha za celý deň, večer namerané a čo sľubovala predpoveď.
+ * @param {{ label: string, value: string, eq: { value: string, label: string }[] } | null} day @param {DnesFaza} d
+ * @returns {Karta | null}
+ */
+function strechaOf(day, d) {
+    if (!day) return null;
+    return { kind: 'strecha', title: day.label, value: d.grade ?? day.value, text: d.faza === 'vecer' ? d.line : '', eq: day.eq };
+}
+
+/**
+ * Dlaždica Veľké veci (ráno a cez deň): odpočet okna, kým prebieha alebo príde, inak veta o okne či pláne.
+ * @param {DnesFaza} d @returns {Karta | null}
+ */
+function velkeOf(d) {
+    if (d.count) return { kind: 'velke', title: DNES_TEXTS.velke, value: d.count.value, text: d.count.text };
+    return d.line ? { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: d.line } : null;
+}
+
+/** Dlaždica Zajtra (večer): trieda, veľké slovo a veta zajtrajška. @param {Tomorrow | null} t @returns {Karta | null} */
+function zajtraOf(t) {
+    return t ? { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, word: t.word, text: t.text } : null;
 }
 
 /** @typedef {NonNullable<ReturnType<typeof dnesFaza>>} DnesFaza */

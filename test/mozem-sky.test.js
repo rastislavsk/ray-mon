@@ -14,9 +14,8 @@ import {
 } from '../shared/messages.js';
 import { itemAnswer } from '../shared/mozem-jadro.js';
 import { mozemModel } from '../shared/mozem.js';
-import { mozemSkyModel, sunArc } from '../shared/mozem-sky.js';
+import { mozemSkyModel } from '../shared/mozem-sky.js';
 import { typicalSettings } from '../shared/settings.js';
-import { sunTimes } from '../shared/solar.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
@@ -174,7 +173,6 @@ test('mozemSkyModel: bez dát veta s príčinou, Skúsiť znova, otáznik v nadp
     assert.equal(m.groups[0].sheet?.lead, '');
     assert.equal(m.items.find((x) => x.id === 'pracka')?.short, 'neviem');
     assert.equal(m.day, null);
-    assert.equal(m.arc?.win, null);
     assert.match(mozemSkyModel(input(FIXED_NOW, { forecast: null }), { online: false }).lead, /^Nie je internet/);
     // Meranie z fixtures o 17:00 mlčí od 13:00.
     assert.match(mozemSkyModel(input(at('17:00'), { forecast: null })).lead, /Meranie zo strechy neodpovedá od \d\d:\d\d\./);
@@ -201,31 +199,8 @@ test('mozemSkyModel: poloha bez panelov odpovedá z typickej strechy a priznáva
 test('mozemSkyModel: bez polohy len výzva, žiadne odpovede', () => {
     const m = mozemSkyModel({ ...input(FIXED_NOW, { forecast: null, pv: null }), known: 'nic' });
     assert.equal(m.ask, true);
-    assert.equal(m.arc, null);
     assert.equal(m.list, null);
     assert.deepEqual(m.items, []);
-});
-
-test('sunArc: slnko medzi skutočným východom a západom, v noci mesiac, okno tým istým meradlom', () => {
-    const sun = sunTimes(SITE, '2026-09-05');
-    const noon = sunArc(FIXED_NOW, SITE, { from: /** @type {number} */ (sun.rise), to: /** @type {number} */ (sun.set) });
-    assert.equal(noon.rise, sun.rise);
-    assert.equal(noon.set, sun.set);
-    assert.ok(noon.sun !== null && noon.sun > 0.4 && noon.sun < 0.7);
-    assert.deepEqual(noon.win, { from: 0, to: 1 });
-    assert.equal(sunArc(at('22:00'), SITE, null).sun, null);
-    assert.equal(sunArc(at('22:00'), SITE, null).win, null);
-    // Skutočná fáza Mesiaca: spln 24. 11. 2026, na severnej pologuli.
-    const spln = sunArc(new Date('2026-11-24T14:54:00Z'), SITE, null);
-    assert.ok(Math.abs(spln.faza - 0.5) < 0.01, String(spln.faza));
-    assert.equal(spln.juh, false);
-    assert.equal(sunArc(at('22:00'), { ...SITE, lat: -22.91, lon: -43.17 }, null).juh, true);
-    // Polárna noc: východ ani západ nie je, oblúk ide cez produkčné okno grafov.
-    const arctic = { ...SITE, lat: 78.2, lon: 15.6, timezone: 'Arctic/Longyearbyen' };
-    const dec = sunArc(new Date('2026-12-21T11:00:00Z'), arctic, { from: 5 * 60, to: 21 * 60 });
-    assert.equal(dec.rise, null);
-    assert.equal(dec.sun, null);
-    assert.deepEqual(dec.win, { from: 0, to: 1 });
 });
 
 test('skupiny: len spotrebiče doma, polovičná dlaždica bez páru na celú šírku', () => {

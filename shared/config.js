@@ -1043,6 +1043,14 @@ export const PREVIEW = {
     keyStepMin: 15,
 };
 
+// Posuvník dňa hore na karte Dnes (docs/navrhy/dnes-tlacidlo-teraz.html, T4c, web/mozem-interactions.js): krok
+// prsta a kurzora v minútach a do koľkých minút od teraz sa bežec prilepí na teraz. Šípky posúvajú po
+// PREVIEW.keyStepMin.
+export const DNES_OS = {
+    krokMin: 5,
+    prilepMin: 10,
+};
+
 // Rozlíšenie ťuknutia od švihnutia prstom na grafoch (tooltip vo web/interactions.js, náhľad času
 // vo web/teraz-gestures.js). Karty sa ťahom nelistujú - len ťuknutím na ikonu v spodnej lište.
 export const SWIPE = {

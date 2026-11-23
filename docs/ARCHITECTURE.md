@@ -89,7 +89,8 @@ aktuálneho času. Všetko, čo potrebuje, dostane parametrom.
 | `schema.js`                                                                  | Kontrola dát zo siete: `pv` z Workera a predpoveď pred zobrazením.                                                                     |
 | `format.js`                                                                  | Formátovanie času a čísel pre slovenské UI.                                                                                            |
 | `sky.js`                                                                     | Živá obloha novej appky: dve farby pozadia z času dňa, východu a západu slnka a oblačnosti.                                            |
-| `mozem-sky.js`                                                               | Karta Dnes novej appky: model z `mozem.js` poskladaný pre nový vzhľad (slovo, deň v číslach, oblúk, výzvy).                            |
+| `mozem-sky.js`                                                               | Karta Dnes novej appky: model z `mozem.js` poskladaný pre nový vzhľad (slovo, deň v číslach, výzvy).                                   |
+| `dnes-nebo.js`                                                               | Karta Dnes hore: výkon, počasie a slnko v čase posuvníka dňa, východ a západ na ňom a kam bežec skočí pod prstom.                      |
 | `teraz.js`                                                                   | Karta Teraz novej appky: číslo, odporúčanie a plán z `hero-model.js` a `day-plan.js`, pás odporúčaní; graf dňa (`grafModel`).          |
 | `teraz-scena.js`                                                             | Scéna toku energie na karte Teraz: výroba, dom a sieť ako čísla bez slov, počet lúčov a bodov na vedení, veta pre čítačku.             |
 | `day-chart.js`                                                               | Graf dňa (panel karty Dnes, detail dňa): oblačnosť, krivky, os kW, hranica s plochou, „teraz“, náhľad, pás plánu, okno.                |
@@ -288,8 +289,8 @@ odpovede vecí sú tie isté. Stav karty, veta pod veľkým slovom aj dlaždice 
 príde ešte dnes, inak „dnes už nie“. Dlaždica skupiny bez spotrebiča doma sa neukáže; pás dňa
 ostáva podľa slnka (zelenej). Panel veci odpovedá ďalej za vec samu (dokedy ju ešte pustiť). `mozemSkyModel` v `shared/mozem-sky.js` ich len poskladá pre nový
 vzhľad: štítky (ÁNO / POČKAJ / DNES NIE / NEVIEM a LACNÁ či DRAHÁ SIEŤ), fakt v mobiloch (naisto
-len zo živého a čerstvého merania, inak s „asi“), oblúk slnka (`sunArc`: skutočný
-východ a západ, zelený úsek je dnešné okno so slnkom) a vetu, prečo dáta nie sú. Pri známej polohe
+len zo živého a čerstvého merania, inak s „asi“) a vetu, prečo dáta nie sú. Oblúk slnka zanikol
+s posuvníkom dňa (`docs/navrhy/dnes-tlacidlo-teraz.html`, T4c). Pri známej polohe
 bez panelov odpovedá z typickej strechy (`estimate` v `mozemModel`) a priznáva odhad - rovnako ako
 súčasná appka, ktorá to hovorí jantárovým pásom pod hlavičkou a riadkom „typická strecha“.
 
@@ -499,7 +500,12 @@ ktorom to, čo slnko nepokryje, stojí zo siete najmenej. Čo dnes zo slnka ide,
 slnko na ten spotrebič najbližšie, keď to nie je zajtra. Karta Dnes a ranné oznámenie núdzové časy
 nepoznajú - vec, ktorá sa dnes nezmestí, tam stále čaká na deň so slnkom.
 
-Karta Dnes (druhá v navigácii) má hore veľké slovo o celom dni (`shared/den-trieda.js`,
+Karta Dnes (druhá v navigácii) má hore veľký výkon na živej oblohe a pod ním posuvník dňa
+(`docs/navrhy/dnes-obloha-posuvnik.html`, A, `docs/navrhy/dnes-tlacidlo-teraz.html`, T4c; `dnesNeboModel` v
+`shared/dnes-nebo.js`): zvolený čas (`mzCas` v stave, nie je krokom navigácie, iná karta ho vráti na teraz) mení
+výkon (dozadu namerané, dopredu predpoveď - ten istý `heroModel` ako graf dňa), farby neba aj kresbu počasia
+(`render/index.js` a `render/mozem.js`) a slnko na nej. Na teraz po bežci ostane odtlačok, ťuknutie naň ho vráti.
+Pod posuvníkom je pás dlaždíc (`dnesKarty` v `shared/dnes-faza.js`): prvá nesie veľké slovo o celom dni (`shared/den-trieda.js`,
 `docs/navrhy/dnes-hlasky-dna.html`): trieda dňa (výborný, dobrý, slabý, nanič) z toho istého
 rozvrhu ako Plán dňa, len od polnoci - koľko spotrebičov sa za deň zmestí na slnko, a či aj
 s rezervou na mrak. Ráno hovorí predpoveď, cez deň namerané s predpoveďou na zvyšok a po západe

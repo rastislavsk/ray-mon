@@ -27,7 +27,8 @@ import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js'
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI, TERAZ_TEXTS } from '../../shared/messages-core.js';
-import { denVysvetlenie, dnesFaza } from '../../shared/dnes-faza.js';
+import { denVysvetlenie, dnesFaza, dnesKarty } from '../../shared/dnes-faza.js';
+import { dnesNeboModel } from '../../shared/dnes-nebo.js';
 import { grafModel, pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
@@ -872,67 +873,51 @@ const modelKarty = (time, extra = {}, opts = {}) => {
     const m = mozemSkyModel(input, opts);
     // Čo sa mení s časťou dňa - appka to skladá tou istou funkciou (web/render/mozem.js).
     const faza = m.ask || m.state === 'loading' ? null : dnesFaza(input, m.den, m.window, { voice: opts.voice, devices: opts.devices });
-    return { ...m, faza };
+    return { ...m, faza, nebo: m.ask ? null : dnesNeboModel(input, null, opts.voice) };
 };
 
 /**
- * Čo karta Dnes ukazuje: slovo, veta (len bez predpovede na dnešok), čo dá strecha za celý deň
- * a to, čo sa mení s časťou dňa. @param {import('@playwright/test').Page} page
+ * Čo karta Dnes ukazuje: výkon a čo je to za číslo hore a pás dlaždíc - Dnes, Veľké veci, Dnes zo strechy, večer
+ * Zajtra a karty časti dňa. Každá dlaždica ako [druh, nadpis, hodnota či slovo, veta, štítok či prirovnania].
+ * @param {import('@playwright/test').Page} page
  */
 const kartaVStranke = (page) =>
     page.evaluate(() => {
-        const text = (/** @type {string} */ sel) => document.querySelector(sel)?.textContent ?? '';
         const vidno = (/** @type {string} */ sel) => !document.querySelector(sel)?.classList.contains('hidden');
-        const ak = (/** @type {string} */ sel) => (vidno(sel) ? text(sel) : '');
+        const text = (/** @type {Element} */ el, /** @type {string} */ sel) => el.querySelector(sel)?.textContent ?? '';
         return {
-            word: text('#mz-word'),
-            lead: ak('#mz-lead'),
-            day: vidno('#mz-day') ? text('#mz-day-label') + text('#mz-day-val') : '',
-            eq: [...document.querySelectorAll('#mz-day-eq b')].map((el) => el.textContent),
-            chip: vidno('#mz-chip') ? text('#mz-chip-text') : '',
-            kick: ak('#mz-kick'),
-            count: ak('#mz-count'),
-            line: ak('#mz-line'),
+            nebo: vidno('#mz-nebo') ? [text(document, '#mz-kw'), text(document, '#mz-stav')] : null,
             karty: vidno('#mz-karty')
                 ? [...document.querySelectorAll('#mz-karty .karta')].map((el) => [
                       el.getAttribute('data-kind'),
-                      el.querySelector('.glass-ttl, .k-otvor')?.textContent ?? '',
-                      el.querySelector('.k-val, .k-popis')?.textContent ?? '',
-                      el.querySelector('.k-text, .k-teplo')?.textContent ?? '',
-                      el.querySelector('.k-obl')?.textContent ?? '',
+                      text(el, '.glass-ttl, .k-otvor'),
+                      text(el, '.k-val, .k-popis, .k-slovo'),
+                      text(el, '.k-text, .k-teplo'),
+                      el.querySelector('.k-obl, .chip')?.textContent ??
+                          [...el.querySelectorAll('.eq b')].map((b) => b.textContent).join('|'),
                   ])
                 : [],
-            tomorrow: vidno('#mz-tom') ? [text('#mz-tom-chip-text'), text('#mz-tom-word'), text('#mz-tom-text')] : null,
         };
     });
 
-/** Karta bez časti dňa (dáta nie sú, poloha chýba). @type {import('../../shared/dnes-faza.js').DnesFaza} */
-const BEZ_FAZY = { faza: 'den', chip: '', kick: '', count: null, grade: null, line: '', karty: [], tomorrow: null };
+/** Dlaždica z modelu, ako ju ukazuje stránka. @param {import('../../shared/dnes-faza.js').Karta} k */
+const kartaZDlazdice = (k) => {
+    if (k.kind === 'graf') return [k.kind, `${k.title} – ${k.stitok}`, '', '', ''];
+    if (k.kind === 'predpoved')
+        return [k.kind, k.title, k.popis, `najnižšia ${k.min}najvyššia ${k.max}`, k.oblacnost === null ? '' : `oblačnosť${k.oblacnost} %`];
+    if (k.kind === 'dnes' || k.kind === 'zajtra') return [k.kind, k.title, k.word, k.text, k.chip];
+    if (k.kind === 'strecha') return [k.kind, k.title, k.value, k.text, k.eq.map((e) => e.value).join('|')];
+    return [k.kind, k.title, k.value, k.text, ''];
+};
 
-/** Časť dňa z modelu, ako ju ukazuje stránka. @param {import('../../shared/dnes-faza.js').DnesFaza} d */
-const fazaZModelu = (d) => ({
-    chip: d.chip,
-    kick: d.kick,
-    count: d.count ? d.count.value + d.count.text : '',
-    line: d.line,
-    karty: d.karty.map((k) =>
-        k.kind === 'graf'
-            ? [k.kind, `${k.title} – ${k.stitok}`, '', '', '']
-            : k.kind === 'predpoved'
-              ? [k.kind, k.title, k.popis, `najnižšia ${k.min}najvyššia ${k.max}`, k.oblacnost === null ? '' : `oblačnosť${k.oblacnost} %`]
-              : [k.kind, k.title, 'value' in k ? k.value : '', k.text, ''],
-    ),
-    tomorrow: d.tomorrow ? [d.tomorrow.chip, d.tomorrow.word, d.tomorrow.text] : null,
-});
-
-/** To isté z modelu. @param {ReturnType<typeof modelKarty>} m */
+/** To isté z modelu - pás skladá appka tou istou funkciou (dnesKarty). @param {ReturnType<typeof modelKarty>} m */
 const kartaZModelu = (m) => ({
-    word: m.word,
-    lead: m.day ? '' : m.lead,
-    day: m.day ? m.day.label + (m.faza?.grade ?? m.day.value) : '',
-    eq: m.day ? m.day.eq.map((e) => e.value) : [],
-    ...fazaZModelu(m.faza ?? BEZ_FAZY),
+    nebo: m.nebo ? [`${m.nebo.kw}kW`, `${m.nebo.slovo}${m.nebo.cas}`] : null,
+    karty: m.ask ? [] : dnesKarty(m, m.faza).map(kartaZDlazdice),
 });
+
+/** Dlaždica pásu karty Dnes podľa druhu. @param {import('@playwright/test').Page} page @param {string} kind */
+const dlazdica = (page, kind) => page.locator(`#mz-karty [data-kind="${kind}"]`);
 
 /** Otvorí kartu Dnes - appka sa otvára na Teraz. @param {import('@playwright/test').Page} page */
 async function naDnes(page) {
@@ -964,21 +949,20 @@ test.describe('karta Dnes', () => {
             await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
             await expect(page.locator('#mz-retry')).toBeHidden();
             await expect(page.locator('#mz-guess')).toBeHidden();
-            // Zelený úsek oblúka je dnešné okno so slnkom; v noci je pri oblúku Mesiac v skutočnej fáze.
-            await expect(page.locator('#mz-arc .arc-win')).toHaveCount(m.arc?.win ? 1 : 0);
-            await expect(page.locator('#mz-arc .arc-moon')).toHaveCount(m.arc?.sun === null ? 1 : 0);
             // Ráno plán, cez deň odpočet, večer ako dopadol dnešok a zajtrajšok - porovnané v kartaVStranke.
-            await expect(page.locator('#mz-kick')).toHaveText(m.faza?.kick || /^$/);
-            if (hm === '21:00') await expect(page.locator('#mz-tom')).toBeVisible();
+            await expect(dlazdica(page, 'zajtra')).toHaveCount(hm === '21:00' ? 1 : 0);
+            // Po otvorení karty stojí bežec na teraz a odtlačku niet.
+            await expect(page.locator('#mz-os')).toHaveAttribute('aria-valuenow', String(minuta(hm)));
+            await expect(page.locator('#mz-odtlacok')).toBeHidden();
             expect(errors).toEqual([]);
         });
     }
 
     test('časy okna sú tučne: odpočet cez deň, plán ráno aj zajtrajšok večer', async ({ page }) => {
         for (const [hm, sel] of /** @type {const} */ ([
-            ['13:00', '#mz-count-text'],
-            ['05:30', '#mz-line'],
-            ['21:00', '#mz-tom-text'],
+            ['13:00', '#mz-karty [data-kind="velke"] .k-text'],
+            ['05:30', '#mz-karty [data-kind="velke"] .k-text'],
+            ['21:00', '#mz-karty [data-kind="zajtra"] .k-text'],
         ])) {
             const errors = await openObloha(page, { time: at(hm) });
             await naDnes(page);
@@ -990,14 +974,76 @@ test.describe('karta Dnes', () => {
         }
     });
 
+    test('posuvník dňa: iný čas ukáže jeho výkon a oblohu, odtlačok vráti bežec na teraz, iná karta tiež', async ({ page }) => {
+        await page.setViewportSize({ width: 390, height: 800 });
+        const time = at('13:00');
+        const errors = await openObloha(page, { time });
+        await naDnes(page);
+        const vstup = {
+            ...OWNER,
+            now: time,
+            loading: false,
+            known: /** @type {const} */ ('elektraren'),
+            pv,
+            forecast: buildForecast(weather, time, SITE, PLANT),
+        };
+        const os = page.locator('#mz-os');
+        const odtlacok = page.locator('#mz-odtlacok');
+        /** Výkon a riadok pod ním v čase posuvníka, ako ich počíta appka. */
+        const nebo = async () => {
+            const cas = Number(await os.getAttribute('aria-valuenow'));
+            const n = dnesNeboModel(vstup, cas === minuta('13:00') ? null : cas);
+            return n ? [`${n.kw}kW`, `${n.slovo}${n.cas}`] : null;
+        };
+        const vStranke = async () => (await kartaVStranke(page)).nebo;
+        // Kurzorom (ťuknutie myšou) na 9:00 - dopoludnia namerané, bežec tam a na teraz ostane odtlačok.
+        const box = /** @type {{ x: number, y: number, width: number, height: number }} */ (await os.boundingBox());
+        await page.mouse.click(box.x + (box.width * minuta('09:00')) / 1440, box.y + box.height / 2);
+        await expect(os).toHaveAttribute('aria-valuenow', /^5[34]\d$/);
+        await expect(page.locator('#mz-stav')).toHaveAttribute('data-druh', 'namerane');
+        await expect.poll(vStranke).toEqual(await nebo());
+        await expect(os).toHaveAttribute('aria-valuetext', /^Namerané 0?9:\d\d, /);
+        await expect(odtlacok).toBeVisible();
+        expect(await page.locator('#wx').getAttribute('data-dnes')).not.toBeNull();
+        // Odtlačok je pod bežcom aj na prst (44 px) a ťuknutie naň vráti bežec na teraz.
+        const o = /** @type {{ width: number, height: number }} */ (await odtlacok.boundingBox());
+        expect(Math.min(o.width, o.height)).toBeGreaterThanOrEqual(44);
+        await odtlacok.click();
+        await expect(page.locator('#mz-stav')).toHaveAttribute('data-druh', 'teraz');
+        await expect(odtlacok).toBeHidden();
+        await expect(os).toBeFocused();
+        // Šípka posunie po štvrťhodine dopredu - predpoveď.
+        await page.keyboard.press('ArrowRight');
+        await expect(os).toHaveAttribute('aria-valuenow', String(minuta('13:15')));
+        await expect(page.locator('#mz-stav')).toHaveAttribute('data-druh', 'predpoved');
+        await expect.poll(vStranke).toEqual(await nebo());
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#mz-stav')).toHaveAttribute('data-druh', 'teraz');
+        // Prst: ťuknutie na 16:00, pri teraz sa bežec prilepí na teraz.
+        await prst(page, { x: box.x + (box.width * minuta('16:00')) / 1440, y: box.y + box.height / 2 });
+        await expect(page.locator('#mz-stav')).toHaveAttribute('data-druh', 'predpoved');
+        await prst(page, { x: box.x + (box.width * (minuta('13:00') + 5)) / 1440, y: box.y + box.height / 2 });
+        await expect(page.locator('#mz-stav')).toHaveAttribute('data-druh', 'teraz');
+        // Iná karta a späť: bežec je znova na teraz.
+        await page.keyboard.press('ArrowLeft');
+        await expect(odtlacok).toBeVisible();
+        await page.locator('#nav-terazky').click();
+        await ocakavajKartu(page, 'terazky');
+        await naDnes(page);
+        await expect(os).toHaveAttribute('aria-valuenow', String(minuta('13:00')));
+        await expect(odtlacok).toBeHidden();
+        expect(errors).toEqual([]);
+    });
+
     test('pás kariet: bodka ukazuje, kde pás stojí, ťuknutie na bodku pás posunie; zvislý ťah posúva stránku', async ({ page }) => {
-        await page.setViewportSize({ width: 390, height: 700 });
+        // Nízke okno: karta je vyššia ako ono, stránka sa má kam posunúť.
+        await page.setViewportSize({ width: 390, height: 560 });
         const errors = await openObloha(page, { time: at('13:00') });
         await naDnes(page);
         const karty = page.locator('#mz-karty .karta');
-        await expect(karty).toHaveCount(5);
+        await expect(karty).toHaveCount(8);
         const bodky = page.locator('#mz-bodky button');
-        await expect(bodky).toHaveCount(5);
+        await expect(bodky).toHaveCount(8);
         const aktivna = () => bodky.evaluateAll((b) => b.findIndex((x) => x.hasAttribute('aria-current')));
         await expect.poll(aktivna).toBe(0);
         // Susedná karta vykukuje sprava - je vidno, že pás ide ďalej.
@@ -1009,7 +1055,7 @@ test.describe('karta Dnes', () => {
         await expect.poll(async () => Math.round((await karty.nth(2).boundingBox())?.x ?? -1)).toBe(14);
         // Posun pásu (ako prstom) rozsvieti bodku sám.
         await page.locator('#mz-karty').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
-        await expect.poll(aktivna).toBe(4);
+        await expect.poll(aktivna).toBe(7);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
         // Zvislý ťah prstom cez pás posúva stránku.
         await page.locator('#mz-karty').scrollIntoViewIfNeeded();
@@ -1037,7 +1083,7 @@ test.describe('karta Dnes', () => {
         const v = /** @type {import('../../shared/dnes-faza.js').DenVysvetlenie} */ (denVysvetlenie(input, 'dnes'));
         expect(v).not.toBeNull();
         const panel = page.locator('#mz-trieda-sheet');
-        const chip = page.locator('#mz-chip');
+        const chip = page.locator('#mz-karty [data-trieda="dnes"]');
         await chip.click();
         await expect(panel).toBeVisible();
         await expect(page.locator('#mz-trieda-chip')).toHaveText(v.chip);
@@ -1083,13 +1129,13 @@ test.describe('karta Dnes', () => {
             forecast: buildForecast(weather, time, SITE, PLANT),
         };
         const v = denVysvetlenie(input, 'zajtra');
-        await expect(page.locator('#mz-chip')).toBeHidden();
-        await page.locator('#mz-tom-chip').click();
+        await expect(page.locator('#mz-karty [data-trieda="dnes"]')).toHaveCount(0);
+        await page.locator('#mz-karty [data-trieda="zajtra"]').click();
         await expect(page.locator('#mz-trieda-sheet')).toBeVisible();
         await expect(page.locator('#mz-trieda-chip')).toHaveText(v?.chip ?? '-');
         await expect(page.locator('#mz-trieda-text')).toHaveText(v?.text ?? '-');
         await page.keyboard.press('Escape');
-        await expect(page.locator('#mz-tom-chip')).toBeFocused();
+        await expect(page.locator('#mz-karty [data-trieda="zajtra"]')).toBeFocused();
         expect(errors).toEqual([]);
     });
 
@@ -1098,8 +1144,14 @@ test.describe('karta Dnes', () => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
             await naDnes(page);
-            await expect(page.locator('#mz-day-eq > li')).toHaveCount(3);
-            const cisla = await page.locator('#mz-day-eq > li').evaluateAll((els) =>
+            // Dlaždica Dnes zo strechy je tretia v páse - posunie sa na ňu ako prstom.
+            const strecha = dlazdica(page, 'strecha');
+            await page
+                .locator('#mz-karty')
+                .evaluate((el, x) => el.scrollTo({ left: x }), await strecha.evaluate((el) => el.offsetLeft - 14));
+            await expect.poll(async () => Math.round((await strecha.boundingBox())?.x ?? -1)).toBe(14);
+            await expect(strecha.locator('.eq > li')).toHaveCount(3);
+            const cisla = await strecha.locator('.eq > li').evaluateAll((els) =>
                 els.map((el) => {
                     const box = el.getBoundingClientRect();
                     return { text: el.textContent, ok: box.left >= 0 && box.right <= innerWidth && el.scrollWidth <= el.clientWidth + 0.5 };
@@ -1107,6 +1159,8 @@ test.describe('karta Dnes', () => {
             );
             for (const c of cisla) expect(c.ok, `${c.text} je orezané`).toBe(true);
             expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
+            await page.locator('#mz-karty').evaluate((el) => el.scrollTo({ left: 0 }));
+            await expect.poll(async () => Math.round((await page.locator('#mz-word').boundingBox())?.x ?? -1)).toBeGreaterThan(0);
             // Každé veľké slovo, aké karta pozná, s veľkosťou podľa wordSize ako v appke.
             for (const word of [...bigWords('drzy'), ...bigWords('slusny')]) {
                 const ok = await page.evaluate(
@@ -1164,7 +1218,12 @@ test.describe('karta Dnes', () => {
 
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(modelKarty(FIXED_NOW, { pv: null, forecast: null })));
         await expect(page.locator('#mz-word')).toHaveText(MOZEM_WORDS.offline);
-        await expect(page.locator('#mz-lead')).toHaveText(/^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./);
+        await expect(dlazdica(page, 'dnes').locator('.k-text')).toHaveText(
+            /^Predpoveď počasia neprišla.* Ani meranie zo strechy neodpovedá\./,
+        );
+        // Bez predpovede nie je výkon ani posuvník.
+        await expect(page.locator('#mz-nebo')).toBeHidden();
+        await expect(page.locator('#mz-os-obal')).toBeHidden();
         await expect(page.locator('#tz-co')).toBeHidden();
         const znova = page.locator('#mz-retry');
         await expect(znova).toBeVisible();
@@ -1181,7 +1240,7 @@ test.describe('karta Dnes', () => {
         await openObloha(page, { offline: true });
         await page.context().setOffline(true);
         await naDnes(page);
-        await expect(page.locator('#mz-lead')).toHaveText(/^Nie je internet/);
+        await expect(dlazdica(page, 'dnes').locator('.k-text')).toHaveText(/^Nie je internet/);
     });
 
     test('poloha bez panelov: deň z typickej strechy a výzva', async ({ page }) => {
@@ -1199,7 +1258,7 @@ test.describe('karta Dnes', () => {
             forecast: buildForecast(weather, FIXED_NOW, SITE, typical.plant),
         };
         const sky = mozemSkyModel(input);
-        const m = { ...sky, faza: dnesFaza(input, sky.den, sky.window) };
+        const m = { ...sky, faza: dnesFaza(input, sky.den, sky.window), nebo: dnesNeboModel(input, null) };
         await expect.poll(() => kartaVStranke(page)).toEqual(kartaZModelu(m));
         await expect(page.locator('#mz-guess-title')).toHaveText('Hádam podľa suseda');
         await expect(page.locator('#mz-guess-text')).toHaveText(m.guess);
@@ -2069,18 +2128,16 @@ test.describe('graf dňa prstom', () => {
 
 test.describe('karta Dnes po kontrole kroku 2', () => {
     for (const width of [390, 320]) {
-        test(`šírka ${width} px: časy východu a západu pod oblúkom sú celé a odsadené od okraja ako ostatný obsah`, async ({ page }) => {
+        test(`šírka ${width} px: časy východu a západu pod posuvníkom sú celé a odsadené od okraja`, async ({ page }) => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
             await naDnes(page);
-            const casy = await page.locator('#mz-arc .arc-t').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+            const casy = await page.locator('#mz-os .mz-os-cas').evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
             expect(casy).toHaveLength(2);
-            // Odstup obsahu karty: odsadenie vety pod slovom.
-            const odstup = await page.locator('#mz-answer').evaluate((el) => parseFloat(getComputedStyle(el).paddingLeft));
             const sirka = await page.evaluate(() => innerWidth);
             for (const t of casy) {
-                expect(t.left, 'čas pod oblúkom je pri ľavom okraji').toBeGreaterThanOrEqual(odstup - 0.5);
-                expect(sirka - t.right, 'čas pod oblúkom je pri pravom okraji').toBeGreaterThanOrEqual(odstup - 0.5);
+                expect(t.left, 'čas pod posuvníkom je pri ľavom okraji').toBeGreaterThanOrEqual(14);
+                expect(sirka - t.right, 'čas pod posuvníkom je pri pravom okraji').toBeGreaterThanOrEqual(14);
             }
             expect(errors).toEqual([]);
         });
@@ -2679,8 +2736,14 @@ test.describe('počasie v pozadí karty Teraz', () => {
         // Kresba je dekorácia: čítačka ju nevidí a dotyk prejde cez ňu.
         await expect(page.locator('#wx')).toHaveAttribute('aria-hidden', 'true');
         expect(await page.locator('#wx').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
+        // Na karte Dnes je kresba v čase jej posuvníka (teraz po otvorení) a slnko na dennej dráhe.
         await page.locator('#nav-mozem').click();
+        await expect(page.locator('#wx')).toHaveAttribute('data-dnes', '');
+        await expect(page.locator('#wx')).toHaveAttribute('data-wx', pocasieStav(den));
+        await page.locator('#nav-radar').click();
         await expect(page.locator('#wx')).toBeHidden();
+        await page.locator('#nav-terazky').click();
+        await expect(page.locator('#wx')).not.toHaveAttribute('data-dnes');
         expect(errors).toEqual([]);
     });
 

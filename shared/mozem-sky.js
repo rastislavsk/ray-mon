@@ -1,45 +1,12 @@
 // Karta Môžem?. Počíta sa to isté
 // (mozemModel v shared/mozem.js), tu sa to len skladá pre nový vzhľad: veľké slovo, čo dá
-// strecha za celý deň, oblúk slnka a výzvy. Štítky a vetu o teraz kreslí karta Teraz. Čisté funkcie - čas, dáta
+// strecha za celý deň a výzvy. Štítky a vetu o teraz kreslí karta Teraz. Čisté funkcie - čas, dáta
 // aj to, či je internet, prichádzajú v parametroch. Texty sú v shared/messages.js.
 
-import { HOUR_RANGE } from './chart-model.js';
 import { installedKw, TYPICAL_PLANT } from './config.js';
 import { pvFreshness } from './hero-model.js';
-import { mesiacFaza } from './mesiac.js';
 import { mozemGuessText, mozemOfflineText } from './messages-core.js';
 import { mozemModel } from './mozem.js';
-import { localDateKey, localMinutes, sunTimes, sunUp } from './solar.js';
-
-/** @typedef {import('./mozem-jadro.js').Window} Window */
-/**
- * Oblúk slnka: východ a západ (minúta dňa, null v polárny deň či noc), kde je slnko medzi nimi
- * (0 = východ, 1 = západ, null = noc), dnešné okno so slnkom tým istým meradlom a fáza Mesiaca,
- * ktorá sa na južnej pologuli (`juh`) kreslí zrkadlovo.
- * @typedef {{ rise: number | null, set: number | null, sun: number | null, win: { from: number, to: number } | null,
- *   faza: number, juh: boolean }} SunArc
- */
-
-/**
- * Oblúk slnka pre danú chvíľu. Východ a západ sú skutočné pre polohu elektrárne; kde v ten deň
- * nie sú, oblúk ide cez produkčné okno grafov (HOUR_RANGE).
- * @param {Date} now @param {import('./config.js').Site} site @param {Window | null} window okno so slnkom, alebo null
- * @returns {SunArc}
- */
-export function sunArc(now, site, window) {
-    const { rise, set } = sunTimes(site, localDateKey(now, site.timezone));
-    const from = rise ?? HOUR_RANGE.min * 60;
-    const to = set ?? HOUR_RANGE.max * 60;
-    const at = (/** @type {number} */ m) => Math.round(Math.max(0, Math.min(1, (m - from) / (to - from))) * 1000) / 1000;
-    return {
-        rise,
-        set,
-        sun: sunUp(now, site) ? at(localMinutes(now, site.timezone)) : null,
-        win: window ? { from: at(window.from), to: at(window.to) } : null,
-        faza: Math.round(mesiacFaza(now) * 100) / 100,
-        juh: site.lat < 0,
-    };
-}
 
 /**
  * Meranie zo strechy: ide, alebo odkedy mlčí. Bez pripojeného merania nie je čo merať.
@@ -61,7 +28,7 @@ export function pvStatus({ now, site, pv, zdroj, pokusAt }) {
  *   spotrebiče doma (s nimi ráta Plán dňa) a ranná trieda dňa
  */
 export function mozemSkyModel(input, { online = true, voice = 'drzy', devices, ranna = null } = {}) {
-    if (input.known === 'nic') return { ask: true, arc: null, ...emptyCard() };
+    if (input.known === 'nic') return { ask: true, ...emptyCard() };
     const m = mozemModel(input, { voice, devices, ranna });
     const f = m.facts;
     const offline = m.state === 'offline';
@@ -82,7 +49,6 @@ export function mozemSkyModel(input, { online = true, voice = 'drzy', devices, r
         items: m.items,
         groups: m.groups,
         plan: m.plan,
-        arc: sunArc(input.now, input.site, f ? f.window : null),
     };
 }
 
