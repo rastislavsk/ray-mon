@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Bojler – hranica teploty</title>
+        <style>
+            /* Návrh (23. 11. 2026): teplota vody z teplomera Shelly 1 Gen3 + Add-on (DS18B20) v appke - dlaždica Bojler,
+               panel Bojler dnes a Nastavenie. Zásuvka si teplotu prečíta v domácej sieti a pošle ju s minútovým hlásením (B2).
+               Samostatný súbor, nič neimportuje z appky. Čísla a časy sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --sun: #ffd166;
+                --siet: rgba(124, 196, 255, 0.85);
+                --zelena: #8fe36f;
+                --horuca: #ff8a5c;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            p {
+                margin: 0;
+                max-width: 74ch;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                width: 300px;
+                max-width: 100%;
+            }
+            figcaption {
+                font-size: 14px;
+            }
+            figcaption b {
+                display: block;
+                font-size: 16px;
+            }
+            .plus,
+            .minus {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--zelena);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+
+            /* ===== kúsok obrazovky ===== */
+            .kus {
+                --glass: rgba(8, 16, 40, 0.3);
+                position: relative;
+                width: 300px;
+                max-width: 100%;
+                padding: 12px;
+                border-radius: 24px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #2f62b5, #5d8fd8 70%, #6f9cdc);
+                font-size: 13px;
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+                align-items: start;
+            }
+            .dl {
+                position: relative;
+                padding: 11px;
+                border-radius: 20px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                min-height: 152px;
+            }
+            .dl[data-zapnuty] {
+                box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.7);
+            }
+            .dl[data-tlmene] {
+                opacity: 0.55;
+            }
+            .ico {
+                position: relative;
+                width: 36px;
+                height: 36px;
+                margin-bottom: 14px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+            }
+            .dl[data-zapnuty] .ico {
+                color: var(--zelena);
+            }
+            .vi {
+                width: 20px;
+                height: 20px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 1.8;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .velky {
+                display: block;
+                font-size: 22px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .velky small {
+                font-size: 12px;
+                font-weight: 800;
+            }
+            .meno {
+                display: block;
+                font-size: 15px;
+                font-weight: 800;
+                margin-top: 2px;
+            }
+            .podiel {
+                display: block;
+                height: 5px;
+                margin: 6px 0 3px;
+                border-radius: 3px;
+                background: linear-gradient(90deg, var(--sun) 0 82%, var(--siet) 82%);
+            }
+            .odr {
+                display: block;
+                font-size: 11.5px;
+                font-weight: 600;
+            }
+
+            /* T3: nádrž v ikone, výška vody = teplota (20 – 75 °C) */
+            .nadrz {
+                position: absolute;
+                right: 12px;
+                top: 12px;
+                width: 26px;
+                height: 62px;
+                border: 2px solid rgba(255, 255, 255, 0.85);
+                border-radius: 13px;
+                overflow: hidden;
+            }
+            .nadrz i {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: linear-gradient(0deg, #7cc4ff, var(--horuca));
+                background-size: 100% 62px;
+                background-position: bottom;
+            }
+            .nadrz::after {
+                /* ryska 55 °C - „na sprchu stačí“ */
+                content: '';
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: calc((55 - 20) / 55 * 100%);
+                border-top: 1.5px dashed rgba(255, 255, 255, 0.7);
+            }
+
+            /* ===== panel zdola ===== */
+            .panel {
+                width: 300px;
+                max-width: 100%;
+                padding: 16px 14px 18px;
+                border-radius: 24px 24px 0 0;
+                background: #16213f;
+                border: 1px solid var(--line);
+                display: grid;
+                gap: 12px;
+                font-size: 13px;
+            }
+            .panel .hlava {
+                display: flex;
+                justify-content: space-between;
+                align-items: baseline;
+            }
+            .panel .hlava b {
+                font-size: 18px;
+                font-weight: 900;
+            }
+            .panel .hlava span {
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .krivka svg {
+                width: 100%;
+                height: auto;
+                display: block;
+                overflow: visible;
+            }
+            .k-t {
+                font-size: 9.5px;
+                font-weight: 700;
+                fill: rgba(255, 255, 255, 0.75);
+                font-family: var(--font);
+            }
+            .k-h {
+                font-size: 11px;
+                font-weight: 900;
+                fill: #fff;
+                font-family: var(--font);
+            }
+            .tri {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            .tri div {
+                padding: 10px 8px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.07);
+                display: grid;
+                gap: 2px;
+            }
+            .tri b {
+                font-size: 20px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .tri span {
+                font-size: 11px;
+                color: var(--dim);
+            }
+            .doteraz {
+                font-size: 12px;
+                color: var(--dim);
+                border-top: 1px solid var(--line);
+                padding-top: 10px;
+            }
+
+            /* ===== Nastavenie ===== */
+            .nast {
+                width: 300px;
+                max-width: 100%;
+                padding: 16px 14px;
+                border-radius: 20px;
+                background: #16213f;
+                border: 1px solid var(--line);
+                display: grid;
+                gap: 10px;
+                font-size: 13px;
+            }
+            .nast h4 {
+                margin: 0;
+                font-size: 15px;
+                font-weight: 800;
+            }
+            .nast label {
+                display: grid;
+                gap: 4px;
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .nast input {
+                font: inherit;
+                font-size: 14px;
+                color: #fff;
+                padding: 9px 10px;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                background: rgba(0, 0, 0, 0.25);
+            }
+            .nast .pozn {
+                font-size: 11.5px;
+                color: var(--dim);
+            }
+            .nast .btn {
+                justify-self: start;
+                padding: 9px 14px;
+                border-radius: 999px;
+                background: #fff;
+                color: #0b1226;
+                font-weight: 800;
+            }
+            .prepinac {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: 700;
+            }
+            .prepinac i {
+                width: 40px;
+                height: 22px;
+                border-radius: 11px;
+                background: var(--zelena);
+                position: relative;
+            }
+            .prepinac i::after {
+                content: '';
+                position: absolute;
+                right: 3px;
+                top: 3px;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .stav {
+                display: flex;
+                gap: 8px;
+                align-items: baseline;
+                font-size: 12.5px;
+            }
+            .stav::before {
+                content: '';
+                flex: none;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                background: var(--zelena);
+                transform: translateY(-1px);
+            }
+            .stav[data-chyba]::before {
+                background: #ffb547;
+            }
+            .zlozene {
+                opacity: 0.55;
+            }
+            .krok {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 10px;
+            }
+            .krok span.l {
+                display: grid;
+                font-weight: 700;
+            }
+            .krok small {
+                font-weight: 500;
+                color: var(--dim);
+                font-size: 11.5px;
+            }
+            .stepper {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .stepper i {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                display: grid;
+                place-items: center;
+                font-style: normal;
+                font-weight: 800;
+            }
+            .stepper b {
+                font-size: 17px;
+                font-weight: 900;
+                min-width: 58px;
+                text-align: center;
+            }
+            .tok {
+                display: grid;
+                gap: 6px;
+                padding: 14px 16px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.05);
+                font-size: 14px;
+                max-width: 74ch;
+            }
+            .tok ol {
+                margin: 0;
+                padding-left: 20px;
+            }
+            .tahaj {
+                position: relative;
+            }
+            .tahaj .uchyt {
+                position: absolute;
+                right: -4px;
+                width: 22px;
+                height: 22px;
+                margin-top: -11px;
+                border-radius: 50%;
+                background: #fff;
+                box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Bojler – hranica teploty</h1>
+                <p class="dim">
+                    Návrh 23. 11. 2026, zvolená možnosť 2: hranicu nastavíš v appke, Worker ju pošle zásuvke s každou odpoveďou a zásuvka ju
+                    stráži sama, aj bez internetu. Termostat na bojleri ostáva nastavený vyššie ako poistka. V ručnom režime Ray-mon hranicu
+                    nestráži, teplotu si nastavíš v appke Shelly. Čísla sú ilustračné.
+                </p>
+            </section>
+
+            <section>
+                <h2>Ako to bude fungovať</h2>
+                <div class="tok">
+                    <ol>
+                        <li>Pri každej odpovedi pošle Worker zásuvke hranicu (napr. 60 °C) a teplotu návratu o 5 °C nižšie (55 °C).</li>
+                        <li>
+                            Zásuvka po prečítaní teplomera: keď má voda <b>60 °C alebo viac</b>, bojler vypne a nezapne ho, ani keď je
+                            prebytok, kým voda neklesne na <b>55 °C</b>. Potom ho zase zapína podľa prebytku ako doteraz.
+                        </li>
+                        <li>
+                            Bez internetu stráži poslednú hranicu, ktorú dostala. Po 15 minútach bez Workera bojler vypne aj tak (ako dnes).
+                        </li>
+                        <li>
+                            Keď teplomer neodpovedá, zásuvka hranicu nevie strážiť: riadi len podľa prebytku a strážcom je termostat. Appka
+                            to povie v Nastavení („neodpovedá od …“).
+                        </li>
+                        <li>
+                            Worker rozhoduje rovnakým pravidlom, takže dlaždica, panel aj oznámenia vedia, že voda je „nahriata na 60 °C“, a
+                            nepíšu „čaká na slnko“.
+                        </li>
+                    </ol>
+                </div>
+                <p class="dim">
+                    Návrat o 5 °C nižšie (hysterézia) je pevný, aby bojler necvakal pri každej desatine. Ak ho chceš meniť, povedz.
+                </p>
+            </section>
+
+            <section>
+                <h2>H – kde sa hranica nastavuje</h2>
+                <div class="rad" id="kde"></div>
+            </section>
+
+            <section>
+                <h2>D – predvolená hranica</h2>
+                <div class="rad">
+                    <figure>
+                        <figcaption>
+                            <b>D1 · vypnutá, kým ju nenastavíš</b>
+                            <span class="plus">Po nasadení sa nič nezmení, bojler hreje ako dnes až po termostat.</span>
+                            <span class="plus">Čiara na krivke sa ukáže až s hranicou.</span>
+                            <span class="minus">Krok navyše: hranicu treba raz zapnúť.</span>
+                        </figcaption>
+                    </figure>
+                    <figure>
+                        <figcaption>
+                            <b>D2 · 55 °C hneď</b>
+                            <span class="plus">Funguje bez nastavovania.</span>
+                            <span class="minus">Po nasadení zrazu prestane hriať nad 55 °C – prekvapenie, ak je termostat vyššie.</span>
+                        </figcaption>
+                    </figure>
+                </div>
+                <p class="dim">Rozsah 40 až 75 °C po 1 °C. Pod 40 °C nemá zmysel (baktérie), nad 75 °C už rozhoduje termostat.</p>
+            </section>
+
+            <section>
+                <h2>Dlaždica, keď voda dosiahla hranicu</h2>
+                <div class="rad" id="dlazdica"></div>
+            </section>
+
+            <section>
+                <h2>Odporúčanie</h2>
+                <div class="odpor">
+                    <p>
+                        <b>H1 + D1.</b> Hranica patrí tam, kde vidíš krivku teploty: v paneli Bojler dnes je čiara na krivke presne tá
+                        hranica, ktorú meníš tlačidlami pod ňou. D1, aby sa po nasadení nič nezmenilo potichu.
+                    </p>
+                </div>
+            </section>
+        </main>
+
+        <script>
+            // Obrázky skladá tento skript. Len pre návrh, appka ho nemá.
+            const BOJLER =
+                '<rect x="7" y="2.5" width="10" height="19" rx="5"/><path d="M7 9h10"/><path d="M10.5 13.5c0 1.2 1.5 1.2 1.5 2.5s-1.5 1.3-1.5 2.5M13.5 13.5c0 1.2 1.5 1.2 1.5 2.5"/>';
+            const AUTO =
+                '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>';
+            const vi = (p) => `<svg class="vi" viewBox="0 0 24 24" aria-hidden="true">${p}</svg>`;
+            const plusMinus = (v) =>
+                v.plus.map((t) => `<span class="plus">${t}</span>`).join('') +
+                v.minus.map((t) => `<span class="minus">${t}</span>`).join('');
+
+            // Krivka: ráno vychladla, slnko ju dohrialo na hranicu 60 °C o 12:40, odvtedy čaká.
+            const W = 272;
+            const H = 120;
+            const x = (h) => (h / 24) * W;
+            const y = (t) => 10 + ((75 - t) / 45) * (H - 30);
+            const BODY = [
+                [0, 56],
+                [6.8, 53],
+                [7.2, 44],
+                [10.5, 43],
+                [12.67, 60],
+                [14.08, 59.4],
+            ];
+            const krivka = (uchyt) => {
+                const d = BODY.map(([h, t], i) => `${i ? 'L' : 'M'}${x(h).toFixed(1)} ${y(t).toFixed(1)}`).join('');
+                const r = y(60);
+                const osi = [0, 6, 12, 18, 24]
+                    .map(
+                        (h) =>
+                            `<text class="k-t" x="${x(h)}" y="${H - 4}" text-anchor="${h === 0 ? 'start' : h === 24 ? 'end' : 'middle'}">${h}</text>`,
+                    )
+                    .join('');
+                return `<div class="krivka tahaj"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Teplota vody dnes">
+                    <path d="${d}L${x(14.08)} ${H - 20}L0 ${H - 20}Z" fill="rgba(255,255,255,.12)"/>
+                    <line x1="0" x2="${W}" y1="${r}" y2="${r}" stroke="rgba(255,255,255,.7)" stroke-dasharray="3 3"/>
+                    <text class="k-t" x="${uchyt ? W - 26 : W}" y="${r - 5}" text-anchor="end">hranica 60 °C</text>
+                    <path d="${d}" fill="none" stroke="#fff" stroke-width="2"/>
+                    <circle cx="${x(14.08)}" cy="${y(59.4)}" r="4" fill="#fff"/>
+                    <rect x="${x(10.5)}" y="${H - 18}" width="${x(12.67) - x(10.5)}" height="4" rx="2" fill="var(--sun)"/>
+                    ${osi}</svg>${uchyt ? `<span class="uchyt" style="top:${(r / H) * 100}%"></span>` : ''}</div>`;
+            };
+            const hlava = '<div class="hlava"><b>Bojler dnes</b><span>nahriata na 60 °C o 12:40</span></div>';
+            const stepper = (pozn) =>
+                `<div class="krok"><span class="l">Hriať do<small>${pozn}</small></span><span class="stepper"><i>−</i><b>60 °C</b><i>+</i></span></div>`;
+
+            const kde = [
+                {
+                    n: 'H1 · v paneli Bojler dnes, pod krivkou',
+                    html: `<div class="panel">${hlava}${krivka(false)}${stepper('znova zapne pod 55 °C')}<div class="doteraz">Pod tým ako dnes: Riadi appka / Ručne, pás dňa, čísla.</div></div>`,
+                    plus: ['Hranica je tam, kde ju vidno na krivke.', 'Pri ručnom režime sa skryje (hranica vtedy neplatí).'],
+                    minus: ['Panel je o riadok dlhší.'],
+                },
+                {
+                    n: 'H2 · v Nastavení pri teplomeri',
+                    html: `<div class="nast"><h4>Bojler na prebytky</h4><span class="pozn zlozene">Prahy, zásuvka… (ako dnes)</span><span class="prepinac">Mám teplomer v bojleri<i></i></span>${stepper('znova zapne pod 55 °C')}<span class="pozn">Adresa a heslo teplomera (ako dnes)</span></div>`,
+                    plus: ['Spolu s prahmi kW - nastavenie riadenia na jednom mieste.'],
+                    minus: ['Zmeniť hranicu znamená ísť do Nastavenia, ďaleko od krivky.'],
+                },
+                {
+                    n: 'H3 · ťahať čiaru priamo na krivke',
+                    html: `<div class="panel">${hlava}${krivka(true)}<div class="doteraz">Ťahom bieleho kolieska hore či dole. Pod tým ako dnes.</div></div>`,
+                    plus: ['Najpriamejšie: posunieš čiaru, kam chceš.'],
+                    minus: ['Na prst drobné a ľahko sa pohne omylom.', 'Treba aj ovládanie bez ťahania (klávesnica, čítačka).'],
+                },
+            ];
+            document.getElementById('kde').innerHTML = kde
+                .map((k) => `<figure>${k.html}<figcaption><b>${k.n}</b>${plusMinus(k)}</figcaption></figure>`)
+                .join('');
+
+            const auto = `<div class="dl" data-tlmene><span class="ico">${vi(AUTO)}</span><span class="velky">13:15</span><span class="meno">Auto</span><span class="podiel"></span><span class="odr">• ~50 km zo slnka</span></div>`;
+            const dl = `<div class="dl"><span class="ico">${vi(BOJLER)}</span><span class="velky">59<small> °C</small></span><span class="meno">Bojler</span><span class="podiel"></span><span class="odr">• nahriata na 60 °C</span><span class="odr">• o 12:40</span></div>`;
+            document.getElementById('dlazdica').innerHTML =
+                `<figure><div class="kus"><div class="mriezka">${dl}${auto}</div></div><figcaption><b>Dosiahla hranicu</b><span class="plus">Rovnaké ako „nahriata“ od termostatu, len s hranicou.</span><span class="plus">Panel hore: „nahriata na 60 °C o 12:40“.</span></figcaption></figure>`;
+        </script>
+    </body>
+</html>

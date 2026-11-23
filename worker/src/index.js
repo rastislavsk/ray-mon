@@ -17,6 +17,7 @@
 // (docs/navrhy/bojler-prebytky.html). POST /bojler-pecat: pečať telefónu -> menšia pečať do skriptu.
 // POST /koniec: oznámenie o konci programu spotrebiča - budík v Durable Object (worker/src/budik.js).
 // POST /bojler-stav: pečať telefónu -> posledné hlásenie zásuvky s bojlerom, bez merania (worker/src/ucet.js).
+// POST /bojler-hranica: telefón nastaví hranicu teploty vody, ktorú zásuvka stráži (worker/src/ucet.js).
 // POST /bojler-oznamenia: telefón si zapne či vypne oznámenia o zapnutí a vypnutí bojlera (worker/src/ucet.js).
 // POST /historia: pečať telefónu -> história elektrárne pre učenie Plánu dňa (worker/src/ucet.js, shared/historia.js).
 // POST /bezi: pečať telefónu, dnešok a zmeny „Už beží“ -> dnešné behy všetkých telefónov domácnosti (worker/src/ucet.js).
@@ -29,6 +30,7 @@ import {
     WORKER_BOJLER_PECAT_PATH,
     WORKER_BOJLER_OZNAM_PATH,
     WORKER_BOJLER_REZIM_PATH,
+    WORKER_BOJLER_HRANICA_PATH,
     WORKER_BEZI_PATH,
     WORKER_BOJLER_STAV_PATH,
     WORKER_HISTORIA_PATH,
@@ -42,6 +44,7 @@ import {
     WORKER_ZDIELAJ_PATH,
     ZDIELANIE,
 } from '../../shared/config.js';
+import { hranicaZ } from '../../shared/bojler-voda.js';
 import { kioskApiUrl } from '../../shared/kiosk.js';
 import { isObj } from '../../shared/valid.js';
 import { ulozKoniec } from './budik.js';
@@ -294,7 +297,7 @@ async function dopytBojlera(request, key, now) {
 
 /**
  * POST /bojler: `{ pecat, rele, w, e, zapKw, vypKw, t? }` od skriptu zásuvky (stav relé, príkon vo W,
- * počítadlo energie vo Wh, prahy a s teplomerom teplota vody v °C, docs/navrhy/bojler-teplota.html) -> `{ zapni, rucne }`. V ručnom režime je `zapni` stav relé, takže ho
+ * počítadlo energie vo Wh, prahy a s teplomerom teplota vody v °C, docs/navrhy/bojler-teplota.html) -> `{ zapni, rucne, prebytokKw, maxC, minC }` (hranica teploty a návrat). V ručnom režime je `zapni` stav relé, takže ho
  * nezmení ani starší skript, ktorý `rucne` nepozná. Rozhoduje Durable Object účtu (shared/bojler.js).
  * @param {Request} request @param {Env} env @param {Date} now
  */
@@ -306,7 +309,9 @@ export async function handleBojler(request, env, now) {
     try {
         const prahy = { zapKw: req.zapKw, vypKw: req.vypKw };
         const r = await ucet(env.UCTY, obsah.pristup, '/bojler', now, { rele: req.rele, w: req.w, e: req.e, prahy, t: req.t });
-        return json(200, { zapni: r.zapni === true, rucne: r.rucne === true, prebytokKw: r.prebytokKw ?? null });
+        // Hranicu teploty (docs/navrhy/bojler-hranica.html) si skript zásuvky pamätá a stráži ju aj bez Workera.
+        const hranica = { maxC: r.maxC ?? null, minC: r.minC ?? null };
+        return json(200, { zapni: r.zapni === true, rucne: r.rucne === true, prebytokKw: r.prebytokKw ?? null, ...hranica });
     } catch (err) {
         return chyba(err);
     }
@@ -344,6 +349,24 @@ export async function handleBojlerRezim(request, env, now) {
     if (!obsah || typeof req.rucne !== 'boolean') return json(400, { chyba: 'udaje' });
     try {
         const r = await ucet(env.UCTY, obsah.pristup, '/rezim', now, { rucne: req.rucne });
+        return json(200, { ok: true, bojler: r.bojler ?? null });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
+ * POST /bojler-hranica: `{ pecat, hranica }` od appky (pečať telefónu) -> `{ ok, bojler }`. Hranica teploty vody v °C (celé
+ * číslo v rozsahu BOJLER.vodaMinC až vodaMaxC) alebo null - bez hranice (docs/navrhy/bojler-hranica.html).
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleBojlerHranica(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    if (!obsah || (req.hranica !== null && hranicaZ(req.hranica) === null)) return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/hranica', now, { hranica: req.hranica });
         return json(200, { ok: true, bojler: r.bojler ?? null });
     } catch (err) {
         return chyba(err);
@@ -432,6 +455,7 @@ const CESTY = {
     [WORKER_BOJLER_PATH]: { limit: false, run: handleBojler },
     [WORKER_BOJLER_PECAT_PATH]: { limit: true, run: handleBojlerPecat },
     [WORKER_BOJLER_REZIM_PATH]: { limit: true, run: handleBojlerRezim },
+    [WORKER_BOJLER_HRANICA_PATH]: { limit: true, run: handleBojlerHranica },
     // Appka sa pýta každú minútu, bez platnej pečate nič nespraví (ako meranie).
     [WORKER_BOJLER_STAV_PATH]: { limit: false, run: handleBojlerStav },
     [WORKER_OZNAMENIA_PATH]: { limit: true, run: (request, env) => oznam((body) => ulozOdber(body, env), request) },

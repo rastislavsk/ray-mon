@@ -20,7 +20,7 @@
 import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zmenaOhrevu } from '../../shared/bojler.js';
 import { zapisZmeny } from '../../shared/bezi.js';
-import { pridajTeplotu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
+import { hranicaZ, pridajTeplotu, strazVodu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
 import { domBezBojlera, sBojlerom, zapisMeranie } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
 import { bojlerZmenaText } from '../../shared/messages-oznamenia.js';
@@ -72,15 +72,17 @@ export class UcetHuawei {
                     ? await this.bojler(req, now)
                     : path === '/rezim'
                       ? await this.rezim(req, now)
-                      : path === '/stav'
-                        ? await this.stav(req, now)
-                        : path === '/oznam'
-                          ? await this.oznam(req)
-                          : path === '/historia'
-                            ? await this.historia(req)
-                            : path === '/bezi'
-                              ? await this.behy(req)
-                              : await this.pv(req.pristup, now);
+                      : path === '/hranica'
+                        ? await this.hranica(req, now)
+                        : path === '/stav'
+                          ? await this.stav(req, now)
+                          : path === '/oznam'
+                            ? await this.oznam(req)
+                            : path === '/historia'
+                              ? await this.historia(req)
+                              : path === '/bezi'
+                                ? await this.behy(req)
+                                : await this.pv(req.pristup, now);
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -200,6 +202,7 @@ export class UcetHuawei {
      * Dopyt zásuvky: rozhodnutie a záznam dňa. Keď meranie nevyjde, rozhoduje z posledného
      * (rozhodni ho po BOJLER.tichoMin nechá vypnúť).
      * Teplotu vody (`t`) pošle len skript s teplomerom (docs/navrhy/bojler-teplota.html); bez nej ostáva posledná.
+     * Hranicu teploty (docs/navrhy/bojler-hranica.html) stráži rovnako ako zásuvka a pošle jej ju (`maxC`, `minC`).
      * @param {{ pristup: Record<string, unknown>, rele: unknown, w: unknown, e: unknown, prahy: unknown, t?: unknown }} req @param {Date} now
      */
     async bojler(req, now) {
@@ -215,11 +218,20 @@ export class UcetHuawei {
         const meranieAt = pv?.measuredAt ? Date.parse(pv.measuredAt) : 0;
         const pamat = /** @type {import('../../shared/bojler.js').Pamat | undefined} */ (await this.storage.get(`bp:${plant}`));
         const rucne = (await this.storage.get(`br:${plant}`)) === true;
-        const r = rozhodni(pamat ?? PAMAT_ZACIATOK, { rele, w, sietKw, meranieAt, now: now.getTime(), prahy, rucne });
         const stary = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        const v = await this.voda(plant, req.t, stary, now);
+        const r = rozhodni(pamat ?? PAMAT_ZACIATOK, {
+            rele,
+            w,
+            sietKw,
+            meranieAt,
+            now: now.getTime(),
+            prahy,
+            rucne,
+            nahriata: v.nahriata,
+        });
         const energiaWh = cislo(req.e);
         const den = zaznamenaj(stary?.den ?? null, { now, tz: NB.pasmo, rele, w, energiaWh, sietKw });
-        const v = await this.voda(plant, req.t, stary, now);
         /** @type {BojlerInfo} */ const info = {
             kontaktAt: now.getTime(),
             rele,
@@ -229,6 +241,8 @@ export class UcetHuawei {
             den,
             rucne,
             voda: v.voda,
+            hranica: v.hranica,
+            nahriata: v.nahriata,
         };
         await this.storage.put({
             [`bp:${plant}`]: r.pamat,
@@ -238,12 +252,13 @@ export class UcetHuawei {
         });
         const zmena = zmenaOhrevu(stary ?? null, info);
         if (zmena) await this.oznamZmenu(plant, bojlerZmenaText(zmena), now);
-        return { zapni: r.zapni, rucne, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin };
+        const minC = v.hranica === null ? null : v.hranica - BOJLER.vodaHystC;
+        return { zapni: r.zapni, rucne, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin, maxC: v.hranica, minC };
     }
 
     /**
-     * Teplota vody z hlásenia zásuvky (docs/navrhy/bojler-teplota.html): posledná (bez novej ostáva stará) a čo zapísať
-     * do bodov `bt:`.
+     * Teplota vody z hlásenia zásuvky (docs/navrhy/bojler-teplota.html): posledná (bez novej ostáva stará), čo zapísať
+     * do bodov `bt:`, hranica (`bh:`) a či ju voda dosiahla (shared/bojler-voda.js, strazVodu - to isté ako v zásuvke).
      * @param {string} plant @param {unknown} raw @param {BojlerInfo | undefined} stary @param {Date} now
      */
     async voda(plant, raw, stary, now) {
@@ -251,10 +266,26 @@ export class UcetHuawei {
         const body =
             /** @type {import('../../shared/bojler-voda.js').BodyVody | undefined} */ (await this.storage.get(`bt:${plant}`)) ?? [];
         const nove = pridajTeplotu(body, t, now.getTime());
+        const hranica = hranicaZ(await this.storage.get(`bh:${plant}`));
         return {
             voda: t === null ? (stary?.voda ?? null) : { t, at: now.getTime() },
+            hranica,
+            nahriata: strazVodu(stary?.nahriata === true, t, hranica),
             zapis: nove === body ? {} : { [`bt:${plant}`]: nove },
         };
+    }
+
+    /**
+     * Hranica teploty od appky (docs/navrhy/bojler-hranica.html): uloží ju (null - bez hranice) a vráti stav bojlera
+     * s ňou. Zásuvka ju dostane pri ďalšom hlásení.
+     * @param {{ pristup: Record<string, unknown>, hranica: unknown }} req @param {Date} now
+     */
+    async hranica(req, now) {
+        const plant = String(req.pristup.plant ?? '');
+        const hranica = hranicaZ(req.hranica);
+        const stary = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        await this.storage.put({ [`bh:${plant}`]: hranica, ...(stary ? { [`b:${plant}`]: { ...stary, hranica } } : {}) });
+        return { bojler: await this.sTeplotami(plant, now) };
     }
 
     /**

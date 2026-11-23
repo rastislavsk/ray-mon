@@ -140,6 +140,19 @@ function renderBojler(b, dom) {
     setText(dom.nsTeplomerIpL, t.ipLabel);
     setText(dom.nsTeplomerHesloL, t.hesloLabel);
     setText(dom.nsTeplomerPozn, t.pozn);
+    const h = t.hranica;
+    show(dom.nsHranica, !!h);
+    show(dom.nsHranicaChyba, !!h?.chyba);
+    if (h) {
+        setText(dom.nsHranicaL, h.label);
+        setText(dom.nsHranicaSmall, h.small);
+        setText(dom.nsHranicaV, h.value);
+        setText(dom.nsHranicaChyba, h.chyba);
+        dom.nsHranicaMenej.disabled = !h.menej;
+        dom.nsHranicaViac.disabled = !h.viac;
+        dom.nsHranicaMenej.setAttribute('aria-label', h.menejL);
+        dom.nsHranicaViac.setAttribute('aria-label', h.viacL);
+    }
     // Kým človek píše, pole neprepisovať - adresa sa uloží až pri opustení poľa.
     if (document.activeElement !== dom.nsTeplomerIp && dom.nsTeplomerIp.value !== t.ip) dom.nsTeplomerIp.value = t.ip;
     setText(dom.nsBojlerSkript, b.tlacidlo);

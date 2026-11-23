@@ -144,3 +144,36 @@ test('adresa teplomera: len IP či meno a neprázdne heslo', () => {
     assert.equal(adresaTeplomera({ ip: 'a@b', heslo: 'abc' }), null);
     assert.equal(skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT, zapKw: 2.3, vypKw: 2, teplomer: { ip: '', heslo: 'x' } }), null);
 });
+
+test('skript s teplomerom: hranicu od Workera stráži sám - vypne pri nej, pustí až pod návratom, aj bez Workera', () => {
+    const kod = /** @type {string} */ (skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT, zapKw: 2.3, vypKw: 2, teplomer: TEPLOMER }));
+    assert.doesNotMatch(kod, /=>|\blet\b|\bconst\b|,\s*[)}\]]|`/);
+    let t = 50;
+    let worker = /** @type {{ code: number, body: string } | null} */ ({ code: 200, body: '{"zapni":true,"maxC":60,"minC":55}' });
+    const s = zasuvka(
+        kod,
+        () => worker,
+        () => ({ code: 200, body: JSON.stringify({ tC: t }) }),
+    );
+    assert.equal(s.z.output, true, 'pod hranicou poslúchne');
+    t = 60;
+    s.minuta();
+    assert.equal(s.z.output, false, 'pri hranici vypne, hoci Worker hovorí zapni');
+    t = 57;
+    s.minuta();
+    assert.equal(s.z.output, false, 'medzi hranicou a návratom nepustí');
+    t = 55;
+    s.minuta();
+    assert.equal(s.z.output, true, 'na návrate znova poslúchne');
+    // Bez Workera: posledná hranica platí, nahriatu vodu vypne hneď.
+    worker = null;
+    t = 61;
+    s.minuta();
+    assert.equal(s.z.output, false);
+    // Ručný režim: hranicu nestráži.
+    worker = { code: 200, body: '{"zapni":true,"rucne":true,"maxC":60,"minC":55}' };
+    s.z.output = true;
+    s.minuta();
+    s.minuta();
+    assert.equal(s.z.output, true);
+});

@@ -27,6 +27,33 @@ export function adresaTeplomera(t) {
     return `http://admin:${heslo}@${ip}/rpc/Temperature.GetStatus?id=${BOJLER.teplomerId}`;
 }
 
+/** Bez Workera počká BOJLER.tichoMin minút a vypne, s ním poslúchne (v ručnom režime nikdy neprepína). */
+const BEZ_HRANICE = [
+    '        if (zapni === null) {',
+    '            ticho = ticho + 1;',
+    '            if (ticho < TICHO || rucne) return;',
+    '            zapni = false;',
+    '        } else {',
+    '            ticho = 0;',
+    '        }',
+];
+
+/**
+ * S hranicou teploty (docs/navrhy/bojler-hranica.html): nahriatu vodu (`nad`) vypne hneď a nepustí, aj keď Worker povie
+ * zapni, aj keď mlčí. V ručnom režime ani tak neprepína.
+ */
+const HRANICA_ROZHODNUTIE = [
+    '        if (zapni === null) {',
+    '            ticho = ticho + 1;',
+    '            if (rucne) return;',
+    '            if (ticho < TICHO && !nad) return;',
+    '            zapni = false;',
+    '        } else {',
+    '            ticho = 0;',
+    '            if (nad) zapni = false;',
+    '        }',
+];
+
 /**
  * Funkcia, ktorá zásuvku nahlási Workerovi a poslúchne ho. S teplomerom dostane teplotu (`t`, null keď ju nemá).
  * @param {boolean} sTeplotou
@@ -50,17 +77,17 @@ function hlasenie(sTeplotou) {
         '                var o = JSON.parse(res.body);',
         '                zapni = o.zapni === true;',
         '                rucne = o.rucne === true;',
+        ...(sTeplotou
+            ? [
+                  "                maxC = typeof o.maxC === 'number' ? o.maxC : null;",
+                  "                minC = typeof o.minC === 'number' ? o.minC : null;",
+              ]
+            : []),
         '            } catch (e) {',
         '                zapni = null;',
         '            }',
         '        }',
-        '        if (zapni === null) {',
-        '            ticho = ticho + 1;',
-        '            if (ticho < TICHO || rucne) return;',
-        '            zapni = false;',
-        '        } else {',
-        '            ticho = 0;',
-        '        }',
+        ...(sTeplotou ? HRANICA_ROZHODNUTIE : BEZ_HRANICE),
         "        if (!rucne && zapni !== sw.output) Shelly.call('Switch.Set', { id: 0, on: zapni });",
         '    });',
         '}',
@@ -80,6 +107,10 @@ const KROK_S_TEPLOTOU = [
     '                t = null;',
     '            }',
     '        }',
+    // To isté pravidlo ako strazVodu v shared/bojler-voda.js: od hranice nahriata, kým neklesne na minC.
+    '        if (t === null || maxC === null) nad = false;',
+    '        else if (t >= maxC) nad = true;',
+    '        else if (t <= minC) nad = false;',
     '        posli(t);',
     '    });',
     '}',
@@ -100,13 +131,26 @@ export function skriptBojlera(v) {
         `// a poslúchne. Keď ${BOJLER.tichoMin} minút nedostane odpoveď, vypne ho.`,
         '// V ručnom režime (prepínač v appke) bojler neprepína, len hlási, čo robí.',
         `// Prahy: zapni od ${v.zapKw} kW, vypni pod ${v.vypKw} kW prebytku. Zmeníš ich v appke.`,
-        ...(teplomer ? ['// Teplotu vody si pred každým hlásením prečíta z teplomera Shelly v domácej sieti.'] : []),
+        ...(teplomer
+            ? [
+                  '// Teplotu vody si pred každým hlásením prečíta z teplomera Shelly v domácej sieti.',
+                  '// Keď voda dosiahne hranicu nastavenú v appke, bojler vypne aj bez internetu.',
+              ]
+            : []),
         `var ADRESA = '${v.url}';`,
         `var PECAT = '${v.pecat}';`,
         `var ZAP = ${v.zapKw};`,
         `var VYP = ${v.vypKw};`,
         `var TICHO = ${BOJLER.tichoMin};`,
-        ...(teplomer ? [`var TEPLOMER = '${teplomer}';`, `var TEPLOMER_S = ${BOJLER.teplomerS};`] : []),
+        ...(teplomer
+            ? [
+                  `var TEPLOMER = '${teplomer}';`,
+                  `var TEPLOMER_S = ${BOJLER.teplomerS};`,
+                  'var maxC = null;',
+                  'var minC = null;',
+                  'var nad = false;',
+              ]
+            : []),
         'var ticho = 0;',
         'var rucne = false;',
         '',

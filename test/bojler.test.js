@@ -159,8 +159,8 @@ test('zmena ohrevu pre oznámenie: zapol, vypol a prečo; bez zmeny či prvé hl
     assert.equal(zmenaOhrevu(null, b(1, true, 2000)), null);
     assert.equal(zmenaOhrevu(b(1, true, 2000), b(2, true, 1900)), null);
     assert.equal(zmenaOhrevu(b(1, false, 0), b(2, true, 10)), null, 'relé zapnuté, ale voda nahriata - nehreje');
-    assert.deepEqual(zmenaOhrevu(b(1, false, 0), b(2, true, 2000)), { zapol: true, dovod: 'appka', kw: 2.4 });
-    assert.deepEqual(zmenaOhrevu(b(1, true, 2000), b(2, false, 0)), { zapol: false, dovod: 'appka', kw: 2.4 });
+    assert.deepEqual(zmenaOhrevu(b(1, false, 0), b(2, true, 2000)), { zapol: true, dovod: 'appka', kw: 2.4, hranica: null });
+    assert.deepEqual(zmenaOhrevu(b(1, true, 2000), b(2, false, 0)), { zapol: false, dovod: 'appka', kw: 2.4, hranica: null });
     assert.equal(zmenaOhrevu(b(1, true, 2000), b(2, true, 20))?.dovod, 'termostat');
     assert.equal(zmenaOhrevu(b(1, true, 20), b(2, true, 2000))?.dovod, 'termostat');
     assert.equal(zmenaOhrevu(b(1, false, 0, true), b(2, true, 2000, true))?.dovod, 'rucne');
@@ -175,4 +175,29 @@ test('stav dlaždice: mlčí, hreje, nahriata, čaká', () => {
     assert.equal(bojlerStav({ ...b, rele: false }, T0), 'caka');
     assert.equal(bojlerStav({ ...b, rele: false, rucne: true }, T0), 'vypnuty');
     assert.equal(bojlerStav(b, T0 + 16 * MIN), 'mlci');
+});
+
+test('hranica teploty (docs/navrhy/bojler-hranica.html): nahriatu vodu nepustí, stav je nahriata, oznámenie s hranicou', () => {
+    const v = { rele: false, w: 0, sietKw: 3, meranieAt: T0, now: T0, prahy: PRAHY };
+    // Dve merania nad prahom by zaplo - s nahriatou vodou nie.
+    const p1 = rozhodni(PAMAT_ZACIATOK, v).pamat;
+    const nad = { ...v, meranieAt: T0 + 5 * MIN, now: T0 + 20 * MIN };
+    assert.equal(rozhodni(p1, nad).zapni, true);
+    assert.equal(rozhodni(p1, { ...nad, nahriata: true }).zapni, false);
+    // Hreje a voda dosiahla hranicu: vypne hneď, aj pred minimálnym behom.
+    const hreje = rozhodni(PAMAT_ZACIATOK, { ...v, rele: true, w: 2200 }).pamat;
+    assert.equal(rozhodni(hreje, { ...v, rele: true, w: 2200, now: T0 + MIN, nahriata: true }).zapni, false);
+    // V ručnom režime hranica nič neprepína.
+    assert.equal(rozhodni(hreje, { ...v, rele: true, w: 2200, now: T0 + MIN, nahriata: true, rucne: true }).zapni, true);
+    const b = { kontaktAt: T0, rele: false, w: 0, prebytokKw: 2.5, prahy: PRAHY, den: null, rucne: false };
+    assert.equal(bojlerStav({ ...b, nahriata: true, hranica: 60 }, T0), 'hotovo');
+    const stary = { ...b, rele: true, w: 2200 };
+    assert.deepEqual(zmenaOhrevu(stary, { ...b, kontaktAt: T0 + MIN, nahriata: true, hranica: 60 }), {
+        zapol: false,
+        dovod: 'hranica',
+        kw: 2.5,
+        hranica: 60,
+    });
+    // Už bola nahriata (napr. ručne zapnutá a vypnutá): dôvod nie je hranica.
+    assert.equal(zmenaOhrevu({ ...stary, nahriata: true }, { ...b, kontaktAt: T0 + MIN, nahriata: true, hranica: 60 })?.dovod, 'appka');
 });

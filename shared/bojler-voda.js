@@ -57,17 +57,45 @@ export const vodaTeraz = (b, nowMs) => (b.voda && nowMs - b.voda.at <= BOJLER.ti
 /** Teplota ako „68 °C“. @param {number} t */
 export const stupne = (t) => `${Math.round(t)} °C`;
 
+/**
+ * Hranica teploty (docs/navrhy/bojler-hranica.html): celé °C od BOJLER.vodaMinC do BOJLER.vodaMaxC, inak null (nie je).
+ * @param {unknown} h @returns {number | null}
+ */
+export const hranicaZ = (h) => (typeof h === 'number' && Number.isInteger(h) && h >= BOJLER.vodaMinC && h <= BOJLER.vodaMaxC ? h : null);
+
+/**
+ * Hranica o krok vyššie (`smer` 1) či nižšie (-1): z vypnutej nahor BOJLER.vodaStartC, pod BOJLER.vodaMinC vypnutá.
+ * @param {number | null} h @param {1 | -1} smer @returns {number | null}
+ */
+export function posunHranicu(h, smer) {
+    if (h === null) return smer > 0 ? BOJLER.vodaStartC : null;
+    if (smer < 0 && h <= BOJLER.vodaMinC) return null;
+    return Math.min(BOJLER.vodaMaxC, h + smer);
+}
+
+/**
+ * Stráženie hranice: je voda nahriata na hranicu? Od hranice áno, kým neklesne na hranicu mínus BOJLER.vodaHystC; medzi
+ * tým ostáva, ako bolo (`nad`). Bez hranice či bez teploty (teplomer mlčí) nie - vtedy stráži len termostat. To isté
+ * pravidlo má skript zásuvky (shared/bojler-skript.js), aby strážil aj bez Workera.
+ * @param {boolean} nad @param {number | null} t @param {number | null} hranica
+ */
+export function strazVodu(nad, t, hranica) {
+    if (hranica === null || t === null) return false;
+    if (t >= hranica) return true;
+    return t > hranica - BOJLER.vodaHystC && nad;
+}
+
 // Krivka: šírka = minúty dňa / 5, výška v jednotkách viewBoxu; medzera dlhšia ako MEDZERA_MIN preruší čiaru.
 const W = 288;
 const H = 96;
 const MEDZERA_MIN = 20;
 
 /**
- * Krivka teploty dnes v paneli Bojler dnes (P1): úseky čiary a plochy pod ňou vo viewBoxe W × H, čiara cieľa
- * `cielC`, bod teraz s teplotou, popisky hodín a veta pre čítačku. Menej ako dva body null.
- * @param {Array<[number, number]>} teploty [minúta dňa, °C] @param {number} cielC
+ * Krivka teploty dnes v paneli Bojler dnes (P1): úseky čiary a plochy pod ňou vo viewBoxe W × H, čiara hranice
+ * (`hranica`, bez nej nie je), bod teraz s teplotou, popisky hodín a veta pre čítačku. Menej ako dva body null.
+ * @param {Array<[number, number]>} teploty [minúta dňa, °C] @param {number | null} hranica
  */
-export function krivkaVody(teploty, cielC) {
+export function krivkaVody(teploty, hranica) {
     if (teploty.length < 2) return null;
     const hodnoty = teploty.map(([, t]) => t);
     const dole = Math.min(30, Math.floor((Math.min(...hodnoty) - 2) / 5) * 5);
@@ -86,7 +114,7 @@ export function krivkaVody(teploty, cielC) {
         h: H,
         ciary: useky.map(ciara),
         plochy: useky.map((u) => `${ciara(u)}L${x(u[u.length - 1][0])} ${H}L${x(u[0][0])} ${H}Z`),
-        ciel: cielC > dole && cielC < hore ? { y: y(cielC), text: stupne(cielC) } : null,
+        ciel: hranica !== null && hranica > dole && hranica < hore ? { y: y(hranica), text: `hranica ${stupne(hranica)}` } : null,
         bod: { x: x(mPosl), y: y(tPosl), text: stupne(tPosl) },
         ticks: [0, 6, 12, 18, 24].map((h) => ({ at: Math.round((h / 24) * 10000) / 100, label: String(h) })),
         popis: `Teplota vody dnes od ${fmt1(Math.min(...hodnoty))} do ${fmt1(Math.max(...hodnoty))} °C, naposledy ${fmt1(tPosl)} °C.`,

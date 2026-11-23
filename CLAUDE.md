@@ -77,8 +77,11 @@ Teplomer vo vode (`docs/navrhy/bojler-teplota.html`, B2 + T1 + P1 + N2, 23. 11. 
 v domácej sieti (snímač `temperature:100`, heslo zapnuté). Teplotu číta skript zásuvky (`HTTP.GET` s `admin:heslo@` v adrese)
 a posiela ju ako `t` s hlásením; bez teplomera je skript bajtovo ten istý ako predtým. Worker drží poslednú (`voda` v `b:`)
 a bod každých 5 minút za 7 dní (`bt:`, `shared/bojler-voda.js`), appke dá dnešné body (`teploty`). Heslo teplomera appka
-neukladá, len adresu (`teplomer-v1`). Hranica teploty zatiaľ len kreslí čiaru (`BOJLER.vodaCielC`); termostat na bojleri je
-nastavený vyššie ako poistka.
+neukladá, len adresu (`teplomer-v1`). Hranica teploty (`docs/navrhy/bojler-hranica.html`, možnosť 2 + H2 + D1): nastavuje sa
+v Nastavení („Hriať do“, kým nie je, hreje sa po termostat), drží ju Worker (`bh:`, `/bojler-hranica`) a posiela zásuvke
+(`maxC`, `minC` = hranica - `BOJLER.vodaHystC`). Pravidlo `strazVodu` (`shared/bojler-voda.js`) má Worker aj skript zásuvky,
+ktorý ho stráži aj bez internetu; bez teploty hranica nič nebráni. V ručnom režime ju nestráži nikto. Termostat na bojleri
+je nastavený vyššie ako poistka.
 
 ## Spotrebič beží
 

@@ -11,6 +11,7 @@ import {
     WORKER_BEZI_URL,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_REZIM_URL,
+    WORKER_BOJLER_HRANICA_URL,
     WORKER_BOJLER_STAV_URL,
     WORKER_HISTORIA_URL,
     WORKER_PRIPOJ_URL,
@@ -128,6 +129,22 @@ export async function spolocneBehy(pecat, d, zmeny, fetchImpl = fetch) {
         const res = await postWorker(WORKER_BEZI_URL, JSON.stringify({ pecat, d, zmeny }), fetchImpl);
         const body = res.ok ? await res.json() : null;
         return isObj(body) && Array.isArray(body.bezi) ? body.bezi : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Hranica teploty vody (Worker `/bojler-hranica`, docs/navrhy/bojler-hranica.html): °C alebo null - bez hranice. Vráti
+ * stav bojlera s ňou (`bojler` null, keď sa zásuvka ešte neozvala), alebo null, keď sa uložiť nepodarilo.
+ * @param {string} pecat zapečatený prístup tejto appky @param {number | null} hranica @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ bojler: import('../shared/bojler.js').BojlerInfo | null } | null>}
+ */
+export async function ulozHranicuBojlera(pecat, hranica, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_BOJLER_HRANICA_URL, JSON.stringify({ pecat, hranica }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) && body.ok === true ? { bojler: bojlerInfoZ(body.bojler) } : null;
     } catch {
         return null;
     }

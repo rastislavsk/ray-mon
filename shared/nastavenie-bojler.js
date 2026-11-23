@@ -4,7 +4,7 @@
 
 import { BOJLER } from './config.js';
 import { bojlerStav } from './bojler.js';
-import { stupne, vodaTeraz } from './bojler-voda.js';
+import { posunHranicu, stupne, vodaTeraz } from './bojler-voda.js';
 import { fmt1, minutesToTimeStr } from './format.js';
 import { polite } from './messages-core.js';
 import { localDateKey, localMinutes } from './solar.js';
@@ -78,6 +78,19 @@ export const BOJLER_TEXTS = {
         pozn: 'Heslo appka neuloží, ide len do skriptu zásuvky.',
         chyba: /** @type {[string, string]} */ (['Doplň adresu a heslo teplomera.', 'Doplňte adresu a heslo teplomera.']),
     },
+    /** Hranica teploty (docs/navrhy/bojler-hranica.html, H2 + D1). */
+    hranica: {
+        label: 'Hriať do',
+        vypnuta: 'vypnutá',
+        bez: 'hreje až po termostat',
+        znova: (/** @type {string} */ t) => `znova zapne pod ${t}`,
+        menej: 'Hriať do: menej',
+        viac: 'Hriať do: viac',
+        chyba: /** @type {[string, string]} */ ([
+            'Hranicu sa nepodarilo uložiť, skús znova.',
+            'Hranicu sa nepodarilo uložiť, skúste znova.',
+        ]),
+    },
     kroky: /** @type {Array<[string, string]>} */ ([
         [
             'V prehliadači otvor zásuvku cez jej adresu v domácej sieti a choď do Scripts › Create script.',
@@ -130,9 +143,51 @@ function stavTeplomera(b, on, now, tz) {
 }
 
 /**
+ * Riadok Hriať do: hodnota, čo z nej plynie a či sa dá ísť nižšie a vyššie (posunHranicu). Len keď sa zásuvka už ozvala -
+ * hranicu drží Worker pri jej stave.
+ * @param {BojlerInfo | null} b @param {'uklada' | 'chyba' | null} stav @param {(t: string | [string, string]) => string} v
+ */
+function riadokHranice(b, stav, v) {
+    if (!b) return null;
+    const T = BOJLER_TEXTS.hranica;
+    const h = b.hranica ?? null;
+    return {
+        label: T.label,
+        small: h === null ? T.bez : T.znova(stupne(h - BOJLER.vodaHystC)),
+        value: h === null ? T.vypnuta : stupne(h),
+        menej: h !== null && stav !== 'uklada',
+        viac: posunHranicu(h, 1) !== h && stav !== 'uklada',
+        menejL: T.menej,
+        viacL: T.viac,
+        chyba: stav === 'chyba' ? v(T.chyba) : '',
+    };
+}
+
+/**
+ * Teplomer v sekcii bojlera: prepínač so stavom teploty, adresa, heslo a hranica teploty.
+ * @param {BojlerInfo | null} b @param {Teplomer} tp
+ * @param {{ now: Date, site: { timezone: string }, bojlerHranica?: 'uklada' | 'chyba' | null }} s
+ * @param {(t: string | [string, string]) => string} v
+ */
+function teplomerSekcia(b, tp, s, v) {
+    const T = BOJLER_TEXTS.teplomer;
+    return {
+        label: T.label,
+        small: stavTeplomera(b, tp.on, s.now, s.site.timezone),
+        on: tp.on,
+        ip: tp.ip,
+        ipLabel: T.ip,
+        hesloLabel: T.heslo,
+        pozn: T.pozn,
+        hranica: riadokHranice(b, s.bojlerHranica ?? null, v),
+    };
+}
+
+/**
  * Sekcia bojlera, alebo null, keď sa riadiť nedá (iný zdroj merania, bojler nie je doma).
  * @param {{ zdroj: { sposob: string } | null, doma: readonly string[], bojler: BojlerInfo | null, bojlerPrahy: Prahy,
- *   bojlerSkript: BojlerSkript, now: Date, site: { timezone: string }, voice: import('./messages-core.js').Voice, teplomer?: Teplomer }} s
+ *   bojlerSkript: BojlerSkript, now: Date, site: { timezone: string }, voice: import('./messages-core.js').Voice, teplomer?: Teplomer,
+ *   bojlerHranica?: 'uklada' | 'chyba' | null }} s
  */
 export function bojlerSekcia(s) {
     if (s.zdroj?.sposob !== 'huawei-northbound' || !s.doma.includes('bojler')) return null;
@@ -174,15 +229,7 @@ export function bojlerSekcia(s) {
         tlacidlo: v(T.tlacidlo),
         robim: sk.stav === 'robim',
         sprava: sprava ? { text: sprava, chyba: sk.stav === 'chyba' || sk.stav === 'teplomer' } : null,
-        teplomer: {
-            label: T.teplomer.label,
-            small: stavTeplomera(b, tp.on, s.now, s.site.timezone),
-            on: tp.on,
-            ip: tp.ip,
-            ipLabel: T.teplomer.ip,
-            hesloLabel: T.teplomer.heslo,
-            pozn: T.teplomer.pozn,
-        },
+        teplomer: teplomerSekcia(b, tp, s, v),
         skript: sk.stav === 'hotovo' && !sk.schranka ? sk.text : '',
         kroky: T.kroky.map(v),
     };

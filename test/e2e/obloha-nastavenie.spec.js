@@ -19,6 +19,7 @@ import {
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_STAV_URL,
     WORKER_BOJLER_REZIM_URL,
+    WORKER_BOJLER_HRANICA_URL,
     WORKER_BOJLER_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
@@ -1047,7 +1048,7 @@ test.describe('bojler na prebytky', () => {
         const teploty = /** @type {Array<[number, number]>} */ (
             Array.from({ length: 49 }, (_, i) => [teraz - (48 - i) * 5, 44 + (i / 48) * 8.4])
         );
-        const info = { ...BOJLER_INFO, rucne: false, voda: { t: 52.4, at: FIXED_NOW.getTime() - 60000 }, teploty };
+        const info = { ...BOJLER_INFO, rucne: false, voda: { t: 52.4, at: FIXED_NOW.getTime() - 60000 }, teploty, hranica: 60 };
         await page.addInitScript(() => {
             Object.defineProperty(navigator, 'clipboard', {
                 value: { writeText: (/** @type {string} */ t) => /** @type {any} */ ((window.__schranka = t), Promise.resolve()) },
@@ -1068,7 +1069,7 @@ test.describe('bojler na prebytky', () => {
         await expect(voda).toHaveAccessibleName(/** @type {NonNullable<typeof d.voda>} */ (d.voda).popis);
         await expect(voda.locator('.bj-voda-c')).toHaveCount(1);
         await expect(voda.locator('.bj-voda-t')).toHaveText('52 °C');
-        await expect(voda.locator('.bj-voda-ct')).toHaveText('55 °C');
+        await expect(voda.locator('.bj-voda-ct')).toHaveText('hranica 60 °C');
         expect((await new AxeBuilder({ page }).include('#tz-bojler-sheet').analyze()).violations).toEqual([]);
         await page.locator('#tz-bojler-sheet').screenshot({ path: test.info().outputPath('bojler-dnes.png') });
         await page.keyboard.press('Escape');
@@ -1090,6 +1091,18 @@ test.describe('bojler na prebytky', () => {
         );
         await page.locator('#ns-bojler-skript').click();
         await expect(page.locator('#ns-bojler-sprava')).toHaveText(BOJLER_TEXTS.teplomer.chyba[0]);
+        // H2 (docs/navrhy/bojler-hranica.html): Hriať do 60 °C, o krok vyššie ide Workeru.
+        /** @type {unknown[]} */ const hranice = [];
+        await page.route(WORKER_BOJLER_HRANICA_URL, (route) => {
+            const h = JSON.parse(route.request().postData() ?? '{}').hranica;
+            hranice.push(h);
+            return route.fulfill({ json: { ok: true, bojler: { ...info, hranica: h } } });
+        });
+        await expect(page.locator('#ns-hranica-v')).toHaveText('60 °C');
+        await expect(page.locator('#ns-hranica-small')).toHaveText('znova zapne pod 55 °C');
+        await page.locator('#ns-hranica-viac').click();
+        await expect(page.locator('#ns-hranica-v')).toHaveText('61 °C');
+        expect(hranice).toEqual([61]);
         await page.locator('#ns-teplomer-heslo').fill('Tajne-heslo1');
         await page.locator('#ns-bojler-skript').click();
         await expect(page.locator('#ns-bojler-sprava')).toHaveText(BOJLER_TEXTS.hotovo[0]);

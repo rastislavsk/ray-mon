@@ -503,7 +503,9 @@ export const TRASY_STORAGE_KEY = 'trasy-v1';
  * Zásuvka, ktorá sa neozvala `riadenyHod` hodín, bojler už neriadi - appka s ním radí ako predtým.
  * Teplomer vo vode (docs/navrhy/bojler-teplota.html, B2): zásuvka si pri každom hlásení prečíta teplotu zo Shelly
  * s Add-onom v domácej sieti (snímač `teplomerId`, najviac `teplomerS` sekúnd) a pošle ju Workerovi. Ten si drží
- * bod každých `vodaKrokMin` minút za `vodaDni` dní. `vodaCielC` je čiara na krivke teploty v paneli Bojler dnes.
+ * bod každých `vodaKrokMin` minút za `vodaDni` dní. Hranica teploty (docs/navrhy/bojler-hranica.html, možnosť 2 + H2 + D1):
+ * kým ju človek nenastaví, nie je. Nastavuje sa po 1 °C od `vodaMinC` do `vodaMaxC`, prvé zapnutie ponúkne `vodaStartC`.
+ * Pri hranici zásuvka bojler vypne a znova ho pustí až pod hranicou mínus `vodaHystC`.
  */
 export const BOJLER = {
     zapKw: 2.3,
@@ -522,7 +524,10 @@ export const BOJLER = {
     teplomerS: 5,
     vodaKrokMin: 5,
     vodaDni: 7,
-    vodaCielC: 55,
+    vodaMinC: 40,
+    vodaMaxC: 75,
+    vodaStartC: 55,
+    vodaHystC: 5,
 };
 
 /**
@@ -833,6 +838,8 @@ export const WORKER_BOJLER_PECAT_PATH = '/bojler-pecat';
 export const WORKER_BOJLER_PECAT_URL = new URL(WORKER_BOJLER_PECAT_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_REZIM_PATH = '/bojler-rezim';
 export const WORKER_BOJLER_REZIM_URL = new URL(WORKER_BOJLER_REZIM_PATH, WORKER_URL).href;
+export const WORKER_BOJLER_HRANICA_PATH = '/bojler-hranica';
+export const WORKER_BOJLER_HRANICA_URL = new URL(WORKER_BOJLER_HRANICA_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_STAV_PATH = '/bojler-stav';
 export const WORKER_BOJLER_STAV_URL = new URL(WORKER_BOJLER_STAV_PATH, WORKER_URL).href;
 /** História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. */

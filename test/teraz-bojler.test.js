@@ -241,3 +241,17 @@ test('teplomer (P1): krivka v paneli a plán s teplotou vody', () => {
     assert.equal(nedohreje.voda, null, 'bez bodov krivka nie je');
     assert.equal(bojlerDetail(info(), NOW, TZ, { zapne: null, dohreje: 900, nahriaty: false }).plan, 'Podľa plánu dohreje okolo 15:00.');
 });
+
+test('hranica teploty: nahriata na hranicu na dlaždici aj v paneli, čiara hranice na krivke', () => {
+    const voda = { t: 60.2, at: NOW.getTime() - MIN };
+    const b = info({ voda, rele: false, w: 0, nahriata: true, hranica: 60 });
+    const dl = bojlerDlazdica(b, NOW, TZ);
+    assert.deepEqual([dl.velky, dl.odr[0]], ['60 °C', 'nahriata na 60 °C']);
+    const teploty = /** @type {Array<[number, number]>} */ ([
+        [800, 58],
+        [805, 60.2],
+    ]);
+    const d = bojlerDetail({ ...b, teploty }, NOW, TZ);
+    assert.equal(d.pod, 'voda nahriata na 60 °C');
+    assert.equal(d.voda?.ciel?.text, 'hranica 60 °C');
+});
