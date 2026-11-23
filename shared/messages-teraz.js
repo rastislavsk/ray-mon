@@ -500,21 +500,15 @@ export function terazTodayText({ forecastKwh, doneKwh, measured }) {
 
 /**
  * Karta Kedy lepšie: dnes ešte silnejšie slnko (čas z heroModel) a najbližší silný deň z predpovede - podľa
- * triedy dňa (silnyDen v den-trieda.js). Veľká hodnota je kedy, veta k nej.
+ * triedy dňa (silnyDen v den-trieda.js). Veľká hodnota je kedy, krátky riadok k nej - je to polovica dlaždice
+ * (docs/navrhy/dnes-nizsie-dlazdice.html, D).
  * @param {{ wait: string | null, todayStrong: boolean, next: { name: string, kwh: number } | null }} d
  */
 export function dnesLepsieText({ wait, todayStrong, next }) {
     const name = next ? next.name.toLowerCase() : '';
-    const okolo = next ? `okolo ${Math.round(next.kwh)} kWh` : '';
-    if (wait)
-        return {
-            value: `o ${wait}`,
-            text: next ? `Dnes ešte silnejšie slnko. Najbližší silný deň: ${name}, ${okolo}.` : 'Dnes ešte silnejšie slnko.',
-        };
-    if (next) return { value: name, text: `Najbližší silný deň, ${okolo}.${todayStrong ? ' Aj dnešok je silný.' : ''}` };
-    return todayStrong
-        ? { value: 'dnes', text: 'Dnes je silný deň, ďalší taký v predpovedi nie je.' }
-        : { value: 'tento týždeň nie', text: 'Silný deň v predpovedi na týždeň nie je.' };
+    if (wait) return { value: `o ${wait}`, text: 'dnes ešte silnejšie' };
+    if (next) return { value: name, text: `~${Math.round(next.kwh)} kWh${todayStrong ? ', aj dnes' : ''}` };
+    return todayStrong ? { value: 'dnes', text: 'ďalší taký nebude' } : { value: 'nie', text: 'v týždni silný deň nie je' };
 }
 
 /** Počasie dňa slovom - ikona je len ozdoba, význam nesie toto slovo (karta 7 dní, Predpoveď na karte Dnes). @type {Record<import('./sky.js').SkyWeather, string>} */
@@ -554,14 +548,12 @@ export function dnesPopisText({ weather, zrazky }) {
 }
 
 /**
- * Karta Najviac slnka: najsilnejšia hodina dneška podľa predpovede.
- * @param {{ from: number, kw: number }} d minúta začiatku hodiny a výkon strechy v nej @param {import('./messages-zaklad.js').Voice} voice
+ * Karta Najviac slnka: najsilnejšia hodina dneška podľa predpovede - krátko, je to polovica dlaždice
+ * (docs/navrhy/dnes-nizsie-dlazdice.html, D). @param {{ from: number, kw: number }} d minúta začiatku hodiny a výkon strechy v nej
  */
-export function dnesSlnkoText({ from, kw }, voice) {
-    return {
-        value: `${hm(from)} – ${endHm(from + 60)}`,
-        text: `Strecha vtedy dá až ~${fmt1(kw)} kW. Auto alebo dve veci naraz ${polite(voice) ? 'dajte' : 'daj'} sem.`,
-    };
+export function dnesSlnkoText({ from, kw }) {
+    const h = Math.floor(from / 60);
+    return { value: `${h} – ${h + 1} h`, text: `až ~${fmt1(kw)} kW` };
 }
 
 /**

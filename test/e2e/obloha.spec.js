@@ -11,7 +11,6 @@ import {
     OLD_STORAGE_KEYS,
     PANELS,
     PLANT,
-    PREVIEW,
     SETTINGS_STORAGE_KEY,
     SITE,
     SITE_STORAGE_KEY,
@@ -23,30 +22,20 @@ import {
 } from '../../shared/config.js';
 import { MOZEM_WORDS } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
-import { cellAt, chartX, DAY_CHART, planCells } from '../../shared/day-chart.js';
+import { cellAt, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI, TERAZ_TEXTS } from '../../shared/messages-core.js';
+import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI } from '../../shared/messages-core.js';
 import { denVysvetlenie, dnesFaza, dnesKarty } from '../../shared/dnes-faza.js';
 import { dnesNeboModel } from '../../shared/dnes-nebo.js';
-import { grafModel, pocasieTeraz, terazModel } from '../../shared/teraz.js';
+import { pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
 import { buildForecast } from '../../shared/solar.js';
-import {
-    bigWords,
-    dazdKresba,
-    FIXED_NOW,
-    fixture,
-    fixtureData,
-    otvorGraf,
-    overHlavicku,
-    pvAt,
-    rozdielStavovehoRiadku,
-} from '../helpers.js';
+import { bigWords, dazdKresba, FIXED_NOW, fixture, fixtureData, overHlavicku, pvAt, rozdielStavovehoRiadku } from '../helpers.js';
 
 const { pv } = fixtureData();
 const weather = fixture('open-meteo.json');
@@ -176,19 +165,6 @@ test('obloha o 13:00 a o 21:00 má iné farby, tie isté ako výpočet v shared/
     await expect.poll(() => oblohaVStranke(page)).toEqual({ top: vecer.top, bottom: vecer.bottom, sky: vecer.weather });
     expect(vecer.top).not.toBe(poludnie.top);
     expect(vecer.bottom).not.toBe(poludnie.bottom);
-    expect(errors).toEqual([]);
-});
-
-test('pri zvolenom čase v grafe dňa ostáva obloha teraz - zvolený čas má vlastnú oblohu len panel', async ({ page }) => {
-    const errors = await openTeraz(page, { time: at('13:00') });
-    const teraz = ocakavanaObloha(at('13:00'));
-    await expect.poll(() => oblohaVStranke(page)).toEqual({ top: teraz.top, bottom: teraz.bottom, sky: teraz.weather });
-    await otvorGraf(page);
-    // Osem šípok po 15 minút: zvolený čas 15:00.
-    await page.locator('#gr-chart').focus();
-    for (let i = 0; i < 8; i++) await page.keyboard.press('ArrowRight');
-    await expect(page.locator('#gr-reset')).toBeVisible();
-    await expect.poll(() => oblohaVStranke(page)).toEqual({ top: teraz.top, bottom: teraz.bottom, sky: teraz.weather });
     expect(errors).toEqual([]);
 });
 
@@ -458,7 +434,7 @@ test('každý panel zdola má krížik Zavrieť', async ({ page }) => {
     await page.locator('#nav-nastavenie').click();
     await ocakavajKartu(page, 'nastavenie');
     const panely = await page.locator('dialog.sheet').evaluateAll((ds) => ds.map((d) => d.id));
-    expect(panely.length).toBeGreaterThanOrEqual(7);
+    expect(panely.length).toBeGreaterThanOrEqual(6);
     for (const id of panely) {
         await expect(page.locator(`#${id} .sheet-x`), `#${id} nemá krížik`).toHaveCount(1);
         await expect(page.locator(`#${id} .sheet-x`)).toHaveAttribute('aria-label', 'Zavrieť');
@@ -877,8 +853,9 @@ const modelKarty = (time, extra = {}, opts = {}) => {
 };
 
 /**
- * Čo karta Dnes ukazuje: výkon a čo je to za číslo hore a pás dlaždíc - Dnes, Veľké veci, Dnes zo strechy, večer
- * Zajtra a karty časti dňa. Každá dlaždica ako [druh, nadpis, hodnota či slovo, veta, štítok či prirovnania].
+ * Čo karta Dnes ukazuje: výkon a čo je to za číslo hore a pás dlaždíc - Dnes, Veľké veci, Zo strechy, večer
+ * Zajtra a karty časti dňa, po jednej či po dvoch na dlaždici. Každá karta ako [druh, nadpis, hodnota či slovo, veta,
+ * štítok či prirovnania].
  * @param {import('@playwright/test').Page} page
  */
 const kartaVStranke = (page) =>
@@ -888,32 +865,32 @@ const kartaVStranke = (page) =>
         return {
             nebo: vidno('#mz-nebo') ? [text(document, '#mz-kw'), text(document, '#mz-stav')] : null,
             karty: vidno('#mz-karty')
-                ? [...document.querySelectorAll('#mz-karty .karta')].map((el) => [
-                      el.getAttribute('data-kind'),
-                      text(el, '.glass-ttl, .k-otvor'),
-                      text(el, '.k-val, .k-popis, .k-slovo'),
-                      text(el, '.k-text, .k-teplo'),
-                      el.querySelector('.k-obl, .chip')?.textContent ??
-                          [...el.querySelectorAll('.eq b')].map((b) => b.textContent).join('|'),
-                  ])
+                ? [...document.querySelectorAll('#mz-karty .karta')].map((d) =>
+                      [...d.querySelectorAll('.cast')].map((el) => [
+                          el.getAttribute('data-kind'),
+                          text(el, '.glass-ttl'),
+                          text(el, '.k-val, .k-popis, .k-slovo'),
+                          text(el, '.k-text, .k-teplo'),
+                          el.querySelector('.chip')?.textContent ?? [...el.querySelectorAll('.eq b')].map((b) => b.textContent).join('|'),
+                      ]),
+                  )
                 : [],
         };
     });
 
 /** Dlaždica z modelu, ako ju ukazuje stránka. @param {import('../../shared/dnes-faza.js').Karta} k */
 const kartaZDlazdice = (k) => {
-    if (k.kind === 'graf') return [k.kind, `${k.title} – ${k.stitok}`, '', '', ''];
-    if (k.kind === 'predpoved')
-        return [k.kind, k.title, k.popis, `najnižšia ${k.min}najvyššia ${k.max}`, k.oblacnost === null ? '' : `oblačnosť${k.oblacnost} %`];
+    if (k.kind === 'predpoved') return [k.kind, k.title, k.popis, `najnižšia ${k.min}najvyššia ${k.max}`, ''];
     if (k.kind === 'dnes' || k.kind === 'zajtra') return [k.kind, k.title, k.word, k.text, k.chip];
-    if (k.kind === 'strecha') return [k.kind, k.title, k.value, k.text, k.eq.map((e) => e.value).join('|')];
+    if (k.kind === 'eq') return [k.kind, k.title, '', '', k.eq.map((e) => e.value).join('|')];
+    if (k.kind === 'oblacnost') return [k.kind, k.title, k.value, '', ''];
     return [k.kind, k.title, k.value, k.text, ''];
 };
 
 /** To isté z modelu - pás skladá appka tou istou funkciou (dnesKarty). @param {ReturnType<typeof modelKarty>} m */
 const kartaZModelu = (m) => ({
     nebo: m.nebo ? [`${m.nebo.kw}kW`, `${m.nebo.slovo}${m.nebo.cas}`] : null,
-    karty: m.ask ? [] : dnesKarty(m, m.faza).map(kartaZDlazdice),
+    karty: m.ask ? [] : dnesKarty(m, m.faza).map((d) => d.map(kartaZDlazdice)),
 });
 
 /** Dlaždica pásu karty Dnes podľa druhu. @param {import('@playwright/test').Page} page @param {string} kind */
@@ -973,6 +950,26 @@ test.describe('karta Dnes', () => {
             expect(errors).toEqual([]);
         }
     });
+
+    // Posuvník dňa stojí v tej istej výške ako stred poľa toku na karte Teraz a pás dlaždíc dostane výšku pod ním
+    // (docs/navrhy/dnes-nizsie-dlazdice.html, Z2). Prepnutie kariet tak posuvníkom ani poľom nepohne.
+    for (const size of [
+        { width: 360, height: 780 },
+        { width: 412, height: 915 },
+        { width: 320, height: 640 },
+    ])
+        test(`posuvník dňa vo výške poľa toku karty Teraz (${size.width} × ${size.height})`, async ({ page }) => {
+            await page.setViewportSize(size);
+            const errors = await openObloha(page, { time: at('13:00') });
+            const tok = await page.locator('#tz-tok').boundingBox();
+            await naDnes(page);
+            const ciara = await page.locator('#mz-os .mz-os-ciara').boundingBox();
+            const pas = await page.locator('#mz-karty .karta').first().boundingBox();
+            if (!tok || !ciara || !pas) throw new Error('pole toku, posuvník alebo dlaždica nie je vidno');
+            expect(Math.abs(ciara.y + ciara.height / 2 - (tok.y + tok.height / 2))).toBeLessThanOrEqual(1);
+            expect(Math.round(pas.height)).toBeGreaterThanOrEqual(124);
+            expect(errors).toEqual([]);
+        });
 
     test('posuvník dňa: iný čas ukáže jeho výkon a oblohu, odtlačok vráti bežec na teraz, iná karta tiež', async ({ page }) => {
         await page.setViewportSize({ width: 390, height: 800 });
@@ -1041,9 +1038,9 @@ test.describe('karta Dnes', () => {
         const errors = await openObloha(page, { time: at('13:00') });
         await naDnes(page);
         const karty = page.locator('#mz-karty .karta');
-        await expect(karty).toHaveCount(8);
+        await expect(karty).toHaveCount(5);
         const bodky = page.locator('#mz-bodky i');
-        await expect(bodky).toHaveCount(8);
+        await expect(bodky).toHaveCount(5);
         const spat = page.getByRole('button', { name: 'Predchádzajúca karta' });
         const dalej = page.getByRole('button', { name: 'Ďalšia karta' });
         const aktivna = () => bodky.evaluateAll((b) => b.findIndex((x) => x.hasAttribute('data-on')));
@@ -1062,7 +1059,7 @@ test.describe('karta Dnes', () => {
         await expect.poll(aktivna).toBe(1);
         // Posun pásu (ako prstom) rozsvieti bodku sám, na konci je šípka ďalej vypnutá.
         await page.locator('#mz-karty').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
-        await expect.poll(aktivna).toBe(7);
+        await expect.poll(aktivna).toBe(4);
         await expect(dalej).toBeDisabled();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
         // Zvislý ťah prstom cez pás posúva stránku.
@@ -1152,14 +1149,15 @@ test.describe('karta Dnes', () => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
             await naDnes(page);
-            // Dlaždica Dnes zo strechy je tretia v páse - posunie sa na ňu ako prstom.
-            const strecha = dlazdica(page, 'strecha');
+            // Dlaždica Zo strechy | Ako keby je tretia v páse - posunie sa na ňu ako prstom.
+            const dvojica = page.locator('#mz-karty .karta:has([data-kind="eq"])');
             await page
                 .locator('#mz-karty')
-                .evaluate((el, x) => el.scrollTo({ left: x }), await strecha.evaluate((el) => el.offsetLeft - 14));
-            await expect.poll(async () => Math.round((await strecha.boundingBox())?.x ?? -1)).toBe(14);
-            await expect(strecha.locator('.eq > li')).toHaveCount(3);
-            const cisla = await strecha.locator('.eq > li').evaluateAll((els) =>
+                .evaluate((el, x) => el.scrollTo({ left: x }), await dvojica.evaluate((el) => el.offsetLeft - 14));
+            await expect.poll(async () => Math.round((await dvojica.boundingBox())?.x ?? -1)).toBe(14);
+            const eq = dlazdica(page, 'eq');
+            await expect(eq.locator('.eq > li')).toHaveCount(3);
+            const cisla = await eq.locator('.eq > li').evaluateAll((els) =>
                 els.map((el) => {
                     const box = el.getBoundingClientRect();
                     return { text: el.textContent, ok: box.left >= 0 && box.right <= innerWidth && el.scrollWidth <= el.clientWidth + 0.5 };
@@ -1187,7 +1185,14 @@ test.describe('karta Dnes', () => {
                             ),
                         );
                         const box = el.getBoundingClientRect();
-                        return el.scrollWidth <= el.clientWidth + 0.5 && box.left >= 0 && box.right <= innerWidth;
+                        // Aj na výšku: slovo sa zmestí do nízkej dlaždice (docs/navrhy/dnes-nizsie-dlazdice.html).
+                        const cast = /** @type {HTMLElement} */ (el.closest('.cast'));
+                        return (
+                            el.scrollWidth <= el.clientWidth + 0.5 &&
+                            box.left >= 0 &&
+                            box.right <= innerWidth &&
+                            cast.scrollHeight <= cast.clientHeight + 1
+                        );
                     },
                     [word, wordSize(word)],
                 );
@@ -1449,39 +1454,6 @@ const coZModelu = (m) => {
 /** Minúta dňa pre čas „HH:MM“. @param {string} hm */
 const minuta = (hm) => Number(hm.slice(0, 2)) * 60 + Number(hm.slice(3));
 
-/**
- * Os grafu dňa tak, ako ju dal render do posúvača (chartRange v shared/day-chart.js).
- * @param {import('@playwright/test').Page} page
- */
-async function osGrafu(page) {
-    const graf = page.locator('#gr-chart');
-    const from = Number(await graf.getAttribute('aria-valuemin'));
-    return { from, to: Number(await graf.getAttribute('aria-valuemax')) + PREVIEW.keyStepMin };
-}
-
-/** Bod na grafe pre minútu dňa, v pixeloch okna (graf je nad ním posunutý do okna). @param {import('@playwright/test').Page} page @param {number} min */
-async function bodGrafu(page, min) {
-    await page.locator('#gr-chart').evaluate((e) => e.scrollIntoView({ block: 'center' }));
-    const box = await page.locator('#gr-chart svg').boundingBox();
-    if (!box) throw new Error('graf nie je vidno');
-    return { x: box.x + (chartX(min, await osGrafu(page)) / DAY_CHART.w) * box.width, y: box.y + box.height * 0.45 };
-}
-
-/**
- * Farba bunky pásu plánu pre minútu dňa, alebo null, keď minúta nie je na osi grafu (noc).
- * @param {import('@playwright/test').Page} page @param {number} min
- */
-async function farbaNaOsi(page, min) {
-    const bunka = page.locator(`#gr-chart rect[data-from="${Math.floor(min / 30) * 30}"]`);
-    return (await bunka.count()) ? bunka.getAttribute('data-tone') : null;
-}
-
-/** Čo má byť v páse v čase „teraz“: farba, alebo nič, keď je teraz mimo osi. @param {ReturnType<typeof grafModel>} g @param {string} tone */
-const naOsi = (g, tone) => (g?.chart.mark?.cell ? tone : null);
-
-/** Farba bunky pásu plánu, do ktorej padne minúta dňa. @param {import('@playwright/test').Page} page @param {number} min */
-const farbaPasu = (page, min) => page.locator(`#gr-chart rect[data-from="${Math.floor(min / 30) * 30}"]`).getAttribute('data-tone');
-
 test.describe('karta Teraz', () => {
     // Napoludnie slnko, podvečer lacná sieť, večerná špička drahá sieť, v noci lacná sieť;
     // ráno živé meranie ešte slabé, plán dňa už počíta so slnkom.
@@ -1502,16 +1474,8 @@ test.describe('karta Teraz', () => {
             expect(await rozmeryDlazdic(page)).toEqual({ vysky: m.co ? 1 : 0, nezarovnane: 0 });
             await expect(page.locator('#tz-retry')).toBeHidden();
             await expect(page.locator('#tz-guess')).toBeHidden();
-            // Graf dňa v paneli karty Dnes: pás pod krivkou má v čase „teraz“ farbu toho istého plánu dňa.
-            // V noci je „teraz“ mimo osi grafu (deň so slnkom) a bunku v páse nemá.
-            await otvorGraf(page);
-            const g = grafModel(vstup);
-            const ocakavana = cellAt(planCells(dayPlan(vstup)), minuta(hm)).tone;
-            if (tone) expect(ocakavana).toBe(tone);
-            expect(await farbaNaOsi(page, minuta(hm))).toBe(naOsi(g, ocakavana));
-            await expect(page.locator('#gr-chart')).toHaveAttribute('aria-valuetext', g?.den.citanie.veta ?? '');
-            await expect(page.locator('#gr-chart-desc')).toHaveText(g?.chart.desc ?? '');
-            await expect(page.locator('#gr-hint')).toHaveText(TERAZ_TEXTS.hint);
+            // Plán dňa v tej chvíli: farba pásma, s ktorou ráta aj čo zapnúť.
+            if (tone) expect(cellAt(planCells(dayPlan(vstup)), minuta(hm)).tone).toBe(tone);
             expect(errors).toEqual([]);
         });
     }
@@ -1795,161 +1759,6 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('krivka: nameraná krivka dneška je plná čiara cez predpoveď, hranica veľkých spotrebičov s popiskom a oblačnosť', async ({
-        page,
-    }) => {
-        const errors = await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        // Os je deň so slnkom (5–21): oblačnosť, bunky pásu a hodiny len v nej.
-        const graf = grafModel(vstupTeraz(at('13:00')))?.chart;
-        if (!graf) throw new Error('model nemá graf');
-        await expect(page.locator('#gr-chart .dc-cloud')).toHaveCount(graf.clouds.length);
-        expect(graf.clouds.length).toBe(16);
-        await expect(page.locator('#gr-chart .dc-fc')).toHaveCount(1);
-        await expect(page.locator('#gr-chart .dc-real')).toHaveCount(1);
-        await expect(page.locator('#gr-chart .dc-over')).toHaveCount(1);
-        await expect(page.locator('#gr-chart .dc-limit-t')).toHaveText('veľké spotrebiče');
-        await expect(page.locator('#gr-chart rect[data-from]')).toHaveCount(graf.cells.length);
-        await expect(page.locator('#gr-chart .dc-t')).toHaveText(['5', '9', '12', '15', '18', '21']);
-        await expect(page.locator('#gr-leg span')).toHaveText([
-            'výkon',
-            'predpoveď',
-            'veľké spotrebiče',
-            'slnko stačí',
-            'lacná sieť',
-            'drahá sieť',
-        ]);
-        expect(errors).toEqual([]);
-    });
-
-    test('graf dňa: hore výkon a odkiaľ je, vpravo čas - teraz aj zvolený; prepínač pás / krivka nie je', async ({ page }) => {
-        const time = at('13:00');
-        const errors = await openTeraz(page, { time });
-        await otvorGraf(page);
-        const teraz = /** @type {NonNullable<ReturnType<typeof grafModel>>} */ (grafModel(vstupTeraz(time))).den.citanie;
-        const zvolene = /** @type {NonNullable<ReturnType<typeof grafModel>>} */ (
-            grafModel(vstupTeraz(time, { previewMinutes: minuta('15:30') }))
-        ).den.citanie;
-        await expect(page.locator('#gr-den button[aria-pressed]')).toHaveCount(0);
-        await expect(page.locator('#gr-citanie > *')).toHaveText([`${teraz.kw}${teraz.zdroj}`, 'Teraz 13:00']);
-        await expect(page.locator('#gr-citanie .c-kw span')).toHaveText('živé meranie');
-        const bod = await bodGrafu(page, minuta('15:30'));
-        await page.mouse.click(bod.x, bod.y);
-        await expect(page.locator('#gr-citanie .c-cas')).toHaveText('15:30');
-        await expect(page.locator('#gr-citanie .c-kw b')).toHaveText(zvolene.kw);
-        await expect(page.locator('#gr-citanie .c-kw span')).toHaveText('odhad z predpovede');
-        await expect(page.locator('#gr-chart')).toHaveAttribute('aria-valuetext', zvolene.veta);
-        // Výkon vľavo, čas v pravom rohu v jednom riadku; čas je o štvrtinu menší.
-        const [kw, cas, hlava] = await page.evaluate(() =>
-            ['#gr-citanie .c-kw b', '#gr-citanie .c-cas', '#gr-citanie'].map((sel) => {
-                const r = /** @type {Element} */ (document.querySelector(sel)).getBoundingClientRect();
-                return {
-                    left: r.left,
-                    right: r.right,
-                    top: r.top,
-                    px: parseFloat(getComputedStyle(/** @type {Element} */ (document.querySelector(sel))).fontSize),
-                    pr: parseFloat(getComputedStyle(/** @type {Element} */ (document.querySelector(sel))).paddingRight),
-                };
-            }),
-        );
-        expect(kw.right).toBeLessThan(cas.left);
-        expect(Math.abs(kw.top - cas.top)).toBeLessThan(8);
-        // Vpravo od času je už len miesto pre krížik panelu.
-        expect(Math.abs(cas.right - (hlava.right - hlava.pr)), 'čas je pri pravom okraji').toBeLessThan(1);
-        expect(cas.px).toBeCloseTo(kw.px * 0.75, 1);
-        await page.getByRole('button', { name: 'Späť na teraz' }).click();
-        await expect(page.locator('#gr-citanie .c-cas')).toHaveText('Teraz 13:00');
-        expect(errors).toEqual([]);
-    });
-
-    test('kurzorom: ťahanie po krivke ukáže zvolený čas v grafe dňa, „Späť na teraz“ aj tlačidlo Späť ho zrušia', async ({ page }) => {
-        const errors = await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        const cas = page.locator('#gr-citanie .c-cas');
-        const z = await bodGrafu(page, minuta('10:00'));
-        const na = await bodGrafu(page, minuta('15:30'));
-        await page.mouse.move(z.x, z.y);
-        await page.mouse.down();
-        await page.mouse.move(na.x, na.y, { steps: 8 });
-        await page.mouse.up();
-        await expect(cas).toHaveText('15:30');
-        // Graf sa pod kurzorom nepohne (do pixela - test ho pred meraním znova vycentruje).
-        expect(Math.abs((await bodGrafu(page, minuta('15:30'))).y - na.y)).toBeLessThan(1);
-        await expect(page.locator('#gr-chart .dc-at-t')).toHaveText('15:30');
-        await expect(page.locator('#gr-chart .dc-cell-on')).toHaveAttribute('data-tone', (await farbaPasu(page, minuta('15:30'))) ?? '');
-        const spat = page.getByRole('button', { name: 'Späť na teraz' });
-        await spat.click();
-        await expect(cas).toHaveText('Teraz 13:00');
-        await expect(spat).toBeHidden();
-        await expect(page.locator('#gr-chart')).toBeFocused();
-
-        // Tlačidlo Späť v telefóne zavrie panel naraz, nech sa po grafe chodilo akokoľvek (posun aj
-        // „Späť na teraz“ nie sú kroky), a ďalšie vráti predošlú kartu - graf sa znovu neotvorí.
-        await page.mouse.click(z.x, z.y);
-        await page.mouse.click(na.x, na.y);
-        await expect(cas).toHaveText('15:30');
-        await page.goBack();
-        await expect(page.locator('#gr-sheet')).toBeHidden();
-        await ocakavajKartu(page, 'mozem');
-        await expect(page.locator('#mz-karty [data-kind="graf"] .k-otvor')).toBeFocused();
-        await page.goBack();
-        await ocakavajKartu(page, 'terazky');
-        await expect(page.locator('#gr-sheet')).toBeHidden();
-        // Graf sa otvorí znovu na teraz.
-        await page.goForward();
-        await ocakavajKartu(page, 'mozem');
-        await expect(page.locator('#gr-sheet')).toBeHidden();
-        // Karta Teraz zvolený čas nepozná - číslo a riadok stavu sú teraz.
-        await expect.poll(() => terazVStranke(page)).toEqual(terazZModelu(terazModel(vstupTeraz(at('13:00')))));
-        await expect(page.locator('#hdr-status')).toHaveText('13:00 · živé meranie');
-        expect(errors).toEqual([]);
-    });
-
-    test('panel s grafom: ťuknutie vedľa a Escape ho zavrú, otvorený graf ukáže vždy teraz', async ({ page }) => {
-        const errors = await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        await page.locator('#gr-chart').focus();
-        await page.keyboard.press('ArrowRight');
-        await expect(page.locator('#gr-citanie .c-cas')).toHaveText('13:15');
-        // Ťuknutie na stmavenú stránku nad panelom.
-        await page.mouse.click(20, 20);
-        await expect(page.locator('#gr-sheet')).toBeHidden();
-        await otvorGraf(page);
-        await expect(page.locator('#gr-citanie .c-cas')).toHaveText('Teraz 13:00');
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#gr-sheet')).toBeHidden();
-        await ocakavajKartu(page, 'mozem');
-        expect(errors).toEqual([]);
-    });
-
-    test('klávesnica: šípky posúvajú čas po štvrťhodinách, Home a End na kraje dňa, Escape vráti teraz', async ({ page }) => {
-        const errors = await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        const graf = page.getByRole('slider', { name: 'Deň, šípkami si pozrieš iný čas' });
-        const hodnota = (/** @type {string} */ hm) =>
-            grafModel(vstupTeraz(at('13:00'), { previewMinutes: hm === 'teraz' ? null : minuta(hm) }))?.den.citanie.veta ?? '';
-        await graf.focus();
-        await page.keyboard.press('ArrowRight');
-        await expect(graf).toHaveAttribute('aria-valuetext', hodnota('13:15'));
-        await expect(page.locator('#gr-chart .dc-at-t')).toHaveText('13:15');
-        await page.keyboard.press('ArrowLeft');
-        await page.keyboard.press('ArrowLeft');
-        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('12:45')));
-        // Home a End na kraje osi: deň so slnkom, nie polnoc.
-        await page.keyboard.press('End');
-        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('20:45')));
-        await page.keyboard.press('Home');
-        await expect(graf).toHaveAttribute('aria-valuenow', String(minuta('05:00')));
-        // Escape najprv vráti teraz a panel nechá otvorený, druhý panel zavrie.
-        await page.keyboard.press('Escape');
-        await expect(graf).toHaveAttribute('aria-valuetext', hodnota('teraz'));
-        await expect(page.locator('#gr-reset')).toBeHidden();
-        await expect(page.locator('#gr-sheet')).toBeVisible();
-        await page.keyboard.press('Escape');
-        await expect(page.locator('#gr-sheet')).toBeHidden();
-        expect(errors).toEqual([]);
-    });
-
     test('bez merania: biely pás pod číslom povie, že je to odhad, a vedie do Nastavenia', async ({ page }) => {
         const errors = await openObloha(page, { time: at('13:00'), settings: { ...OWNER, zdroj: null } });
         await page.locator('#nav-terazky').click();
@@ -2063,12 +1872,8 @@ test.describe('karta Teraz', () => {
         await expect(page.locator('#tz-co')).toBeVisible();
     });
 
-    test('prístupnosť: žiadne závažné nálezy axe v grafe so zvoleným časom ani bez dát', async ({ page }) => {
+    test('prístupnosť: žiadne závažné nálezy axe na Teraz ani bez dát', async ({ page }) => {
         await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        await page.locator('#gr-chart').focus();
-        await page.keyboard.press('ArrowRight');
-        await expect(page.locator('#gr-reset')).toBeVisible();
         expect(await vazneNalezy(page)).toEqual([]);
         await openTeraz(page, { offline: true });
         expect(await vazneNalezy(page)).toEqual([]);
@@ -2088,44 +1893,48 @@ async function prstTah(page, { x, y, dx = 0, dy = 0, krokMs = 40 }) {
     await cdp.detach();
 }
 
-test.describe('graf dňa prstom', () => {
+test.describe('posuvník dňa prstom', () => {
     test.use({ hasTouch: true });
 
-    test('ťuknutie bez pohybu ukáže náhľad a nechá ho svietiť', async ({ page }) => {
+    /** Bod na posuvníku dňa pre minútu dňa, v pixeloch okna. @param {import('@playwright/test').Page} page @param {number} min */
+    const bodOsi = async (page, min) => {
+        const box = await page.locator('#mz-os').boundingBox();
+        if (!box) throw new Error('posuvník nie je vidno');
+        return { x: box.x + (box.width * min) / 1440, y: box.y + 20 };
+    };
+
+    test('ťuknutie bez pohybu presunie bežec a nechá ho tam', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
-        const errors = await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        const bod = await bodGrafu(page, minuta('16:00'));
-        await prst(page, bod);
-        await expect(page.locator('#gr-chart .dc-at-t')).toHaveText('16:00');
+        const errors = await openObloha(page, { time: at('13:00') });
+        await naDnes(page);
+        await prst(page, await bodOsi(page, minuta('16:00')));
+        await expect(page.locator('#mz-stav span')).toHaveText('16:00');
         await page.waitForTimeout(2000);
-        await expect(page.locator('#gr-chart .dc-at-t')).toHaveText('16:00');
-        await expect(page.locator('#gr-citanie .c-cas')).toHaveText('16:00');
-        await expect(page.locator('#gr-sheet')).toBeVisible();
+        await expect(page.locator('#mz-stav span')).toHaveText('16:00');
+        await expect(page.locator('#mz-odtlacok')).toBeVisible();
         expect(errors).toEqual([]);
     });
 
-    test('zvislý ťah cez graf náhľad neukáže', async ({ page }) => {
+    test('zvislý ťah cez posuvník čas nezmení', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
-        const errors = await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        const bod = await bodGrafu(page, minuta('12:00'));
-        await prst(page, { ...bod, dy: 160 });
+        const errors = await openObloha(page, { time: at('13:00') });
+        await naDnes(page);
+        await prst(page, { ...(await bodOsi(page, minuta('09:00'))), dy: 160 });
         await page.waitForTimeout(300);
-        await expect(page.locator('#gr-hint')).toHaveText('Ťahaj prstom po grafe a pozri si iný čas.');
-        await expect(page.locator('#gr-reset')).toBeHidden();
+        await expect(page.locator('#mz-os')).toHaveAttribute('aria-valuenow', String(minuta('13:00')));
+        await expect(page.locator('#mz-odtlacok')).toBeHidden();
         expect(errors).toEqual([]);
     });
 
-    test('rýchly vodorovný ťah po grafe ukazuje náhľad a kartu neprelistuje', async ({ page }) => {
+    test('rýchly vodorovný ťah po posuvníku posunie čas a kartu neprelistuje', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
-        const errors = await openTeraz(page, { time: at('13:00') });
-        await otvorGraf(page);
-        const bod = await bodGrafu(page, minuta('16:00'));
-        const ciel = await bodGrafu(page, minuta('09:00'));
+        const errors = await openObloha(page, { time: at('13:00') });
+        await naDnes(page);
+        const bod = await bodOsi(page, minuta('16:00'));
+        const ciel = await bodOsi(page, minuta('09:00'));
         // Švihnutie doľava ako pri listovaní kariet: rýchle a ďaleko.
         await prstTah(page, { ...bod, dx: ciel.x - bod.x, krokMs: 20 });
-        await expect(page.locator('#gr-chart .dc-at-t')).toHaveText('09:00');
+        await expect(page.locator('#mz-stav span')).toHaveText('09:00');
         await page.waitForTimeout(300);
         await ocakavajKartu(page, 'mozem');
         expect(errors).toEqual([]);
@@ -2159,9 +1968,7 @@ test.describe('karta Dnes po kontrole kroku 2', () => {
 });
 
 for (const width of [390, 320]) {
-    test(`karta Teraz a graf dňa na šírke ${width} px: nič nepretečie, číslo, dlaždice aj legenda sú celé, tlačidlá aspoň 44 px`, async ({
-        page,
-    }) => {
+    test(`karta Teraz a Dnes na šírke ${width} px: nič nepretečie, číslo a dlaždice sú celé, tlačidlá aspoň 44 px`, async ({ page }) => {
         await page.setViewportSize({ width, height: 800 });
         const errors = await openTeraz(page, { time: at('13:00') });
         /** Prvky, ktoré trčia z obrazovky. @param {string[]} sels */
@@ -2198,13 +2005,17 @@ for (const width of [390, 320]) {
                 .map((b) => b.textContent),
         );
         expect(zlomene).toEqual([]);
-        // Graf dňa v paneli karty Dnes.
-        await otvorGraf(page);
-        await page.locator('#gr-chart').focus();
-        await page.keyboard.press('ArrowRight');
-        await expect(page.locator('#gr-reset')).toBeVisible();
-        expect(await trcia(['#gr-den', '#gr-chart', '#gr-leg', '#gr-reset']), 'tieto prvky trčia z obrazovky').toEqual([]);
-        expect((await page.locator('#gr-reset').boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+        // Karta Dnes: v nízkych dlaždiciach (aj v polovici dvojice) sa nič neoreže (docs/navrhy/dnes-nizsie-dlazdice.html).
+        await page.locator('#nav-mozem').click();
+        await ocakavajKartu(page, 'mozem');
+        const pretecie = await page
+            .locator('#mz-karty .cast')
+            .evaluateAll((els) =>
+                els
+                    .filter((e) => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)
+                    .map((e) => e.getAttribute('data-kind')),
+            );
+        expect(pretecie, 'tieto karty v dlaždici pretečú').toEqual([]);
         expect(errors).toEqual([]);
     });
 }
@@ -2753,10 +2564,9 @@ test.describe('počasie v pozadí karty Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    for (const sel of ['#wx', '#gr-wx'])
+    for (const sel of ['#wx'])
         test(`dážď v štyroch silách (${sel}): každá má svoje kvapky, mrholenie bez blízkych`, async ({ page }) => {
             const errors = await openTeraz(page, { time: at('13:00') });
-            if (sel === '#gr-wx') await otvorGraf(page);
             await page.locator(sel).scrollIntoViewIfNeeded();
             const kresby = [];
             for (const sila of ['mrholenie', 'slaby', 'dazd', 'silny']) kresby.push(await dazdKresba(page, sila, sel));
@@ -2765,40 +2575,6 @@ test.describe('počasie v pozadí karty Teraz', () => {
             expect(new Set(kresby.map((k) => k[0])).size).toBe(4);
             expect(errors).toEqual([]);
         });
-
-    test('graf dňa: obloha zvoleného času - farby neba a počasie v tej chvíli, pozadie ostáva teraz', async ({ page }) => {
-        const time = at('13:00');
-        const errors = await openTeraz(page, { time });
-        await otvorGraf(page);
-        const den = page.locator('#gr-den');
-        const farby = () => den.evaluate((el) => [el.style.getPropertyValue('--d1'), el.style.getPropertyValue('--d2')]);
-        const ocakavane = (/** @type {number | null} */ min) => {
-            const v = vstupTeraz(time, { pv, previewMinutes: min });
-            const s = skyNow(v, true, pocasieTeraz(v));
-            return { farby: [s.top, s.bottom], wx: pocasieStav(/** @type {any} */ (pocasieTeraz(v))) };
-        };
-        await expect(den).toHaveClass(/\bnebo\b/);
-        await expect.poll(farby).toEqual(ocakavane(null).farby);
-        await expect(page.locator('#gr-wx')).toHaveAttribute('data-wx', ocakavane(null).wx);
-        const pozadie = await oblohaVStranke(page);
-        // 22:30 cez End a šípky nejde (os končí so slnkom) - 20:45 je posledná štvrťhodina osi.
-        await page.locator('#gr-chart').focus();
-        await page.keyboard.press('End');
-        await expect.poll(farby).toEqual(ocakavane(minuta('20:45')).farby);
-        await expect(page.locator('#gr-wx')).toHaveAttribute('data-wx', ocakavane(minuta('20:45')).wx);
-        expect(await oblohaVStranke(page)).toEqual(pozadie);
-        // Vypnutá živá obloha: panel je tmavý bez kresby.
-        await page.evaluate(
-            ([k, v]) => localStorage.setItem(k, v),
-            [LOOK_STORAGE_KEY, JSON.stringify(lookToStored({ voice: 'drzy', liveSky: false }))],
-        );
-        await page.reload();
-        await appReady(page);
-        await otvorGraf(page);
-        await expect(den).not.toHaveClass(/\bnebo\b/);
-        await expect(page.locator('#gr-wx')).toBeHidden();
-        expect(errors).toEqual([]);
-    });
 
     test('v noci bez slnka, Mesiac len tam, kde naozaj je', async ({ page }) => {
         const vecer = at('22:30');

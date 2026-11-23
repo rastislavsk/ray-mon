@@ -41,6 +41,9 @@
 }
 
 :root {
+    /* Výška scény toku energie na karte Teraz (css/teraz.css). Z nej je aj výška oblohy na karte Dnes, aby posuvník
+       dňa stál v rovnakej výške ako pole toku (css/dnes.css, docs/navrhy/dnes-nizsie-dlazdice.html, Z2). */
+    --scena-h: clamp(180px, calc(40svh - 63px - max(16px, env(safe-area-inset-top))), 340px);
     --s1: #4f555f;
     --s2: #7f858e;
     --s3: rgba(5, 10, 30, 0.13);

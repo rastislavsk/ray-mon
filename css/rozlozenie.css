@@ -202,10 +202,6 @@
 :root:is([data-layout='medium'], [data-layout='wide']) .sheet-in {
     padding-bottom: 22px;
 }
-/* Graf dňa potrebuje šírku - na tablete a počítači je jeho panel širší ako ostatné. */
-:root:is([data-layout='medium'], [data-layout='wide']) .graf-sheet {
-    max-width: 760px;
-}
 
 /* Prehľad: Dnes, Teraz a 7 dní naraz ako stĺpce (data-dash). Obsah je ten istý ako na
    telefóne, len vedľa seba. Na tablete na šírku dva stĺpce - vľavo Dnes, vpravo Teraz a pod
@@ -252,9 +248,6 @@
     container-type: inline-size;
     padding-bottom: 6px;
     border-radius: 28px;
-}
-:root[data-dash] .k-slovo {
-    font-size: min(var(--word, 38px), calc((100cqi - 124px) / var(--word-len, 10)));
 }
 /* Aktívny stĺpec (vybraný v navigácii, alebo v ňom človek naposledy niečo otvoril) má jemný
    rámik - ten istý, ktorý svieti v navigácii. Fokus z klávesnice je výrazný ako všade. */

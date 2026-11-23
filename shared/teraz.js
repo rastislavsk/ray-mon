@@ -1,14 +1,11 @@
 // Karta Teraz. Výkon, pásmo a odporúčanie sú z heroModel, plán dňa z dayPlan, odpoveď teraz a Plán dňa
 // z mozemModel - tie isté ako na karte Dnes. Tu sa to len skladá - číslo, štítky s vetou a čo zapnúť.
-// Graf dňa s pásom plánu a zvoleným časom (`previewMinutes`, grafModel) je v paneli karty Dnes
-// (docs/navrhy/dnes-predpoved-graf.html), dnešok a kedy lepšie (dnesCards) berie karta Dnes
-// (shared/dnes-faza.js). Čisté funkcie,
+// Dnešok a kedy lepšie (dnesCards) berie karta Dnes (shared/dnes-faza.js). Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
 import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
-import { interpolate, opravenaPredpoved, realCurveBoundary } from './chart-model.js';
+import { interpolate } from './chart-model.js';
 import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
-import { dayChartModel, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
 import { dniHlasky, hlaskaDna } from './den-hlaska.js';
 import { heroModel } from './hero-model.js';
@@ -16,7 +13,6 @@ import {
     terazBehText,
     terazBehVecText,
     terazCitanieText,
-    terazChartText,
     terazDalsiText,
     terazDlazdicaText,
     terazHlaskaText,
@@ -25,7 +21,6 @@ import {
     terazNoteText,
     terazOpakText,
     terazPotomText,
-    terazPreviewTime,
     terazRiadokText,
     terazTodayText,
     terazTypicalText,
@@ -67,8 +62,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
         return { ...empty('offline', estimate), num: '–', sub: offlineLead(input, online, voice), retry: true };
     }
     // Meranie, ktoré mlčí, heroModel za výkon „teraz“ nepovažuje (freshPowerKw) - číslo je vtedy
-    // odhad z krivky dňa a riadok pod ním povie, odkedy meranie mlčí. Karta Teraz je vždy teraz -
-    // zvolený čas je len v grafe dňa (grafModel).
+    // odhad z krivky dňa a riadok pod ním povie, odkedy meranie mlčí. Karta Teraz je vždy teraz.
     const now = heroModel({ ...input, previewMinutes: null }, voice);
     const note = estimate ? null : noteOf(input, now, voice);
     const m = mozemModel(input, { voice, devices });
@@ -108,25 +102,6 @@ function tyzdenOf(input, rows, teraz, { span, devices, den, voice }) {
         co: { ...dnes.co, den: hlaska, riadky: iny ? iny.riadky : dnes.co.riadky },
         veci: iny ? iny.veci : dnes.veci,
         hreben: hreben && { ...hreben, zvoleny },
-    };
-}
-
-/**
- * Graf dňa v paneli karty Dnes (docs/navrhy/dnes-predpoved-graf.html, predtým karta Deň na karte Teraz):
- * krivka dňa ako posúvač času (`chart`), odčítanie zvoleného času (`den`: výkon, odkiaľ je, čas) a obloha
- * v tej chvíli (`pocasie`). `previewMinutes` je zvolený čas, null teraz. Bez polohy a bez predpovede null.
- * @param {TerazInput} input
- * @param {{ voice?: import('./messages.js').Voice, devices?: readonly string[] }} [opts] tón hlášok a spotrebiče doma
- */
-export function grafModel(input, { voice = 'drzy', devices } = {}) {
-    if (input.known === 'nic' || !input.forecast) return null;
-    const hero = heroModel(input, voice);
-    const now = input.previewMinutes === null ? hero : heroModel({ ...input, previewMinutes: null }, voice);
-    const m = mozemModel(input, { voice, devices });
-    return {
-        chart: chartOf(input, dayPlan(input), hero, now),
-        den: denModel(input, m.plan ? m.plan.rows : [], input.previewMinutes, voice, m.plan ? m.plan.behy : []),
-        pocasie: pocasieOf(input, hero),
     };
 }
 
@@ -327,46 +302,6 @@ function empty(kind, estimate) {
 export function todayOf(input) {
     const day = input.forecast ? input.forecast.days[0] : null;
     return day && day.date === localDateKey(input.now, input.site.timezone) ? day : null;
-}
-
-/**
- * Graf dňa: geometria, popis pre čítačku a hodnota posúvača (čas, výkon, čo vtedy platí).
- * @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
- * @param {ReturnType<typeof heroModel>} hero zvolený čas (náhľad, inak teraz) @param {ReturnType<typeof heroModel>} now teraz
- */
-function chartOf(input, plan, hero, now) {
-    const tone = (/** @type {number} */ min) => slotTone(plan[Math.floor(min / plan[0].min)]);
-    const curve = input.pv ? input.pv.realCurveToday : [];
-    const limitKw = powerThresholds(input.plant).lowKw;
-    const span = daylightSpan(input.site, localDateKey(input.now, input.site.timezone));
-    const geo = dayChartModel({
-        span,
-        plan,
-        hourly: input.forecast ? opravenaPredpoved(curve, input.forecast.hourlyToday, now.minutes) : [],
-        real: curve,
-        boundary: realCurveBoundary(curve, now.minutes),
-        nowMin: now.minutes,
-        nowKw: now.power,
-        limitKw,
-        limitText: voiceTexts().TERAZ_TEXTS.limit,
-        preview: hero.preview ? { min: hero.minutes, kw: hero.power, text: terazPreviewTime(hero.minutes) } : null,
-    });
-    const windows = (/** @type {Tone} */ t) => planWindows(plan, (s) => slotTone(s) === t);
-    return {
-        ...geo,
-        desc: terazChartText({
-            span,
-            nowMin: now.minutes,
-            kwText: now.powerText,
-            tone: tone(now.minutes),
-            sun: windows('sun'),
-            cheap: windows('cheap'),
-            costly: windows('costly'),
-        }),
-        // Hodnota posúvača ostáva v jeho rozsahu aj v noci, keď je „teraz“ mimo osi; čas povie
-        // odčítanie grafu dňa (aria-valuetext).
-        value: Math.min(geo.range.max, Math.max(geo.range.min, hero.minutes)),
-    };
 }
 
 /**

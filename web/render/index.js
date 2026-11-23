@@ -7,7 +7,6 @@ import { pocasieTeraz } from '../../shared/teraz.js';
 import { naucenaPredpoved } from '../../shared/ucenie.js';
 import { loaded } from '../parts.js';
 import { dashboard, isColumn, PARTS, partOf, ready, shows } from '../state.js';
-import { renderGraf } from './graf.js';
 import { renderHeader } from './header.js';
 import { renderMozem } from './mozem.js';
 import { renderTeraz } from './teraz.js';
@@ -22,8 +21,7 @@ import { show } from './write.js';
  * @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom
  */
 function renderSky(state, dom) {
-    // Nebo je z tejto chvíle, na karte Dnes z času jej posuvníka - zvolený čas v grafe dňa má vlastnú oblohu len
-    // panel s grafom. `?? null`: starý web/state.js z cache po nasadení pole mzCas nemá (CLAUDE.md, Nasadenie a cache).
+    // Nebo je z tejto chvíle, na karte Dnes z času jej posuvníka. `?? null`: starý web/state.js z cache po nasadení pole mzCas nemá (CLAUDE.md, Nasadenie a cache).
     const dnes = shows(state, 'mozem') && !dashboard(state);
     const chvila = { ...state, previewMinutes: dnes ? (state.mzCas ?? null) : null };
     const sky = skyNow(chvila, state.liveSky, pocasieTeraz(chvila));
@@ -112,7 +110,6 @@ export function render(raw, dom) {
     renderPanels(state, dom);
     renderWait(state, dom);
     renderMozem(state, dom);
-    renderGraf(state, dom);
     renderTeraz(state, dom);
     for (const part of PARTS) if (state.parts[part] === 'ok') loaded[part]?.render(state, dom);
 }

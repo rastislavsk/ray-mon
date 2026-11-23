@@ -380,12 +380,12 @@ test('mozemModel: veta bez spotrebičov a čo dá strecha za celý deň', () => 
     assert.match(m.hero.lead, /^Slnko to teraz platí za nás\. Teraz /, 'hlavička Dnes aj s plánom');
     // Predpoveď dňa 61,4 kWh je viac, než nabehlo - ráta sa celý deň.
     assert.deepEqual(m.day, {
-        label: 'Dnes zo strechy',
+        label: 'Zo strechy',
         value: '~61 kWh',
         eq: [
-            { value: '~4\u00a0090', label: 'nabitých mobilov' },
-            { value: '~370 km', label: 'elektrickým autom' },
-            { value: '~4,0 kg', label: 'CO2eq menej' },
+            { ikona: 'mobil', value: '~4\u00a0090', label: 'nabitých mobilov' },
+            { ikona: 'auto', value: '~370 km', label: 'elektrickým autom' },
+            { ikona: 'co2', value: '~4,0 kg CO2', label: 'menej' },
         ],
     });
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).day, null, 'bez predpovede nie');
