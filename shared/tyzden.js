@@ -7,7 +7,7 @@
 import { MINUTES_PER_DAY, PLAN_DNA, PREDPOVED_HODINY, TARIFF_LIMITS, TYZDEN } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { dayNameShort, weekDayName } from './format.js';
-import { planDnaRowText, terazDenHlavickaText, terazNudzaText, terazRiadokText, terazVecText } from './messages-core.js';
+import { planDnaRowText, terazNudzaText, terazRiadokText, terazVecText } from './messages-core.js';
 import { dayCtx, programDraw } from './mozem-jadro.js';
 import { cheapFrom, chosen, najlepsiDen, podielSlnka, vec, volne } from './plan-dna.js';
 import { skyWeather } from './sky.js';
@@ -256,12 +256,11 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
 }
 
 /**
- * Plán iného dňa pre kartu Teraz: hlavička (meno dňa, dátum, o koľko dní), spotrebiče do mriežky - najprv čo
- * ide v ten deň zo slnka, potom čo aspoň najmenej zo siete - a detaily spotrebičov pre panel.
- * @param {DenTyzdna} d @param {readonly string[]} devices @param {boolean} nad deň aspoň chvíľu nad hranicou
- * @param {Voice} [voice]
+ * Plán iného dňa pre kartu Teraz: spotrebiče do mriežky - najprv čo ide v ten deň zo slnka, potom čo aspoň
+ * najmenej zo siete - a detaily spotrebičov pre panel. Hlášku nad nimi skladá shared/den-hlaska.js.
+ * @param {DenTyzdna} d @param {readonly string[]} devices @param {Voice} [voice]
  */
-export function denInyModel(d, devices, nad, voice = 'drzy') {
+export function denInyModel(d, devices, voice = 'drzy') {
     const { span } = d.ctx;
     const den = { name: d.name, date: d.day.date, index: d.index };
     const slnko = [...d.slnko]
@@ -305,7 +304,6 @@ export function denInyModel(d, devices, nad, voice = 'drzy') {
         nudzaRiadok(n, { name: planDnaRowText({ id: n.id, kind: 'none' }, voice).name, span, den: d.name, potom: null }, voice),
     );
     return {
-        hlavicka: terazDenHlavickaText({ date: d.day.date, index: d.index, nad }),
         riadky: [...slnko, ...nudza].map((x) => x.riadok),
         veci: [...slnko, ...nudza].map((x) => x.detail),
     };

@@ -10,6 +10,7 @@ import { interpolate, opravenaPredpoved, realCurveBoundary } from './chart-model
 import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayChartModel, slotTone } from './day-chart.js';
 import { dayPlan } from './day-plan.js';
+import { dniHlasky, hlaskaDna } from './den-hlaska.js';
 import { heroModel } from './hero-model.js';
 import {
     terazBehText,
@@ -18,6 +19,7 @@ import {
     terazChartText,
     terazDalsiText,
     terazDlazdicaText,
+    terazHlaskaText,
     terazHotoveText,
     terazKonciText,
     terazNoteText,
@@ -88,7 +90,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
 
 /**
  * Hrebeň týždňa a plán zvoleného dňa: dnes čo zapnúť, iný deň (`den`, poradie od dneška) jeho plán
- * s hlavičkou; detaily spotrebičov patria zvolenému dňu. Deň mimo predpovede je dnešok.
+ * s hláškou dňa (`co.den`, shared/den-hlaska.js); detaily spotrebičov patria zvolenému dňu. Deň mimo predpovede je dnešok.
  * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {Parameters<typeof coZapnutModel>[1]} teraz
  * @param {{ span: { from: number, to: number }, devices: readonly string[], den: number, voice: import('./messages.js').Voice }} o
  */
@@ -97,9 +99,13 @@ function tyzdenOf(input, rows, teraz, { span, devices, den, voice }) {
     const hreben = hrebenModel(dni);
     const zvoleny = hreben && dni[den] ? den : 0;
     const dnes = dnesOf(input, rows, { ...teraz, tyzden: dni }, span, voice);
-    const iny = hreben && zvoleny > 0 ? denInyModel(dni[zvoleny], devices, hreben.dni[zvoleny].nad, voice) : null;
+    const iny = hreben && zvoleny > 0 ? denInyModel(dni[zvoleny], devices, voice) : null;
+    const hlaska =
+        iny && input.forecast
+            ? terazHlaskaText(hlaskaDna(dniHlasky({ ...input, forecast: input.forecast }, devices), zvoleny), voice)
+            : null;
     return {
-        co: { ...dnes.co, den: iny ? iny.hlavicka : null, riadky: iny ? iny.riadky : dnes.co.riadky },
+        co: { ...dnes.co, den: hlaska, riadky: iny ? iny.riadky : dnes.co.riadky },
         veci: iny ? iny.veci : dnes.veci,
         hreben: hreben && { ...hreben, zvoleny },
     };
@@ -308,7 +314,7 @@ function empty(kind, estimate) {
         note: /** @type {ReturnType<typeof noteOf>} */ (null),
         retry: false,
         guess: false,
-        co: /** @type {(ReturnType<typeof coZapnutModel> & { den: { nazov: string, pod: string } | null }) | null} */ (null),
+        co: /** @type {(ReturnType<typeof coZapnutModel> & { den: string | null }) | null} */ (null),
         veci: /** @type {Array<VecDetail>} */ ([]),
         hreben: /** @type {(NonNullable<ReturnType<typeof hrebenModel>> & { zvoleny: number }) | null} */ (null),
         os: /** @type {ReturnType<typeof denOs> | null} */ (null),
