@@ -501,31 +501,56 @@
 }
 /* Bodky pod pásom: kde pás stojí; ťuknutím preskočia na kartu. Tlačidlo má plochu na prst (44 px),
    bodka v ňom je malá. */
-.bodky {
+/* Pod pásom šípky po stranách (posunú pás o kartu, pre myš) a medzi nimi bodky - len ukazovateľ, kde pás stojí. */
+.pas-ovladanie {
     display: flex;
+    align-items: center;
     justify-content: center;
     gap: 8px;
     margin-top: 8px;
 }
-.bodky button {
+.pas-sipka {
     display: grid;
     place-items: center;
     width: 44px;
     height: 44px;
     padding: 0;
     border: 0;
+    border-radius: 50%;
     background: none;
+    color: #fff;
     cursor: pointer;
 }
-.bodky button::before {
-    content: '';
+.pas-sipka svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.pas-sipka:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+.pas-sipka:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: -3px;
+}
+.bodky {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.bodky i {
     width: 7px;
     height: 7px;
     border-radius: 4px;
     background: rgba(255, 255, 255, 0.4);
     transition: width 0.2s;
 }
-.bodky button[aria-current]::before {
+.bodky i[data-on] {
     width: 20px;
     background: #fff;
 }

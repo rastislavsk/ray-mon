@@ -1035,27 +1035,35 @@ test.describe('karta Dnes', () => {
         expect(errors).toEqual([]);
     });
 
-    test('pás kariet: bodka ukazuje, kde pás stojí, ťuknutie na bodku pás posunie; zvislý ťah posúva stránku', async ({ page }) => {
+    test('pás kariet: bodka ukazuje, kde pás stojí, šípky ho posunú o kartu; zvislý ťah posúva stránku', async ({ page }) => {
         // Nízke okno: karta je vyššia ako ono, stránka sa má kam posunúť.
         await page.setViewportSize({ width: 390, height: 560 });
         const errors = await openObloha(page, { time: at('13:00') });
         await naDnes(page);
         const karty = page.locator('#mz-karty .karta');
         await expect(karty).toHaveCount(8);
-        const bodky = page.locator('#mz-bodky button');
+        const bodky = page.locator('#mz-bodky i');
         await expect(bodky).toHaveCount(8);
-        const aktivna = () => bodky.evaluateAll((b) => b.findIndex((x) => x.hasAttribute('aria-current')));
+        const spat = page.getByRole('button', { name: 'Predchádzajúca karta' });
+        const dalej = page.getByRole('button', { name: 'Ďalšia karta' });
+        const aktivna = () => bodky.evaluateAll((b) => b.findIndex((x) => x.hasAttribute('data-on')));
         await expect.poll(aktivna).toBe(0);
+        await expect(spat).toBeDisabled();
         // Susedná karta vykukuje sprava - je vidno, že pás ide ďalej.
         const druha = await karty.nth(1).boundingBox();
         expect(druha && druha.x < 390 && druha.x + druha.width > 390, 'druhá karta vykukuje').toBe(true);
-        await bodky.nth(2).click();
+        await dalej.click();
+        await expect.poll(aktivna).toBe(1);
+        await dalej.click();
         await expect.poll(aktivna).toBe(2);
         // Karta zastane na začiatku pásu (pás posúva plynulo - čaká sa na koniec).
         await expect.poll(async () => Math.round((await karty.nth(2).boundingBox())?.x ?? -1)).toBe(14);
-        // Posun pásu (ako prstom) rozsvieti bodku sám.
+        await spat.click();
+        await expect.poll(aktivna).toBe(1);
+        // Posun pásu (ako prstom) rozsvieti bodku sám, na konci je šípka ďalej vypnutá.
         await page.locator('#mz-karty').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
         await expect.poll(aktivna).toBe(7);
+        await expect(dalej).toBeDisabled();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
         // Zvislý ťah prstom cez pás posúva stránku.
         await page.locator('#mz-karty').scrollIntoViewIfNeeded();

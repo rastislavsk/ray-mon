@@ -108,10 +108,19 @@
                     <!-- Mimo posuvníka: jeho obsah čítačka neberie ako ovládanie. Pod bežcom - ten je vždy nad ním. -->
                     <button type="button" id="mz-odtlacok" class="mz-odtlacok hidden"></button>
                 </div>
-                <!-- Pás kariet: posúva ho prehliadač (scroll-snap), bodky ukazujú, kde si, a ťuknutím na kartu
-                     preskočia (render/mozem.js, mozem-interactions.js). Ťah do strán je tu druhý v appke. -->
+                <!-- Pás kariet: posúva ho prehliadač (scroll-snap), bodky ukazujú, kde si, a šípky po stranách ho posunú
+                     o kartu - pre myš (render/mozem.js, mozem-karty.js). Ťah do strán je tu druhý v appke. Šípky Tab
+                     preskočí: klávesnica pás posúva šípkami, keď je na ňom fokus. -->
                 <div id="mz-karty" class="karty" tabindex="0" role="group"></div>
-                <div id="mz-bodky" class="bodky"></div>
+                <div id="mz-pas-ovladanie" class="pas-ovladanie">
+                    <button type="button" id="mz-pas-spat" class="pas-sipka" data-smer="-1" tabindex="-1">
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5" /></svg>
+                    </button>
+                    <div id="mz-bodky" class="bodky" aria-hidden="true"></div>
+                    <button type="button" id="mz-pas-dalej" class="pas-sipka" data-smer="1" tabindex="-1">
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 4.5 13 10l-5.5 5.5" /></svg>
+                    </button>
+                </div>
                 <!-- Pre čítačku: ohlási len zmenu odpovede, ktorá príde sama (čas, nové meranie). -->
                 <p id="mz-live" class="sr" role="status"></p>
                 <button type="button" id="mz-retry" class="pbtn retry"></button>

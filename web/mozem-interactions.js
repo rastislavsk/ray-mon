@@ -34,7 +34,7 @@ export function initMozem(store, dom, refresh) {
         if (kedy === 'dnes' || kedy === 'zajtra') store.setState({ mzChip: kedy, panel: 'mozem' });
     });
     initSheet(dom.mzTriedaSheet, () => stepBack(store, { mzChip: null }));
-    bindKarty(dom.mzKarty, dom.mzBodky);
+    bindKarty(dom.mzKarty, dom.mzBodky, [dom.mzPasSpat, dom.mzPasDalej]);
     initOs(store, dom);
     initGraf(store, dom);
 }

@@ -177,7 +177,7 @@ function dnesnyHtml(k) {
 }
 
 /**
- * Pás kariet pod posuvníkom a bodky pod ním (jedna karta bez bodiek).
+ * Pás kariet pod posuvníkom a pod ním bodky so šípkami (jedna karta bez nich).
  * Ktorá bodka svieti, závisí od posunu pásu - nastaví ju syncBodky (aj pri posúvaní, mozem-interactions.js).
  * @param {Karta[]} k @param {Dom} dom
  */
@@ -185,14 +185,11 @@ function renderKarty(k, dom) {
     show(dom.mzKarty, k.length > 0);
     dom.mzKarty.setAttribute('aria-label', DNES_TEXTS.karty);
     setHtml(dom.mzKarty, k.map(kartaHtml).join(''));
-    show(dom.mzBodky, k.length > 1);
-    const zapisane = setHtml(
-        dom.mzBodky,
-        k.length > 1
-            ? k.map((x, i) => `<button type="button" data-i="${i}" aria-label="${escapeHtml(x.title)}" tabindex="-1"></button>`).join('')
-            : '',
-    );
-    if (zapisane) syncBodky(dom.mzKarty, dom.mzBodky);
+    show(dom.mzPasOvladanie, k.length > 1);
+    dom.mzPasSpat.setAttribute('aria-label', DNES_TEXTS.pasSpat);
+    dom.mzPasDalej.setAttribute('aria-label', DNES_TEXTS.pasDalej);
+    const zapisane = setHtml(dom.mzBodky, k.length > 1 ? k.map(() => '<i></i>').join('') : '');
+    if (zapisane) syncBodky(dom.mzKarty, dom.mzBodky, [dom.mzPasSpat, dom.mzPasDalej]);
 }
 
 /** Značka pri veci vo vysvetlení odznaku: fajka, keď sa zmestí, inak pomlčka. @param {boolean} ok */

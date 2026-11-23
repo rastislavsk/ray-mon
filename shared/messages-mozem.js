@@ -113,6 +113,9 @@ export const DNES_TEXTS = {
     /** Posuvník dňa nad pásom a odtlačok bežca na teraz (docs/navrhy/dnes-tlacidlo-teraz.html, T4c). */
     os: 'Čas dňa, šípkami si pozrieš iný',
     naTeraz: 'Vrátiť na teraz',
+    /** Šípky po stranách bodiek pod pásom - posunú ho o kartu. */
+    pasSpat: 'Predchádzajúca karta',
+    pasDalej: 'Ďalšia karta',
 };
 
 /**

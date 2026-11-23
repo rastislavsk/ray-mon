@@ -244,8 +244,8 @@ Mapa a časová os karty Radar majú `touch-action: none`: karta zaberá celú o
 **Karty sa ťahom prsta nelistujú**, len ťuknutím v navigácii. Ťah do strán má
 dve miesta: dni v detaile dňa karty 7 dní (`web/day-pager.js`, rozhodnutia v `shared/day-pager.js`)
 a pás kariet pod číslami na karte Dnes. Pás posúva prehliadač sám (CSS scroll-snap, `web/mozem-karty.js`
-len zladí bodky), žiadny vlastný kód nad touch udalosťami; zvislý ťah cez neho posúva stránku a myš
-ho posúva ťuknutím na bodky. Ďalšie miesto pridávaj len s rovnakým rozmyslom
+len zladí bodky a šípky), žiadny vlastný kód nad touch udalosťami; zvislý ťah cez neho posúva stránku a myš
+ho posúva šípkami ‹ › po stranách bodiek (bodky sú len ukazovateľ - pri ôsmich kartách by sa ako tlačidlá na prst nezmestili). Ďalšie miesto pridávaj len s rovnakým rozmyslom
 (návrh: `docs/navrhy/dnes-upravy.html`). Pri dňoch v detaile karty 7 dní platí:
 Obsah dňa ide za prstom a vedľa neho stojí susedný deň, ktorý nakreslil ten istý render (appka ho na
 chvíľu zavolá so susedným dňom a výsledok skopíruje) – iný kód na kreslenie dňa preto nepíš. Kópie
