@@ -235,8 +235,8 @@ test('texty: po bojleri pri spotrebiči, zapne okolo na dlaždici bojlera, dohre
     const plan = { zapne: 675, dohreje: 770, nahriaty: false };
     assert.deepEqual(bojlerDlazdica(caka, now, SITE.timezone, plan).odr, ['čaká na slnko', 'zapne okolo 11:15']);
     assert.deepEqual(bojlerDlazdica(caka, now, SITE.timezone).odr[1], 'zapne pri 2,3 kW');
-    assert.equal(bojlerDetail(caka, now, SITE.timezone, plan).plan, 'Podľa plánu dohreje okolo 12:50.');
-    assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, dohreje: null }).plan, 'Dnes ho slnko asi nedohreje.');
+    assert.equal(bojlerDetail(caka, now, SITE.timezone, plan).plan, 'dohreje okolo 12:50');
+    assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, dohreje: null }).plan, 'slnko ho dnes asi nedohreje');
     assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, nahriaty: true }).plan, '');
     assert.equal(bojlerDetail(caka, now, SITE.timezone).plan, '');
 });

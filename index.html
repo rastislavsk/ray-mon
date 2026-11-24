@@ -1073,41 +1073,53 @@
             </div>
         </dialog>
 
-        <!-- Bojler dnes (docs/navrhy/bojler-prebytky.html): otvorí ho dlaždica Bojler, keď bojler riadi zásuvka.
-             Prepínač režimu (ručne / riadi appka): docs/navrhy/teraz-auto-tok.html.
-             Pás dňa (zo slnka, zo siete, voda nahriata), počet zapnutí, ako dlho hrial, kWh a jednotlivé behy. -->
+        <!-- Bojler dnes (docs/navrhy/bojler-panel.html, A): otvorí ho dlaždica Bojler, keď bojler riadi zásuvka.
+             Stav a plán v riadku pod nadpisom, teplota vody a pás behov na jednej osi 0 - 24 h, energia podľa zdroja,
+             behy (zbalené), dole nastavenie: čo riadi bojler (docs/navrhy/teraz-auto-tok.html) a oznámenia. -->
         <dialog id="tz-bojler-sheet" class="sheet vec-sheet bojler-sheet" aria-labelledby="tz-bojler-ttl">
             <div class="sheet-in">
                 <div class="vec-top">
                     <span id="tz-bojler-ico" class="vec-ico" aria-hidden="true"></span>
                     <div>
                         <h2 id="tz-bojler-ttl"></h2>
-                        <p id="tz-bojler-pod" class="vec-kedy"></p>
-                        <p id="tz-bojler-plan" class="vec-kedy hidden"></p>
+                        <!-- Stav a za bodkou plán (kedy dohreje) v jednom riadku. -->
+                        <p class="bj-pod"><span id="tz-bojler-pod"></span><span id="tz-bojler-plan" class="bj-plan hidden"></span></p>
                     </div>
                 </div>
-                <!-- Teplota vody dnes z teplomera v bojleri (docs/navrhy/bojler-teplota.html, P1). Bez teplomera skrytá. -->
-                <div id="tz-bojler-voda" class="bj-voda hidden" role="img"></div>
-                <!-- Kto zapína bojler: appka podľa prebytku, alebo človek (ručne, časovačom v appke Shelly) - vtedy
-                     skript v zásuvke len hlási. Texty dopĺňa render (TERAZ_BOJLER_TEXTS.rezim). -->
-                <div id="tz-bojler-rezim" class="bj-rezim" role="group" aria-labelledby="tz-bojler-rezim-n">
-                    <span id="tz-bojler-rezim-n" class="sr"></span>
-                    <button type="button" data-bojler-rezim="appka" aria-pressed="true"></button>
-                    <button type="button" data-bojler-rezim="rucne" aria-pressed="false"></button>
+                <!-- Teplota vody (docs/navrhy/bojler-teplota.html, P1; bez teplomera skrytá) a pod ňou pás behov. Čiarka teraz
+                     prechádza oboma, os hodín je pod pásom. -->
+                <div class="bj-graf">
+                    <div id="tz-bojler-voda" class="bj-voda hidden" role="img"></div>
+                    <div id="tz-bojler-pas" aria-hidden="true"></div>
                 </div>
-                <p id="tz-bojler-rezim-t" class="bj-rezim-t"></p>
-                <!-- Potvrdenie, že Worker režim uložil: na chvíľu namiesto popisu režimu (BOJLER_ULOZENE_MS). -->
-                <p id="tz-bojler-rezim-ok" class="bj-rezim-t bj-rezim-ok hidden" role="status">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="12" cy="12" r="11" />
-                        <path d="M7 12.4l3.2 3.1L17 8.8" />
-                    </svg>
-                    <span id="tz-bojler-rezim-ok-t"></span>
-                </p>
-                <p id="tz-bojler-rezim-chyba" class="wz-msg hidden" role="status"></p>
-                <div id="tz-bojler-pas" aria-hidden="true"></div>
-                <div id="tz-bojler-cisla" class="bj-cisla"></div>
-                <div id="tz-bojler-behy" class="bj-behy"></div>
+                <div id="tz-bojler-energia" class="bj-energia"></div>
+                <p id="tz-bojler-hrial" class="bj-hrial"></p>
+                <details id="tz-bojler-behy-d" class="bj-behy-d">
+                    <summary>
+                        <span id="tz-bojler-behy-n"></span>
+                        <span id="tz-bojler-behy-pocet" class="bj-behy-pocet"></span>
+                    </summary>
+                    <div id="tz-bojler-behy" class="bj-behy"></div>
+                </details>
+                <!-- Čo riadi bojler: Ray-mon podľa prebytku, alebo Shelly (ručne, časovačom v appke Shelly) - vtedy
+                     skript v zásuvke len hlási. Texty dopĺňa render (TERAZ_BOJLER_TEXTS.rezim). -->
+                <div class="bj-nast">
+                    <p id="tz-bojler-rezim-n" class="bj-nast-n"></p>
+                    <div id="tz-bojler-rezim" class="bj-rezim" role="group" aria-labelledby="tz-bojler-rezim-n">
+                        <button type="button" data-bojler-rezim="rucne" aria-pressed="false"></button>
+                        <button type="button" data-bojler-rezim="appka" aria-pressed="true"></button>
+                    </div>
+                    <p id="tz-bojler-rezim-t" class="bj-rezim-t"></p>
+                    <!-- Potvrdenie, že Worker režim uložil: na chvíľu namiesto popisu režimu (BOJLER_ULOZENE_MS). -->
+                    <p id="tz-bojler-rezim-ok" class="bj-rezim-t bj-rezim-ok hidden" role="status">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <circle cx="12" cy="12" r="11" />
+                            <path d="M7 12.4l3.2 3.1L17 8.8" />
+                        </svg>
+                        <span id="tz-bojler-rezim-ok-t"></span>
+                    </p>
+                    <p id="tz-bojler-rezim-chyba" class="wz-msg hidden" role="status"></p>
+                </div>
                 <!-- Oznámenia o zapnutí a vypnutí bojlera pre tento telefón (docs/navrhy/spotrebic-koniec-opakovanie.html). -->
                 <button type="button" id="tz-bojler-oznam" class="bj-oznam" role="switch" aria-checked="false">
                     <span id="tz-bojler-oznam-t"></span>

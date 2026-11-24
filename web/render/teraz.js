@@ -170,7 +170,7 @@ function prvyVPlane(co) {
 const rezimHtml = (rezim) => (rezim ? `<i class="dl-rz" data-rezim="${rezim}">${rezimIcon(rezim)}</i>` : '');
 
 /** Režim bojlera pre čítačku slovom - kruh s ikonou čítačka nečíta. @param {'appka' | 'rucne' | null | undefined} rezim */
-const rezimSr = (rezim) => (rezim ? `<span class="sr">, ${escapeHtml(TERAZ_BOJLER_TEXTS.rezim[rezim])}</span>` : '');
+const rezimSr = (rezim) => (rezim ? `<span class="sr">, ${escapeHtml(TERAZ_BOJLER_TEXTS.rezim.sr[rezim])}</span>` : '');
 
 /**
  * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri inom dni hláška dňa (docs/navrhy/teraz-hlaska-dna.html), pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
@@ -524,72 +524,106 @@ function bojlerTeraz(state, co, plan) {
 }
 
 /**
- * Panel Bojler dnes: pás dňa, štyri čísla a behy. Otvorený, kým je v stave tzVec 'bojler' a bojler riadi zásuvka.
+ * Panel Bojler dnes (docs/navrhy/bojler-panel.html, A): stav s plánom, teplota a pás behov na jednej osi, energia podľa
+ * zdroja, behy a čo riadi bojler. Otvorený, kým je v stave tzVec 'bojler' a bojler riadi zásuvka.
  * @param {import('../state.js').AppState} state @param {Dom} dom @param {Model['bojler']} plan
  */
 function renderBojlerSheet(state, dom, plan) {
     const b = state.tzVec === 'bojler' && riadeny(state) ? state.bojler : null;
     if (b) {
-        const d = bojlerDetail(b, state.now, state.site.timezone, plan);
+        const d = bojlerDetail(b, state.now, state.site.timezone, plan, state.tariff);
         setHtml(dom.tzBojlerIco, vecIcon('bojler'));
         setText(dom.tzBojlerTtl, d.nadpis);
         setText(dom.tzBojlerPod, d.pod);
         setText(dom.tzBojlerPlan, d.plan);
         show(dom.tzBojlerPlan, !!d.plan);
         renderVoda(d.voda, dom.tzBojlerVoda);
-        const R = TERAZ_BOJLER_TEXTS.rezim;
-        setText(dom.tzBojlerRezimN, R.nazov);
-        // Biela plocha pod zvoleným tlačidlom prejde na druhú stranu (css/teraz.css, .bj-rezim::before).
-        dom.tzBojlerRezim.dataset.rucne = String(d.rezim.rucne);
-        for (const btn of dom.tzBojlerRezim.querySelectorAll('button')) {
-            const rucne = btn.dataset.bojlerRezim === 'rucne';
-            setText(btn, rucne ? R.rucne : R.appka);
-            btn.setAttribute('aria-pressed', String(rucne === d.rezim.rucne));
-            btn.disabled = state.bojlerRezim === 'uklada';
-        }
-        setText(dom.tzBojlerRezimT, d.rezim.popis);
-        // Po uložení na chvíľu zelené „Uložené“ namiesto popisu režimu.
-        const ulozene = state.bojlerRezim === 'ulozene';
-        show(dom.tzBojlerRezimT, !ulozene);
-        show(dom.tzBojlerRezimOk, ulozene);
-        setText(dom.tzBojlerRezimOkT, R.ulozene(d.rezim.rucne));
-        show(dom.tzBojlerRezimChyba, state.bojlerRezim === 'chyba');
-        setText(dom.tzBojlerRezimChyba, R.chyba);
+        renderBojlerPas(d.pas, dom.tzBojlerPas);
+        renderBojlerEnergia(d, dom);
+        renderBojlerRezim(state, d.rezim, dom);
         renderBojlerOznam(state, dom);
-        const teraz = d.pas.teraz === null ? '' : `<i class="os-teraz" style="left:${d.pas.teraz}%"></i>`;
-        setHtml(
-            dom.tzBojlerPas,
-            `<div class="os bj-pas"><i class="os-ciara"></i>` +
-                d.pas.useky.map((u) => `<i class="os-usek" data-tone="${u.tone}" style="left:${u.left}%;width:${u.width}%"></i>`).join('') +
-                teraz +
-                d.pas.ticks.map((t) => `<span class="os-t" style="left:${t.at}%">${t.label}</span>`).join('') +
-                `</div>`,
-        );
-        setHtml(
-            dom.tzBojlerCisla,
-            d.cisla
-                .map(
-                    (c) => `<div><b${c.tone ? ` data-tone="${c.tone}"` : ''}>${escapeHtml(c.v)}</b><small>${escapeHtml(c.l)}</small></div>`,
-                )
-                .join(''),
-        );
-        setHtml(
-            dom.tzBojlerBehy,
-            d.behy
-                .map(
-                    (r) =>
-                        `<p><span>${escapeHtml(r.cas)}</span><i data-tone="slnko">${escapeHtml(r.slnko)}<span class="sr"> ${TERAZ_BOJLER_TEXTS.zoSlnka}</span></i>` +
-                        `<i data-tone="siet">${escapeHtml(r.siet)}<span class="sr"> ${TERAZ_BOJLER_TEXTS.zoSiete}</span></i></p>`,
-                )
-                .join(''),
-        );
     }
     dialog(dom.tzBojlerSheet, !!b, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="bojler"]') : null));
 }
 
 /**
+ * Pás behov pod krivkou teploty: úseky podľa zdroja, čiarka teraz (cez krivku aj pás, css/teraz.css) a os hodín.
+ * @param {ReturnType<typeof bojlerDetail>['pas']} pas @param {HTMLElement} el
+ */
+function renderBojlerPas(pas, el) {
+    setHtml(
+        el,
+        `<div class="bj-pas">` +
+            pas.useky.map((u) => `<i data-tone="${u.tone}" style="left:${u.left}%;width:${u.width}%"></i>`).join('') +
+            `</div><i class="bj-teraz" style="left:${pas.teraz}%"></i>` +
+            `<div class="bj-osi">${pas.ticks.map((t) => `<span style="left:${t.at}%">${t.label}</span>`).join('')}</div>`,
+    );
+}
+
+/** Pásik s častiami podľa zdroja, šírka podľa Wh. @param {Array<{ tone: string, wh: number }>} casti */
+const stoh = (casti) =>
+    `<span class="bj-stoh" aria-hidden="true">${casti
+        .filter((c) => c.wh > 0)
+        .map((c) => `<i data-tone="${c.tone}" style="flex-grow:${Math.round(c.wh)}"></i>`)
+        .join('')}</span>`;
+
+/**
+ * Energia dňa (pásik a čísla podľa zdroja), koľkokrát a ako dlho hrial a behy zbalené pod nadpisom s počtom.
+ * Či sú behy rozbalené, drží prvok `<details>` sám - render na to nesiaha.
+ * @param {ReturnType<typeof bojlerDetail>} d @param {Dom} dom
+ */
+function renderBojlerEnergia(d, dom) {
+    setHtml(
+        dom.tzBojlerEnergia,
+        stoh(d.energia) +
+            `<div class="bj-zdroje">${d.energia
+                .map((c) => `<div><b>${escapeHtml(c.v)}</b><small><i data-tone="${c.tone}"></i>${escapeHtml(c.l)}</small></div>`)
+                .join('')}</div>`,
+    );
+    setText(dom.tzBojlerHrial, d.hrial);
+    show(dom.tzBojlerHrial, !!d.hrial);
+    show(dom.tzBojlerBehyD, d.behy.length > 0);
+    setText(dom.tzBojlerBehyN, d.behyNadpis);
+    setText(dom.tzBojlerBehyPocet, String(d.behy.length));
+    setHtml(
+        dom.tzBojlerBehy,
+        d.behy
+            .map(
+                (r) =>
+                    `<p><span>${escapeHtml(r.cas)}</span>${stoh(r.casti)}<b>${escapeHtml(r.kwh)}</b>` +
+                    `<span class="sr">, ${escapeHtml(r.sr)}</span></p>`,
+            )
+            .join(''),
+    );
+}
+
+/**
+ * Čo riadi bojler: Shelly či Ray-mon, popis zvoleného, po uložení na chvíľu „Uložené“, pri chybe hláška.
+ * @param {import('../state.js').AppState} state @param {ReturnType<typeof bojlerDetail>['rezim']} rezim @param {Dom} dom
+ */
+function renderBojlerRezim(state, rezim, dom) {
+    const R = TERAZ_BOJLER_TEXTS.rezim;
+    setText(dom.tzBojlerRezimN, R.nazov);
+    // Biela plocha pod zvoleným tlačidlom prejde na druhú stranu (css/teraz.css, .bj-rezim::before).
+    dom.tzBojlerRezim.dataset.rucne = String(rezim.rucne);
+    for (const btn of dom.tzBojlerRezim.querySelectorAll('button')) {
+        const rucne = btn.dataset.bojlerRezim === 'rucne';
+        setText(btn, rucne ? R.rucne : R.appka);
+        btn.setAttribute('aria-pressed', String(rucne === rezim.rucne));
+        btn.disabled = state.bojlerRezim === 'uklada';
+    }
+    setText(dom.tzBojlerRezimT, rezim.popis);
+    const ulozene = state.bojlerRezim === 'ulozene';
+    show(dom.tzBojlerRezimT, !ulozene);
+    show(dom.tzBojlerRezimOk, ulozene);
+    setText(dom.tzBojlerRezimOkT, R.ulozene(rezim.rucne));
+    show(dom.tzBojlerRezimChyba, state.bojlerRezim === 'chyba');
+    setText(dom.tzBojlerRezimChyba, R.chyba);
+}
+
+/**
  * Krivka teploty vody dnes (docs/navrhy/bojler-teplota.html, P1): čiara a plocha v SVG natiahnutom na šírku panela,
- * čiara cieľa, bod teraz a popisky v HTML, aby sa písmo nenaťahovalo so SVG.
+ * čiara cieľa, bod teraz a popisky v HTML, aby sa písmo nenaťahovalo so SVG. Os hodín je pod pásom behov.
  * @param {ReturnType<typeof bojlerDetail>['voda']} v @param {HTMLElement} el
  */
 function renderVoda(v, el) {
@@ -607,8 +641,7 @@ function renderVoda(v, el) {
             v.plochy.map((d) => `<path class="bj-voda-p" d="${d}"/>`).join('') +
             v.ciary.map((d) => `<path class="bj-voda-c" d="${d}" vector-effect="non-scaling-stroke"/>`).join('') +
             `</svg>${ciel}<i class="bj-voda-bod" style="${bod}"></i>` +
-            `<b class="bj-voda-t" style="${bod}">${escapeHtml(v.bod.text)}</b></div>` +
-            `<div class="bj-voda-osi" aria-hidden="true">${v.ticks.map((t) => `<span style="left:${t.at}%">${t.label}</span>`).join('')}</div>`,
+            `<b class="bj-voda-t" style="${bod}">${escapeHtml(v.bod.text)}</b></div>`,
     );
 }
 

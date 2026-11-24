@@ -1,20 +1,20 @@
 // Karta Teraz a bojler na prebytky (docs/navrhy/bojler-prebytky.html, časť 3): smer toku pod číslom,
 // dlaždica Bojler podľa toho, čo hlási zásuvka (variant A, len stav), a panel „Bojler dnes“
-// s pásom dňa, počtom zapnutí a behmi. Čisté funkcie - stav dostanú, texty a čísla vrátia.
+// (docs/navrhy/bojler-panel.html, A) s teplotou a behmi na jednej osi, energiou podľa zdroja a behmi. Čisté funkcie - stav dostanú, texty a čísla vrátia.
 
 import { BOJLER } from './config.js';
 import { bojlerStav, suctyDna } from './bojler.js';
 import { krivkaVody, stupne, vodaTeraz } from './bojler-voda.js';
 import { fmt1, minutesToTimeStr } from './format.js';
 import { localDateKey, localMinutes } from './solar.js';
-import { bandAt, scheduleFor } from './tariff.js';
+import { bandAt, bandById, scheduleFor } from './tariff.js';
 
 /** @typedef {import('./bojler.js').BojlerInfo} BojlerInfo */
 
 const MIN = 60 * 1000;
 
-// Pás dňa v paneli: od 6 do 18 h, popisky každé 3 hodiny.
-const PAS = { odMin: 6 * 60, doMin: 18 * 60, krokMin: 3 * 60 };
+// Pás dňa v paneli: celý deň (os zdieľa s krivkou teploty), popisky každých 6 hodín.
+const PAS = { odMin: 0, doMin: 24 * 60, krokMin: 6 * 60 };
 
 export const TERAZ_BOJLER_TEXTS = {
     von: 'do siete',
@@ -30,18 +30,14 @@ export const TERAZ_BOJLER_TEXTS = {
     od: 'od',
     zapnePri: 'zapne pri',
     zapneOkolo: 'zapne okolo',
-    /** Čo plán čaká od bojlera (docs/navrhy/plan-dna-zive-data.html): kedy dohreje, alebo že dnes nie. */
+    /** Čo plán čaká od bojlera (docs/navrhy/plan-dna-zive-data.html): kedy dohreje, alebo že dnes nie. Za stavom v paneli. */
     plan: {
-        dohreje: (/** @type {string} */ cas) => `Podľa plánu dohreje okolo ${cas}.`,
-        nedohreje: 'Dnes ho slnko asi nedohreje.',
-        /** S teplomerom (docs/navrhy/bojler-teplota.html): aj koľko má voda teraz. */
-        dohrejeVoda: (/** @type {string} */ t, /** @type {string} */ cas) => `Voda má ${t}, podľa plánu dohreje okolo ${cas}.`,
-        nedohrejeVoda: (/** @type {string} */ t) => `Voda má ${t}, dnes ju slnko asi nedohreje.`,
+        dohreje: (/** @type {string} */ cas) => `dohreje okolo ${cas}`,
+        nedohreje: 'slnko ho dnes asi nedohreje',
     },
     dnesZoSlnka: 'dnes zo slnka',
     o: 'o',
     bezSpojenia: 'skript alebo Wi-Fi',
-    rucne: 'ručne',
     hrejeRucne: 'hreje',
     vypnuty: 'vypnutý',
     dnesKwh: (/** @type {string} */ kwh) => `dnes ${kwh} kWh`,
@@ -58,19 +54,24 @@ export const TERAZ_BOJLER_TEXTS = {
         hrejeBez: 'hreje',
         nic: 'dnes ešte nehrial',
     },
-    zapnuty: 'zapnutý',
-    hrial: 'hrial',
-    zoSlnka: 'zo slnka',
-    zoSiete: 'zo siete',
+    /** Riadok pod energiou: koľkokrát a ako dlho dnes hrial. */
+    zapnutyHrial: (/** @type {number} */ n, /** @type {string} */ hrial) => `${n}× zapnutý · hrial ${hrial}`,
+    /** Energia dňa podľa zdroja (docs/navrhy/bojler-panel.html): slnko, sieť a sieť v drahom pásme tarify. */
+    zdroj: { slnko: 'slnko', siet: 'sieť', vt: 'sieť vo VT' },
+    /** To isté pre čítačku v riadku behu. */
+    zdrojSr: { slnko: 'zo slnka', siet: 'zo siete', vt: 'zo siete vo VT' },
+    behyNadpis: 'Behy dnes',
     teraz: 'teraz',
     rezim: {
-        nazov: 'Kto zapína bojler',
-        appka: 'Riadi appka',
-        rucne: 'Ručne',
+        nazov: 'Čo riadi bojler?',
+        appka: 'Ray-mon',
+        rucne: 'Shelly',
+        /** Značka pri ikone dlaždice pre čítačku. */
+        sr: { appka: 'riadi Ray-mon', rucne: 'riadi Shelly' },
         popisRucne: 'Zapína sa ručne alebo časovačom v appke Shelly. Ray-mon len zapisuje, čo bojler robí.',
         popisAppka: (/** @type {string} */ zap, /** @type {string} */ vyp) => `Zapne pri prebytku od ${zap} kW, vypne pod ${vyp} kW.`,
         chyba: 'Režim sa nepodarilo uložiť, ostal pôvodný.',
-        ulozene: (/** @type {boolean} */ rucne) => `Uložené · ${rucne ? 'zapínaš ručne' : 'riadi appka'}`,
+        ulozene: (/** @type {boolean} */ rucne) => `Uložené · riadi ${rucne ? 'Shelly' : 'Ray-mon'}`,
     },
     /** Vypínač oznámení o zapnutí a vypnutí bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html). */
     oznam: {
@@ -169,26 +170,66 @@ function podielDnes(den) {
     return s && spolu > 0 ? Math.round((100 * s.slnkoKwh) / spolu) : null;
 }
 
+/** @typedef {import('./config.js').Tariff} Tariff */
+/** Je minúta `m` v drahom pásme tarify? @typedef {(m: number) => boolean} JeDraha */
+
+/** Drahé pásmo tarify v deň `den` (bez tarify nikdy). @param {Tariff | null} tariff @param {string} den @returns {JeDraha} */
+function drahaDna(tariff, den) {
+    if (!tariff) return () => false;
+    const schedule = scheduleFor(tariff, den);
+    return (m) => bandAt(tariff, schedule, Math.min(m, 24 * 60 - 1)).level === 'draha';
+}
+
+/** Má tarifa v deň `den` drahé pásmo? Pri jednosadzbovej panel VT neukáže. @param {Tariff | null} tariff @param {string} den */
+const maDrahu = (tariff, den) => !!tariff && scheduleFor(tariff, den).changes.some((c) => bandById(tariff, c.band).level === 'draha');
+
 /**
- * Koľko dnešnej energie bojlera išlo zo siete v drahom pásme tarify, v % pre červenú časť pásika
- * (docs/navrhy/plan-dna-oznamenie-vt.html, P1). Worker kedy presne bral zo siete nemeria, preto sa odber zo siete
- * každého behu rozloží rovnomerne na jeho čas (`od` až `do`, bežiaci beh po teraz). Kým dnes nehrial, 0.
- * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./config.js').Tariff} tariff
+ * Koľko Wh behu išlo zo siete a koľko z toho v drahom pásme tarify (docs/navrhy/bojler-panel.html, D2). Beh so štvrťhodinami
+ * (`q`) to vie presne, beh od staršieho Workera len odhadom (D1): odber zo siete sa rozloží rovnomerne na čas behu
+ * (`od` až `do`, bežiaci beh po teraz).
+ * @param {import('./bojler.js').Beh} beh @param {JeDraha} jeDraha @param {number} teraz minúta dňa
+ */
+function sietBehu(beh, jeDraha, teraz) {
+    const siet = Math.min(beh.wh, beh.whSiet);
+    let vt = 0;
+    if (beh.q) {
+        const q0 = Math.floor(beh.od / BOJLER.qMin);
+        vt = beh.q.reduce((sum, [, wh], i) => sum + (jeDraha((q0 + i) * BOJLER.qMin) ? wh : 0), 0);
+    } else {
+        const doMin = Math.max(beh.od + 1, beh.do ?? teraz);
+        let n = 0;
+        for (let m = beh.od; m < doMin; m++) if (jeDraha(m)) n++;
+        vt = (siet * n) / (doMin - beh.od);
+    }
+    return { siet, vt: Math.min(siet, vt) };
+}
+
+/**
+ * Energia dňa podľa zdroja vo Wh: zo slnka, zo siete mimo drahého pásma a zo siete v drahom pásme.
+ * @param {import('./bojler.js').Den} den @param {Tariff | null} tariff @param {number} teraz minúta dňa
+ */
+function energiaDna(den, tariff, teraz) {
+    const jeDraha = drahaDna(tariff, den.den);
+    return den.behy.reduce(
+        (e, beh) => {
+            const { siet, vt } = sietBehu(beh, jeDraha, teraz);
+            return { slnko: e.slnko + beh.wh - siet, siet: e.siet + siet - vt, vt: e.vt + vt };
+        },
+        { slnko: 0, siet: 0, vt: 0 },
+    );
+}
+
+/**
+ * Koľko dnešnej energie bojlera išlo zo siete v drahom pásme tarify, v % pre červenú časť pásika dlaždice
+ * (docs/navrhy/plan-dna-oznamenie-vt.html, P1). Kým dnes nehrial, 0.
+ * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {Tariff} tariff
  */
 export function bojlerDrahaDnes(b, now, tz, tariff) {
     const den = dnes(b, now, tz);
-    const s = den ? suctyDna(den) : null;
-    const spolu = s ? s.slnkoKwh + s.sietKwh : 0;
-    if (!den || !s || spolu <= 0) return 0;
-    const schedule = scheduleFor(tariff, den.den);
-    const teraz = localMinutes(now, tz);
-    const draha = den.behy.reduce((sum, beh) => {
-        const doMin = Math.max(beh.od + 1, beh.do ?? teraz);
-        let n = 0;
-        for (let m = beh.od; m < doMin; m++) if (bandAt(tariff, schedule, Math.min(m, 24 * 60 - 1)).level === 'draha') n++;
-        return sum + (beh.whSiet * n) / (doMin - beh.od);
-    }, 0);
-    return Math.round((100 * Math.min(draha / 1000, s.sietKwh)) / spolu);
+    if (!den) return 0;
+    const e = energiaDna(den, tariff, localMinutes(now, tz));
+    const spolu = e.slnko + e.siet + e.vt;
+    return spolu > 0 ? Math.round((100 * e.vt) / spolu) : 0;
 }
 
 /**
@@ -315,37 +356,68 @@ export function bojlerDlazdica(b, now, tz, plan = null) {
 /** Pozícia minúty na páse v % (orezaná na pás). @param {number} m */
 const naPase = (m) => Math.round(((Math.min(PAS.doMin, Math.max(PAS.odMin, m)) - PAS.odMin) * 10000) / (PAS.doMin - PAS.odMin)) / 100;
 
+/** @typedef {'slnko' | 'siet' | 'vt' | 'hotovo'} Ton */
+
 /**
- * Úseky jedného behu na páse: zo slnka, podiel zo siete (na konci ohrevu) a po nahriatí vody.
- * @param {import('./bojler.js').Den} den @param {import('./bojler.js').Beh} b @param {number} terazMin
+ * Kusy jedného behu v minútach: zo slnka, zo siete (v drahom pásme `vt`) a po nahriatí vody. So štvrťhodinami (D2)
+ * po štvrťhodinách - v každej najprv slnko, potom sieť; štvrťhodina bez energie je po nahriatí. Beh od staršieho
+ * Workera ako predtým: slnko, na konci ohrevu sieť, potom po nahriatí.
+ * @param {import('./bojler.js').Den} den @param {import('./bojler.js').Beh} b @param {number} terazMin @param {JeDraha} jeDraha
+ * @returns {Array<[number, number, Ton]>}
  */
-function usekyBehu(den, b, terazMin) {
+function kusyBehu(den, b, terazMin, jeDraha) {
     const koniec = b.do ?? terazMin;
+    if (b.q) {
+        const q0 = Math.floor(b.od / BOJLER.qMin);
+        return b.q.flatMap(([wh, siet], i) => {
+            const zac = (q0 + i) * BOJLER.qMin;
+            const od = Math.max(b.od, zac);
+            const po = Math.min(koniec, zac + BOJLER.qMin);
+            if (po <= od) return [];
+            if (wh <= 0) return [/** @type {[number, number, Ton]} */ ([od, po, 'hotovo'])];
+            const delenie = od + (po - od) * (1 - Math.min(1, siet / wh));
+            return /** @type {Array<[number, number, Ton]>} */ ([
+                [od, delenie, 'slnko'],
+                [delenie, po, jeDraha(zac) ? 'vt' : 'siet'],
+            ]);
+        });
+    }
     const hotovo = hotovoV(den, b, koniec) ?? koniec;
     const siet = b.wh > 0 ? Math.min(1, b.whSiet / b.wh) : 0;
     const delenie = b.od + (hotovo - b.od) * (1 - siet);
-    /** @type {Array<[number, number, 'slnko' | 'siet' | 'hotovo']>} */
-    const kusy = [
+    return [
         [b.od, delenie, 'slnko'],
         [delenie, hotovo, 'siet'],
         [hotovo, koniec, 'hotovo'],
     ];
-    return kusy
-        .filter(([od, po]) => naPase(po) > naPase(od))
-        .map(([od, po, tone]) => ({ left: naPase(od), width: Math.round((naPase(po) - naPase(od)) * 100) / 100, tone }));
 }
 
 /**
- * Pás dňa v paneli: úseky behov v % pásu (zo slnka zelené, podiel zo siete červený, po nahriatí
- * vody sivé), čiarka teraz a popisky hodín.
- * @param {import('./bojler.js').Den | null} den @param {number} terazMin
+ * Pás dňa v paneli na osi 0 - 24 h, tej istej ako krivka teploty: úseky behov v % pásu (zo slnka, zo siete, zo siete
+ * v drahom pásme, po nahriatí vody; susedné kusy tej istej farby zlúčené), čiarka teraz a popisky hodín.
+ * @param {import('./bojler.js').Den | null} den @param {number} terazMin @param {Tariff | null} tariff
  */
-function pasDna(den, terazMin) {
-    const useky = den ? den.behy.flatMap((b) => usekyBehu(den, b, terazMin)) : [];
+function pasDna(den, terazMin, tariff) {
+    /** @type {Array<[number, number, Ton]>} */ const kusy = [];
+    if (den) {
+        const jeDraha = drahaDna(tariff, den.den);
+        for (const [od, po, tone] of den.behy.flatMap((b) => kusyBehu(den, b, terazMin, jeDraha))) {
+            const posl = kusy[kusy.length - 1];
+            if (po <= od) continue;
+            if (posl && posl[2] === tone && Math.abs(posl[1] - od) < 0.01) posl[1] = po;
+            else kusy.push([od, po, tone]);
+        }
+    }
+    const useky = kusy
+        .filter(([od, po]) => naPase(po) > naPase(od))
+        .map(([od, po, tone]) => ({ left: naPase(od), width: Math.round((naPase(po) - naPase(od)) * 100) / 100, tone }));
     const ticks = [];
     for (let m = PAS.odMin; m <= PAS.doMin; m += PAS.krokMin) ticks.push({ at: naPase(m), label: String(m / 60) });
-    return { useky, teraz: terazMin >= PAS.odMin && terazMin <= PAS.doMin ? naPase(terazMin) : null, ticks };
+    return { useky, teraz: naPase(terazMin), ticks };
 }
+
+/** Prvé písmeno veľké. @param {string} t */
+const velke = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
 /**
  * Riadok pod nadpisom panelu: čo bojler robí teraz.
@@ -354,10 +426,20 @@ function pasDna(den, terazMin) {
 function podDetail(b, den, now, tz) {
     const T = TERAZ_BOJLER_TEXTS.detailPod;
     const stav = bojlerStav(b, now.getTime());
-    if (stav === 'mlci') return `${T.mlci} ${cas(b.kontaktAt, now, tz)}`;
-    if (b.rucne) return `${TERAZ_BOJLER_TEXTS.rucne} · ${podStavu(stav, den)}`;
-    if (stav === 'hotovo' && naHranici(b)) return TERAZ_BOJLER_TEXTS.detailPod.hotovoNa(stupne(/** @type {number} */ (b.hranica)));
-    return podStavu(stav, den);
+    if (stav === 'mlci') return velke(`${T.mlci} ${cas(b.kontaktAt, now, tz)}`);
+    if (stav === 'hotovo' && !b.rucne && naHranici(b)) return velke(T.hotovoNa(stupne(/** @type {number} */ (b.hranica))));
+    return velke(podStavu(stav, den));
+}
+
+/**
+ * Čo čaká plán od bojlera, v tom istom riadku za stavom: kedy dohreje, alebo že dnes nie. Pri nahriatej vode a bez
+ * plánu prázdne.
+ * @param {import('./plan-dna.js').BojlerPlan | null} plan
+ */
+function planText(plan) {
+    const T = TERAZ_BOJLER_TEXTS.plan;
+    if (!plan || plan.nahriaty) return '';
+    return plan.dohreje === null ? T.nedohreje : T.dohreje(minutesToTimeStr(plan.dohreje));
 }
 
 /**
@@ -390,56 +472,65 @@ function koniecBehu(b, den, x, now, tz) {
 }
 
 /**
- * Riadok behu: od - do a koľko kWh išlo zo slnka a koľko zo siete (farby, bez popisu; `sr` pre čítačku).
- * @param {BojlerInfo} b @param {import('./bojler.js').Den} den @param {import('./bojler.js').Beh} x @param {Date} now @param {string} tz
+ * Časti energie podľa zdroja: Wh (šírka v pásiku), kWh textom, popis a to isté pre čítačku. Bez drahého pásma
+ * v tarife (`sVt` false) je sieť jedna časť.
+ * @param {{ slnko: number, siet: number, vt: number }} e @param {boolean} sVt
  */
-function behRiadok(b, den, x, now, tz) {
-    const siet = Math.min(x.wh, x.whSiet);
+function casti(e, sVt) {
+    const T = TERAZ_BOJLER_TEXTS;
+    const tony = /** @type {Array<'slnko' | 'siet' | 'vt'>} */ (sVt ? ['slnko', 'siet', 'vt'] : ['slnko', 'siet']);
+    return tony.map((tone) => {
+        const wh = Math.max(0, tone === 'siet' && !sVt ? e.siet + e.vt : e[tone]);
+        return { tone, wh, v: `${fmt1(wh / 1000)} kWh`, l: T.zdroj[tone], sr: T.zdrojSr[tone] };
+    });
+}
+
+/**
+ * Riadok behu: od - do, pásik podľa zdroja (`casti`) a koľko kWh spolu; čítačka dostane kWh po zdrojoch (`sr`).
+ * @param {import('./bojler.js').Beh} x
+ * @param {{ b: BojlerInfo, den: import('./bojler.js').Den, now: Date, tz: string, jeDraha: JeDraha, sVt: boolean }} k
+ */
+function behRiadok(x, { b, den, now, tz, jeDraha, sVt }) {
+    const { siet, vt } = sietBehu(x, jeDraha, localMinutes(now, tz));
+    const c = casti({ slnko: x.wh - siet, siet: siet - vt, vt }, sVt);
     return {
         cas: `${minutesToTimeStr(x.od)} – ${x.do === null ? koniecBehu(b, den, x, now, tz) : minutesToTimeStr(x.do)}`,
-        slnko: `${fmt1((x.wh - siet) / 1000)} kWh`,
-        siet: `${fmt1(siet / 1000)} kWh`,
+        kwh: `${fmt1(x.wh / 1000)} kWh`,
+        casti: c.map(({ tone, wh }) => ({ tone, wh })),
+        sr: c
+            .filter((k) => k.wh > 0)
+            .map((k) => `${k.v} ${k.sr}`)
+            .join(', '),
     };
 }
 
 /**
- * Čo čaká plán od bojlera: kedy dohreje, alebo že dnes nie; s teplomerom aj koľko má voda. Pri nahriatej vode a bez plánu
- * prázdne.
- * @param {import('./plan-dna.js').BojlerPlan | null} plan @param {{ t: number } | null} voda
- */
-function planText(plan, voda) {
-    const T = TERAZ_BOJLER_TEXTS.plan;
-    if (!plan || plan.nahriaty) return '';
-    const cas = plan.dohreje === null ? null : minutesToTimeStr(plan.dohreje);
-    if (voda) return cas === null ? T.nedohrejeVoda(stupne(voda.t)) : T.dohrejeVoda(stupne(voda.t), cas);
-    return cas === null ? T.nedohreje : T.dohreje(cas);
-}
-
-/**
- * Panel „Bojler dnes“: nadpis, čo sa deje teraz, čo čaká plán (`plan`: kedy dohreje, alebo že dnes nie - pri nahriatej
- * vode a bez plánu prázdne; s teplomerom aj koľko má voda), krivka teploty vody dnes (`voda`, P1 v
- * docs/navrhy/bojler-teplota.html, bez teplomera null), pás dňa, štyri čísla (zapnutia, ako dlho hrial, kWh zo slnka
- * a zo siete) a behy s časom a odkiaľ.
+ * Panel „Bojler dnes“ (docs/navrhy/bojler-panel.html, A): nadpis, čo sa deje teraz (`pod`) a za ním, čo čaká plán (`plan`),
+ * krivka teploty vody dnes (`voda`, P1 v docs/navrhy/bojler-teplota.html, bez teplomera null) a pod ňou pás behov na
+ * tej istej osi 0 - 24 h, energia dňa podľa zdroja (VT len pri tarife s drahým pásmom), koľkokrát a ako dlho hrial,
+ * behy a čo riadi bojler.
  * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./plan-dna.js').BojlerPlan | null} [plan]
+ * @param {Tariff | null} [tariff]
  */
-export function bojlerDetail(b, now, tz, plan = null) {
+export function bojlerDetail(b, now, tz, plan = null, tariff = null) {
     const T = TERAZ_BOJLER_TEXTS;
     const den = dnes(b, now, tz);
-    const s = den ? suctyDna(den) : { zapnuti: 0, min: 0, slnkoKwh: 0, sietKwh: 0 };
+    const teraz = localMinutes(now, tz);
+    const s = den ? suctyDna(den) : { zapnuti: 0, min: 0 };
     const hrial = s.min >= 60 ? `${Math.floor(s.min / 60)} h ${s.min % 60} min` : `${s.min} min`;
+    const sVt = maDrahu(tariff, localDateKey(now, tz));
+    const jeDraha = drahaDna(tariff, localDateKey(now, tz));
     return {
         nadpis: T.detail,
         pod: podDetail(b, den, now, tz),
-        plan: planText(plan, vodaTeraz(b, now.getTime())),
+        plan: planText(plan),
         voda: krivkaVody(b.teploty ?? [], b.hranica ?? null),
         rezim: { rucne: b.rucne, popis: b.rucne ? T.rezim.popisRucne : T.rezim.popisAppka(fmt1(b.prahy.zapKw), fmt1(b.prahy.vypKw)) },
-        pas: pasDna(den, localMinutes(now, tz)),
-        cisla: [
-            { v: `${s.zapnuti}×`, l: T.zapnuty, tone: '' },
-            { v: hrial, l: T.hrial, tone: '' },
-            { v: `${fmt1(s.slnkoKwh)} kWh`, l: T.zoSlnka, tone: 'slnko' },
-            { v: `${fmt1(s.sietKwh)} kWh`, l: T.zoSiete, tone: 'siet' },
-        ],
-        behy: den ? den.behy.map((x) => behRiadok(b, den, x, now, tz)) : [],
+        pas: pasDna(den, teraz, tariff),
+        energia: casti(den ? energiaDna(den, tariff, teraz) : { slnko: 0, siet: 0, vt: 0 }, sVt),
+        // Kým dnes nehrial, povie to už riadok pod nadpisom.
+        hrial: s.zapnuti ? T.zapnutyHrial(s.zapnuti, hrial) : '',
+        behyNadpis: T.behyNadpis,
+        behy: den ? den.behy.map((x) => behRiadok(x, { b, den, now, tz, jeDraha, sVt })) : [],
     };
 }

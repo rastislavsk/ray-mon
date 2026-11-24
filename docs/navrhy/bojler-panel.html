@@ -1,0 +1,969 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Bojler dnes – nový panel</title>
+        <style>
+            /* Návrh (24. 11. 2026): prerobenie panelu Bojler dnes, ktorý otvorí dlaždica bojlera na karte Teraz.
+               Tri rozloženia (A, B, C), prepínač „Čo riadi bojler?“ (Shelly / Ray-mon) a farby odberu: slnko, sieť (modrá),
+               drahé pásmo VT (červená). Samostatný súbor, nič neimportuje z appky. Čísla a časy sú ilustračné. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --sheet: #101a3a;
+                --ink: #0b1430;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.14);
+                --sun: #ffd166;
+                --siet: #7cc4ff;
+                --vt: #ff7a66;
+                --yes: #b9f28c;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 18px;
+                font-weight: 800;
+            }
+            p,
+            li {
+                max-width: 74ch;
+            }
+            p {
+                margin: 0;
+            }
+            ul {
+                margin: 0;
+                padding-left: 1.2em;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 32px;
+                align-items: flex-start;
+            }
+            .popis {
+                flex: 1 1 320px;
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                font-size: 15px;
+            }
+            .plus,
+            .minus {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--yes);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+            .dnes-img {
+                width: 300px;
+                max-width: 100%;
+                border-radius: 20px;
+                border: 1px solid var(--line);
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 8px 12px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+
+            /* ===== panel (ako sheet v appke) ===== */
+            .panel {
+                width: 340px;
+                max-width: 100%;
+                padding: 18px 16px 18px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #14214a, var(--sheet) 40%, #0d1631);
+                font-size: 14px;
+                display: grid;
+                gap: 14px;
+                align-content: start;
+            }
+            .top {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            .ico {
+                flex: 0 0 auto;
+                width: 46px;
+                height: 46px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.08);
+                display: grid;
+                place-items: center;
+            }
+            .ico svg {
+                width: 24px;
+                height: 24px;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 1.8;
+            }
+            .ico[data-zap] svg {
+                stroke: var(--yes);
+            }
+            .top h4 {
+                margin: 0;
+                font-size: 22px;
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            .top p {
+                font-size: 13px;
+                color: var(--dim);
+            }
+            .top .x {
+                margin-left: auto;
+                align-self: flex-start;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1);
+                display: grid;
+                place-items: center;
+                font-size: 15px;
+            }
+            .graf svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+            }
+            .graf text {
+                fill: var(--dim);
+                font: 700 9px var(--font);
+            }
+            .graf .t {
+                fill: #fff;
+                font-size: 12px;
+                font-weight: 900;
+            }
+            .lbl {
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .sep {
+                border-top: 1px solid var(--line);
+                padding-top: 14px;
+                display: grid;
+                gap: 10px;
+            }
+            /* stohový pás energie */
+            .stoh {
+                display: flex;
+                height: 12px;
+                border-radius: 6px;
+                overflow: hidden;
+                gap: 2px;
+            }
+            .stoh i {
+                display: block;
+            }
+            .s {
+                background: var(--sun);
+            }
+            .n {
+                background: var(--siet);
+            }
+            .v {
+                background: var(--vt);
+            }
+            .tri {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            .tri b {
+                display: block;
+                font-size: 19px;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+                line-height: 1.1;
+            }
+            .tri small {
+                font-size: 12px;
+                color: var(--dim);
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .bod {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+            }
+            .riadok {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 13px;
+                color: var(--dim);
+            }
+            /* prepínač Čo riadi bojler? */
+            .seg {
+                display: flex;
+                gap: 3px;
+                padding: 3px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .seg span {
+                flex: 1;
+                min-height: 40px;
+                display: grid;
+                place-items: center;
+                border-radius: 999px;
+                font-weight: 700;
+            }
+            .seg span[data-on] {
+                background: #fff;
+                color: var(--ink);
+            }
+            .seg.male span {
+                min-height: 32px;
+                white-space: nowrap;
+                font-size: 13px;
+                padding: 0 10px;
+            }
+            .tg-r {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-weight: 700;
+            }
+            .tg {
+                width: 44px;
+                height: 26px;
+                border-radius: 13px;
+                background: rgba(255, 255, 255, 0.25);
+                position: relative;
+            }
+            .tg::after {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .poznamka {
+                font-size: 13px;
+                color: var(--dim);
+            }
+            details.behy summary {
+                list-style: none;
+                display: flex;
+                justify-content: space-between;
+                font-weight: 700;
+                cursor: pointer;
+            }
+            details.behy summary::-webkit-details-marker {
+                display: none;
+            }
+            .beh {
+                display: grid;
+                grid-template-columns: 6.6em 1fr 4.4em;
+                white-space: nowrap;
+                gap: 10px;
+                align-items: center;
+                height: 38px;
+                border-bottom: 1px solid var(--line);
+                font-size: 13px;
+                font-variant-numeric: tabular-nums;
+            }
+            .beh:last-child {
+                border-bottom: 0;
+            }
+            .beh .stoh {
+                height: 8px;
+            }
+            .beh b {
+                text-align: right;
+            }
+            /* B: hlavné číslo a karty voľby */
+            .hero {
+                display: flex;
+                align-items: flex-end;
+                gap: 14px;
+            }
+            .hero b {
+                font-size: 46px;
+                font-weight: 900;
+                line-height: 0.95;
+                font-variant-numeric: tabular-nums;
+            }
+            .hero p {
+                font-size: 13px;
+                color: var(--dim);
+                padding-bottom: 3px;
+            }
+            .hero p strong {
+                color: #fff;
+                display: block;
+                font-size: 15px;
+            }
+            .dnes-b {
+                display: grid;
+                grid-template-columns: 92px 1fr;
+                gap: 16px;
+                align-items: center;
+            }
+            .zoz {
+                display: grid;
+                gap: 5px;
+                font-size: 13px;
+            }
+            .zoz div {
+                display: flex;
+                align-items: center;
+                gap: 7px;
+            }
+            .zoz b {
+                margin-left: auto;
+                font-variant-numeric: tabular-nums;
+            }
+            .karty {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+            .karta {
+                padding: 10px 11px;
+                border-radius: 16px;
+                border: 1.5px solid rgba(255, 255, 255, 0.16);
+                display: grid;
+                gap: 4px;
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .karta strong {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: #fff;
+                font-size: 15px;
+            }
+            .karta[data-on] {
+                border-color: #fff;
+                background: rgba(255, 255, 255, 0.1);
+            }
+            .karta svg {
+                width: 18px;
+                height: 18px;
+                fill: none;
+                stroke: currentColor;
+                stroke-width: 2;
+            }
+            .radio {
+                margin-left: auto;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                border: 2px solid rgba(255, 255, 255, 0.5);
+            }
+            .karta[data-on] .radio {
+                border: 5px solid #fff;
+            }
+            /* C: súčet v hlavičke a bublina behu */
+            .suma {
+                display: flex;
+                align-items: baseline;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+            .suma > b {
+                font-size: 30px;
+                font-weight: 900;
+                line-height: 1;
+            }
+            .suma span {
+                font-size: 13px;
+                color: var(--dim);
+            }
+            .suma i {
+                font-style: normal;
+                font-weight: 800;
+            }
+            .bubl {
+                justify-self: start;
+                margin-left: 96px;
+                padding: 7px 10px;
+                border-radius: 12px;
+                background: #fff;
+                color: var(--ink);
+                font-size: 12px;
+                font-weight: 700;
+                line-height: 1.35;
+                position: relative;
+            }
+            .bubl::before {
+                content: '';
+                position: absolute;
+                top: -6px;
+                left: 26px;
+                border: 6px solid transparent;
+                border-top: 0;
+                border-bottom-color: #fff;
+            }
+            .leg {
+                display: flex;
+                gap: 12px;
+                flex-wrap: wrap;
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .leg span {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Bojler dnes – nový panel</h1>
+                <p class="dim">
+                    Návrh, 24. 11. 2026. Panel, ktorý sa otvorí po ťuknutí na dlaždicu bojlera na karte Teraz. Rástol postupne (teplota
+                    vody, prepínač riadenia, pás dňa, štyri čísla, behy, oznámenia) a teraz je rozhádzaný. Čísla a časy v obrázkoch sú
+                    ilustračné: bojler dnes zapol dvakrát, teraz je 13:30 a hreje, voda má 58 °C.
+                </p>
+            </section>
+
+            <section>
+                <h2>Ako je to teraz</h2>
+                <div class="rad">
+                    <img class="dnes-img" src="bojler-panel/dnes.png" alt="Súčasný panel Bojler dnes" />
+                    <div class="popis">
+                        <p><b>Čo je na ňom zlé</b></p>
+                        <ul>
+                            <li>Dve časové osi: teplota má 0 – 24 h, pás behov 6 – 18 h. Tá istá 12-ka nie je na tom istom mieste.</li>
+                            <li>Prepínač riadenia stojí medzi nimi, takže teplotu a behy od seba oddeľuje nastavenie.</li>
+                            <li>Štyri rovnako veľké dlaždice s číslami: „0× zapnutý“ a „0 min hrial“ vážia toľko ako energia.</li>
+                            <li>Zoznam behov nemá nadpis a stĺpce kWh nemajú popis, iba farbu.</li>
+                            <li>Odber zo siete je červený, hoci inde v appke je sieť modrá.</li>
+                        </ul>
+                        <p><b>Čo sa mení vo všetkých troch návrhoch</b></p>
+                        <ul>
+                            <li>
+                                Prepínač sa volá <b>Čo riadi bojler?</b>, voľby sú <b>Shelly</b> (doteraz „Ručne“) a <b>Ray-mon</b> (doteraz
+                                „Riadi appka“).
+                            </li>
+                            <li>Jedna časová os 0 – 24 h pre teplotu aj behy (v režime Shelly môže bojler hriať aj v noci).</li>
+                            <li>
+                                Farby odberu: <span style="color: var(--sun)">■ slnko</span>,
+                                <span style="color: var(--siet)">■ sieť</span>, <span style="color: var(--vt)">■ sieť vo VT</span>. Dlaždica
+                                už tieto tri farby má (pásik P1), panel ich prevezme. Slnko bude zlaté ako na pásiku, nie zelené ako dnes v
+                                paneli.
+                            </li>
+                            <li>Bez teplomera graf ukáže len behy. Pri jednosadzbovej tarife VT neexistuje a červená sa neukáže.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= A ================= -->
+            <section>
+                <h2>A · Jedna os a nastavenie dole</h2>
+                <div class="rad">
+                    <div class="panel">
+                        <div class="top">
+                            <span class="ico" data-zap
+                                ><svg viewBox="0 0 24 24">
+                                    <rect x="6" y="2.5" width="12" height="19" rx="6" />
+                                    <path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z" /></svg
+                            ></span>
+                            <div>
+                                <h4>Bojler dnes</h4>
+                                <p>Hreje od 12:05 · dohreje okolo 14:10</p>
+                            </div>
+                            <span class="x">✕</span>
+                        </div>
+                        <div class="graf">
+                            <svg viewBox="0 0 300 140">
+                                <line x1="0" y1="9" x2="300" y2="9" stroke="rgba(255,255,255,.5)" stroke-dasharray="4 3" />
+                                <text x="300" y="5" text-anchor="end">hranica 60 °C</text>
+                                <path
+                                    d="M0 68 L75 77 L121 86 L141.6 50 L151 52.3 L168.75 18.2 L168.75 100 L0 100Z"
+                                    fill="rgba(255,255,255,.1)"
+                                />
+                                <polyline
+                                    points="0,68 75,77 121,86 141.6,50 151,52.3 168.75,18.2"
+                                    fill="none"
+                                    stroke="#fff"
+                                    stroke-width="2"
+                                    stroke-linejoin="round"
+                                />
+                                <line x1="168.75" y1="18" x2="168.75" y2="122" stroke="rgba(255,255,255,.6)" />
+                                <circle cx="168.75" cy="18.2" r="4.5" fill="#fff" />
+                                <text class="t" x="176" y="30">58 °C</text>
+                                <rect x="0" y="108" width="300" height="12" rx="2" fill="rgba(255,255,255,.07)" />
+                                <rect x="121" y="108" width="18.5" height="12" fill="var(--sun)" />
+                                <rect x="139.5" y="108" width="2.1" height="12" fill="var(--vt)" />
+                                <rect x="151" y="108" width="14.6" height="12" fill="var(--sun)" />
+                                <rect x="165.6" y="108" width="3.15" height="12" fill="var(--siet)" />
+                                <text x="0" y="136">0</text>
+                                <text x="75" y="136" text-anchor="middle">6</text>
+                                <text x="150" y="136" text-anchor="middle">12</text>
+                                <text x="225" y="136" text-anchor="middle">18</text>
+                                <text x="300" y="136" text-anchor="end">24</text>
+                            </svg>
+                        </div>
+                        <div style="display: grid; gap: 8px">
+                            <div class="stoh">
+                                <i class="s" style="flex: 3"></i><i class="n" style="flex: 0.3"></i><i class="v" style="flex: 0.2"></i>
+                            </div>
+                            <div class="tri">
+                                <div>
+                                    <b>3,0 kWh</b><small><i class="bod s"></i>slnko</small>
+                                </div>
+                                <div>
+                                    <b>0,3 kWh</b><small><i class="bod n"></i>sieť</small>
+                                </div>
+                                <div>
+                                    <b>0,2 kWh</b><small><i class="bod v"></i>sieť vo VT</small>
+                                </div>
+                            </div>
+                            <div class="riadok"><span>2× zapnutý · hrial 3 h 5 min</span></div>
+                        </div>
+                        <details class="behy">
+                            <summary><span>Behy dnes</span><span class="dim">2 ›</span></summary>
+                        </details>
+                        <div class="sep">
+                            <span class="lbl">Čo riadi bojler?</span>
+                            <div class="seg"><span>Shelly</span><span data-on>Ray-mon</span></div>
+                            <p class="poznamka">Zapne pri prebytku od 2,3 kW, vypne pod 2,0 kW.</p>
+                        </div>
+                        <div class="tg-r sep" style="display: flex"><span>Oznámiť zapnutie a vypnutie</span><i class="tg"></i></div>
+                    </div>
+                    <div class="popis">
+                        <p>
+                            Najmenšia zmena. Hore je, čo sa deje (stav a plán v jednom riadku, bez veľkých písmen), pod tým jeden graf:
+                            krivka teploty a pod ňou pás behov na tej istej osi 0 – 24 h, čiara teraz prechádza oboma. Energia je jeden pás
+                            a tri čísla. Zapnutia a čas sú jeden tichý riadok, behy sú zbalené (ťuknutím sa rozbalia na riadky ako v návrhu
+                            B). Nastavenie (Čo riadi bojler?, oznámenia) je dole za čiarou, lebo sa mení zriedka.
+                        </p>
+                        <span class="plus">Najkratší panel, na S22 sa zmestí bez posúvania.</span>
+                        <span class="plus">Čas behu sa dá prečítať priamo pod krivkou: vidno, kedy voda stúpala a odkiaľ.</span>
+                        <span class="plus">Kód sa mení najmenej: pás dňa a krivka sa spoja, dlaždice nahradí jeden riadok.</span>
+                        <span class="minus">Behy sú schované, kto ich chce vidieť, musí ťuknúť.</span>
+                        <span class="minus">Úzke behy (10 minút zo siete) sú na osi 0 – 24 h len prúžok široký 2 px.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= B ================= -->
+            <section>
+                <h2>B · Sekcie s nadpismi</h2>
+                <div class="rad">
+                    <div class="panel">
+                        <div class="top">
+                            <span class="ico" data-zap
+                                ><svg viewBox="0 0 24 24">
+                                    <rect x="6" y="2.5" width="12" height="19" rx="6" />
+                                    <path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z" /></svg
+                            ></span>
+                            <div><h4>Bojler dnes</h4></div>
+                            <span class="x">✕</span>
+                        </div>
+                        <div class="hero">
+                            <b>58 °C</b>
+                            <p><strong>Hreje od 12:05</strong>dohreje na 60 °C okolo 14:10</p>
+                        </div>
+                        <div class="sep">
+                            <span class="lbl">Odkiaľ dnes hrial</span>
+                            <div class="dnes-b">
+                                <svg viewBox="0 0 92 92" width="92" height="92">
+                                    <g transform="rotate(-90 46 46)" fill="none" stroke-width="12">
+                                        <circle cx="46" cy="46" r="34" stroke="var(--sun)" stroke-dasharray="183.1 213.6" />
+                                        <circle
+                                            cx="46"
+                                            cy="46"
+                                            r="34"
+                                            stroke="var(--siet)"
+                                            stroke-dasharray="18.3 213.6"
+                                            stroke-dashoffset="-183.1"
+                                        />
+                                        <circle
+                                            cx="46"
+                                            cy="46"
+                                            r="34"
+                                            stroke="var(--vt)"
+                                            stroke-dasharray="12.2 213.6"
+                                            stroke-dashoffset="-201.4"
+                                        />
+                                    </g>
+                                    <text
+                                        x="46"
+                                        y="47"
+                                        text-anchor="middle"
+                                        fill="#fff"
+                                        font-family="Archivo"
+                                        font-weight="900"
+                                        font-size="20"
+                                    >
+                                        86 %
+                                    </text>
+                                    <text
+                                        x="46"
+                                        y="61"
+                                        text-anchor="middle"
+                                        fill="rgba(255,255,255,.72)"
+                                        font-family="Archivo"
+                                        font-weight="700"
+                                        font-size="9"
+                                    >
+                                        zo slnka
+                                    </text>
+                                </svg>
+                                <div class="zoz">
+                                    <div><i class="bod s"></i>slnko<b>3,0 kWh</b></div>
+                                    <div><i class="bod n"></i>sieť<b>0,3 kWh</b></div>
+                                    <div><i class="bod v"></i>sieť vo VT<b>0,2 kWh</b></div>
+                                    <div class="dim" style="margin-top: 4px">2× · 3 h 5 min</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sep">
+                            <span class="lbl">Priebeh</span>
+                            <div class="graf">
+                                <svg viewBox="0 0 300 140">
+                                    <line x1="0" y1="9" x2="300" y2="9" stroke="rgba(255,255,255,.5)" stroke-dasharray="4 3" />
+                                    <text x="300" y="5" text-anchor="end">hranica 60 °C</text>
+                                    <path
+                                        d="M0 68 L75 77 L121 86 L141.6 50 L151 52.3 L168.75 18.2 L168.75 100 L0 100Z"
+                                        fill="rgba(255,255,255,.1)"
+                                    />
+                                    <polyline
+                                        points="0,68 75,77 121,86 141.6,50 151,52.3 168.75,18.2"
+                                        fill="none"
+                                        stroke="#fff"
+                                        stroke-width="2"
+                                        stroke-linejoin="round"
+                                    />
+                                    <line x1="168.75" y1="18" x2="168.75" y2="122" stroke="rgba(255,255,255,.6)" />
+                                    <circle cx="168.75" cy="18.2" r="4.5" fill="#fff" />
+                                    <rect x="0" y="108" width="300" height="12" rx="2" fill="rgba(255,255,255,.07)" />
+                                    <rect x="121" y="108" width="18.5" height="12" fill="var(--sun)" />
+                                    <rect x="139.5" y="108" width="2.1" height="12" fill="var(--vt)" />
+                                    <rect x="151" y="108" width="14.6" height="12" fill="var(--sun)" />
+                                    <rect x="165.6" y="108" width="3.15" height="12" fill="var(--siet)" />
+                                    <text x="0" y="136">0</text>
+                                    <text x="75" y="136" text-anchor="middle">6</text>
+                                    <text x="150" y="136" text-anchor="middle">12</text>
+                                    <text x="225" y="136" text-anchor="middle">18</text>
+                                    <text x="300" y="136" text-anchor="end">24</text>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="sep" style="gap: 0">
+                            <span class="lbl" style="margin-bottom: 4px">Behy</span>
+                            <div class="beh">
+                                <span>9:40 – 11:20</span
+                                ><span class="stoh"><i class="s" style="flex: 1.7"></i><i class="v" style="flex: 0.2"></i></span
+                                ><b>1,9 kWh</b>
+                            </div>
+                            <div class="beh">
+                                <span>12:05 – teraz</span
+                                ><span class="stoh"><i class="s" style="flex: 1.3"></i><i class="n" style="flex: 0.3"></i></span
+                                ><b>1,6 kWh</b>
+                            </div>
+                        </div>
+                        <div class="sep">
+                            <span class="lbl">Čo riadi bojler?</span>
+                            <div class="karty">
+                                <div class="karta">
+                                    <strong
+                                        ><svg viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="9" />
+                                            <path d="M12 7v5l3 2" /></svg
+                                        >Shelly<i class="radio"></i
+                                    ></strong>
+                                    Ty alebo časovač v appke Shelly. Ray-mon len zapisuje.
+                                </div>
+                                <div class="karta" data-on>
+                                    <strong
+                                        ><svg viewBox="0 0 24 24">
+                                            <circle cx="12" cy="12" r="4" />
+                                            <path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2" /></svg
+                                        >Ray-mon<i class="radio"></i
+                                    ></strong>
+                                    Zapne pri prebytku od 2,3 kW, vypne pod 2,0 kW.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="tg-r sep" style="display: flex"><span>Oznámiť zapnutie a vypnutie</span><i class="tg"></i></div>
+                    </div>
+                    <div class="popis">
+                        <p>
+                            Najprehľadnejšia. Hore veľká teplota vody (bez teplomera „3,5 kWh“ dnes) a stav. Potom sekcie s malými nadpismi:
+                            <b>Odkiaľ dnes hrial</b> (koliesko s podielom slnka a tri čísla), <b>Priebeh</b> (ten istý graf ako v A),
+                            <b>Behy</b> (každý beh s malým pásikom namiesto dvoch stĺpcov čísel) a <b>Čo riadi bojler?</b>
+                            ako dve karty, každá s ikonou a vetou, čo voľba znamená. Ikony sú tie isté ako značka na dlaždici (hodiny pre
+                            Shelly, slnko pre Ray-mon).
+                        </p>
+                        <span class="plus">Každá vec má svoje miesto a nadpis, dá sa ľahko dopĺňať, a preto vydrží najdlhšie.</span>
+                        <span class="plus">Pri voľbe riadenia vidno obe vysvetlenia naraz, netreba prepínať a čítať.</span>
+                        <span class="plus">Behy majú vlastné pásiky: vidno, ktorý beh si vzal sieť.</span>
+                        <span class="minus">Najdlhší panel, treba ho posúvať (asi 1,5 obrazovky na S22).</span>
+                        <span class="minus">Koliesko a pás behov hovoria o slnku dvakrát, každé inak.</span>
+                        <span class="minus">Najviac práce: nové HTML aj štýly, prepínač sa mení na karty.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= C ================= -->
+            <section>
+                <h2>C · Farebná krivka</h2>
+                <div class="rad">
+                    <div class="panel">
+                        <div class="top">
+                            <span class="ico" data-zap
+                                ><svg viewBox="0 0 24 24">
+                                    <rect x="6" y="2.5" width="12" height="19" rx="6" />
+                                    <path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z" /></svg
+                            ></span>
+                            <div>
+                                <h4>Bojler dnes</h4>
+                                <p>Hreje od 12:05</p>
+                            </div>
+                            <span class="x">✕</span>
+                        </div>
+                        <div class="riadok">
+                            <span class="lbl">Čo riadi bojler?</span>
+                            <div class="seg male"><span>Shelly</span><span data-on>Ray-mon</span></div>
+                        </div>
+                        <div class="suma">
+                            <b>3,5 kWh</b>
+                            <span
+                                ><i style="color: var(--sun)">3,0</i> · <i style="color: var(--siet)">0,3</i> ·
+                                <i style="color: var(--vt)">0,2</i> · 2× · 3 h 5 min</span
+                            >
+                        </div>
+                        <div class="graf">
+                            <svg viewBox="0 0 300 150">
+                                <rect x="0" y="0" width="75" height="112" fill="rgba(124,196,255,.07)" />
+                                <rect x="165.6" y="0" width="25" height="112" fill="rgba(124,196,255,.07)" />
+                                <rect x="250" y="0" width="25" height="112" fill="rgba(124,196,255,.07)" />
+                                <rect x="75" y="0" width="90.6" height="112" fill="rgba(255,122,102,.06)" />
+                                <rect x="190.6" y="0" width="59.4" height="112" fill="rgba(255,122,102,.06)" />
+                                <rect x="275" y="0" width="25" height="112" fill="rgba(255,122,102,.06)" />
+                                <line x1="0" y1="9" x2="300" y2="9" stroke="rgba(255,255,255,.5)" stroke-dasharray="4 3" />
+                                <text x="300" y="5" text-anchor="end">hranica 60 °C</text>
+                                <polyline points="0,68 75,77 121,86" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5" />
+                                <polyline points="141.6,50 151,52.3" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2.5" />
+                                <path d="M121 86 L139.5 53.6 L139.5 112 L121 112Z" fill="var(--sun)" opacity=".28" />
+                                <path d="M139.5 53.6 L141.6 50 L141.6 112 L139.5 112Z" fill="var(--vt)" opacity=".35" />
+                                <path d="M151 52.3 L165.6 24.2 L165.6 112 L151 112Z" fill="var(--sun)" opacity=".28" />
+                                <path d="M165.6 24.2 L168.75 18.2 L168.75 112 L165.6 112Z" fill="var(--siet)" opacity=".35" />
+                                <polyline
+                                    points="121,86 139.5,53.6"
+                                    fill="none"
+                                    stroke="var(--sun)"
+                                    stroke-width="4"
+                                    stroke-linecap="round"
+                                />
+                                <polyline
+                                    points="139.5,53.6 141.6,50"
+                                    fill="none"
+                                    stroke="var(--vt)"
+                                    stroke-width="4"
+                                    stroke-linecap="round"
+                                />
+                                <polyline
+                                    points="151,52.3 165.6,24.2"
+                                    fill="none"
+                                    stroke="var(--sun)"
+                                    stroke-width="4"
+                                    stroke-linecap="round"
+                                />
+                                <polyline
+                                    points="165.6,24.2 168.75,18.2"
+                                    fill="none"
+                                    stroke="var(--siet)"
+                                    stroke-width="4"
+                                    stroke-linecap="round"
+                                />
+                                <circle cx="168.75" cy="18.2" r="5" fill="#fff" />
+                                <text class="t" x="176" y="30">58 °C</text>
+                                <line x1="0" y1="112" x2="300" y2="112" stroke="rgba(255,255,255,.25)" />
+                                <text x="0" y="126">0</text>
+                                <text x="75" y="126" text-anchor="middle">6</text>
+                                <text x="150" y="126" text-anchor="middle">12</text>
+                                <text x="225" y="126" text-anchor="middle">18</text>
+                                <text x="300" y="126" text-anchor="end">24</text>
+                                <text x="37" y="144" text-anchor="middle" style="fill: var(--siet)">NT</text>
+                                <text x="120" y="144" text-anchor="middle" style="fill: var(--vt)">VT</text>
+                                <text x="178" y="144" text-anchor="middle" style="fill: var(--siet)">NT</text>
+                            </svg>
+                        </div>
+                        <div class="bubl">9:40 – 11:20 · 1,7 slnko · 0,2 VT</div>
+                        <div class="leg">
+                            <span><i class="bod s"></i>zo slnka</span><span><i class="bod n"></i>zo siete</span
+                            ><span><i class="bod v"></i>vo VT</span><span>podklad: pásma tarify</span>
+                        </div>
+                        <div class="tg-r sep" style="display: flex"><span>Oznámiť zapnutie a vypnutie</span><i class="tg"></i></div>
+                    </div>
+                    <div class="popis">
+                        <p>
+                            Nekonvenčná a najviac „obraz“. Behy nie sú zvláštny pás: časť krivky, kde bojler hrial, je hrubá a zafarbená
+                            podľa toho, odkiaľ prúd išiel, pod ňou je plocha tej istej farby. Podklad grafu ukazuje pásma tarify (NT
+                            modrasté, VT červenkasté), takže vidno, prečo je kúsok červený. Súčet je jedno veľké číslo v hlavičke, zoznam
+                            behov nie je: ťuknutie na zafarbený kúsok ukáže bublinu s behom. Čo riadi bojler? je malý prepínač hore, lebo od
+                            neho závisí, čo graf znamená (pri Shelly Ray-mon len zapisuje).
+                        </p>
+                        <span class="plus">Jeden obraz povie všetko: kedy hrial, o koľko stúpla voda a z čoho.</span>
+                        <span class="plus">Najkratší panel zo všetkých.</span>
+                        <span class="minus"
+                            >Bez teplomera krivka nie je, graf by spadol na pás ako v A. Dva rôzne vzhľady jedného panelu.</span
+                        >
+                        <span class="minus">Behy sú len na ťuknutie do grafu (na prst malý cieľ), čítačka ich musí dostať inak.</span>
+                        <span class="minus">Podklad s pásmami tarify pridáva ďalšie farby, kto tarifu nepozná, nemusí ich pochopiť.</span>
+                        <span class="minus">Malý prepínač hore je ľahšie prepnúť omylom.</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ================= Dáta ================= -->
+            <section>
+                <h2>Vieme presne, koľko išlo zo slnka, v NT a vo VT?</h2>
+                <p>
+                    <b>Slnko a sieť: áno, s presnosťou merania.</b> Worker pri každom minútovom dopyte zásuvky pripočíta k behu odber zo
+                    siete (príkon bojlera, najviac toľko, koľko dom práve berie zo siete podľa elektromera). Elektromer Huawei sa obnovuje
+                    raz za 5 minút, takže krátky oblak môže byť o pár minút posunutý. Je to to isté číslo, ktoré panel ukazuje už dnes.
+                </p>
+                <p>
+                    <b>NT a VT: teraz nie presne, len odhadom.</b> Worker si na beh ukladá iba jedno číslo <code>whSiet</code> za celý beh,
+                    nie kedy presne sa zo siete bralo. Pásik dlaždice (P1, <code>bojlerDrahaDnes</code>) preto rozdelí odber zo siete
+                    rovnomerne na celý beh a potom ráta, koľko z toho padlo do VT. Keď beh prejde hranicou pásma (napríklad 9:40 – 11:20 a
+                    NT začína o 11:00), odhad sa môže pomýliť. Presné číslo je jednoduché zariadiť:
+                </p>
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>Ako</th>
+                        <th>Výhody</th>
+                        <th>Nevýhody</th>
+                    </tr>
+                    <tr>
+                        <td><b>D1</b> odhad ako dnes</td>
+                        <td>Panel použije ten istý rovnomerný rozpočet ako pásik dlaždice.</td>
+                        <td>Žiadna zmena Workera, hneď.</td>
+                        <td>
+                            Červená je odhad. Pri behu cez hranicu pásma môže byť zle, a pásik behov v grafe by ukazoval VT na mieste, kde
+                            nebol.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><b>D2</b> odber po štvrťhodinách</td>
+                        <td>
+                            Worker k behu ukladá odber zo siete po 15 minútach (najviac 96 čísel za deň). Na VT a NT ich rozdelí appka podľa
+                            tarify, ktorú už pozná.
+                        </td>
+                        <td>
+                            Presné do štvrťhodiny (pásma tarify začínajú na štvrťhodinách). Worker nemusí poznať tarifu. Graf vie nakresliť
+                            sieť presne tam, kde bola.
+                        </td>
+                        <td>Zmena záznamu dňa vo Workeri a jeho nasadenie. Staršie dni a starý Worker údaj nemajú, tam ostane odhad D1.</td>
+                    </tr>
+                    <tr>
+                        <td><b>D3</b> Worker pozná tarifu</td>
+                        <td>Appka pošle Workeru rozvrh tarify, Worker hneď pripočíta odber do <code>whNt</code> / <code>whVt</code>.</td>
+                        <td>V zázname len dve čísla navyše.</td>
+                        <td>
+                            Tarifa by musela žiť aj vo Workeri, takže ďalšia kópia nastavenia, ktorá sa môže rozísť s telefónom. Graf by
+                            miesto odberu nevedel.
+                        </td>
+                    </tr>
+                </table>
+                <p class="odpor">
+                    <b>Odporúčam A + D2.</b> A rieši, čo je dnes zlé (dve osi, prepínač v strede, štyri rovnaké dlaždice), a ostane krátky.
+                    Behy v ňom môžu byť rozbalené do riadkov s pásikom z B, ak nechceš nič schovávať. D2 dá červenú len tam, kde VT naozaj
+                    bola, a stojí na údaji, ktorý Worker aj tak zbiera každú minútu. Kým D2 nie je nasadené, panel ukáže odhad D1, takže A
+                    môže ísť samostatne a skôr.
+                </p>
+                <p class="odpor">
+                    <b>Rozhodnuté 24. 11. 2026: A + D2.</b> Behy sú zbalené pod nadpisom „Behy dnes“ s počtom a rozbalia sa do riadkov s
+                    pásikom ako v B. Kto bojler riadi, riadok pod nadpisom už neopakuje (ukáže to prepínač v tom istom paneli) a teplotu
+                    vody tam nepíše (je na krivke). Panel bez štvrťhodín (behy od staršieho Workera) ráta VT odhadom D1.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>

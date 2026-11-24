@@ -239,7 +239,7 @@ export function bojlerZmenaText({ zapol, dovod, kw, hranica }) {
     const prebytok = kw === null ? '' : `${fmt1(kw)} kW`;
     /** @type {Record<typeof dovod, string>} */
     const body = {
-        appka: zapol ? `Prebytok ${prebytok} · riadi appka` : prebytok ? `Prebytok klesol na ${prebytok}.` : 'Prebytok klesol.',
+        appka: zapol ? `Prebytok ${prebytok} · riadi Ray-mon` : prebytok ? `Prebytok klesol na ${prebytok}.` : 'Prebytok klesol.',
         termostat: zapol ? 'Voda chladne, termostat znova kúri.' : 'Voda je nahriata (termostat).',
         rucne: 'Prepnutý ručne v Shelly.',
         spojenie: 'Zásuvka nemala spojenie, vypla sa pre istotu.',

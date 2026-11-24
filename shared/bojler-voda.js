@@ -92,7 +92,7 @@ const MEDZERA_MIN = 20;
 
 /**
  * Krivka teploty dnes v paneli Bojler dnes (P1): úseky čiary a plochy pod ňou vo viewBoxe W × H, čiara hranice
- * (`hranica`, bez nej nie je), bod teraz s teplotou, popisky hodín a veta pre čítačku. Menej ako dva body null.
+ * (`hranica`, bez nej nie je), bod teraz s teplotou a veta pre čítačku. Os hodín pod ňou kreslí pás behov (rovnaká šírka dňa). Menej ako dva body null.
  * @param {Array<[number, number]>} teploty [minúta dňa, °C] @param {number | null} hranica
  */
 export function krivkaVody(teploty, hranica) {
@@ -116,7 +116,6 @@ export function krivkaVody(teploty, hranica) {
         plochy: useky.map((u) => `${ciara(u)}L${x(u[u.length - 1][0])} ${H}L${x(u[0][0])} ${H}Z`),
         ciel: hranica !== null && hranica > dole && hranica < hore ? { y: y(hranica), text: `hranica ${stupne(hranica)}` } : null,
         bod: { x: x(mPosl), y: y(tPosl), text: stupne(tPosl) },
-        ticks: [0, 6, 12, 18, 24].map((h) => ({ at: Math.round((h / 24) * 10000) / 100, label: String(h) })),
         popis: `Teplota vody dnes od ${fmt1(Math.min(...hodnoty))} do ${fmt1(Math.max(...hodnoty))} °C, naposledy ${fmt1(tPosl)} °C.`,
     };
 }

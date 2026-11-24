@@ -518,6 +518,8 @@ export const TRASY_STORAGE_KEY = 'trasy-v1';
  * bod každých `vodaKrokMin` minút za `vodaDni` dní. Hranica teploty (docs/navrhy/bojler-hranica.html, možnosť 2 + H2 + D1):
  * kým ju človek nenastaví, nie je. Nastavuje sa po 1 °C od `vodaMinC` do `vodaMaxC`, prvé zapnutie ponúkne `vodaStartC`.
  * Pri hranici zásuvka bojler vypne a znova ho pustí až pod hranicou mínus `vodaHystC`.
+ * Energiu a odber zo siete si beh drží aj po `qMin` minútach (docs/navrhy/bojler-panel.html, D2) - po toľkých sa mení
+ * pásmo tarify, takže appka z nich vie, čo išlo zo siete v drahom pásme.
  */
 export const BOJLER = {
     zapKw: 2.3,
@@ -540,6 +542,7 @@ export const BOJLER = {
     vodaMaxC: 75,
     vodaStartC: 55,
     vodaHystC: 5,
+    qMin: TARIFF_LIMITS.stepMin,
 };
 
 /**

@@ -153,6 +153,37 @@ test('záznam dňa: behy, energia z počítadla, podiel zo siete, nahriata voda 
     assert.deepEqual([noc.behy.length, noc.behy[0].od, noc.hotovo], [1, 0, null]);
     const noc2 = zaznamenaj({ ...den, behy: [] }, { ...v(0, { rele: false }), now: new Date(Date.UTC(2026, 10, 15, 23, 1)) });
     assert.deepEqual(noc2.behy, []);
+    assert.equal(noc.behy[0].q?.length, 1, 'beh po polnoci má štvrťhodiny od začiatku');
+});
+
+test('záznam dňa: energia a odber zo siete po štvrťhodinách (D2) sedia so súčtom behu', () => {
+    const tz = 'Europe/Bratislava';
+    const v = (/** @type {number} */ min, /** @type {object} */ o) => ({
+        now: new Date(T0 + min * MIN),
+        tz,
+        rele: true,
+        w: 2200,
+        energiaWh: 1000,
+        sietKw: 0.1,
+        ...o,
+    });
+    // Beh od 10:01, 40 minút po 36,7 Wh; zo siete 1 kW v dopytoch o 10:22 - 10:31.
+    let den = zaznamenaj(null, v(1, {}));
+    for (let m = 2; m <= 41; m++)
+        den = zaznamenaj(den, v(m, { energiaWh: 1000 + ((m - 1) * 2200) / 60, sietKw: m >= 22 && m <= 31 ? -1 : 0.1 }));
+    const beh = den.behy[0];
+    const q = /** @type {Array<[number, number]>} */ (beh.q);
+    // Dopyt patrí štvrťhodine minúty pred ním: 10:00-10:15, 10:15-10:30, 10:30-10:45.
+    assert.equal(q.length, 3);
+    assert.ok(Math.abs(q.reduce((s, x) => s + x[0], 0) - beh.wh) < 0.5);
+    assert.ok(Math.abs(q.reduce((s, x) => s + x[1], 0) - beh.whSiet) < 0.5);
+    assert.deepEqual(
+        q.map((x) => Math.round(x[1])),
+        [0, 150, 17],
+    );
+    // Beh od staršieho Workera (bez `q`) štvrťhodiny nezačne - nesedeli by s celým behom.
+    const stary = { ...den, behy: [{ od: beh.od, do: null, wh: beh.wh, whSiet: beh.whSiet, e0: beh.e0, hrejeMin: beh.hrejeMin }] };
+    assert.equal(zaznamenaj(stary, v(42, { energiaWh: 2600 })).behy[0].q, undefined);
 });
 
 test('zmena ohrevu pre oznámenie: zapol, vypol a prečo; bez zmeny či prvé hlásenie nič', () => {
