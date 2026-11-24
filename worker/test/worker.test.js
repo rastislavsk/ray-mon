@@ -1222,7 +1222,7 @@ test('oznámenia bojlera: telefón si ich zapne, pri každej zmene ohrevu príde
     await hlas(2, false, 0);
     assert.deepEqual(await nove(), [], 'prvé hlásenie nič nemení');
     await hlas(3, true, 2200);
-    assert.deepEqual(await nove(), ['Prebytok 2,3 kW · riadi appka']);
+    assert.deepEqual(await nove(), ['Prebytok 2,3 kW · riadi Ray-mon']);
     await hlas(4, true, 2200);
     assert.deepEqual(await nove(), [], 'bez zmeny bez oznámenia');
     await hlas(5, true, 10);

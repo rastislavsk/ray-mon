@@ -196,7 +196,7 @@ test('koniec programu: čo je hotové, pri praní aj sušička podľa plánu v c
 
 test('bojler: zapol sa či vypol sa a prečo', () => {
     const t = (/** @type {any} */ z) => bojlerZmenaText(z);
-    assert.deepEqual(t({ zapol: true, dovod: 'appka', kw: 2.6 }), { title: 'Bojler sa zapol', body: 'Prebytok 2,6 kW · riadi appka' });
+    assert.deepEqual(t({ zapol: true, dovod: 'appka', kw: 2.6 }), { title: 'Bojler sa zapol', body: 'Prebytok 2,6 kW · riadi Ray-mon' });
     assert.deepEqual(t({ zapol: false, dovod: 'appka', kw: 1.8 }), { title: 'Bojler sa vypol', body: 'Prebytok klesol na 1,8 kW.' });
     assert.equal(t({ zapol: false, dovod: 'appka', kw: null }).body, 'Prebytok klesol.');
     assert.equal(t({ zapol: false, dovod: 'termostat', kw: 3 }).body, 'Voda je nahriata (termostat).');

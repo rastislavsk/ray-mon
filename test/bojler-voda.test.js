@@ -78,7 +78,7 @@ test('krivka: úseky po medzerách, plocha, čiara cieľa, bod teraz a popis', (
     assert.equal(k.ciel?.text, 'hranica 55 °C');
     assert.equal(
         krivkaVody(
-            k.ticks.map((_, i) => [i * 5, 50]),
+            [0, 5, 10].map((m) => [m, 50]),
             null,
         )?.ciel,
         null,
@@ -87,10 +87,6 @@ test('krivka: úseky po medzerách, plocha, čiara cieľa, bod teraz a popis', (
     assert.ok(k.ciel && k.ciel.y > 0 && k.ciel.y < k.h);
     assert.deepEqual(k.bod.text, '68 °C');
     assert.equal(k.bod.x, Math.round((845 / 1440) * k.w * 10) / 10);
-    assert.deepEqual(
-        k.ticks.map((t) => t.label),
-        ['0', '6', '12', '18', '24'],
-    );
     assert.equal(k.popis, 'Teplota vody dnes od 43,5 do 67,6 °C, naposledy 67,6 °C.');
     // Cieľ mimo rozsahu krivky sa nekreslí, rozsah sa rozšíri podľa teplôt.
     const horuca = krivkaVody(

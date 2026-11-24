@@ -82,6 +82,11 @@ v Nastavení („Hriať do“, kým nie je, hreje sa po termostat), drží ju Wo
 (`maxC`, `minC` = hranica - `BOJLER.vodaHystC`). Pravidlo `strazVodu` (`shared/bojler-voda.js`) má Worker aj skript zásuvky,
 ktorý ho stráži aj bez internetu; bez teploty hranica nič nebráni. V ručnom režime ju nestráži nikto. Termostat na bojleri
 je nastavený vyššie ako poistka.
+Panel Bojler dnes (`docs/navrhy/bojler-panel.html`, A + D2, 24. 11. 2026): stav a plán v riadku pod nadpisom, teplota vody
+a pás behov na jednej osi 0 – 24 h, energia slnko / sieť / sieť vo VT (VT len pri tarife s drahým pásmom), behy zbalené
+a dole prepínač **Čo riadi bojler?** so Shelly (ručný režim, `rucne`) a Ray-mon. Sieť je modrá, červená len VT. Beh si vo Workeri
+drží energiu a odber zo siete po štvrťhodinách (`q`, `BOJLER.qMin` = krok tarify), z nich appka vie VT presne; beh bez `q`
+(starší Worker) ráta VT odhadom - odber rozloží rovnomerne na čas behu.
 Bojler riadi jedno zariadenie (`docs/navrhy/bojler-jedno-zariadenie.html`, C + D, 24. 11. 2026): skript posiela
 `Shelly.getDeviceInfo().id`, Worker pripne prvú zásuvku s meraním príkonu (`bd:`, `zariadenieBojlera` v `shared/bojler.js`)
 a ostatným vráti 409; hlásenie bez `w` (Shelly 1 Gen3 s teplomerom) neprejde nikdy. Skript patrí len do zásuvky.

@@ -115,6 +115,21 @@ test('stav bojlera z Workera: kontrola tvaru, záznam dňa len s platnými behmi
         den: { den: '2026-11-15', behy: [beh], hotovo: 700, posledneAt: 2 },
         rucne: false,
     });
+    // Štvrťhodiny behu (docs/navrhy/bojler-panel.html, D2): celé prejdú, pokazené sa zahodia a beh ostane bez nich.
+    const sQ = (/** @type {unknown} */ q) =>
+        bojlerInfoZ({ kontaktAt: 1, rele: true, w: 1, den: { den: 'd', behy: [{ ...beh, q }], posledneAt: 1 } })?.den?.behy[0];
+    assert.deepEqual(
+        sQ([
+            [50, 5],
+            [50, 0],
+        ])?.q,
+        [
+            [50, 5],
+            [50, 0],
+        ],
+    );
+    assert.deepEqual(sQ([[50, 'x']]), beh);
+    assert.deepEqual(sQ('x'), beh);
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, rucne: true })?.rucne, true);
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, prebytokKw: 1, den: { den: 5 } })?.den, null);
     assert.equal(bojlerInfoZ({ kontaktAt: 1, rele: false, w: 0, den: { den: 'd', behy: [], posledneAt: 1 } })?.den?.hotovo, null);

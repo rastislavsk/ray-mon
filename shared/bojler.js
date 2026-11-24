@@ -111,8 +111,10 @@ function vysledok(zapni, p, v, prebytokKw) {
 /**
  * Jeden beh bojlera v dni: od a do (minúty od polnoci, `do` null kým beží), energia behu vo Wh
  * (z počítadla zásuvky, `e0` je jeho stav na začiatku), koľko z nej išlo zo siete (`whSiet`) a koľko
- * minút bojler naozaj hrial (`hrejeMin`; relé môže byť zapnuté aj s nahriatou vodou).
- * @typedef {{ od: number, do: number | null, wh: number, whSiet: number, e0: number, hrejeMin: number }} Beh
+ * minút bojler naozaj hrial (`hrejeMin`; relé môže byť zapnuté aj s nahriatou vodou). `q` je to isté po
+ * štvrťhodinách od tej, v ktorej beh začal: [Wh, Wh zo siete] (docs/navrhy/bojler-panel.html, D2) - appka z neho
+ * vie, koľko zo siete išlo v drahom pásme tarify. Behy od staršieho Workera ho nemajú.
+ * @typedef {{ od: number, do: number | null, wh: number, whSiet: number, e0: number, hrejeMin: number, q?: Array<[number, number]> }} Beh
  */
 /**
  * Záznam dňa: dátum (v pásme elektrárne), behy (ich počet = počet zapnutí) a kedy termostat
@@ -162,7 +164,7 @@ function kedyHotovo(predtym, hreje, rele, beh, min) {
 }
 
 /** @param {number} od @param {number} e0 @returns {Beh} */
-const novyBeh = (od, e0) => ({ od, do: null, wh: 0, whSiet: 0, e0, hrejeMin: 0 });
+const novyBeh = (od, e0) => ({ od, do: null, wh: 0, whSiet: 0, e0, hrejeMin: 0, q: [] });
 
 /**
  * Behy, ku ktorým sa dopyt pripíše: dnešné (kópia), v novom dni prázdne - bežiaci beh v ňom
@@ -181,11 +183,29 @@ function behyDna(den, dnes, v) {
  * @param {number} cas @param {boolean} hreje @param {number} min
  */
 function zapocitaj(beh, v, cas, hreje, min) {
-    beh.wh = Math.max(0, v.energiaWh - beh.e0);
+    const wh = Math.max(0, v.energiaWh - beh.e0);
     const odber = v.sietKw !== null && v.sietKw < 0 ? -v.sietKw * 1000 : 0;
-    beh.whSiet += v.rele ? Math.min(Math.max(0, v.w), odber) * cas : 0;
+    const siet = v.rele ? Math.min(Math.max(0, v.w), odber) * cas : 0;
+    // Energia od posledného dopytu patrí štvrťhodine minúty pred ním (dopyt príde každú minútu).
+    if (cas > 0) pripocitajQ(beh, Math.max(beh.od, min - 1), wh - beh.wh, siet);
+    beh.wh = wh;
+    beh.whSiet += siet;
     beh.hrejeMin += hreje ? cas * 60 : 0;
     if (!v.rele) beh.do = min;
+}
+
+/**
+ * Pripočíta energiu a odber zo siete do štvrťhodiny minúty `min` (D2). Beh bez `q` (od staršieho Workera) ho nezačne -
+ * súčty po štvrťhodinách by nesedeli s celým behom.
+ * @param {Beh} beh @param {number} min @param {number} wh @param {number} siet
+ */
+function pripocitajQ(beh, min, wh, siet) {
+    if (!beh.q) return;
+    const i = Math.floor(min / BOJLER.qMin) - Math.floor(beh.od / BOJLER.qMin);
+    const q = beh.q.map((x) => /** @type {[number, number]} */ ([...x]));
+    while (q.length <= i) q.push([0, 0]);
+    q[i] = [q[i][0] + Math.max(0, wh), q[i][1] + siet];
+    beh.q = q;
 }
 
 /**
@@ -369,9 +389,14 @@ function denZ(raw) {
     const d = /** @type {Record<string, unknown>} */ (raw);
     const num = (/** @type {unknown} */ v) => typeof v === 'number' && Number.isFinite(v);
     if (typeof d.den !== 'string' || !Array.isArray(d.behy) || !num(d.posledneAt)) return null;
-    const behy = d.behy.filter(
-        (b) => isObj(b) && num(b.od) && (b.do === null || num(b.do)) && num(b.wh) && num(b.whSiet) && num(b.e0) && num(b.hrejeMin),
-    );
+    const behy = d.behy
+        .filter((b) => isObj(b) && num(b.od) && (b.do === null || num(b.do)) && num(b.wh) && num(b.whSiet) && num(b.e0) && num(b.hrejeMin))
+        .map((b) => {
+            // Štvrťhodiny (D2) len celé - inak appka ráta odhadom, ako pri behu od staršieho Workera.
+            const { q, ...beh } = b;
+            const ok = Array.isArray(q) && q.every((x) => Array.isArray(x) && x.length === 2 && x.every(num));
+            return ok ? { ...beh, q } : beh;
+        });
     return {
         den: d.den,
         behy: /** @type {Beh[]} */ (behy),

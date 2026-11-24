@@ -1393,18 +1393,204 @@
     background: #fff;
     color: var(--ink);
 }
-/* Prepínač v paneli Bojler dnes: kto zapína bojler (docs/navrhy/teraz-auto-tok.html, ručný režim). */
+/* Panel Bojler dnes (docs/navrhy/bojler-panel.html, A): riadok stavu bez veľkých písmen, teplota a pás behov na jednej
+   osi, energia podľa zdroja, behy zbalené a dole nastavenie. Farby zdrojov ako pásik dlaždice (.podiel): slnko zlaté,
+   sieť modrá, sieť v drahom pásme červená, po nahriatí vody sivá. */
+.bj-pod {
+    margin: 2px 0 0;
+    font-size: 0.875rem;
+    color: var(--dim);
+}
+.bj-plan::before {
+    content: ' · ';
+}
+.bj-graf {
+    position: relative;
+    margin: 16px 0 4px;
+}
+.bj-pas {
+    position: relative;
+    height: 12px;
+    border-radius: 3px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+.bj-pas i {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+}
+.bj-pas i[data-tone='hotovo'] {
+    background: rgba(255, 255, 255, 0.45);
+}
+.bojler-sheet [data-tone='slnko'] {
+    --bj-farba: #ffd166;
+}
+.bojler-sheet [data-tone='siet'] {
+    --bj-farba: var(--cheap);
+}
+.bojler-sheet [data-tone='vt'] {
+    --bj-farba: var(--costly);
+}
+.bj-pas i[data-tone],
+.bj-stoh i,
+.bj-zdroje small i {
+    background: var(--bj-farba, rgba(255, 255, 255, 0.45));
+}
+/* Čiarka teraz cez krivku teploty aj pás, nad osou hodín. */
+.bj-teraz {
+    position: absolute;
+    top: 0;
+    bottom: 20px;
+    width: 1.5px;
+    margin-left: -0.75px;
+    background: rgba(255, 255, 255, 0.6);
+}
+.bj-osi {
+    position: relative;
+    height: 16px;
+    margin-top: 4px;
+}
+.bj-osi span {
+    position: absolute;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--dim);
+}
+.bj-osi span:first-child {
+    transform: none;
+}
+.bj-osi span:last-child {
+    transform: translateX(-100%);
+}
+.bj-energia {
+    display: grid;
+    gap: 8px;
+    margin-top: 10px;
+}
+.bj-stoh {
+    display: flex;
+    gap: 2px;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+}
+.bj-stoh i {
+    flex: 1 1 0;
+    min-width: 2px;
+}
+.bj-zdroje {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: 6px;
+}
+.bj-zdroje b {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+    white-space: nowrap;
+}
+.bj-zdroje small {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: var(--dim);
+}
+.bj-zdroje small i {
+    flex: none;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.bj-hrial {
+    margin: 8px 0 0;
+    font-size: 0.875rem;
+    color: var(--dim);
+}
+/* Behy dnes: zbalené pod nadpisom s počtom, šípka sa pri rozbalení otočí. */
+.bj-behy-d {
+    margin-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.bj-behy-d summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    font-weight: 700;
+    cursor: pointer;
+    list-style: none;
+}
+.bj-behy-d summary::-webkit-details-marker {
+    display: none;
+}
+.bj-behy-pocet {
+    margin-left: auto;
+    color: var(--dim);
+}
+.bj-behy-d summary::after {
+    content: '';
+    width: 7px;
+    height: 7px;
+    margin: 0 4px 3px 2px;
+    border-right: 2px solid var(--dim);
+    border-bottom: 2px solid var(--dim);
+    transform: rotate(45deg);
+    transition: transform 0.2s ease;
+}
+.bj-behy-d[open] summary::after {
+    margin-bottom: -3px;
+    transform: rotate(-135deg);
+}
+.bj-behy p {
+    display: grid;
+    grid-template-columns: 7em 1fr 4.6em;
+    align-items: center;
+    gap: 10px;
+    height: 40px;
+    margin: 0;
+    padding: 0 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.bj-behy .bj-stoh {
+    height: 8px;
+}
+.bj-behy b {
+    text-align: right;
+}
+/* Nastavenie dole za čiarou: čo riadi bojler (Shelly / Ray-mon) a oznámenia. */
+.bj-nast {
+    margin-top: 4px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.bj-nast-n {
+    margin: 0 0 8px;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
 .bj-rezim {
     position: relative;
     display: flex;
     gap: 3px;
-    margin: 14px 0 6px;
+    margin: 0 0 6px;
     padding: 3px;
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.06);
 }
-/* Posuvný segment: biela plocha pod zvoleným režimom, pri prepnutí prejde na druhú stranu. */
+/* Posuvný segment: biela plocha pod zvoleným režimom - Ray-mon vpravo, Shelly vľavo. */
 .bj-rezim::before {
     content: '';
     position: absolute;
@@ -1414,10 +1600,11 @@
     width: calc(50% - 4.5px);
     border-radius: 999px;
     background: #fff;
+    transform: translateX(calc(100% + 3px));
     transition: transform 0.25s ease;
 }
 .bj-rezim[data-rucne='true']::before {
-    transform: translateX(calc(100% + 3px));
+    transform: none;
 }
 .bj-rezim button {
     position: relative;
@@ -1443,7 +1630,7 @@
     opacity: 0.7;
 }
 .bj-rezim-t {
-    margin: 0 0 10px;
+    margin: 0;
     font-size: 0.875rem;
     color: var(--dim);
 }
@@ -1468,72 +1655,6 @@
     stroke-width: 2.6;
     stroke-linecap: round;
     stroke-linejoin: round;
-}
-/* Panel Bojler dnes: pás dňa z úsekov bez minimálnej šírky, štyri čísla a behy. */
-.bj-pas .os-usek {
-    top: 20px;
-    min-width: 0;
-    height: 12px;
-    border-radius: 0;
-    box-shadow: none;
-}
-.bj-pas .os-usek[data-tone='siet'] {
-    background: var(--costly);
-}
-.bj-pas .os-usek[data-tone='hotovo'] {
-    background: rgba(255, 255, 255, 0.45);
-}
-.bj-cisla {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin: 12px 0;
-}
-.bj-cisla div {
-    padding: 10px 12px;
-    border-radius: 16px;
-    background: rgba(255, 255, 255, 0.07);
-}
-.bj-cisla b {
-    display: block;
-    font-size: 1.3rem;
-    font-weight: 900;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.1;
-}
-.bj-cisla small {
-    font-size: 0.78rem;
-    color: var(--dim);
-}
-.bj-cisla b[data-tone='slnko'],
-.bj-behy i[data-tone='slnko'] {
-    color: var(--yes);
-}
-.bj-cisla b[data-tone='siet'],
-.bj-behy i[data-tone='siet'] {
-    color: var(--costly-text);
-}
-/* Riadok behu na jeden riadok a vždy rovnako vysoký: čas, kWh zo slnka, kWh zo siete (stĺpce pod sebou). */
-.bj-behy p {
-    display: grid;
-    grid-template-columns: 1fr 5.2em 5.2em;
-    align-items: center;
-    gap: 10px;
-    height: 40px;
-    margin: 0;
-    padding: 0 2px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-    font-size: 0.875rem;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-.bj-behy p:last-child {
-    border-bottom: 0;
-}
-.bj-behy i {
-    font-style: normal;
-    font-weight: 700;
-    text-align: right;
 }
 /* Vypínač oznámení bojlera na konci panela Bojler dnes (docs/navrhy/spotrebic-koniec-opakovanie.html); prepínač .tg
    je spoločný s Nastavením (css/nastavenie.css). */
@@ -1563,7 +1684,7 @@
 /* Teplota vody dnes v paneli Bojler dnes (docs/navrhy/bojler-teplota.html, P1): krivka cez celý deň, čiarkovaná
    čiara cieľa a bod teraz s teplotou. SVG je natiahnuté na šírku, písmo je mimo neho. */
 .bj-voda {
-    margin: 4px 0 14px;
+    margin: 4px 0 8px;
 }
 .bj-voda-plocha {
     position: relative;
@@ -1614,22 +1735,4 @@
     font-weight: 900;
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
-}
-.bj-voda-osi {
-    position: relative;
-    height: 16px;
-    margin-top: 4px;
-}
-.bj-voda-osi span {
-    position: absolute;
-    transform: translateX(-50%);
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: var(--dim);
-}
-.bj-voda-osi span:first-child {
-    transform: none;
-}
-.bj-voda-osi span:last-child {
-    transform: translateX(-100%);
 }
