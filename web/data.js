@@ -13,14 +13,14 @@ import {
     WORKER_BOJLER_REZIM_URL,
     WORKER_BOJLER_HRANICA_URL,
     WORKER_BOJLER_STAV_URL,
-    WORKER_HISTORIA_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
     WORKER_TRASY_URL,
+    WORKER_UCENIE_URL,
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
 import { bojlerInfoZ } from '../shared/bojler.js';
-import { parseHistoria } from '../shared/ucenie.js';
+import { parseNaucene } from '../shared/ucenie.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
@@ -103,16 +103,16 @@ export async function bojlerPecat(pecat, fetchImpl = fetch) {
 }
 
 /**
- * História elektrárne pre učenie Plánu dňa (Worker `/historia`, docs/navrhy/plan-dna-ucenie.html), alebo null, keď ju
- * Worker nedá (iný zdroj než Huawei Northbound, výpadok).
- * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl]
- * @returns {Promise<import('../shared/historia.js').DenHistorie[] | null>}
+ * Model učenia Plánu dňa od Workera (`/ucenie`, docs/navrhy/ucenie-vo-workeri.html), ten istý pre všetky telefóny
+ * domácnosti, alebo null, keď to nevyšlo. `telo`: snímky predpovede, pri prechode aj behy a od kedy sa učí, `odznova`.
+ * @param {string} pecat zapečatený prístup tejto appky @param {Record<string, unknown>} telo @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<import('../shared/ucenie.js').Naucene | null>}
  */
-export async function stiahniHistoriu(pecat, fetchImpl = fetch) {
+export async function ucenieZWorkera(pecat, telo, fetchImpl = fetch) {
     try {
-        const res = await postWorker(WORKER_HISTORIA_URL, JSON.stringify({ pecat }), fetchImpl);
+        const res = await postWorker(WORKER_UCENIE_URL, JSON.stringify({ ...telo, pecat }), fetchImpl);
         const body = res.ok ? await res.json() : null;
-        return isObj(body) && Array.isArray(body.dni) ? parseHistoria(body.dni) : null;
+        return isObj(body) ? parseNaucene(body.ucenie) : null;
     } catch {
         return null;
     }

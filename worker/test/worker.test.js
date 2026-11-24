@@ -15,7 +15,9 @@ import {
     handlePripoj,
     handlePv,
     handleRequest,
+    handleUcenie,
 } from '../src/index.js';
+import { naucene } from '../../shared/ucenie.js';
 import { UcetHuawei } from '../src/ucet.js';
 import { otvor, pecatKey, zapecat } from '../src/pecat.js';
 import { odberTelefonu, rozsifruj, vapidTest } from './push-pomoc.js';
@@ -1325,6 +1327,95 @@ test('história: Durable Object skladá hodiny z meraní a deň bojlera, telefó
     assert.equal((await handleRequest(post('/historia', JSON.stringify({ pecat: telefon })), env, po(14 * 60))).status, 200);
 });
 
+test('učenie: Worker počíta model raz za deň a všetky telefóny účtu dostanú ten istý (/ucenie)', async () => {
+    const { s, env, telefon } = await sBojlerom();
+    const D = '2026-09-05';
+    const VCERA = '2026-09-04';
+    const ucenie = async (/** @type {string} */ pecat, /** @type {object} */ telo, /** @type {number} */ m) =>
+        handleUcenie(post('/ucenie', JSON.stringify({ pecat, ...telo })), env, po(m));
+    // Meranie založí objekt; potom prvý dopyt bez ničoho - predvolený model.
+    await handlePv(pvRequest(telefon), env, po(0), s.impl);
+    const prazdny = (await (await ucenie(telefon, {}, 1)).json()).ucenie;
+    assert.deepEqual(prazdny, naucene({ dni: [], snimky: [], behy: [], today: D, od: null }));
+    const { u } = /** @type {any} */ ([...env.UCTY.objekty.values()][0]);
+    const plant = [...u.m.keys()].find((/** @type {string} */ k) => k.startsWith('m:')).slice(2);
+    assert.equal(u.m.get(`um:${plant}`).d, D, 'model uložený na dnešok');
+    // Telefón pri prechode pošle svoje snímky, behy a od kedy sa učí; dnešný beh do /ucenie nepatrí.
+    const hod = (/** @type {number | null} */ x) => Array.from({ length: 24 }, () => x);
+    const snimka = (/** @type {string} */ d, /** @type {number} */ k) => ({ d, m: 360, k: hod(k), c: hod(10), t: 12 });
+    const behVcera = { id: 'pracka', d: VCERA, m: 600, k: 720 };
+    const r1 = await ucenie(
+        telefon,
+        { snimky: [snimka(VCERA, 1), snimka(D, 1)], behy: [behVcera, { id: 'pracka', d: D, m: 600, k: 720 }], od: '2026-08-01' },
+        2,
+    );
+    assert.equal(r1.status, 200);
+    const m1 = (await r1.json()).ucenie;
+    assert.equal(m1.od, '2026-08-01');
+    assert.deepEqual(
+        u.m.get(`hs:${plant}`).map((/** @type {any} */ x) => x.d),
+        [VCERA, D],
+    );
+    assert.deepEqual(u.m.get(`bz:${plant}`), [behVcera]);
+    // Druhý telefón (iná pečať toho istého účtu) so svojou snímkou včerajška: platí prvá, model je ten istý.
+    const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
+    const obsah = /** @type {any} */ (await otvor(key, telefon, NOW));
+    const druhy = await zapecat(key, { sposob: 'huawei-northbound', pristup: { ...obsah.pristup, tokenAt: 0 } });
+    const m2 = (await (await ucenie(druhy, { snimky: [snimka(VCERA, 3)], od: '2026-07-01' }, 3)).json()).ucenie;
+    assert.deepEqual(m2, m1);
+    assert.equal(u.m.get(`hs:${plant}`)[0].k[0], 1, 'snímku včerajška nič neprepíše');
+    // V ten istý deň sa model len prečíta - zmena histórie bez nového dňa ho neprepočíta.
+    const ulozeny = u.m.get(`um:${plant}`);
+    u.m.set(`hd:${plant}`, [{ d: VCERA, h: hod(null), b: { wh: 3000, hotovo: true } }]);
+    assert.deepEqual((await (await ucenie(telefon, {}, 4)).json()).ucenie, m1);
+    assert.equal(u.m.get(`um:${plant}`), ulozeny);
+    // „Začať odznova“ z hociktorého telefónu: celá domácnosť sa učí od dneška.
+    const m3 = (await (await ucenie(druhy, { odznova: true }, 5)).json()).ucenie;
+    assert.equal(m3.od, D);
+    assert.equal((await (await ucenie(telefon, { od: '2026-08-01' }, 6)).json()).ucenie.od, D, 'staršie od z prechodu nič nevráti');
+    // Iba pečať telefónu Northbound, nie zdieľaný odkaz; bez Durable Objects 503.
+    const zdielana = await zapecat(key, { sposob: 'huawei-northbound', pristup: obsah.pristup, platiDo: po(60).getTime() });
+    assert.equal((await ucenie(zdielana, {}, 7)).status, 400);
+    assert.equal((await handleUcenie(post('/ucenie', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
+    assert.equal((await handleRequest(post('/ucenie', JSON.stringify({ pecat: telefon })), env, po(8))).status, 200);
+});
+
+test('učenie: zmena histórie staršieho dňa zahodí model, prepočíta sa pri ďalšom dopyte', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom();
+    const ucenie = async (/** @type {number} */ m) => handleUcenie(post('/ucenie', JSON.stringify({ pecat: telefon })), env, po(m));
+    await handlePv(pvRequest(telefon), env, po(0), s.impl);
+    await ucenie(1);
+    const { u } = /** @type {any} */ ([...env.UCTY.objekty.values()][0]);
+    const plant = [...u.m.keys()].find((/** @type {string} */ k) => k.startsWith('m:')).slice(2);
+    // Hodina dneška sa uzavrie: model ostáva.
+    await handlePv(pvRequest(telefon), env, po(61), s.impl);
+    assert.ok(u.m.get(`um:${plant}`));
+    // Deň bojlera sa skončí (prvý dopyt zásuvky na druhý deň): model zmizne.
+    await handleBojler(bojlerReq({ pecat: zasuvka, rele: true, w: 2000, e: 100 }), env, po(62));
+    await handleBojler(bojlerReq({ pecat: zasuvka, rele: false, w: 0, e: 900 }), env, po(13 * 60));
+    assert.equal(u.m.get(`um:${plant}`), null);
+    assert.equal((await (await ucenie(13 * 60 + 1)).json()).ucenie.bojler.vsetky, null);
+    assert.equal(u.m.get(`um:${plant}`).d, '2026-09-06');
+    // Beh staršieho dňa cez /bezi zahodí model tiež; dnešný nie.
+    const bezi = (/** @type {string} */ d, /** @type {number} */ m) =>
+        handleBezi(
+            post(
+                '/bezi',
+                JSON.stringify({
+                    pecat: telefon,
+                    d: '2026-09-06',
+                    zmeny: [{ id: 'pracka', d, behy: [{ id: 'pracka', d, m: 600, k: 700 }] }],
+                }),
+            ),
+            env,
+            po(m),
+        );
+    await bezi('2026-09-06', 13 * 60 + 2);
+    assert.ok(u.m.get(`um:${plant}`));
+    await bezi('2026-09-05', 13 * 60 + 3);
+    assert.equal(u.m.get(`um:${plant}`), null);
+});
+
 test('jedno zariadenie: bojler riadi prvá zásuvka s ID, iné a bez merania príkonu dostanú 409', async () => {
     const { env, zasuvka } = await sBojlerom({ sietW: () => 2500 });
     const hlas = (/** @type {object} */ telo, /** @type {number} */ min) =>
@@ -1398,8 +1489,12 @@ test('spoločné behy: telefón zapíše „Už beží“, druhý telefón ho do
     assert.deepEqual(
         await (await bezi({ d: D, zmeny: [{ id: 'pracka', d: D, behy: [beh] }] })).json(),
         { bezi: [beh] },
-        'včerajšok zmizol',
+        'telefón dostane len dnešok',
     );
+    // Objekt drží behy HISTORIA.dni dní pre učenie Plánu dňa (docs/navrhy/ucenie-vo-workeri.html).
+    const { u } = /** @type {any} */ ([...env.UCTY.objekty.values()][0]);
+    const bz = [...u.m.keys()].find((/** @type {string} */ k) => k.startsWith('bz:'));
+    assert.deepEqual(u.m.get(bz), [vcera, beh]);
     // Druhý telefón (iná pečať toho istého účtu) len číta.
     const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
     const obsah = /** @type {any} */ (await otvor(key, telefon, NOW));

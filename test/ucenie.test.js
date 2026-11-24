@@ -1,9 +1,19 @@
 // Učenie Plánu dňa z histórie (shared/ucenie.js) a jeho sekcia v Nastavení (shared/nastavenie-ucenie.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HISTORIA, HOUSE_BASE_KW, PLANT, SITE, TARIFF, UCENIE } from '../shared/config.js';
+import { HISTORIA, HOUSE_BASE_KW, PLAN_ZIVE, PLANT, SITE, TARIFF, UCENIE } from '../shared/config.js';
 import { addDays } from '../shared/solar.js';
-import { domProfil, naucenaPredpoved, naucene, parseHistoria, potrebaBojlera, triedaOblacnosti, vikend } from '../shared/ucenie.js';
+import {
+    domProfil,
+    naucenaPredpoved,
+    naucene,
+    parseHistoria,
+    parseNaucene,
+    potrebaBojlera,
+    spolocneOd,
+    triedaOblacnosti,
+    vikend,
+} from '../shared/ucenie.js';
 import { ucenieSekcia, UCENIE_TEXTS } from '../shared/nastavenie-ucenie.js';
 import { dayCtx, freeKw } from '../shared/mozem-jadro.js';
 import { fixtureData } from './helpers.js';
@@ -175,6 +185,47 @@ test('parseHistoria: od Workera či z úložiska len platné dni', () => {
         [ok, { ...ok, d: '2026-11-17', b: null }],
     );
     assert.equal(parseHistoria(Array.from({ length: HISTORIA.dni + 3 }, (_, i) => den(addDays(DNES, -i)))).length, HISTORIA.dni);
+});
+
+test('parseNaucene: model od Workera či z úložiska len v tvare naucene, hodnoty orezané', () => {
+    const ok = naucene({ dni: dni(21, (d) => den(d, { b: { wh: 2500, hotovo: true } })), snimky: [], behy: [], today: DNES, od: null });
+    assert.deepEqual(parseNaucene(ok), ok);
+    assert.deepEqual(parseNaucene(JSON.parse(JSON.stringify({ ...ok, od: '2026-11-01' }))), { ...ok, od: '2026-11-01' });
+    for (const zly of [
+        null,
+        'x',
+        { ...ok, dni: -1 },
+        { ...ok, dni: 1.5 },
+        { ...ok, od: '1. 11.' },
+        { ...ok, oprava: ok.oprava.slice(1) },
+        { ...ok, oprava: [[1], ...ok.oprava.slice(1)] },
+        { ...ok, dom: { prac: ok.dom.prac, vik: [] } },
+        { ...ok, dom: null },
+        { ...ok, bojler: null },
+        { ...ok, bojler: { pasma: [null, null], vsetky: null } },
+        { ...ok, bojler: { pasma: [null, null, 'x'], vsetky: null } },
+        { ...ok, bojler: { pasma: [null, null, null], vsetky: 'x' } },
+    ])
+        assert.equal(parseNaucene(zly), null);
+    const mimo = parseNaucene({
+        ...ok,
+        oprava: ok.oprava.map((r) => r.map(() => 9)),
+        dom: { prac: ok.dom.prac.map(() => -1), vik: ok.dom.vik },
+        bojler: { pasma: [1e9, null, 1], vsetky: 2500 },
+    });
+    assert.ok(mimo?.oprava.every((r) => r.every((k) => k === UCENIE.oprava[1])));
+    assert.ok(mimo?.dom.prac.every((kw) => kw === PLAN_ZIVE.domMin));
+    assert.deepEqual(mimo?.bojler, { pasma: [UCENIE.bojlerWh[1], null, UCENIE.bojlerWh[0]], vsetky: 2500 });
+});
+
+test('spolocneOd: neskorší deň zo Workera a z telefónu, nič po dnešku', () => {
+    assert.equal(spolocneOd(null, null, DNES), null);
+    assert.equal(spolocneOd('2026-11-01', null, DNES), '2026-11-01');
+    assert.equal(spolocneOd(undefined, '2026-11-02', DNES), '2026-11-02');
+    assert.equal(spolocneOd('2026-11-01', '2026-11-02', DNES), '2026-11-02');
+    assert.equal(spolocneOd('2026-11-03', '2026-11-02', DNES), '2026-11-03');
+    assert.equal(spolocneOd('2026-11-03', '2026-11-25', DNES), '2026-11-03');
+    assert.equal(spolocneOd('x', 5, DNES), null);
 });
 
 test('plán dňa: spotreba domu a potreba bojlera z učenia', () => {

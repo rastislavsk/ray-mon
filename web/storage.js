@@ -31,6 +31,7 @@ import {
     SUCTY_STORAGE_KEY,
     TRASY_STORAGE_KEY,
     UCENIE_OD_STORAGE_KEY,
+    UCENIE_WORKER_STORAGE_KEY,
     VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
@@ -38,7 +39,7 @@ import { parseBezi, parseCaka } from '../shared/bezi.js';
 import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parsePredpovedHist, pridajBehy, snimkaPredpovede } from '../shared/historia.js';
-import { parseHistoria } from '../shared/ucenie.js';
+import { parseHistoria, parseNaucene } from '../shared/ucenie.js';
 import { DATE_RE } from '../shared/valid.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { teplomerZ } from '../shared/nastavenie-bojler.js';
@@ -364,9 +365,27 @@ export function loadUcenie() {
     };
 }
 
-/** @param {{ d: string, dni: import('../shared/historia.js').DenHistorie[] }} h @returns {boolean} podarilo sa? */
-export function saveHistoria(h) {
-    return write(HISTORIA_STORAGE_KEY, JSON.stringify(h));
+/**
+ * Model učenia od Workera (UCENIE_WORKER_STORAGE_KEY, web/ucenie.js): deň a meranie (`z`, názov zdroja), keď prišiel,
+ * či Worker dostal dnešnú snímku predpovede (`s`), či telefón nahral svoje dáta (`n`), čaká „Začať odznova“ (`o`).
+ * @typedef {{ d: string, z: string, s: boolean, n: boolean, o: boolean, model: import('../shared/ucenie.js').Naucene | null }} UcenieWorkera
+ */
+
+/** @returns {UcenieWorkera | null} */
+export function loadUcenieWorkera() {
+    return readJson(
+        UCENIE_WORKER_STORAGE_KEY,
+        (/** @type {any} */ x) =>
+            x && typeof x.d === 'string' && typeof x.z === 'string'
+                ? { d: x.d, z: x.z, s: x.s === true, n: x.n === true, o: x.o === true, model: parseNaucene(x.model) }
+                : null,
+        null,
+    );
+}
+
+/** @param {UcenieWorkera} u @returns {boolean} podarilo sa? */
+export function saveUcenieWorkera(u) {
+    return write(UCENIE_WORKER_STORAGE_KEY, JSON.stringify(u));
 }
 
 /** Od ktorého dňa sa appka učí. @param {string} d @returns {boolean} podarilo sa? */

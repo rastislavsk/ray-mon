@@ -134,11 +134,20 @@ v tme hlásila „Teraz zo slnka“ a na karte Dnes ÁNO.
 
 Návrhy a rozhodnutia: `docs/navrhy/plan-dna-zive-data.html` (balík B, bojler má prednosť pred práčkou, sušičkou
 a umývačkou) a `docs/navrhy/plan-dna-ucenie.html` (Worker zbiera, telefón sa učí, tabuľky s váhou podľa veku), 19. 11. 2026.
-Zatiaľ beží len zber (`shared/historia.js`, `HISTORIA`): Durable Object `UcetHuawei` skladá z každého nového merania
+Zber (`shared/historia.js`, `HISTORIA`): Durable Object `UcetHuawei` skladá z každého nového merania
 hodinové súhrny výroby a spotreby domu bez bojlera (`hh:` bežiaca hodina, `hd:` dni) a pri prvom dopyte zásuvky
-v novom dni pripíše deň bojlera. Telefón si stiahne históriu cez `POST /historia`. V telefóne sa ukladá snímka
-predpovede dňa (`predpoved-hist-v1`) a história behov z „Už beží“ (`behy-hist-v1`), lebo `bezi-v1` drží len dnešok.
-Odložené časti učenia majú termíny v `docs/to do later.md`.
+v novom dni pripíše deň bojlera. V telefóne sa ukladá snímka predpovede dňa (`predpoved-hist-v1`) a história behov
+z „Už beží“ (`behy-hist-v1`), lebo `bezi-v1` drží len dnešok. Odložené časti učenia majú termíny v `docs/to do later.md`.
+
+Model pri Huawei Northbound počíta Worker (`docs/navrhy/ucenie-vo-workeri.html`, B + S1 + B1 + O1 + P1, 24. 11. 2026),
+aby mali telefóny domácnosti ten istý: `POST /ucenie` (`ucenie` vo `worker/src/ucet.js`) počíta `naucene` najviac
+raz za deň a drží ho pod `um:` - nad 60 dňami trvá niekoľko ms a bezplatný Worker má 10 ms. Zápis, ktorý mení
+vstup staršieho dňa (uzavretá hodina včerajška, deň bojlera, beh staršieho dňa v `/bezi`), `um:` zmaže. Snímky
+predpovede posiela prvý telefón, ktorý ich má (`hs:`, platí prvá, `zlucSnimky`), behy sú spoločné `bz:` za
+`HISTORIA.dni` dní (`/bezi` telefónu vracia len dnešok), „Začať odznova“ je spoločné (`uo:`). Telefón sa pýta
+raz za deň, s novou dnešnou snímkou a pri „Začať odznova“ (`web/ucenie.js`, `ucenie-worker-v1` s menom elektrárne);
+prvýkrát pošle aj všetky svoje snímky, behy a `ucenie-od-v1`. Kým model od Workera nemá, a pri inom zdroji merania,
+počíta ho telefón sám. `/historia` ostáva len pre staršiu appku v cache, `historia-v1` sa už len číta.
 
 Plán dňa ráta so živými dátami (`PLAN_ZIVE`): predpoveď za posledným meraním opravuje pomer meranie / predpoveď
 za poslednú hodinu (`opravaPredpovede` v `shared/chart-model.js`, jediné miesto - `dayKwAt` aj graf dňa), štvrťhodina

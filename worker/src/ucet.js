@@ -12,7 +12,9 @@
 // telefónov, ktoré si ich zapli - pri každej zmene ohrevu im pošle push s textom. Pre učenie Plánu dňa
 // (docs/navrhy/plan-dna-ucenie.html) históriu: z každého nového merania hodinové súhrny výroby a spotreby domu
 // bez bojlera a na konci dňa bojlera (shared/historia.js), najviac HISTORIA.dni dní. Telefón si ju stiahne cez /historia.
-// Behy „Už beží“ dneška, ktoré si telefóny domácnosti zdieľajú (docs/navrhy/bezi-spolocne.html, shared/bezi.js), cez /bezi.
+// Behy „Už beží“, ktoré si telefóny domácnosti zdieľajú (docs/navrhy/bezi-spolocne.html, shared/bezi.js), cez /bezi - za
+// HISTORIA.dni dní, telefón dostane len dnešok. Model učenia (docs/navrhy/ucenie-vo-workeri.html, shared/ucenie.js) cez
+// /ucenie: snímky predpovede od telefónov (`hs:`), od kedy sa učí (`uo:`) a model počítaný raz za deň (`um:`).
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
@@ -21,8 +23,10 @@ import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zariadenieBojlera, zmenaOhrevu } from '../../shared/bojler.js';
 import { zapisZmeny } from '../../shared/bezi.js';
 import { hranicaZ, pridajTeplotu, strazVodu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
-import { domBezBojlera, sBojlerom, zapisMeranie } from '../../shared/historia.js';
+import { domBezBojlera, sBojlerom, zapisMeranie, zlucBehy, zlucSnimky } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
+import { localDateKey } from '../../shared/solar.js';
+import { naucene, spolocneOd } from '../../shared/ucenie.js';
 import { bojlerZmenaText } from '../../shared/messages-oznamenia.js';
 import { posliPush, vapidKlic } from './webpush.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
@@ -85,7 +89,9 @@ export class UcetHuawei {
                               ? await this.historia(req)
                               : path === '/bezi'
                                 ? await this.behy(req)
-                                : await this.pv(req.pristup, now);
+                                : path === '/ucenie'
+                                  ? await this.ucenie(req, now)
+                                  : await this.pv(req.pristup, now);
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -153,7 +159,13 @@ export class UcetHuawei {
         const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`)) ?? [];
         const domKw = domBezBojlera(pv.realTimePowerKw, pv.sietKw, bojler, now.getTime());
         const r = zapisMeranie({ hodina: hodina ?? null, dni }, { at: now.getTime(), tz: NB.pasmo, vyrobaKw: pv.realTimePowerKw, domKw });
-        return { [`hh:${plant}`]: r.hodina, ...(r.dni !== dni ? { [`hd:${plant}`]: r.dni } : {}) };
+        // Uzavretá hodina staršieho dňa mení vstup modelu učenia - prepočíta sa pri ďalšom /ucenie.
+        const minulyDen = r.dni !== dni && hodina && hodina.d !== r.hodina.d;
+        return {
+            [`hh:${plant}`]: r.hodina,
+            ...(r.dni !== dni ? { [`hd:${plant}`]: r.dni } : {}),
+            ...(minulyDen ? { [`um:${plant}`]: null } : {}),
+        };
     }
 
     /**
@@ -165,7 +177,7 @@ export class UcetHuawei {
         const stary = info?.den;
         if (!stary || stary.den === novy.den) return {};
         const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`)) ?? [];
-        return { [`hd:${plant}`]: sBojlerom(dni, stary) };
+        return { [`hd:${plant}`]: sBojlerom(dni, stary), [`um:${plant}`]: null };
     }
 
     /**
@@ -178,16 +190,72 @@ export class UcetHuawei {
     }
 
     /**
-     * Spoločné behy „Už beží“ (shared/bezi.js): zmeny od telefónu zapíše, dni pred `d` zahodí a vráti dnešné behy
-     * všetkých telefónov. Bez zmien len číta - zapisuje sa, len keď sa niečo zmenilo.
+     * Spoločné behy „Už beží“ (shared/bezi.js): zmeny od telefónu zapíše, dni staršie než HISTORIA.dni zahodí a vráti
+     * dnešné (`d`) behy všetkých telefónov. Bez zmien len číta - zapisuje sa, len keď sa niečo zmenilo. Zmena
+     * staršieho dňa zahodí model učenia.
      * @param {{ pristup: Record<string, unknown>, d: string, zmeny: unknown }} req
      */
     async behy(req) {
-        const kluc = `bz:${String(req.pristup.plant ?? '')}`;
-        const stare = await this.storage.get(kluc);
+        const plant = String(req.pristup.plant ?? '');
+        const kluc = `bz:${plant}`;
+        const stare = /** @type {import('../../shared/bezi.js').Zapis[] | undefined} */ (await this.storage.get(kluc)) ?? [];
         const bezi = zapisZmeny(stare, req.zmeny, req.d);
-        if (JSON.stringify(bezi) !== JSON.stringify(stare ?? [])) await this.storage.put(kluc, bezi);
-        return { bezi };
+        if (JSON.stringify(bezi) !== JSON.stringify(stare)) {
+            const minule = (/** @type {import('../../shared/bezi.js').Zapis[]} */ l) => JSON.stringify(l.filter((z) => z.d < req.d));
+            await this.storage.put({ [kluc]: bezi, ...(minule(bezi) !== minule(stare) ? { [`um:${plant}`]: null } : {}) });
+        }
+        return { bezi: bezi.filter((z) => z.d === req.d) };
+    }
+
+    /**
+     * Model učenia Plánu dňa pre telefón (docs/navrhy/ucenie-vo-workeri.html). Snímky predpovede (`snimky`, platí prvá
+     * snímka dňa), behy z histórie telefónu (`behy`) a jeho „Začať odznova“ (`od`) pridá k tomu, čo má; `odznova` sa
+     * učí od dneška. Model počíta naucene najviac raz za deň - pri prvom dopyte dňa a po zmene vstupov starších dní
+     * (bezplatný Worker má 10 ms procesora, výpočet nad HISTORIA.dni dňami trvá niekoľko ms). Dnešok do modelu nevstupuje.
+     * @param {{ pristup: Record<string, unknown>, snimky?: unknown, behy?: unknown, od?: unknown, odznova?: unknown }} req
+     * @param {Date} now
+     */
+    async ucenie(req, now) {
+        const plant = String(req.pristup.plant ?? '');
+        const today = localDateKey(now, NB.pasmo);
+        const v = await this.vstupyUcenia(plant, req, today);
+        const um = `um:${plant}`;
+        const ulozeny = /** @type {{ d: string, model: import('../../shared/ucenie.js').Naucene } | null | undefined} */ (
+            await this.storage.get(um)
+        );
+        let model = ulozeny?.d === today && !v.zmena ? ulozeny.model : null;
+        if (!model) {
+            const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`)) ?? [];
+            model = naucene({ dni, snimky: v.snimky, behy: v.behy, today, od: v.od });
+            v.zapis[um] = { d: today, model };
+        }
+        if (Object.keys(v.zapis).length) await this.storage.put(v.zapis);
+        return { ucenie: model };
+    }
+
+    /**
+     * Vstupy modelu učenia s tým, čo poslal telefón: snímky (`hs:`), behy (`bz:`), od kedy sa učí (`uo:`), čo z nich
+     * zapísať a či sa zmenilo niečo pred dneškom (vtedy treba model prepočítať).
+     * @param {string} plant @param {{ snimky?: unknown, behy?: unknown, od?: unknown, odznova?: unknown }} req @param {string} today
+     */
+    async vstupyUcenia(plant, req, today) {
+        const [hs, bz, uo] = [`hs:${plant}`, `bz:${plant}`, `uo:${plant}`];
+        const stareS = (await this.storage.get(hs)) ?? [];
+        const stareB = (await this.storage.get(bz)) ?? [];
+        const stareOd = (await this.storage.get(uo)) ?? null;
+        const snimky = zlucSnimky(stareS, req.snimky, today);
+        const behy = zlucBehy(stareB, req.behy, today);
+        const od = req.odznova === true ? today : spolocneOd(stareOd, req.od, today);
+        const text = (/** @type {unknown} */ x) => JSON.stringify(x);
+        const minule = (/** @type {unknown} */ l) =>
+            text((Array.isArray(l) ? l : []).filter((/** @type {{ d: string }} */ x) => x.d < today));
+        /** @type {Record<string, unknown>} */ const zapis = {
+            ...(text(snimky) !== text(stareS) ? { [hs]: snimky } : {}),
+            ...(text(behy) !== text(stareB) ? { [bz]: behy } : {}),
+            ...(od !== stareOd ? { [uo]: od } : {}),
+        };
+        const zmena = minule(snimky) !== minule(stareS) || minule(behy) !== minule(stareB) || od !== stareOd;
+        return { snimky, behy, od, zapis, zmena };
     }
 
     /**
@@ -302,6 +370,7 @@ export class UcetHuawei {
             [`oprava1:${plant}`]: now.getTime(),
             [`hd:${plant}`]: dni.filter((d) => d.d < OPRAVA.od),
             [`hh:${plant}`]: null,
+            [`um:${plant}`]: null,
             ...(b ? { [`b:${plant}`]: { ...b, den: null } } : {}),
         });
     }

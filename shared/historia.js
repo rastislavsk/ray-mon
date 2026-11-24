@@ -1,4 +1,4 @@
-// Zber histórie pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html). Zatiaľ sa len zbiera, nič sa z nej nepočíta.
+// Zber histórie pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html, docs/navrhy/ucenie-vo-workeri.html).
 // Worker (Durable Object účtu Huawei, worker/src/ucet.js) skladá z meraní každých 5 minút hodinové súhrny výroby
 // a spotreby domu bez bojlera a na konci dňa bojlera jeho energiu a či ho termostat vypol. Telefón si drží snímku
 // predpovede na každý deň a behy z „Už beží“ (shared/bezi.js), ktoré inak po dni zahodí. Čisté funkcie - čas
@@ -153,4 +153,33 @@ export function parsePredpovedHist(raw) {
 export function pridajBehy(hist, bezi, today) {
     const od = addDays(today, 1 - HISTORIA.dni);
     return parseBezi([...hist.filter((z) => z.d !== today), ...bezi.filter((z) => z.d === today)]).filter((z) => z.d >= od);
+}
+
+// Učenie vo Workeri (docs/navrhy/ucenie-vo-workeri.html, B + S1 + B1 + O1 + P1): Durable Object účtu Huawei drží
+// snímky predpovede a behy za HISTORIA.dni dní, ktoré mu posielajú telefóny. Dáta od telefónu sú nedôveryhodné.
+
+/** Najviac behov, ktoré Worker od telefónu naraz prijme (60 dní, tri spotrebiče, pár behov denne). */
+const MAX_BEHOV = 600;
+
+/**
+ * Worker: snímky od telefónu k tým, ktoré už má. Platí prvá snímka dňa - tú, čo Worker má, nič neprepíše. Snímky
+ * po dnešku (`today`) a staršie než HISTORIA.dni dní vypadnú.
+ * @param {unknown} stare @param {unknown} nove @param {string} today @returns {SnimkaPredpovede[]}
+ */
+export function zlucSnimky(stare, nove, today) {
+    const od = addDays(today, -HISTORIA.dni);
+    const prijate = Array.isArray(nove) ? nove.slice(0, HISTORIA.dni + 1) : [];
+    return parsePredpovedHist([...(Array.isArray(stare) ? stare : []), ...prijate]).filter((s) => s.d >= od && s.d <= today);
+}
+
+/**
+ * Worker: behy z histórie telefónu (behy-hist-v1, z čias, keď si ich telefóny nezdieľali) k spoločným behom. Prijme
+ * len dni pred dneškom - dnešok ide cez /bezi - a nie staršie než HISTORIA.dni. Ten istý beh (spotrebič, deň a
+ * začiatok) ostane ten, čo Worker už má.
+ * @param {unknown} stare @param {unknown} nove @param {string} today @returns {import('./bezi.js').Zapis[]}
+ */
+export function zlucBehy(stare, nove, today) {
+    const od = addDays(today, -HISTORIA.dni);
+    const prijate = parseBezi(Array.isArray(nove) ? nove.slice(0, MAX_BEHOV) : []).filter((z) => z.d < today && z.d >= od);
+    return parseBezi([...prijate, ...parseBezi(stare)]);
 }

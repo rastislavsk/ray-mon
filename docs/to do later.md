@@ -56,6 +56,9 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
   domácnosti zdieľa cez objekt účtu Huawei (`UcetHuawei`, možnosť A). Pri inom zdroji merania (kiosk FusionSolar,
   iné meniče) taký objekt nie je a každý telefón si behy drží sám. Doplniť, napr. samostatnú „domácnosť“
   s kódom na spárovanie (možnosť B: vlastný Durable Object, párovanie cez QR).
+- **Zmazať `/historia` a `historia-v1`** (24. 11. 2026): model učenia počíta Worker (`docs/navrhy/ucenie-vo-workeri.html`),
+  nová appka `/historia` nesťahuje. Cesta ostáva pre staršiu appku v cache, `historia-v1` už len číta telefón bez modelu
+  od Workera. Po pár týždňoch zmazať `handleHistoria`, `WORKER_HISTORIA_PATH`, `HISTORIA_STORAGE_KEY` a jeho čítanie.
 - **Ranné oznámenie nepozná učenie ani bojler** (19. 11. 2026): service worker nemá prístup k úložisku telefónu,
   plán v rannom oznámení ide bez naučenej predpovede a bez bojlera.
 

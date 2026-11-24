@@ -6,7 +6,8 @@
 // Plán dňa z neho vie, čo už beží alebo dobehlo (shared/plan-dna.js). Overiť to appka nevie - je to na
 // slovo. Čisté funkcie, úložisko rieši web/storage.js a čas prichádza v parametroch.
 
-import { BEZI, MOZEM_ITEMS } from './config.js';
+import { BEZI, HISTORIA, MOZEM_ITEMS } from './config.js';
+import { addDays } from './solar.js';
 import { isObj } from './valid.js';
 
 /**
@@ -133,7 +134,8 @@ export function parseCaka(raw) {
 
 /**
  * Worker: zmeny od telefónu (nedôveryhodné) do spoločného zoznamu. Behy spotrebiča v deň zmeny nahradí behmi zo zmeny,
- * dni pred `d` (dnešok telefónu) zahodí. Najviac jedna zmena na spotrebič - viac ich telefón neposiela.
+ * dni staršie než HISTORIA.dni pred `d` (dnešok telefónu) zahodí - zvyšok potrebuje učenie Plánu dňa
+ * (docs/navrhy/ucenie-vo-workeri.html). Najviac jedna zmena na spotrebič - viac ich telefón neposiela.
  * @param {unknown} list doterajší spoločný zoznam @param {unknown} zmeny @param {string} d @returns {Zapis[]}
  */
 export function zapisZmeny(list, zmeny, d) {
@@ -144,7 +146,8 @@ export function zapisZmeny(list, zmeny, d) {
         const den = /** @type {string} */ (z.d);
         out = [...out.filter((b) => !(b.id === id && b.d === den)), ...behyVeci(parseBezi(z.behy), id, den)];
     }
-    return parseBezi(out.filter((b) => b.d >= d));
+    const od = addDays(d, -HISTORIA.dni);
+    return parseBezi(out.filter((b) => b.d >= od));
 }
 
 /**
