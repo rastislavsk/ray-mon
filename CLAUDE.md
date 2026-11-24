@@ -161,6 +161,8 @@ Učenie (`shared/ucenie.js`, `UCENIE`) nemá vlastný stav: `web/ucenie.js` po k
 Workera (stiahnutej raz za deň, `historia-v1`), snímok predpovede a behov. Naučená oprava predpovede sa pridáva na jednom
 mieste - `sNaucenim` vo `web/render/index.js` pred kreslením; v stave ostáva predpoveď tak, ako prišla, lebo z nej sa
 učí. Spotreba domu po hodinách (`ctx.dom`) a potreba bojlera (`potrebaBojlera`) idú do Plánu dňa cez `input.ucenie`.
+Hodina, v ktorej je medián domu nad `PLAN_ZIVE.domMax` (nabíjanie auta, niečo veľké), sa do profilu domu nezaráta
+(`hodinaDomu` v `shared/ucenie.js`, to isté pravidlo má `domDnes` večerného prepisu auta), 24. 11. 2026.
 „Začať odznova“ v Nastavení len posunie deň, od ktorého sa učí (`ucenie-od-v1`). Ranné oznámenie (service worker)
 ráta s tým istým: appka mu do zrkadla odloží aj `ucenie` a posledný stav bojlera a vstup skladá `swInput`
 (`shared/oznamenia.js`, `docs/navrhy/plan-dna-oznamenie-vt.html`, O2, 24. 11. 2026) - živé meranie nemá.

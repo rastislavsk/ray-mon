@@ -102,6 +102,19 @@ test('oprava predpovede: pomer meranie / predpoveď po hodinách a oblačnosti, 
     assert.equal(naucene({ dni: dni(9, (d) => den(d)), snimky: bezOblacnosti, behy: [], today: DNES, od: null }).oprava[0][10], 1);
 });
 
+test('spotreba domu: hodina nad PLAN_ZIVE.domMax (nabíjanie auta) sa nezaráta, presne na domMax áno', () => {
+    const historia = dni(21, (d) => den(d, { dom: 0.3 }));
+    const auto = historia.map((x) => ({
+        ...x,
+        h: x.h.map((s, hod) =>
+            s && hod === 10 ? [s[0], PLAN_ZIVE.domMax + 0.5, s[2]] : s && hod === 11 ? [s[0], PLAN_ZIVE.domMax, s[2]] : s,
+        ),
+    }));
+    const n = naucene({ dni: auto, snimky: [], behy: [], today: DNES, od: null });
+    assert.equal(n.dom.prac[10], HOUSE_BASE_KW, 'nad domMax sa neučí');
+    assert.equal(n.dom.prac[11], PLAN_ZIVE.domMax, 'presne domMax sa učí');
+});
+
 test('okno učenia: len dokončené dni, nie staršie než HISTORIA.dni, nie pred „Začať odznova“', () => {
     const vsetky = [den(DNES, { v: 1 }), ...dni(HISTORIA.dni + 10, (d) => den(d))];
     const snimky = [snimka(DNES), ...dni(HISTORIA.dni + 10, (d) => snimka(d))];
