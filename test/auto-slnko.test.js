@@ -116,7 +116,7 @@ test('dlaždica auta na karte Teraz: dnes zamrazené číslo, iný deň odhad, b
     const dnes = terazModel(vstup('13:00', { autoDen }), { devices }).co;
     assert.deepEqual(dnes?.auto, { ...terazAutoText(autoDen), podiel: 100 });
     assert.deepEqual(dnes?.auto?.odr, ['12,4 kWh zo slnka', 'odhad na celý deň']);
-    assert.equal(dnes?.auto?.velky, '~70 km');
+    assert.deepEqual([dnes?.auto?.velky, dnes?.auto?.za], ['~70', 'km']);
     assert.equal(terazModel(vstup('13:00', { autoDen: { ...autoDen, d: '2026-09-04' } }), { devices }).co?.auto, null, 'včerajšie nie');
     assert.equal(terazModel(vstup('13:00', { autoDen }), { devices: ['pracka'] }).co?.auto, null, 'bez auta doma');
 });
@@ -128,7 +128,7 @@ test('dlaždica auta na karte Teraz: iný deň odhad z jeho predpovede, deň bez
     assert.ok(zajtra && zajtra.podiel === 100 && zajtra.odr[1] === 'odhad na celý deň');
     // Deň bez slnka: 0 km, prázdny pásik.
     const nic = terazAutoText({ kwh: 0, km: 0, vecer: true });
-    assert.deepEqual(nic, { velky: '0 km', meno: 'Auto', odr: ['0,0 kWh zo slnka', 'dnes naozaj'] });
+    assert.deepEqual(nic, { velky: '0', za: 'km', meno: 'Auto', odr: ['0,0 kWh zo slnka', 'dnes naozaj'] });
     const tma = terazModel(vstup('13:00', { autoDen: { ...autoDen, kwh: 0, km: 0 } }), { devices }).co?.auto;
     assert.equal(tma?.podiel, null);
 });

@@ -24,7 +24,7 @@ import { dialog, setHtml, setText, show } from './write.js';
 /**
  * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
  *   meno: string, podiel: number | null, draha?: number, odr: string[], potom?: { text: string, dlho: boolean } | null,
- *   bezDetailu?: boolean }} Dlazdica
+ *   bezDetailu?: boolean, za?: string }} Dlazdica
  * `bezDetailu`: dlaždica bez detailu (auto zo slnka) nie je tlačidlo - ťuknutie na ňu nič neotvorí.
  */
 
@@ -107,7 +107,7 @@ function renderHreben(h, dom) {
 const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
     `<${znacka(d)} class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''}${stavDlazdice(d, oziv)}>` +
     `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${rezimHtml(d.rezim)}</span>` +
-    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimSr(d.rezim)}` +
+    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}${zaHtml(d.za)}</span><b>${escapeHtml(d.meno)}</b>${rezimSr(d.rezim)}` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%;--n:${100 - (d.draha ?? 0)}%"`}></i>` +
     `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
     `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></${znacka(d).split(' ')[0]}>`;
@@ -259,6 +259,9 @@ const bezia = (co, dnes) => (dnes ? (co.bezi ?? []) : []);
 
 /** Malé slovo pred veľkým číslom („do 20:30“, „od 22:00“). @param {string | undefined} pred */
 const predHtml = (pred) => (pred ? `<span class="pred">${escapeHtml(pred)} </span>` : '');
+
+/** Malá jednotka za veľkým číslom („~70 km“), s nezlomiteľnou medzerou - číslo sa nezalomí. @param {string | undefined} za */
+const zaHtml = (za) => (za ? `<span class="pred"> ${escapeHtml(za)}</span>` : '');
 
 /**
  * Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, na nej plný úsek

@@ -1650,7 +1650,7 @@ test.describe('karta Teraz', () => {
         const m = terazModel(vstupTeraz(time));
         const auto = page.locator('#tz-dlazdice [data-id="auto"]');
         const t = terazAutoText({ ...autoDnes(vstupTeraz(time)), vecer: true });
-        await expect(auto.locator('.velky')).toHaveText(t.velky);
+        await expect(auto.locator('.velky')).toHaveText(`${t.velky} ${t.za}`);
         await expect(auto.locator('b')).toHaveText('Auto');
         // Odrážky: každá svoj riadok, pre čítačku oddelené čiarkou.
         await expect(auto.locator('small > span:not(.sr)')).toHaveText(t.odr);

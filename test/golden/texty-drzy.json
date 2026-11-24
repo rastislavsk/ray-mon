@@ -1,8 +1,7 @@
 {
-  "hash": "a918bf3510ced6d2bfb5a6105ebe38c49735b9596d3cfd1c067d5f53c5b2ee38",
+  "hash": "bc8b712d9d15e2ad735ef3aec026c64b8ff6efb6164ad388ab087118a1d7c1f2",
   "texts": [
     "(prázdne)",
-    "0 km",
     "0,0 kWh zo slnka",
     "0,4 % cesty okolo Zeme",
     "0,6 % cesty okolo Zeme",
@@ -668,6 +667,7 @@
     "kWh na deň",
     "kWh spolu",
     "kWh za deň",
+    "km",
     "krátka",
     "kus cesty z domu do Nitry (25 km)",
     "lacna",
@@ -849,10 +849,8 @@
     "~510 mobilov",
     "~54 kWh",
     "~588 kg CO2eq menej",
-    "~60 km",
     "~61 kWh",
     "~63 kWh",
-    "~70 km",
     "ÚPLNE NAHOVNO DEŇ",
     "Čo môžem",
     "Čo môžem · odhad",

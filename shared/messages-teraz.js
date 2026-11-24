@@ -94,13 +94,14 @@ export function terazDlazdicaText(r, voice = 'drzy') {
 }
 
 /**
- * Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html, Z1): veľké km, pod menom kWh a či je to ranný odhad
- * na celý deň, alebo po západe slnka skutočnosť. @param {import('./auto-slnko.js').AutoSlnko} a
- * @returns {{ velky: string, meno: string, odr: string[] }}
+ * Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html, Z1): veľké km (jednotka `za` je malá za číslom, aby sa
+ * číslo v polovičnej šírke nezalomilo), pod menom kWh a či je to ranný odhad na celý deň, alebo po západe slnka skutočnosť.
+ * @param {import('./auto-slnko.js').AutoSlnko} a @returns {{ velky: string, za: string, meno: string, odr: string[] }}
  */
 export function terazAutoText(a) {
     return {
-        velky: `${a.km ? '~' : ''}${a.km} km`,
+        velky: `${a.km ? '~' : ''}${a.km}`,
+        za: 'km',
         meno: MOZEM_ITEM_TEXTS.auto.name,
         odr: [`${fmt1(a.kwh)} kWh zo slnka`, a.vecer ? 'dnes naozaj' : 'odhad na celý deň'],
     };
