@@ -185,6 +185,32 @@ const suhrn = (x) =>
     (Array.isArray(x) && x.length === 3 && (x[0] === null || cislo(x[0])) && (x[1] === null || cislo(x[1])) && Number.isInteger(x[2]));
 
 /**
+ * Naučený model zo zrkadla pre service worker (shared/oznamenia.js, docs/navrhy/plan-dna-oznamenie-vt.html, O2), alebo null,
+ * keď nemá tvar Naucene - ranné oznámenie potom ráta bez učenia.
+ * @param {unknown} raw @returns {Naucene | null}
+ */
+export function nauceneZ(raw) {
+    if (!isObj(raw)) return null;
+    const n = /** @type {Record<string, any>} */ (raw);
+    const hodiny = (/** @type {unknown} */ a) => Array.isArray(a) && a.length === 24 && a.every(cislo);
+    const casti = [
+        () => cislo(n.dni),
+        () => n.od === null || (typeof n.od === 'string' && DATE_RE.test(n.od)),
+        () => Array.isArray(n.oprava) && n.oprava.length === 3 && n.oprava.every(hodiny),
+        () => isObj(n.dom) && hodiny(n.dom.prac) && hodiny(n.dom.vik),
+        () => bojlerZ(n.bojler),
+    ];
+    return casti.every((ok) => ok()) ? /** @type {Naucene} */ (raw) : null;
+}
+
+/** Naučená potreba bojlera v zrkadle: pásma teploty a všetky dni (číslo či null). @param {unknown} b */
+const bojlerZ = (b) =>
+    isObj(b) &&
+    Array.isArray(/** @type {any} */ (b).pasma) &&
+    /** @type {unknown[]} */ (/** @type {any} */ (b).pasma).every((x) => x === null || cislo(x)) &&
+    /** @type {any} */ (b.vsetky === null || cislo(/** @type {any} */ (b).vsetky));
+
+/**
  * História dní od Workera či z úložiska. Dáta sú nedôveryhodné: deň, ktorý nesedí, vypadne.
  * @param {unknown} raw @returns {DenHistorie[]}
  */

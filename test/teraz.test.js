@@ -515,7 +515,8 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo, deň a úsek na osi 
     assert.deepEqual(
         vecer.veci.map((v) => [v.id, v.tone, v.kedy, v.cas]),
         [
-            ['auto', 'cheap', 'Teraz z lacnej siete', '20:00 – 20:30'],
+            // Kúsok NT 20:00 – 20:30 je pre auto krátky (PLAN_DNA.autoMinMin), ide do ďalšieho.
+            ['auto', '', 'Dnes z lacnej siete', '21:30 – 22:30'],
             ['pracka', '', 'Najmenej zo siete', '20:00 – 22:00'],
         ],
     );
@@ -524,8 +525,8 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo, deň a úsek na osi 
 test('detail spotrebiča večer: iný deň s dňom pri čase, lacná sieť modrá, noc mimo osi', () => {
     const vecer = terazModel(input(at('19:50')), { devices: ['pracka', 'auto'] });
     // Dnes: lacná sieť modrá, bez dňa pri čase.
-    assert.equal(vecer.veci[0].den, '');
-    assert.equal(vecer.veci[0].slot?.tone, 'cheap');
+    assert.equal(vecer.veci[1].den, '');
+    assert.equal(vecer.veci[1].slot?.tone, 'cheap');
     // Iný deň (zvolený v hrebeni): deň pri čase a úsek na tej istej osi, bez „teraz“.
     const zajtra = terazModel(input(at('19:50')), { devices: ['pracka', 'auto'], den: 1 });
     const pracka = zajtra.veci.find((v) => v.id === 'pracka');
@@ -767,20 +768,20 @@ test('čo zapnúť na poludnie: tri dlaždice zo slnka, zvyšok dneška za nimi 
 });
 
 test('čo zapnúť večer: lacná sieť teraz s koncom pásma', () => {
-    const rows = riadky(input(at('19:50')));
-    const m = coZapnutModel(rows, { nowMin: minuta('19:50') });
+    const rows = riadky(input(at('21:20')));
+    const m = coZapnutModel(rows, { nowMin: minuta('21:20') });
     const dl = (/** @type {typeof m} */ x, /** @type {string} */ id) => {
         const d = x.hore.dlazdice.find((y) => y.id === id);
         return d && [d.pred, d.velky, d.meno, d.odr];
     };
-    assert.deepEqual(dl(m, 'auto'), ['do', '20:30', 'Auto', ['nabíjaj teraz', 'lacná elektrina']]);
-    assert.deepEqual(dl(m, 'bojler'), ['do', '20:30', 'Bojler', ['zapni teraz', 'lacná elektrina']]);
+    assert.deepEqual(dl(m, 'auto'), ['do', '22:30', 'Auto', ['nabíjaj teraz', 'lacná elektrina']]);
+    assert.deepEqual(dl(m, 'bojler'), ['do', '22:30', 'Bojler', ['zapni teraz', 'lacná elektrina']]);
     // Čo čaká na iný deň, v mriežke nie je - núdzové časy dodáva karta (shared/tyzden.js).
     assert.deepEqual(m.riadky, []);
     // Slušný tón.
-    const slusne = coZapnutModel(rows, { nowMin: minuta('19:50') }, 'slusny');
-    assert.deepEqual(dl(slusne, 'auto'), ['do', '20:30', 'Auto', ['nabíjajte teraz', 'lacná elektrina']]);
-    assert.deepEqual(dl(slusne, 'bojler'), ['do', '20:30', 'Bojler', ['zapnite teraz', 'lacná elektrina']]);
+    const slusne = coZapnutModel(rows, { nowMin: minuta('21:20') }, 'slusny');
+    assert.deepEqual(dl(slusne, 'auto'), ['do', '22:30', 'Auto', ['nabíjajte teraz', 'lacná elektrina']]);
+    assert.deepEqual(dl(slusne, 'bojler'), ['do', '22:30', 'Bojler', ['zapnite teraz', 'lacná elektrina']]);
 });
 
 test('čo zapnúť v noci: teraz nič, najbližšia vec s odpočtom, lacné pásmo cez polnoc', () => {
@@ -792,6 +793,7 @@ test('čo zapnúť v noci: teraz nič, najbližšia vec s odpočtom, lacné pás
         cas: '23:30',
         odr: ['za 30 min', 'lacná elektrina'],
         podiel: 0,
+        draha: 0,
     });
     assert.deepEqual(m.riadky[0], {
         id: 'auto',
@@ -801,14 +803,15 @@ test('čo zapnúť v noci: teraz nič, najbližšia vec s odpočtom, lacné pás
         cas: '23:30',
         odr: ['lacná elektrina'],
         podiel: 0,
+        draha: 0,
     });
 });
 
 test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez riadkov nič', () => {
     /** @type {any[]} */
     const rows = [
-        { id: 'pracka', name: 'Práčka', kind: 'sun', start: 9 * 60, end: 11 * 60, after: null, km: null, podiel: 0.6 },
-        { id: 'auto', name: 'Auto', kind: 'sun', start: 12 * 60, end: 15 * 60, after: null, km: 80, podiel: 1 },
+        { id: 'pracka', name: 'Práčka', kind: 'sun', start: 9 * 60, end: 11 * 60, after: null, km: null, podiel: 0.6, draha: 0.1 },
+        { id: 'auto', name: 'Auto', kind: 'sun', start: 12 * 60, end: 15 * 60, after: null, km: 80, podiel: 1, draha: 0 },
         {
             id: 'umyvacka',
             name: 'Umývačka',
@@ -817,11 +820,20 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
             end: 10 * 60 + 30,
             after: null,
             podiel: 1,
+            draha: 0,
         },
         { id: 'bojler', name: 'Bojler', kind: 'none' },
     ];
     const nudza = [
-        { id: 'umyvacka', name: 'Umývačka', kind: 'nudza', cas: '12:00', odr: ['polovica zo slnka', 'celá v stredu'], podiel: 50 },
+        {
+            id: 'umyvacka',
+            name: 'Umývačka',
+            kind: 'nudza',
+            cas: '12:00',
+            odr: ['polovica zo slnka', 'celá v stredu'],
+            podiel: 50,
+            draha: 20,
+        },
     ];
     const potom = { auto: { text: 'potom až v stredu', dlho: true } };
     const m = coZapnutModel(rows, { nowMin: 7 * 60 + 30, nudza, potom }, 'slusny');
@@ -832,6 +844,8 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
         cas: '09:00',
         odr: ['za 1 h 30 min', 'väčšina zo slnka'],
         podiel: 60,
+        // Zvyšok 40 %: 10 % v drahom pásme, 30 % v lacnom - pásik má tri farby.
+        draha: 10,
     });
     // Zvyšok dneška podľa času, potom núdzové časy - jedna mriežka, bez nadpisov.
     assert.deepEqual(m.riadky[0], {
@@ -841,6 +855,7 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
         cas: '12:00',
         odr: ['~80 km zo slnka', 'potom až v stredu'],
         podiel: 100,
+        draha: 0,
     });
     assert.deepEqual(m.riadky.slice(1), nudza);
     // Bez núdzových časov sa veci na iný deň a „tento týždeň nie“ v mriežke neukážu.
@@ -859,6 +874,7 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
         cas: '09:00',
         odr: ['dobehne 11:00', 'väčšina zo slnka'],
         podiel: 60,
+        draha: 10,
     });
     const ranoPotom = coZapnutModel(skoro, { nowMin: 5 * 60, potom: { pracka: potom.auto } });
     assert.deepEqual(ranoPotom.riadky[0].odr, ['dobehne 11:00', 'potom až v stredu']);
@@ -927,16 +943,16 @@ test('čas do niečoho', () => {
 });
 
 test('graf dňa a dlaždice sa zhodnú: čo ide teraz, aj v grafe dňa beží (teraz je najbližšia štvrťhodina)', () => {
-    const i = input(at('19:50'));
+    const i = input(at('21:20'));
     const rows = riadky(i);
-    const co = coZapnutModel(rows, { nowMin: minuta('19:50') });
+    const co = coZapnutModel(rows, { nowMin: minuta('21:20') });
     assert.deepEqual(
         co.hore.dlazdice.map((d) => d.id),
         ['bojler', 'auto'],
     );
     assert.equal(casti(denModel(i, rows, null).citanie.veta).at(-1), 'beží bojler a auto');
-    // Zvolený čas sa nezaokrúhľuje - 19:45 je pred lacným pásmom.
-    assert.equal(casti(denModel(i, rows, minuta('19:45')).citanie.veta).at(-1), 'potom bojler o 20:00');
+    // Zvolený čas sa nezaokrúhľuje - 21:15 je pred lacným pásmom.
+    assert.equal(casti(denModel(i, rows, minuta('21:15')).citanie.veta).at(-1), 'potom bojler o 21:30');
 });
 
 /** Behy „Už beží“ 5. 9. 2026: umývačka od 12:00 (beží o 13:00), práčka od 9:30 (dobehla). */
@@ -956,7 +972,18 @@ test('spotrebič beží: dlaždica „beží“ hore; dobehnutý má dlaždicu s
     if (!co) throw new Error('bez Čo zapnúť');
     assert.deepEqual(
         co.bezi.map((t) => ({ ...t, podiel: t.podiel > 0 })),
-        [{ id: 'umyvacka', tone: 'bezi', meno: 'Umývačka', pred: 'do', velky: '14:30', odr: ['beží', 'ešte 1 h 30 min'], podiel: true }],
+        [
+            {
+                id: 'umyvacka',
+                tone: 'bezi',
+                meno: 'Umývačka',
+                pred: 'do',
+                velky: '14:30',
+                odr: ['beží', 'ešte 1 h 30 min'],
+                podiel: true,
+                draha: 0,
+            },
+        ],
     );
     assert.equal('hotovo' in co, false, 'dobehnutý vlastnú dlaždicu nemá');
     const dlazdice = [...co.hore.dlazdice, ...(co.hore.dalsi ? [co.hore.dalsi] : []), ...co.riadky];

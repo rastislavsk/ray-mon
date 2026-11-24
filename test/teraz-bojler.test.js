@@ -1,8 +1,16 @@
 // Karta Teraz a bojler na prebytky: smer toku, dlaždica a panel Bojler dnes (shared/teraz-bojler.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SITE } from '../shared/config.js';
-import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail, tokSiete } from '../shared/teraz-bojler.js';
+import { ALL_DAYS, ALL_MONTHS, SITE, TARIFF } from '../shared/config.js';
+import {
+    bojlerDetail,
+    bojlerDlazdica,
+    bojlerDrahaDnes,
+    bojlerRiadeny,
+    TERAZ_BOJLER_TEXTS,
+    tokDetail,
+    tokSiete,
+} from '../shared/teraz-bojler.js';
 
 const NOW = new Date('2026-11-15T13:00:00Z'); // 14:00 SEČ
 const MIN = 60000;
@@ -27,6 +35,28 @@ const info = (/** @type {object} */ o = {}) => ({
     den: DEN,
     rucne: false,
     ...o,
+});
+
+test('dlaždica Bojler: červená časť pásika - odber zo siete behov v drahom pásme, rozložený na čas behu', () => {
+    /** VT 13:00 - 14:00, inak NT. @type {import('../shared/config.js').Tariff} */
+    const vt = {
+        ...TARIFF,
+        schedules: [
+            {
+                days: ALL_DAYS,
+                months: ALL_MONTHS,
+                changes: [
+                    { from: '00:00', band: 'nt' },
+                    { from: '13:00', band: 'vt' },
+                    { from: '14:00', band: 'nt' },
+                ],
+            },
+        ],
+    };
+    // Druhý beh 12:30 - 14:00 (teraz) vzal zo siete 220 Wh, dve tretiny jeho času je VT: 147 Wh z 3850 Wh dňa.
+    assert.equal(bojlerDrahaDnes(info(), NOW, TZ, vt), 4);
+    assert.equal(bojlerDrahaDnes(info(), NOW, TZ, TARIFF), 0, 'cez deň NT');
+    assert.equal(bojlerDrahaDnes(info({ den: null }), NOW, TZ, vt), 0, 'dnes nehrial');
 });
 
 test('smer toku: do siete, zo siete, okolo nuly a bez elektromera nič', () => {

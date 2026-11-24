@@ -16,9 +16,14 @@ import {
     parseOznamenia,
     planNotice,
     reminderNotice,
+    swInput,
     swNotice,
     vapidKeyBytes,
 } from '../shared/oznamenia.js';
+import { dayCtx } from '../shared/mozem-jadro.js';
+import { planDna } from '../shared/plan-dna.js';
+import { buildForecast } from '../shared/solar.js';
+import { naucenaPredpoved } from '../shared/ucenie.js';
 import { fixture, fixtureData } from './helpers.js';
 
 /** Tarifa Dvorian s cenami: NT lacné, VT drahé. */
@@ -121,7 +126,7 @@ test('ranné oznámenie o 9:00 za jasna: nadpis s koncom slnka, poradie od teraz
 test('ranné oznámenie: večer, zamračený deň a týždeň bez slnka', () => {
     const vecer = planNotice(input(at('19:50')), { devices: DEVICES });
     assert.equal(vecer.title, 'Dnes slnko na spotrebiče nestačí');
-    assert.equal(vecer.body, 'Práčka, sušička a umývačka radšej zajtra. Auto nabi v lacnom pásme od 20:00.');
+    assert.equal(vecer.body, 'Práčka, sušička a umývačka radšej zajtra. Auto nabi v lacnom pásme od 21:30.');
     assert.equal(vecer.remind, null);
     const { forecast } = fixtureData(at('09:00'));
     const scale = (/** @type {number} */ k) => ({
@@ -225,6 +230,44 @@ test('swNotice: ranné oznámenie s tlačidlom Pripomeň, v čase pripomienky pr
     assert.deepEqual(pripomienka.keep, [], 'odoslaná aj stará pripomienka zmizli');
     const neskor = { id: 'susicka', at: at('15:00').toISOString() };
     assert.deepEqual(swNotice(z, [neskor], weather, at('09:00')).keep, [neskor], 'budúca ostáva');
+});
+
+test('swInput: oznámenie ráta s učením a bojlerom zo zrkadla tak ako karta Teraz (24. 11. 2026 sa nezhodli)', () => {
+    const weather = fixture('open-meteo.json');
+    const now = at('07:00');
+    const hodiny = (/** @type {number} */ x) => Array.from({ length: 24 }, () => x);
+    /** @type {import('../shared/ucenie.js').Naucene} */
+    const ucenie = {
+        dni: 10,
+        od: null,
+        oprava: [hodiny(0.6), hodiny(0.6), hodiny(0.6)],
+        dom: { prac: hodiny(0.6), vik: hodiny(0.6) },
+        bojler: { pasma: [null, null, null], vsetky: 2500 },
+    };
+    // Bojler riadi zásuvka v ručnom režime, včera večer naposledy hlásila.
+    const bojler = {
+        kontaktAt: at('00:00').getTime() - 2 * 3600 * 1000,
+        rele: false,
+        w: 0,
+        prebytokKw: null,
+        prahy: { zapKw: 2.3, vypKw: 2 },
+        den: null,
+        rucne: true,
+    };
+    const devices = [...DEVICES, 'bojler'];
+    /** @type {import('../shared/oznamenia.js').Zrkadlo} */
+    const z = { site: SITE, plant: PLANT, tariff: PRICED, devices, voice: 'drzy', app: './', hour: 7, ucenie, bojler };
+    const sw = swInput(z, weather, now);
+    // Appka: predpoveď opravená učením (sNaucenim), učenie aj bojler v stave.
+    const forecast = naucenaPredpoved(buildForecast(weather, now, SITE, PLANT), ucenie);
+    const appka = { now, site: SITE, plant: PLANT, tariff: PRICED, pv: null, forecast, ucenie, bojler };
+    const plan = (/** @type {any} */ i) => planDna(dayCtx(i), i, devices);
+    assert.deepEqual(plan(sw), plan(appka));
+    assert.ok(!plan(sw).some((r) => r.id === 'bojler'), 'bojler riadený zásuvkou nie je vec na zapnutie');
+    // Zrkadlo zo staršej appky či poškodené: bez učenia a bez bojlera, bojler je zas bežný spotrebič.
+    const stare = swInput({ ...z, ucenie: /** @type {any} */ ({ dni: 'x' }), bojler: undefined }, weather, now);
+    assert.deepEqual([stare.ucenie, stare.bojler], [null, null]);
+    assert.ok(plan(stare).some((r) => r.id === 'bojler'));
 });
 
 test('oznamOvladanie: hláška a zámok sekcie Oznámenia, rovnaké', () => {

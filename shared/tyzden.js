@@ -9,7 +9,7 @@ import { forecastDayPlan } from './day-plan.js';
 import { dayNameShort, weekDayName } from './format.js';
 import { planDnaRowText, terazNudzaText, terazRiadokText, terazVecText } from './messages-core.js';
 import { dayCtx, programDraw } from './mozem-jadro.js';
-import { cheapFrom, chosen, najlepsiDen, podielSlnka, vec, volne } from './plan-dna.js';
+import { cheapFrom, chosen, najlepsiDen, podielDrahy, podielSlnka, vec, volne } from './plan-dna.js';
 import { skyWeather } from './sky.js';
 import { localDateKey } from './solar.js';
 
@@ -18,8 +18,10 @@ import { localDateKey } from './solar.js';
 /** @typedef {import('./messages.js').Voice} Voice */
 /**
  * Núdzový čas spotrebiča: štart a koniec (null, keď je to jedno), podiel programu zo slnka (0 až 1,
- * pri aute null) a odkiaľ rada je - deň s kúskom slnka, lacné pásmo, aspoň mimo drahého, alebo nič z toho.
- * @typedef {{ id: string, start: number | null, end: number | null, podiel: number | null, zdroj: 'slnko' | 'lacna' | 'bezna' | 'siet' }} Nudza
+ * pri aute null), koľko z neho pôjde zo siete v drahom pásme (`draha`, podielDrahy; bez času 0) a odkiaľ rada je - deň
+ * s kúskom slnka, lacné pásmo, aspoň mimo drahého, alebo nič z toho.
+ * @typedef {{ id: string, start: number | null, end: number | null, podiel: number | null, draha: number,
+ *   zdroj: 'slnko' | 'lacna' | 'bezna' | 'siet' }} Nudza
  */
 /** Deň týždňa: deň predpovede, poradie od dneška, meno, jeho kontext a čo sa v ňom zmestí na slnko. @typedef {ReturnType<typeof dniTyzdna>[number]} DenTyzdna */
 
@@ -109,7 +111,7 @@ export function nudzoveCasy(ctx, slnko, ids) {
             // Sušička ide hneď po práčke (aj zo siete); keď práčka čas nemá, nemá ho ani ona.
             const n =
                 after && ids.includes(after) && ends[after] === undefined
-                    ? { id, start: null, end: null, podiel: 0, zdroj: /** @type {const} */ ('siet') }
+                    ? { id, start: null, end: null, podiel: 0, draha: 0, zdroj: /** @type {const} */ ('siet') }
                     : after && ends[after] !== undefined
                       ? hnedPo(id, ctx, free, Math.max(from0, ends[after]))
                       : nudzovyCas(id, ctx, free, from0);
@@ -127,10 +129,11 @@ function hnedPo(id, ctx, free, start) {
     const { item, device } = vec(id);
     const draw = programDraw(item, device.powerKw);
     const podiel = podielSlnka(draw, free, start);
+    const draha = podielDrahy(draw, free, start, ctx.plan);
     draw.forEach(({ kw }, m) => (free[start + m] = Math.max(0, (free[start + m] ?? 0) - kw)));
     const vLacnom = ctx.plan[Math.floor(start / STEP) % ctx.plan.length]?.level === 'lacna';
     const zdroj = podiel >= TYZDEN.minPodiel ? 'slnko' : vLacnom ? 'lacna' : 'bezna';
-    return { id, start, end: start + draw.length, podiel, zdroj };
+    return { id, start, end: start + draw.length, podiel, draha, zdroj };
 }
 
 /** Váha ceny pásma, keď tarifa ceny nemá: lacné pásmo je lacnejšie než bežné a to než drahé. */
@@ -147,25 +150,28 @@ const VAHA = /** @type {Record<string, number>} */ ({ lacna: 1, bezna: 2, draha:
  */
 function nudzovyCas(id, ctx, free, from) {
     const { item, device } = vec(id);
-    const lacna = cheapFrom(ctx, from);
-    /** @type {Nudza} */ const jedno = { id, start: null, end: null, podiel: item.runMin === null ? null : 0, zdroj: 'siet' };
+    const lacna = cheapFrom(ctx, from, device.cheapGrid ? PLAN_DNA.autoMinMin : 0);
+    /** @type {Nudza} */ const jedno = { id, start: null, end: null, podiel: item.runMin === null ? null : 0, draha: 0, zdroj: 'siet' };
     // Auto: lacné pásmo až do jeho konca, inak je to jedno - kúsok slnka nabíjačku neutiahne.
-    if (item.runMin === null) return lacna === null ? jedno : { id, start: lacna, end: lacnaDo(ctx, lacna), podiel: null, zdroj: 'lacna' };
+    if (item.runMin === null)
+        return lacna === null ? jedno : { id, start: lacna, end: lacnaDo(ctx, lacna), podiel: null, draha: 0, zdroj: 'lacna' };
     const draw = programDraw(item, device.powerKw);
     const cena = (/** @type {DayCtx['plan'][number]} */ slot) => slot.band.price ?? VAHA[slot.level];
     const jednaCena = ctx.plan.every((slot) => cena(slot) === cena(ctx.plan[0]));
     const v = vyber(starty(draw, ctx, free, from), { lacnaSiet: device.cheapGrid, jednaCena });
     // Program do polnoci nedobehne: ostáva lacné pásmo, ktoré pokračuje cez polnoc.
-    if (!v) return lacna === null ? jedno : { id, start: lacna, end: lacna + draw.length, podiel: 0, zdroj: 'lacna' };
+    if (!v) return lacna === null ? jedno : { id, start: lacna, end: lacna + draw.length, podiel: 0, draha: 0, zdroj: 'lacna' };
     if (v.zdroj === 'siet') return jedno;
     const vLacnom = ctx.plan[v.start / STEP].level === 'lacna';
     if (v.zdroj === 'rovnako' && !vLacnom) return jedno;
+    const draha = podielDrahy(draw, free, v.start, ctx.plan);
     draw.forEach(({ kw }, m) => (free[v.start + m] = Math.max(0, free[v.start + m] - kw)));
     return {
         id,
         start: v.start,
         end: v.start + draw.length,
         podiel: v.podiel,
+        draha,
         zdroj: v.zdroj === 'slnko' ? 'slnko' : vLacnom ? 'lacna' : 'bezna',
     };
 }
@@ -241,6 +247,7 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
             cas: t.cas,
             odr: t.odr,
             podiel: Math.round((n.podiel ?? 0) * 100),
+            draha: Math.round(n.draha * 100),
         },
         detail: {
             id: n.id,
@@ -275,6 +282,7 @@ export function denInyModel(d, devices, voice = 'drzy') {
                 end: r.end,
                 after: r.after,
                 podiel: r.podiel,
+                draha: r.draha,
                 name: t.name,
                 why: t.why,
             };
@@ -286,6 +294,7 @@ export function denInyModel(d, devices, voice = 'drzy') {
                     kind: /** @type {'later' | 'nudza'} */ ('later'),
                     ...terazRiadokText(row),
                     podiel: Math.round(r.podiel * 100),
+                    draha: Math.round(r.draha * 100),
                 },
                 detail: {
                     id: r.id,
