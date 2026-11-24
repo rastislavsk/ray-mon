@@ -19,7 +19,7 @@ import { forecastDayPlan } from './day-plan.js';
 import { weekDayName } from './format.js';
 import { bandAt, scheduleFor } from './tariff.js';
 import { planDnaRowText, PLAN_DNA_NOTE, planTileText } from './messages-core.js';
-import { dayCtx, freeKw, kmOf, programDraw } from './mozem-jadro.js';
+import { dayCtx, freeKw, programDraw } from './mozem-jadro.js';
 import { NB } from './huawei-nb.js';
 import { addDays, localDateKey } from './solar.js';
 import { bojlerRiadeny } from './teraz-bojler.js';
@@ -29,8 +29,8 @@ import { potrebaBojlera } from './ucenie.js';
 /** @typedef {import('./mozem-jadro.js').LaterDay} LaterDay */
 /** @typedef {(typeof MOZEM_ITEMS)[number]} MozemItem */
 /**
- * Miesto spotrebiča v pláne: na slnku od `start` (auto do `end`, s km a cenou tej energie zo
- * siete), v lacnom pásme od `start` do konca toho pásma `end` (cez polnoc viac než 24 h), iný deň
+ * Miesto spotrebiča v pláne: na slnku od `start` do `end`, v lacnom pásme od `start` do konca toho pásma `end` (cez
+ * polnoc viac než 24 h), iný deň
  * od `day.start` do `end` (`after`: po čom v ten deň ide), alebo tento týždeň nie. `podiel`: koľko
  * energie programu v tom čase dá slnko, 0 až 1 (podielSlnka) - na slnku nemusí byť celý, stačí, keď
  * slnko pokryje ohrevy. `poBojleri`: domáci spotrebič na slnku, ktorý by bez bojlera riadeného zásuvkou išiel skôr.
@@ -38,7 +38,7 @@ import { potrebaBojlera } from './ucenie.js';
  * PLAN_DNA.zoSiete - nie je „na slnku“, hoci má presný čas. `draha`: koľko energie programu pôjde zo siete v drahom pásme
  * tarify, 0 až 1 (podielDrahy) - pásik dlaždice ho ukáže červenou (docs/navrhy/plan-dna-oznamenie-vt.html, P1).
  * @typedef {{ id: string, kind: 'sun', start: number, end: number, after: string | null,
- *     km: number | null, save: number | null, currency: string, podiel: number, draha: number, poBojleri?: boolean }
+ *     currency: string, podiel: number, draha: number, poBojleri?: boolean }
  *   | { id: string, kind: 'siet', start: number, end: number, after: string, podiel: number, draha: number }
  *   | { id: string, kind: 'cheap', start: number, end: number, podiel: number, draha: number }
  *   | { id: string, kind: 'later', day: LaterDay, end: number, after: string | null, podiel: number, draha: number }
@@ -80,26 +80,6 @@ function sunStart(draw, free, from) {
         if (draw.every(({ heavy, kw }, m) => !heavy || (free[start + m] ?? 0) >= kw)) return start;
     }
     return null;
-}
-
-/**
- * Úsek pre auto od `from`: najdlhší kus dňa, v ktorom po ostatných spotrebičoch ostáva výkon
- * aspoň na hranicu auta - auto tak chytí najviac km, nie prvú medzeru. Kratší než
- * PLAN_DNA.autoMinMin minút nestojí za zapojenie, vtedy null.
- * @param {number[]} free @param {number} minKw @param {number} from
- * @returns {[number, number] | null}
- */
-function autoSpan(free, minKw, from) {
-    /** @type {[number, number] | null} */ let best = null;
-    let a = from;
-    while (a < DAY_MIN) {
-        while (a < DAY_MIN && free[a] < minKw) a++;
-        let b = a;
-        while (b < DAY_MIN && free[b] >= minKw) b++;
-        if (b - a >= PLAN_DNA.autoMinMin && (!best || b - a > best[1] - best[0])) best = [a, b];
-        a = b;
-    }
-    return best;
 }
 
 /**
@@ -149,20 +129,16 @@ export function volne(ctx, slnko, rezerva = null) {
     const free = Array.from({ length: DAY_MIN }, (_, m) => freeKw(ctx, m) - (rezerva?.[m] ?? 0));
     for (const r of slnko) {
         const { item, device } = vec(r.id);
-        const draw = item.runMin === null ? null : programDraw(item, device.powerKw);
-        for (let m = r.start; m < Math.min(r.end, DAY_MIN); m++) {
-            free[m] = Math.max(0, free[m] - (draw ? (draw[m - r.start]?.kw ?? 0) : device.powerKw));
-        }
+        const draw = programDraw(item, device.powerKw);
+        for (let m = r.start; m < Math.min(r.end, DAY_MIN); m++) free[m] = Math.max(0, free[m] - (draw[m - r.start]?.kw ?? 0));
     }
     return free;
 }
 
-/** Odber veci v lacnom pásme po minútach: program, auto príkonom nabíjačky po celý úsek. @param {Extract<PlanRow, { kind: 'cheap' }>} r */
+/** Odber veci v lacnom pásme po minútach. @param {Extract<PlanRow, { kind: 'cheap' }>} r */
 function cheapDraw(r) {
     const { item, device } = vec(r.id);
-    return item.runMin === null
-        ? Array.from({ length: r.end - r.start }, () => ({ kw: device.powerKw }))
-        : programDraw(item, device.powerKw);
+    return programDraw(item, device.powerKw);
 }
 
 /**
@@ -280,7 +256,7 @@ function mokre(pred) {
 
 /**
  * Plán dňa od teraz: pre každý spotrebič z `devices` (id vecí z MOZEM_ITEMS) miesto na slnku,
- * alebo kam inam. Dnešok rozvrhne najlepsiDen. Čo sa dnes nezmestí: auto a bojler (cheapGrid)
+ * alebo kam inam. Dnešok rozvrhne najlepsiDen. Čo sa dnes nezmestí: bojler bez zásuvky (cheapGrid)
  * do lacného pásma, ostatné tým istým výpočtom na ďalšie dni predpovede (iný deň má rozpočet
  * slnka od polnoci). Čo sa nezmestí celý týždeň, ide aspoň do lacného pásma, inak tento týždeň
  * nie. Riadky sú v poradí PLAN_DNA.order. Čo človek dnes zapol a ešte beží (behy), riadok nemá: nerozvrhuje sa,
@@ -323,7 +299,7 @@ function planDnaCely(ctx, input, devices) {
     for (const r of slnko) rows.set(r.id, zoSieteNatvrdo(r));
     const rest = list.filter(({ item, device }) => {
         if (rows.has(item.id)) return false;
-        const cheap = device.cheapGrid ? cheapRow(item.id, cheapFrom(ctx, from0, PLAN_DNA.autoMinMin), ctx, input) : null;
+        const cheap = device.cheapGrid ? cheapRow(item.id, cheapFrom(ctx, from0, PLAN_DNA.lacnaMinMin), ctx, input) : null;
         if (cheap) rows.set(item.id, cheap);
         return !cheap;
     });
@@ -355,18 +331,47 @@ function planDnaCely(ctx, input, devices) {
 function bojlerPlanu(ctx, input) {
     const b = input.bojler;
     if (!b || !bojlerRiadeny(b, input.now)) return null;
-    const { device } = vec('bojler');
-    const dnes = input.forecast?.days.find((d) => d.date === localDateKey(input.now, input.site.timezone));
-    const teplota = dnes && dnes.tempMinC !== null && dnes.tempMaxC !== null ? (dnes.tempMinC + dnes.tempMaxC) / 2 : null;
-    const o = {
-        nowMin: ctx.nowMin,
+    const o = simVstup(input, localDateKey(input.now, input.site.timezone), ctx.nowMin);
+    return (free) => simulujBojler(free, b, o);
+}
+
+/**
+ * Vstup simulácie bojlera pre deň `date` od minúty `nowMin`: potrebuje toľko, koľko sa appka naučila pri teplote toho
+ * dňa (potrebaBojlera), a meria sa ako Huawei, raz za NB.meranieMs.
+ * @param {import('./day-plan.js').PlanInput} input @param {string} date @param {number} nowMin
+ */
+function simVstup(input, date, nowMin) {
+    const den = input.forecast?.days.find((d) => d.date === date);
+    const teplota = den && den.tempMinC !== null && den.tempMaxC !== null ? (den.tempMinC + den.tempMaxC) / 2 : null;
+    return {
+        nowMin,
         now: input.now.getTime(),
-        dnes: localDateKey(input.now, input.site.timezone),
+        dnes: date,
         potrebaWh: potrebaBojlera(input.ucenie, teplota),
-        kw: device.powerKw,
+        kw: vec('bojler').device.powerKw,
         krokMin: NB.meranieMs / 60000,
     };
-    return (free) => simulujBojler(free, b, o);
+}
+
+/**
+ * Odber bojlera riadeného zásuvkou po minútach celého dneška nad prebytkom bez bojlera `free` (kW po minútach): do teraz
+ * zo záznamu zásuvky, od teraz simulácia (bojlerOdberDna) - auto zo slnka (shared/auto-slnko.js). Bez zásuvky null.
+ * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {number[]} free
+ */
+export function bojlerDna(ctx, input, free) {
+    const sim = bojlerPlanu(ctx, input);
+    return sim ? bojlerOdberDna(ctx, input, sim(free).odber) : null;
+}
+
+/**
+ * Odber bojlera riadeného zásuvkou v inom dni predpovede (`date`) nad prebytkom `free`: deň začína so studenou vodou
+ * a vypnutým relé, zásuvka rozhoduje ako dnes (prahy, ručný režim). Bez zásuvky null.
+ * @param {import('./day-plan.js').PlanInput} input @param {string} date @param {number[]} free
+ */
+export function bojlerInyDen(input, date, free) {
+    const b = input.bojler;
+    if (!b || !bojlerRiadeny(b, input.now)) return null;
+    return simulujBojler(free, { ...b, rele: false, w: 0, den: null, nahriata: false }, simVstup(input, date, 0)).odber;
 }
 
 /**
@@ -395,7 +400,7 @@ function bojlerPrvy(ctx, currency, list, { pred, cakaj }, sim) {
     const bez = najlepsiDen(ctx, currency, list, { pred, cakaj });
     const slnko = [...prane, ...ostatne].map((r) => {
         const b = bez.find((x) => x.id === r.id);
-        return r.km === null && !r.after && b && r.start > b.start ? { ...r, poBojleri: true } : r;
+        return !r.after && b && r.start > b.start ? { ...r, poBojleri: true } : r;
     });
     return { slnko, boj };
 }
@@ -422,8 +427,8 @@ function ineDni(ctx, input, rest, rows) {
 }
 
 /**
- * Najlepší rozvrh jedného dňa: v poradí PLAN_DNA.order, kým iné poradie domácich spotrebičov
- * nedá zreteľne lepší plán (lepsi); auto ide vždy posledné. Vráti len to, čo sa v ten deň
+ * Najlepší rozvrh jedného dňa: v poradí PLAN_DNA.order, kým iné poradie spotrebičov
+ * nedá zreteľne lepší plán (lepsi). Vráti len to, čo sa v ten deň
  * zmestí na slnko. `pred`: čo už beží či dobehlo (behy) - berie si z rozpočtu. `cakaj`: koniec prania, na ktoré
  * vec už čaká (mokre).
  * @param {DayCtx} ctx @param {string} currency @param {ReturnType<typeof chosen>} list @param {Uz} [uz]
@@ -431,11 +436,9 @@ function ineDni(ctx, input, rest, rows) {
  */
 export function najlepsiDen(ctx, currency, list, uz = {}) {
     const u = { pred: [], cakaj: {}, rezerva: null, ...uz };
-    const home = list.filter(({ item }) => item.runMin !== null);
-    const auto = list.filter(({ item }) => item.runMin === null);
     let best = rozvrh(ctx, currency, list, u);
-    for (const order of poradia(home)) {
-        const cand = rozvrh(ctx, currency, [...order, ...auto], u);
+    for (const order of poradia(list)) {
+        const cand = rozvrh(ctx, currency, order, u);
         if (lepsi(cand, best)) best = cand;
     }
     return best.rows;
@@ -446,11 +449,11 @@ export function najlepsiDen(ctx, currency, list, uz = {}) {
  * hneď po jej konci v ten istý deň, aj keď ju slnko neutiahne (podiel povie, koľko zo siete): práčka
  * so sušičkou sú jeden blok a o mieste na slnku rozhoduje práčka. V slabý deň
  * sa spotrebiče, ktoré sa vtedy neodporúčajú (weakDay), na slnko nedávajú. Vráti miesta na slnku
- * a to, čím sa plány porovnávajú: koľko vecí je na slnku, kWh domácich spotrebičov zo siete a km auta.
+ * a to, čím sa plány porovnávajú: koľko vecí je na slnku a kWh spotrebičov zo siete.
  * Čo už beží či dobehlo (`pred`), si z rozpočtu berie od svojho štartu. Vec, ktorá už čaká na pranie (`cakaj`), ide
  * po jeho konci - nie až po ďalšom.
  * @param {DayCtx} ctx @param {string} currency @param {ReturnType<typeof chosen>} list @param {Required<Uz>} uz
- * @returns {{ rows: SunRow[], sun: number, gridKwh: number, km: number }}
+ * @returns {{ rows: SunRow[], sun: number, gridKwh: number }}
  */
 function rozvrh(ctx, currency, list, { pred, cakaj, rezerva }) {
     /** @type {Den} */ const day = { ctx, currency, free: volne(ctx, pred, rezerva) };
@@ -474,7 +477,7 @@ function rozvrh(ctx, currency, list, { pred, cakaj, rezerva }) {
     }
     // Rozpočet ide pod nulu len tam, kde odber programu prevýši výrobu - to je odber zo siete.
     const gridKwh = day.free.reduce((sum, kw) => sum + Math.max(0, -kw), 0) / 60;
-    return { rows, sun: rows.length, gridKwh, km: rows.reduce((sum, r) => sum + (r.km ?? 0), 0) };
+    return { rows, sun: rows.length, gridKwh };
 }
 
 /**
@@ -487,14 +490,12 @@ function waitsFor(id, list) {
 }
 
 /**
- * Je plán `a` zreteľne lepší než `b`? Viac vecí na slnku, inak aspoň o PLAN_DNA.betterKwh menej
- * zo siete, inak aspoň o PLAN_DNA.betterKm viac km pre auto.
+ * Je plán `a` zreteľne lepší než `b`? Viac vecí na slnku, inak aspoň o PLAN_DNA.betterKwh menej zo siete.
  * @param {ReturnType<typeof rozvrh>} a @param {ReturnType<typeof rozvrh>} b
  */
 function lepsi(a, b) {
     if (a.sun !== b.sun) return a.sun > b.sun;
-    if (Math.abs(a.gridKwh - b.gridKwh) >= PLAN_DNA.betterKwh) return a.gridKwh < b.gridKwh;
-    return a.km - b.km >= PLAN_DNA.betterKm;
+    return a.gridKwh - b.gridKwh <= -PLAN_DNA.betterKwh;
 }
 
 /**
@@ -520,32 +521,12 @@ export function chosen(devices) {
 }
 
 /**
- * Miesto na slnku od `from` a jeho odpočítanie z rozpočtu: auto dostane úsek silného slnka a berie
- * z neho všetko až po príkon nabíjačky (km a cenu tej energie zo siete), ostatné najskorší štart,
- * pri ktorom sa ohrevy zmestia. Bez miesta null.
+ * Miesto na slnku od `from` a jeho odpočítanie z rozpočtu: najskorší štart, pri ktorom sa ohrevy zmestia. Bez miesta null.
  * @param {MozemItem} item @param {(typeof DEVICES)[number]} device @param {number} from @param {Den} day
  */
-function onSun(item, device, from, { ctx, currency, free }) {
-    const base = { id: item.id, kind: /** @type {const} */ ('sun'), after: /** @type {string | null} */ (null), currency };
-    if (item.runMin === null) {
-        // Rozpočet už je bez spotreby domu, takže hranica je samotné silné slnko.
-        const span = autoSpan(free, ctx.th.highKw, from);
-        if (!span) return null;
-        let kwh = 0;
-        /** @type {number | null} */ let save = 0;
-        for (let m = span[0]; m < span[1]; m++) {
-            const take = Math.min(free[m], device.powerKw);
-            const price = ctx.plan[Math.floor(m / STEP)].band.price;
-            kwh += take / 60;
-            save = save === null || price === null ? null : save + (take / 60) * price;
-            free[m] -= take;
-        }
-        // Auto berie zo slnka len to, čo je - je celé zo slnka.
-        return { ...base, start: span[0], end: span[1], km: kmOf(kwh), save, podiel: 1, draha: 0 };
-    }
-    const draw = programDraw(item, device.powerKw);
-    const start = sunStart(draw, free, from);
-    return start === null ? null : polozit(item, device, start, { ctx, currency, free });
+function onSun(item, device, from, day) {
+    const start = sunStart(programDraw(item, device.powerKw), day.free, from);
+    return start === null ? null : polozit(item, device, start, day);
 }
 
 /**
@@ -562,7 +543,7 @@ function polozit(item, device, start, { ctx, currency, free }) {
         if (start + m < DAY_MIN) free[start + m] -= kw;
     });
     const runMin = /** @type {number} */ (item.runMin);
-    return { id: item.id, kind: 'sun', after: null, currency, start, end: start + runMin, km: null, save: null, podiel, draha };
+    return { id: item.id, kind: 'sun', after: null, currency, start, end: start + runMin, podiel, draha };
 }
 
 /**

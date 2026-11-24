@@ -25,7 +25,8 @@ import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
-import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI } from '../../shared/messages-core.js';
+import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI, terazAutoText } from '../../shared/messages-core.js';
+import { autoDnes } from '../../shared/auto-slnko.js';
 import { denVysvetlenie, dnesFaza, dnesKarty } from '../../shared/dnes-faza.js';
 import { dnesNeboModel } from '../../shared/dnes-nebo.js';
 import { pocasieTeraz, terazModel } from '../../shared/teraz.js';
@@ -1518,8 +1519,8 @@ test.describe('karta Teraz', () => {
         await panel.getByRole('button', { name: 'Zavrieť' }).click();
         await expect(panel).toBeHidden();
         // Tlačidlo Späť v telefóne detail zavrie a ostane na karte.
-        await vec('auto').click();
-        await expect(page.locator('#tz-vec-name')).toHaveText('Auto');
+        await vec('umyvacka').click();
+        await expect(page.locator('#tz-vec-name')).toHaveText('Umývačka');
         await page.goBack();
         await expect(panel).toBeHidden();
         await ocakavajKartu(page, 'terazky');
@@ -1639,25 +1640,25 @@ test.describe('karta Teraz', () => {
         expect(errors).toEqual([]);
     });
 
-    test('večer: auto z lacnej siete teraz s koncom pásma, ostatné s núdzovým časom; zajtrajšok po ťuknutí v hrebeni s dňom aj v detaile', async ({
+    test('večer: auto zo slnka prepísané skutočnosťou, ostatné s núdzovým časom; zajtrajšok po ťuknutí v hrebeni s dňom aj v detaile', async ({
         page,
     }) => {
-        // 21:20: NT 21:30 - 22:30 (kúsok NT 20:00 - 20:30 je pre auto krátky, PLAN_DNA.autoMinMin).
+        // 21:20 po západe slnka: auto v Pláne dňa nie je, jeho dlaždica povie, čo by slnko dnes naozaj dalo
+        // (docs/navrhy/auto-mimo-planu.html). Bez Huawei Northbound je dom naučený profil.
         const time = at('21:20');
         const errors = await openTeraz(page, { time });
         const m = terazModel(vstupTeraz(time));
-        await expect(page.locator('#tz-dlazdice [data-vec="auto"]')).toHaveAttribute('data-tone', 'cheap');
-        // Farba dlaždice nehovorí, odkiaľ ide prúd (rozhodnuté 21. 11. 2026): auto z lacnej siete je na skle ako ostatné.
-        const pozadie = (/** @type {string} */ sel) =>
-            page
-                .locator(sel)
-                .first()
-                .evaluate((e) => getComputedStyle(e).backgroundColor);
-        expect(await pozadie('#tz-dlazdice [data-vec="auto"]')).toBe(await pozadie('#tz-dlazdice [data-tone="tiche"]'));
-        await expect(page.locator('#tz-dlazdice [data-vec="auto"] b')).toHaveText('Auto');
+        const auto = page.locator('#tz-dlazdice [data-id="auto"]');
+        const t = terazAutoText({ ...autoDnes(vstupTeraz(time)), vecer: true });
+        await expect(auto.locator('.velky')).toHaveText(t.velky);
+        await expect(auto.locator('b')).toHaveText('Auto');
         // Odrážky: každá svoj riadok, pre čítačku oddelené čiarkou.
-        await expect(page.locator('#tz-dlazdice [data-vec="auto"] small > span:not(.sr)')).toHaveText(['nabíjaj teraz', 'lacná elektrina']);
-        await expect(page.locator('#tz-dlazdice [data-vec="auto"] small')).toHaveText('nabíjaj teraz, lacná elektrina');
+        await expect(auto.locator('small > span:not(.sr)')).toHaveText(t.odr);
+        await expect(auto.locator('small')).toHaveText(t.odr.join(', '));
+        // Bez detailu: nie je to tlačidlo a v pravom stĺpci je na skle ako ostatné.
+        expect(await auto.evaluate((e) => [e.tagName, e.getAttribute('data-stlpec')])).toEqual(['DIV', 'p']);
+        // Zamrazené číslo ostane po obnovení stránky.
+        expect(await page.evaluate(() => JSON.parse(localStorage.getItem('auto-den-v1') ?? 'null')?.vecer)).toBe(true);
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
         // Čo sa dnes na slnko už nezmestí, má núdzový čas a povie, kedy pôjde celé zo slnka.
         await expect(page.locator('#tz-dlazdice .dl:not(.dl-pol)[data-kind="nudza"] small').first()).toHaveText(/, celá zajtra$/);

@@ -17,10 +17,9 @@ import { localDateKey } from './solar.js';
 /** @typedef {import('./plan-dna.js').SunRow} SunRow */
 /** @typedef {import('./messages.js').Voice} Voice */
 /**
- * Núdzový čas spotrebiča: štart a koniec (null, keď je to jedno), podiel programu zo slnka (0 až 1,
- * pri aute null), koľko z neho pôjde zo siete v drahom pásme (`draha`, podielDrahy; bez času 0) a odkiaľ rada je - deň
+ * Núdzový čas spotrebiča: štart a koniec (null, keď je to jedno), podiel programu zo slnka (0 až 1), koľko z neho pôjde zo siete v drahom pásme (`draha`, podielDrahy; bez času 0) a odkiaľ rada je - deň
  * s kúskom slnka, lacné pásmo, aspoň mimo drahého, alebo nič z toho.
- * @typedef {{ id: string, start: number | null, end: number | null, podiel: number | null, draha: number,
+ * @typedef {{ id: string, start: number | null, end: number | null, podiel: number, draha: number,
  *   zdroj: 'slnko' | 'lacna' | 'bezna' | 'siet' }} Nudza
  */
 /** Deň týždňa: deň predpovede, poradie od dneška, meno, jeho kontext a čo sa v ňom zmestí na slnko. @typedef {ReturnType<typeof dniTyzdna>[number]} DenTyzdna */
@@ -142,19 +141,16 @@ const VAHA = /** @type {Record<string, number>} */ ({ lacna: 1, bezna: 2, draha:
 /**
  * Núdzový čas jednej veci od `from`; čo si vezme zo slnka, odpočíta z `free`. Radšej cez deň: štart,
  * pri ktorom slnko pokryje z programu najviac, keď je to aspoň TYZDEN.minPodiel. Inak štart, pri
- * ktorom to, čo slnko nepokryje, stojí zo siete najmenej (cena pásma × odber zo siete) - tam idú
- * rovno auto a bojler (cheapGrid). Keď je cena celý deň rovnaká, čas s tým málom slnka, čo je,
+ * ktorom to, čo slnko nepokryje, stojí zo siete najmenej (cena pásma × odber zo siete) - tam ide
+ * rovno bojler bez zásuvky (cheapGrid). Keď je cena celý deň rovnaká, čas s tým málom slnka, čo je,
  * a bez slnka je to jedno (`start` null).
  * @param {string} id @param {DayCtx} ctx @param {number[]} free voľný výkon po minútach @param {number} from
  * @returns {Nudza}
  */
 function nudzovyCas(id, ctx, free, from) {
     const { item, device } = vec(id);
-    const lacna = cheapFrom(ctx, from, device.cheapGrid ? PLAN_DNA.autoMinMin : 0);
-    /** @type {Nudza} */ const jedno = { id, start: null, end: null, podiel: item.runMin === null ? null : 0, draha: 0, zdroj: 'siet' };
-    // Auto: lacné pásmo až do jeho konca, inak je to jedno - kúsok slnka nabíjačku neutiahne.
-    if (item.runMin === null)
-        return lacna === null ? jedno : { id, start: lacna, end: lacnaDo(ctx, lacna), podiel: null, draha: 0, zdroj: 'lacna' };
+    const lacna = cheapFrom(ctx, from, device.cheapGrid ? PLAN_DNA.lacnaMinMin : 0);
+    /** @type {Nudza} */ const jedno = { id, start: null, end: null, podiel: 0, draha: 0, zdroj: 'siet' };
     const draw = programDraw(item, device.powerKw);
     const cena = (/** @type {DayCtx['plan'][number]} */ slot) => slot.band.price ?? VAHA[slot.level];
     const jednaCena = ctx.plan.every((slot) => cena(slot) === cena(ctx.plan[0]));
@@ -214,13 +210,6 @@ function vyber(moznosti, { lacnaSiet, jednaCena }) {
     return { ...lacno, zdroj: lacne.length < moznosti.length ? /** @type {const} */ ('cena') : /** @type {const} */ ('rovnako') };
 }
 
-/** Koniec lacného pásma, ktoré beží o `start`, najviac polnoc. @param {DayCtx} ctx @param {number} start */
-function lacnaDo(ctx, start) {
-    let end = start;
-    while (end < MINUTES_PER_DAY && ctx.plan[end / STEP].level === 'lacna') end += STEP;
-    return end;
-}
-
 /** Úsek na osi dňa v % (`span`), celý mimo osi null. @param {{ from: number, to: number }} span @param {number} od @param {number} po */
 function usek(span, od, po) {
     if (po <= span.from || od >= span.to) return null;
@@ -230,7 +219,7 @@ function usek(span, od, po) {
 }
 
 /**
- * Riadok a detail núdzového času: veľký čas, doplnok a podiel slnka v % pre pásik (auto v lacnom pásme 0),
+ * Riadok a detail núdzového času: veľký čas, doplnok a podiel slnka v % pre pásik,
  * a pre panel spotrebiča kedy, od-do, prečo a úsek na osi dňa (zlatý s kúskom slnka, modrý zo siete).
  * @param {Nudza} n @param {{ name: string, span: { from: number, to: number }, den: string, potom: string | null }} o
  *   meno veci, os dňa, meno iného dňa (pri dnešku prázdne) a pri dnešku deň, keď pôjde celá zo slnka
@@ -246,7 +235,7 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
             kind: /** @type {const} */ ('nudza'),
             cas: t.cas,
             odr: t.odr,
-            podiel: Math.round((n.podiel ?? 0) * 100),
+            podiel: Math.round(n.podiel * 100),
             draha: Math.round(n.draha * 100),
         },
         detail: {

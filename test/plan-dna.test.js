@@ -14,7 +14,7 @@ const FLAT = {
     bands: [{ id: 'j', name: 'Cena', level: 'bezna', price: null }],
     schedules: [{ days: ALL_DAYS, months: ALL_MONTHS, changes: [{ from: '00:00', band: 'j' }] }],
 };
-const ALL = ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'];
+const ALL = ['pracka', 'umyvacka', 'susicka', 'bojler'];
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
 
@@ -54,17 +54,16 @@ test('9:00 za jasna: každý na slnku, sušička po práčke, všetko sa zmestí
     const rows = planDna(ctx, i, ALL);
     assert.deepEqual(
         rows.map((r) => r.kind),
-        ['sun', 'sun', 'sun', 'sun', 'sun'],
+        ['sun', 'sun', 'sun', 'sun'],
     );
     const [pracka, susicka] = [row(rows, 'pracka'), row(rows, 'susicka')];
     assert.equal(pracka.start, 9 * 60, 'práčka hneď');
     assert.ok(susicka.start >= pracka.end, 'sušička až keď práčka dobehne');
     assert.equal(susicka.after, 'pracka');
-    // Rozpočet: v každej minúte ohrevu odber všetkých vecí v pláne neprekročí výrobu nad spotrebou
-    // domu a autu počas jeho úseku po nich ostane aspoň silné slnko.
+    // Rozpočet: v každej minúte ohrevu odber všetkých vecí v pláne neprekročí výrobu nad spotrebou domu.
     /** @type {number[]} */ const draw = new Array(24 * 60).fill(0);
     /** @type {boolean[]} */ const heavy = new Array(24 * 60).fill(false);
-    for (const r of rows.filter((x) => x.kind === 'sun' && x.id !== 'auto')) {
+    for (const r of rows.filter((x) => x.kind === 'sun')) {
         const item = /** @type {(typeof MOZEM_ITEMS)[number]} */ (MOZEM_ITEMS.find((m) => m.id === r.id));
         const device = /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === item.device));
         programDraw(item, device.powerKw).forEach((p, m) => {
@@ -74,13 +73,17 @@ test('9:00 za jasna: každý na slnku, sušička po práčke, všetko sa zmestí
     }
     assert.ok(heavy.some(Boolean));
     heavy.forEach((h, m) => h && assert.ok(draw[m] <= freeKw(ctx, m) + 1e-9, `minúta ${m}: ${draw[m]} kW`));
-    const auto = row(rows, 'auto');
-    assert.ok(auto.end - auto.start >= PLAN_DNA.autoMinMin);
-    assert.ok(auto.km > 0 && auto.save > 0);
-    for (let m = auto.start; m < auto.end; m++) assert.ok(freeKw(ctx, m) - draw[m] >= ctx.th.highKw - 1e-9, `auto v minúte ${m}`);
 });
 
-test('model: riadky podľa času, teraz pri tom, čo je na rade, cena len pri aute', () => {
+test('auto v Pláne dňa nie je, ani keď ho človek má doma (docs/navrhy/auto-mimo-planu.html)', () => {
+    assert.deepEqual(
+        planDnaAt(input(at('09:00')), [...ALL, 'auto']).map((r) => r.id),
+        planDnaAt(input(at('09:00')), ALL).map((r) => r.id),
+    );
+    assert.deepEqual(planDnaAt(input(at('19:50')), ['auto']), []);
+});
+
+test('model: riadky podľa času, teraz pri tom, čo je na rade, bez cien', () => {
     const m = planDnaModel(input(at('09:00')), { devices: ALL });
     assert.ok(m);
     const starts = m.rows.map((r) => (r.kind === 'sun' ? r.start : 0));
@@ -97,28 +100,19 @@ test('model: riadky podľa času, teraz pri tom, čo je na rade, cena len pri au
     assert.equal(row(m.rows, 'susicka').why, 'po práčke, celá zo strechy');
     assert.equal(row(m.rows, 'umyvacka').why, 'oba ohrevy chytia slnko');
     assert.equal(row(m.rows, 'bojler').why, 'celý zo strechy');
-    const auto = row(m.rows, 'auto');
-    assert.match(auto.time, /^\d\d:\d\d–\d\d:\d\d$/);
-    assert.match(auto.why, /^~\d+ km zo slnka, ušetríš ~\d+ €$/);
-    for (const r of m.rows.filter((x) => x.id !== 'auto')) assert.doesNotMatch(r.why, /€/, `${r.id} bez ceny`);
+    for (const r of m.rows) assert.doesNotMatch(r.why, /€/, `${r.id} bez ceny`);
     assert.equal(m.note, PLAN_DNA_NOTE);
-    const slusne = planDnaModel(input(at('09:00')), { devices: ALL, voice: 'slusny' });
-    assert.match(row(slusne?.rows ?? [], 'auto').why, /ušetríte/);
 });
 
 test('predvolene bez bojlera; bez predpovede alebo elektrárne plán nie je', () => {
     const m = planDnaModel(input(at('09:00')));
     assert.deepEqual(m?.rows.map((r) => r.id).sort(), [...PLAN_DNA.devices].sort());
-    // Za jasna sa veľké spotrebiče zmestia popri aute - auto dostane takmer celý deň.
-    const auto = row(m?.rows ?? [], 'auto');
-    assert.ok(auto.end - auto.start >= 5 * 60, `auto ${auto.start}-${auto.end}`);
     assert.equal(planDnaModel(input(at('09:00'), { forecast: null })), null);
     assert.equal(planDnaModel(input(at('09:00'), { known: 'nic' })), null);
 });
 
-test('večer: auto a bojler do lacného pásma, ostatné zajtra', () => {
+test('večer: bojler do lacného pásma, ostatné zajtra', () => {
     const m = planDnaModel(input(at('19:50')), { devices: ALL });
-    assert.equal(row(m?.rows ?? [], 'auto').kind, 'cheap');
     assert.match(row(m?.rows ?? [], 'bojler').time, /^od \d\d:\d\d$/);
     const pracka = row(m?.rows ?? [], 'pracka');
     assert.equal(pracka.kind, 'later');
@@ -131,7 +125,7 @@ test('večer: auto a bojler do lacného pásma, ostatné zajtra', () => {
 test('poradie: umývačka pred práčkou, keď sa tak na slnko zmestia obe', () => {
     // Slabé popoludnie: v pevnom poradí by práčka zabrala slnko a umývačka išla až zajtra. Bez
     // sušičky - tá sa po práčke nezmestí a obe by išli na iný deň.
-    const devices = ['pracka', 'umyvacka', 'auto'];
+    const devices = ['pracka', 'umyvacka'];
     const rows = planDnaAt(input(at('13:00'), { pv: null, forecast: cloudy(0.4, [0]) }), devices);
     assert.equal(row(rows, 'umyvacka').kind, 'sun');
     assert.equal(row(rows, 'umyvacka').start, 13 * 60);
@@ -144,11 +138,7 @@ test('poradie: umývačka pred práčkou, keď sa tak na slnko zmestia obe', () 
     );
 });
 
-test('poradie: kvôli autu len pri zreteľnom rozdiele km, sušička vždy po práčke', () => {
-    // Jasné ráno: umývačka ako prvá a auto chytí o 60 km viac.
-    const rano = planDnaAt(input(at('08:00'), { pv: null }), PLAN_DNA.devices);
-    assert.equal(row(rano, 'umyvacka').start, 8 * 60);
-    assert.equal(row(rano, 'auto').km, 250);
+test('poradie: bez zreteľne lepšieho plánu pevné, sušička vždy po práčke', () => {
     // O 9:00 by iné poradie len skôr skončilo - ostáva pevné, práčka prvá.
     const deviata = planDnaAt(input(at('09:00'), { pv: null }), ALL);
     assert.equal(row(deviata, 'pracka').start, 9 * 60);
@@ -228,7 +218,6 @@ test('slabý deň: umývačka a sušička čakajú na iný deň, auto bez ceny v
         assert.equal(row(rows, id).tone, 'no');
     }
     assert.notEqual(row(rows, 'pracka').kind, 'sun');
-    assert.notEqual(row(rows, 'auto').kind, 'sun');
 });
 
 test('celý týždeň bez slnka a bez lacného pásma: tento týždeň nie', () => {
@@ -237,11 +226,6 @@ test('celý týždeň bez slnka a bez lacného pásma: tento týždeň nie', () 
         assert.equal(r.kind, 'none');
         assert.equal(r.time, 'tento týždeň nie');
     }
-});
-
-test('auto na slnku bez ceny v tarife: len km', () => {
-    const m = planDnaModel(input(at('09:00'), { tariff: FLAT }), { devices: ['auto'] });
-    assert.match(row(m?.rows ?? [], 'auto').why, /^~\d+ km zo slnka$/);
 });
 
 test('podiel drahého pásma: čo slnko nepokryje v minútach VT, bežné pásmo nie je drahé, za polnocou pásma toho dňa', () => {
@@ -278,16 +262,11 @@ test('sušička po praní večer: pásik povie, koľko ide z drahého pásma', (
 });
 
 test('lacné pásmo má koniec: do konca pásma, cez polnoc podľa rozvrhu ďalšieho dňa', () => {
-    // 19:50: NT od 20:00 do 20:30 je kratšie ako PLAN_DNA.autoMinMin - auto a bojler idú do NT od 21:30 do 22:30.
-    const vecer = planDnaModel(input(at('19:50')), { devices: ALL });
-    for (const id of ['auto', 'bojler']) {
-        const r = row(vecer?.rows ?? [], id);
-        assert.equal(r.kind, 'cheap');
-        assert.equal(r.start, 21 * 60 + 30);
-        assert.equal(r.end, 22 * 60 + 30);
-    }
-    // Ráno 7:01 (zistené 24. 11. 2026): koniec NT o 7:30 nie je „nabíjaj teraz“, ďalšie NT je od 8:30 do 9:30.
-    const rano = row(planDnaModel(input(at('07:01'), { forecast: cloudy(0) }), { devices: ['auto'] })?.rows ?? [], 'auto');
+    // 19:50: NT od 20:00 do 20:30 je kratšie ako PLAN_DNA.lacnaMinMin - bojler ide do NT od 21:30 do 22:30.
+    const vecer = row(planDnaModel(input(at('19:50')), { devices: ALL })?.rows ?? [], 'bojler');
+    assert.deepEqual([vecer.kind, vecer.start, vecer.end], ['cheap', 21 * 60 + 30, 22 * 60 + 30]);
+    // Ráno 7:01 (zistené 24. 11. 2026): koniec NT o 7:30 nie je „zapni teraz“, ďalšie NT je od 8:30 do 9:30.
+    const rano = row(planDnaModel(input(at('07:01'), { forecast: cloudy(0) }), { devices: ['bojler'] })?.rows ?? [], 'bojler');
     assert.deepEqual([rano.kind, rano.start, rano.end], ['cheap', 8 * 60 + 30, 9 * 60 + 30]);
     // 23:00: NT od 23:30 pokračuje cez polnoc do 07:30 ďalšieho dňa.
     const noc = planDnaModel(input(at('23:00')), { devices: ALL });
@@ -298,8 +277,8 @@ test('lacné pásmo má koniec: do konca pásma, cez polnoc podľa rozvrhu ďal�
     // Celý deň lacný: pásmo cez polnoc trvá aj celý ďalší deň.
     /** @type {import('../shared/config.js').Tariff} */
     const lacna = { ...FLAT, bands: [{ id: 'j', name: 'NT', level: 'lacna', price: null }] };
-    const cely = planDnaModel(input(at('23:00'), { tariff: lacna }), { devices: ['auto'] });
-    assert.equal(row(cely?.rows ?? [], 'auto').end, 2 * 24 * 60);
+    const cely = planDnaModel(input(at('23:00'), { tariff: lacna }), { devices: ['bojler'] });
+    assert.equal(row(cely?.rows ?? [], 'bojler').end, 2 * 24 * 60);
 });
 
 // ---- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html) -----------------------------

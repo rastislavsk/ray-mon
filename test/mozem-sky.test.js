@@ -165,7 +165,6 @@ test('mozemSkyModel: bez dát veta s príčinou, Skúsiť znova, otáznik v nadp
         m.groups.map((g) => [g.id, g.value, g.tone]),
         [
             ['velke', 'neviem', 'unk'],
-            ['auto', 'neviem', 'unk'],
             ['bojler', 'neviem', 'unk'],
         ],
     );
@@ -214,13 +213,10 @@ test('skupiny: len spotrebiče doma, polovičná dlaždica bez páru na celú š
             MOZEM_GROUP_NAMES[/** @type {keyof typeof MOZEM_GROUP_NAMES} */ (g.id)],
         ]),
     );
-    // Predvolene bez bojlera: dlaždica Bojler nie je a auto ide na celú šírku.
+    // Predvolene bez bojlera: len veľké spotrebiče; auto v Pláne dňa nie je (docs/navrhy/auto-mimo-planu.html).
     assert.deepEqual(
         mozemSkyModel(input(FIXED_NOW)).groups.map((g) => [g.id, g.size]),
-        [
-            ['velke', 'wide'],
-            ['auto', 'wide'],
-        ],
+        [['velke', 'wide']],
     );
 });
 
@@ -248,17 +244,14 @@ test('skupiny: veľké spotrebiče o 13:00 podľa Plánu dňa - čo je na rade, 
     for (const r of sheet.rows) assert.equal(m.plan?.rows.find((p) => p.id === r.id)?.kind, 'sun');
 });
 
-test('skupiny: auto a bojler o 13:00 podľa Plánu dňa', () => {
+test('skupiny: bojler o 13:00 podľa Plánu dňa', () => {
     const m = mozemSkyModel(input(FIXED_NOW), { devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
-    const [, auto, bojler] = m.groups;
-    assert.equal(m.groups.length, 3);
+    const [, bojler] = m.groups;
+    assert.equal(m.groups.length, 2);
     assert.equal(bojler.key, 'bojler');
     assert.equal(bojler.sheet, null, 'jedna vec: ťuknutie otvorí jej panel');
     assert.equal(bojler.value, 'teraz');
     assert.equal(bojler.note, 'zo slnka');
-    assert.equal(auto.tone, 'wait', 'auto až po ohrevoch');
-    assert.match(auto.value, /^o \d\d:\d\d$/);
-    assert.match(auto.note, /km zo slnka$/);
     assert.equal(
         m.items.find((i) => i.id === 'bojler')?.text,
         'Ohrev trvá asi hodinu a celý čas berie 2 kW. Pri štarte najneskôr o 16:15 dobehne celý na slnku.',

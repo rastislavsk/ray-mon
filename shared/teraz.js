@@ -3,6 +3,7 @@
 // Dnešok a kedy lepšie (dnesCards) berie karta Dnes (shared/dnes-faza.js). Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
+import { autoDna } from './auto-slnko.js';
 import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
 import { interpolate } from './chart-model.js';
 import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
@@ -10,6 +11,7 @@ import { dayPlan } from './day-plan.js';
 import { denTriedaDna } from './den-trieda.js';
 import { heroModel } from './hero-model.js';
 import {
+    terazAutoText,
     terazBehText,
     terazBehVecText,
     terazCitanieText,
@@ -34,11 +36,13 @@ import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
 import { daylightSpan, localDateKey, localMinutes, localToUtc } from './solar.js';
 import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzaRiadok, nudzoveCasy } from './tyzden.js';
+import { domProfil } from './ucenie.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
  *   known: import('./settings.js').Known, previewMinutes: number | null,
- *   pristup?: import('./pristup.js').Odmietnutie | null, vecNavrh?: { id: string, min: number } | null }} TerazInput
+ *   pristup?: import('./pristup.js').Odmietnutie | null, vecNavrh?: { id: string, min: number } | null,
+ *   autoDen?: import('./auto-slnko.js').AutoDen | null }} TerazInput
  * @typedef {import('./day-chart.js').Tone} Tone
  */
 
@@ -98,10 +102,33 @@ function tyzdenOf(input, rows, teraz, { span, devices, den, voice }) {
             ? voiceTexts(voice).DEN_WORDS.iny[denTriedaDna({ ...input, forecast: input.forecast }, zvoleny, devices)]
             : null;
     return {
-        co: { ...dnes.co, den: hlaska, riadky: iny ? iny.riadky : dnes.co.riadky },
+        co: {
+            ...dnes.co,
+            den: hlaska,
+            riadky: iny ? iny.riadky : dnes.co.riadky,
+            auto: devices.includes('auto') ? autoDlazdica(input, iny ? zvoleny : 0) : null,
+        },
         veci: iny ? iny.veci : dnes.veci,
         hreben: hreben && { ...hreben, zvoleny },
     };
+}
+
+/**
+ * Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html, Z1): dnes to, čo telefón ráno zamrazil a večer
+ * prepísal (`autoDen`, web/auto-den.js; kým ho nemá, dlaždica nie je), iný deň (`index`) odhad z jeho predpovede.
+ * Pásik je celý žltý - je to celé zo slnka; bez energie prázdny.
+ * @param {TerazInput} input @param {number} index
+ */
+function autoDlazdica(input, index) {
+    const dnes = localDateKey(input.now, input.site.timezone);
+    const den = input.forecast?.days[index];
+    const a =
+        index > 0 && input.forecast && den
+            ? autoDna({ ...input, forecast: input.forecast }, index, domProfil(input.ucenie, den.date))
+            : input.autoDen?.d === dnes
+              ? input.autoDen
+              : null;
+    return a && { ...terazAutoText(a), podiel: a.kwh > 0 ? 100 : null };
 }
 
 /**
@@ -288,7 +315,7 @@ function empty(kind, estimate) {
         note: /** @type {ReturnType<typeof noteOf>} */ (null),
         retry: false,
         guess: false,
-        co: /** @type {(ReturnType<typeof coZapnutModel> & { den: string | null }) | null} */ (null),
+        co: /** @type {(ReturnType<typeof coZapnutModel> & { den: string | null, auto: ReturnType<typeof autoDlazdica> }) | null} */ (null),
         veci: /** @type {Array<VecDetail>} */ ([]),
         hreben: /** @type {(NonNullable<ReturnType<typeof hrebenModel>> & { zvoleny: number }) | null} */ (null),
         os: /** @type {ReturnType<typeof denOs> | null} */ (null),

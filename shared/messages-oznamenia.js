@@ -1,7 +1,7 @@
 // Texty ranného oznámenia a pripomienky (shared/oznamenia.js). Čisté funkcie bez DOM.
 
 import { fmt1 } from './format.js';
-import { autoSunWhy, mozemTexts, planDnaRowText } from './messages-mozem.js';
+import { mozemTexts, planDnaRowText } from './messages-mozem.js';
 import { andList, cap, dniSlovo, hm, onDay, polite } from './messages-zaklad.js';
 
 // ---- Ranné oznámenie (shared/oznamenia.js) -------------------------------------------
@@ -82,13 +82,11 @@ export function vyhladNoticeText({ beh, zmena, predtym, dnes, pracka }, voice = 
 /** Vety oznámení, ktoré sa v tónoch líšia. */
 const NOTICE_SAY = {
     drzy: {
-        nabi: 'nabi',
         pusti: 'Pusti ich, keď treba, najlepšie v lacnom pásme.',
         remind: 'Pripomeň o',
         fail: 'Nepodarilo sa mi ho vypočítať. Pozri appku.',
     },
     slusny: {
-        nabi: 'nabite',
         pusti: 'Pustite ich, keď treba, najlepšie v lacnom pásme.',
         remind: 'Pripomenúť o',
         fail: 'Nepodarilo sa ho vypočítať. Pozrite appku.',
@@ -104,7 +102,7 @@ export function planNoticeText({ rows, sunEnd, weak }, voice = 'drzy') {
     const T = mozemTexts(voice).MOZEM_ITEM_TEXTS;
     const low = (/** @type {string} */ id) => T[id].name.toLowerCase();
     const none = rows.length > 0 && rows.every((r) => r.kind === 'none');
-    const parts = [...sunParts(rows, low, voice), ...elsewhereParts(rows, low, voice)];
+    const parts = [...sunParts(rows, low), ...elsewhereParts(rows, low)];
     if (none) parts.push(NOTICE_SAY[voice].pusti);
     return {
         title: noticeTitle(
@@ -118,33 +116,29 @@ export function planNoticeText({ rows, sunEnd, weak }, voice = 'drzy') {
 }
 
 /**
- * Čo pôjde zo slnka: spotrebiče v poradí podľa času a auto s km.
- * @param {import('./plan-dna.js').PlanRow[]} rows @param {(id: string) => string} low @param {import('./messages-zaklad.js').Voice} voice
+ * Čo pôjde zo slnka: spotrebiče v poradí podľa času.
+ * @param {import('./plan-dna.js').PlanRow[]} rows @param {(id: string) => string} low
  */
-function sunParts(rows, low, voice) {
+function sunParts(rows, low) {
     /** @type {string[]} */ const parts = [];
-    const plain = rows.flatMap((r) => (r.kind === 'sun' && r.id !== 'auto' ? [r] : [])).sort((a, b) => a.start - b.start);
+    const plain = rows.flatMap((r) => (r.kind === 'sun' ? [r] : [])).sort((a, b) => a.start - b.start);
     if (plain.length) parts.push(`${cap(plain.map((r) => `${low(r.id)} ${hm(r.start)}`).join(' · '))}.`);
-    const auto = rows.find((r) => r.id === 'auto');
-    if (auto?.kind === 'sun') parts.push(`Auto ${hm(auto.start)}–${hm(auto.end)}: ${autoSunWhy(auto, voice)}.`);
     return parts;
 }
 
 /**
  * Čo pôjde zo siete hneď po inej veci (sušička po práčke), čo počká na iný deň a čo pôjde v lacnom pásme.
- * @param {import('./plan-dna.js').PlanRow[]} rows @param {(id: string) => string} low @param {import('./messages-zaklad.js').Voice} voice
+ * @param {import('./plan-dna.js').PlanRow[]} rows @param {(id: string) => string} low
  */
-function elsewhereParts(rows, low, voice) {
+function elsewhereParts(rows, low) {
     /** @type {string[]} */ const parts = [];
     /** @type {Map<string, string[]>} */ const later = new Map();
     for (const r of rows) if (r.kind === 'later') later.set(r.day.name, [...(later.get(r.day.name) ?? []), low(r.id)]);
     for (const [day, list] of later) parts.push(`${cap(andList(list))} radšej ${onDay(day)}.`);
     for (const r of rows) if (r.kind === 'siet') parts.push(`${cap(low(r.id))} ${hm(r.start)} zo siete.`);
-    const cheap = rows.flatMap((r) => (r.kind === 'cheap' && r.id !== 'auto' ? [r] : []));
+    const cheap = rows.flatMap((r) => (r.kind === 'cheap' ? [r] : []));
     if (cheap.length)
         parts.push(`${cap(andList(cheap.map((r) => low(r.id))))} v lacnom pásme od ${hm(Math.min(...cheap.map((r) => r.start)))}.`);
-    const auto = rows.find((r) => r.id === 'auto');
-    if (auto?.kind === 'cheap') parts.push(`Auto ${NOTICE_SAY[voice].nabi} v lacnom pásme od ${hm(auto.start)}.`);
     return parts;
 }
 

@@ -446,24 +446,34 @@ export const MOZEM_ITEMS = [
 /**
  * Plán dňa (karta Môžem?): jadro rozvrhuje dnešné slnko medzi spotrebiče jeden po druhom - každý
  * si z neho odpočíta svoj odber, ďalší dostane, čo ostane. `order`: predvolené poradie. Iné poradie
- * domácich spotrebičov vyhrá, len keď zmestí na slnko viac vecí, ušetrí aspoň `betterKwh` zo siete
- * alebo dá autu aspoň `betterKm` km navyše - inak sa riadky zbytočne nepreskupujú
+ * spotrebičov vyhrá, len keď zmestí na slnko viac vecí alebo ušetrí aspoň `betterKwh` zo siete - inak sa riadky
+ * zbytočne nepreskupujú
  * (docs/navrhy/plan-dna-poradie.html). `after`: spotrebič, na ktorý vec čaká (sušička suší, čo
  * práčka vyprala) - ide vždy hneď po jej konci a v ten istý deň, aj zo siete, nikdy nečaká na slnko
- * (variant B, 18. 11. 2026). `zoSiete`: pod týmto podielom slnka povie, že taká vec pôjde zo siete. `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide vždy posledné
- * a berie silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse. Kratší kúsok lacného pásma nestojí za
- * zapojenie ani pri aute a bojleri bez zásuvky (cheapGrid): tie idú do lacného pásma, z ktorého od štartu ostáva
- * aspoň `autoMinMin` minút (docs/navrhy/plan-dna-oznamenie-vt.html, A1).
+ * (variant B, 18. 11. 2026). `zoSiete`: pod týmto podielom slnka povie, že taká vec pôjde zo siete. `devices`: s čím plán ráta, kým si človek nevyberie sám.
+ * Kratší kúsok lacného pásma nestojí za zapojenie bojlera bez zásuvky (cheapGrid): ide do lacného pásma, z ktorého
+ * od štartu ostáva aspoň `lacnaMinMin` minút (docs/navrhy/plan-dna-oznamenie-vt.html, A1). Auto v pláne nie je, nabíjanie
+ * riadi človek sám - karta Teraz ukáže, koľko by dalo slnko (AUTO_SLNKO, docs/navrhy/auto-mimo-planu.html).
  */
 export const PLAN_DNA = {
-    order: ['pracka', 'susicka', 'umyvacka', 'bojler', 'auto'],
+    order: ['pracka', 'susicka', 'umyvacka', 'bojler'],
     after: /** @type {Record<string, string>} */ ({ susicka: 'pracka' }),
     zoSiete: 0.42,
-    devices: ['pracka', 'umyvacka', 'susicka', 'auto'],
-    autoMinMin: 60,
+    devices: ['pracka', 'umyvacka', 'susicka'],
+    lacnaMinMin: 60,
     betterKwh: 0.1,
-    betterKm: 20,
 };
+
+/**
+ * Auto čisto zo slnka (docs/navrhy/auto-mimo-planu.html, A1 + K2 + B1 + Z1, 24. 11. 2026): koľko kWh a km by dalo
+ * slnko, keby auto viselo na nabíjačke celý deň a práčka, sušička ani umývačka nebežali. Ráta sa prebytok nad domom
+ * a bojlerom riadeným zásuvkou, najviac príkon nabíjačky (DEVICES); minúta s prebytkom pod `minKw` sa nepočíta -
+ * nabíjačka pod minimom nenabíja (11 kW = 3 fázy, najmenej 6 A na fázu = 4,1 kW). Ráno odhad z predpovede, ktorý
+ * sa cez deň nemení; `vecerMin` minút po západe slnka sa prepíše skutočnosťou.
+ */
+export const AUTO_SLNKO = { minKw: 4.1, vecerMin: 15 };
+/** Auto zo slnka pre dnešok (shared/auto-slnko.js): { d, kwh, km, vecer }. Patrí telefónu, do odkazu nejde. */
+export const AUTO_DEN_STORAGE_KEY = 'auto-den-v1';
 
 /**
  * Hodiny, v ktorých karta Predpoveď na karte Dnes hľadá zrážky (od `od` do `do` bez nej): deň, ako ho
@@ -539,8 +549,7 @@ export const BOJLER = {
  */
 export const MOZEM_GROUPS = [
     { id: 'velke', items: ['pracka', 'umyvacka', 'susicka'], size: 'wide' },
-    { id: 'auto', items: ['auto'], size: 'half' },
-    { id: 'bojler', items: ['bojler'], size: 'half' },
+    { id: 'bojler', items: ['bojler'], size: 'wide' },
 ];
 
 /**
@@ -743,6 +752,7 @@ export const STORAGE_KEYS = [
     UCENIE_WORKER_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
+    AUTO_DEN_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
@@ -848,10 +858,12 @@ export const WORKER_BOJLER_HRANICA_URL = new URL(WORKER_BOJLER_HRANICA_PATH, WOR
 export const WORKER_BOJLER_STAV_PATH = '/bojler-stav';
 export const WORKER_BOJLER_STAV_URL = new URL(WORKER_BOJLER_STAV_PATH, WORKER_URL).href;
 /**
- * História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. Nová appka ju už
- * nesťahuje (model počíta Worker, WORKER_UCENIE_PATH); ostáva pre staršiu appku v cache (docs/to do later.md).
+ * História elektrárne z Durable Objectu účtu Huawei (docs/navrhy/plan-dna-ucenie.html). Model učenia z nej počíta Worker
+ * (WORKER_UCENIE_PATH); appka si ju stiahne raz za deň po západe slnka - dnešné hodiny domu na večerný prepis auta zo
+ * slnka (docs/navrhy/auto-mimo-planu.html).
  */
 export const WORKER_HISTORIA_PATH = '/historia';
+export const WORKER_HISTORIA_URL = new URL(WORKER_HISTORIA_PATH, WORKER_URL).href;
 /**
  * Spoločné behy „Už beží“ telefónov domácnosti (docs/navrhy/bezi-spolocne.html), v Durable Objecte účtu Huawei.
  * Appka sa pýta pri každej obnove dát (každú minútu a po návrate do appky) a pošle aj nepotvrdené zmeny.

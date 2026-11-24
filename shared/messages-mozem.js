@@ -631,7 +631,6 @@ export function planDnaRowText(row, voice = 'drzy') {
     if (row.kind === 'later') return { name, ...laterRowText(row) };
     if (row.kind === 'siet') return { name, time: hm(row.start), why: PLAN_ZO_SIETE, tone: 'wait' };
     const item = /** @type {MozemItem} */ (MOZEM_ITEMS_BY_ID[row.id]);
-    if (item.runMin === null) return { name, time: `${hm(row.start)}–${hm(row.end)}`, why: autoSunWhy(row, voice), tone: 'go' };
     const p = profileOf(item);
     const why = { start: 'ohrev chytí slnko', twice: 'oba ohrevy chytia slnko', whole: `${t.pron === 'ju' ? 'celá' : 'celý'} zo strechy` }[
         p.shape
@@ -652,18 +651,6 @@ function laterRowText({ day, after }) {
         why: after ? (PLAN_AFTER[after] ?? '') : 'dnes slnko nestačí',
         tone: soon ? 'wait' : 'no',
     };
-}
-
-/**
- * Prečo auto na slnku: km zo slnka a koľko by tá energia stála zo siete. Úspora na celé eurá -
- * centy by pri aute zbytočne tvrdili presnosť.
- * @param {{ km: number | null, save: number | null, currency: string }} row @param {import('./messages-zaklad.js').Voice} voice
- */
-export function autoSunWhy({ km, save, currency }, voice) {
-    const sun = km ? `~${km} km zo slnka` : 'aspoň trochu zo slnka';
-    if (!save) return sun;
-    const sum = save >= 1 ? `${Math.round(save)} ${currency}` : money(save, currency);
-    return `${sun}, ${polite(voice) ? 'ušetríte' : 'ušetríš'} ~${sum}`;
 }
 
 // ---- Karta Môžem?: dlaždice, panel veci a výzvy ------------------------------------
@@ -717,7 +704,6 @@ export const mozemListTitle = (estimate) => `Čo môžem${estimate ? ' · odhad'
 /** Mená skupín vecí (dlaždíc) - kľúče sú id z MOZEM_GROUPS v config.js. */
 export const MOZEM_GROUP_NAMES = {
     velke: 'Veľké spotrebiče',
-    auto: 'Auto',
     bojler: 'Bojler',
 };
 
@@ -743,18 +729,14 @@ export function mozemTileNote(a) {
 
 /**
  * Dlaždica podľa riadku Plánu dňa: veľká odpoveď (`value`), krátka do zoznamu (`short`), farba
- * a riadok pod ňou. Na slnku teraz „teraz“ (auto do konca svojho úseku), neskôr „o 10:45“,
- * inak čas riadku plánu.
- * @param {{ id: string, kind: string, start?: number, end?: number, km?: number | null, now: boolean, time: string,
+ * a riadok pod ňou. Na slnku teraz „teraz“, neskôr „o 10:45“, inak čas riadku plánu.
+ * @param {{ id: string, kind: string, start?: number, end?: number, now: boolean, time: string,
  *   tone: TileTone, poBojleri?: boolean }} row
  * @returns {{ value: string, short: string, tone: TileTone, note: string }}
  */
 export function planTileText(row) {
-    const sunNote = row.km ? `asi ${row.km} km zo slnka` : 'zo slnka';
-    if (row.kind === 'sun' && row.now) {
-        const value = row.id === 'auto' && row.end !== undefined ? `do ${hm(row.end)}` : 'teraz';
-        return { value, short: 'teraz', tone: 'go', note: sunNote };
-    }
+    const sunNote = 'zo slnka';
+    if (row.kind === 'sun' && row.now) return { value: 'teraz', short: 'teraz', tone: 'go', note: sunNote };
     if (row.kind === 'sun') {
         const at = `o ${hm(row.start ?? 0)}`;
         return { value: at, short: at, tone: 'wait', note: row.poBojleri ? PLAN_PO_BOJLERI : sunNote };

@@ -138,13 +138,13 @@ test('dalsieSlnko: najbližší ďalší deň, keď sa spotrebič zmestí na sln
 test('núdzový čas: cez deň s kúskom slnka, inak v lacnom pásme; sušička až po práčke', () => {
     // Zajtra tretina slnka: na celý program nestačí, ale kus pokryje.
     const slabo = dniTyzdna(input({ '2026-09-06': 0.3 }), VSETKO)[1];
-    const zvysok = VSETKO.filter((id) => !slabo.slnko.some((r) => r.id === id));
+    const zvysok = VSETKO.filter((id) => id !== 'auto' && !slabo.slnko.some((r) => r.id === id));
     const n = nudzoveCasy(slabo.ctx, slabo.slnko, zvysok);
     const pracka = n.find((x) => x.id === 'pracka');
     const susicka = n.find((x) => x.id === 'susicka');
     assert.ok(pracka && susicka && pracka.start !== null && pracka.end !== null && susicka.start !== null);
     assert.equal(pracka.zdroj, 'slnko');
-    assert.ok(pracka.podiel !== null && pracka.podiel >= TYZDEN.minPodiel && pracka.podiel <= 1);
+    assert.ok(pracka.podiel >= TYZDEN.minPodiel && pracka.podiel <= 1);
     assert.equal(pracka.end - pracka.start, 120);
     assert.ok(susicka.start >= pracka.end, 'sušička až po práčke');
     assert.deepEqual(n.map((x) => x.id).sort(), [...zvysok].sort());
@@ -153,13 +153,12 @@ test('núdzový čas: cez deň s kúskom slnka, inak v lacnom pásme; sušička 
         'podľa času',
     );
     // Deň bez slnka: lacné pásmo, do ktorého sa program zmestí celý, v hodinách, keď je človek hore
-    // (bojler ráno o šiestej); auto do konca lacného pásma.
+    // (bojler ráno o šiestej). Auto v pláne nie je (docs/navrhy/auto-mimo-planu.html).
     const tma = dniTyzdna(input(DVA_DNI), VSETKO)[1];
     const t = nudzoveCasy(tma.ctx, [], VSETKO);
     assert.deepEqual(
-        t.map((x) => [x.id, x.zdroj, x.start, x.end, x.podiel === null ? null : Math.round(x.podiel * 100)]),
+        t.map((x) => [x.id, x.zdroj, x.start, x.end, Math.round(x.podiel * 100)]),
         [
-            ['auto', 'lacna', 0, 450, null],
             ['bojler', 'lacna', 360, 420, 0],
             ['pracka', 'lacna', 630, 750, 0],
             ['umyvacka', 'lacna', 630, 780, 0],
@@ -173,12 +172,12 @@ test('núdzový čas bez lacného pásma: bežná elektrina, pri jednej cene s t
     const s = nudzoveCasy(spicka.ctx, [], ['pracka', 'auto']);
     assert.deepEqual(s[0].zdroj, 'bezna');
     assert.ok(s[0].start !== null && s[0].start >= 7 * 60 && s[0].start + 120 <= 17 * 60, 'celá mimo drahého pásma');
-    assert.deepEqual(s[1], { id: 'auto', start: null, end: null, podiel: null, draha: 0, zdroj: 'siet' });
+    assert.equal(s.length, 1, 'auto v pláne nie je');
     // Jedna cena: zamračený deň dá aspoň trochu slnka okolo poludnia.
     const jedna = dniTyzdna(input({ '2026-09-06': 0.08 }, RANO, JEDNA), VSETKO)[1];
     const j = nudzoveCasy(jedna.ctx, [], ['pracka'])[0];
     assert.equal(j.zdroj, 'slnko');
-    assert.ok(j.podiel !== null && j.podiel > 0 && j.podiel < 1);
+    assert.ok(j.podiel > 0 && j.podiel < 1);
     assert.ok(j.start !== null && j.start > 8 * 60 && j.start < 15 * 60);
     // Dnes večer po západe, jedna cena: slnko nepomôže, je to jedno. Tesne pred polnocou program nedobehne.
     const vecer = dayCtx(input({}, at('21:30'), JEDNA));
@@ -209,7 +208,7 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
     const dni = dniTyzdna(input(DVA_DNI), DEVICES);
     const nedela = denInyModel(dni[1], DEVICES, 'slusny');
     assert.ok(nedela.riadky.every((r) => r.kind === 'nudza'));
-    assert.deepEqual(nedela.riadky[1], {
+    assert.deepEqual(nedela.riadky[0], {
         id: 'pracka',
         name: 'Práčka',
         kind: 'nudza',
@@ -233,11 +232,11 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
         },
     );
     assert.deepEqual([v?.slot?.tone, v?.slot?.dnes], ['cheap', false]);
-    // Auto v noci je mimo osi dňa len sčasti - úsek ostáva; núdzový čas bez štartu úsek nemá.
-    const jedna = denInyModel(dniTyzdna(input(DVA_DNI, RANO, JEDNA), ['auto'])[1], ['auto']);
+    // Núdzový čas bez štartu úsek nemá.
+    const jedna = denInyModel(dniTyzdna(input(DVA_DNI, RANO, JEDNA), ['pracka'])[1], ['pracka']);
     assert.deepEqual(jedna.riadky[0], {
-        id: 'auto',
-        name: 'Auto',
+        id: 'pracka',
+        name: 'Práčka',
         kind: 'nudza',
         cas: '–',
         odr: ['slnko nepomôže'],
@@ -269,8 +268,6 @@ test('karta Teraz počas dní bez slnka: núdzové časy namiesto „o 3 dni“ 
     assert.deepEqual(
         m.co?.riadky.map((r) => [r.id, r.kind, r.cas, r.odr, r.podiel]),
         [
-            // Auto: koniec NT o 9:30 je krátky (PLAN_DNA.autoMinMin), ide do ďalšieho NT od 10:30.
-            ['auto', 'cheap', '10:30', ['lacná elektrina'], 0],
             ['pracka', 'nudza', '10:30', ['lacná elektrina', 'celá v utorok'], 0],
             ['umyvacka', 'nudza', '10:30', ['lacná elektrina', 'celá v utorok'], 0],
             ['susicka', 'nudza', '12:30', ['lacná elektrina', 'celá v utorok'], 0],

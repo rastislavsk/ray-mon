@@ -23,7 +23,9 @@ import { dialog, setHtml, setText, show } from './write.js';
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 /**
  * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
- *   meno: string, podiel: number | null, draha?: number, odr: string[], potom?: { text: string, dlho: boolean } | null }} Dlazdica
+ *   meno: string, podiel: number | null, draha?: number, odr: string[], potom?: { text: string, dlho: boolean } | null,
+ *   bezDetailu?: boolean }} Dlazdica
+ * `bezDetailu`: dlaždica bez detailu (auto zo slnka) nie je tlačidlo - ťuknutie na ňu nič neotvorí.
  */
 
 /** Texty bubliny, keď riadok bublinu nemá. */
@@ -103,12 +105,15 @@ function renderHreben(h, dom) {
  * @param {Dlazdica} d @param {string} [stlpec] @param {boolean} [pol] @param {Ozivenie | null} [oziv]
  */
 const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
-    `<button type="button" class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''}${stavDlazdice(d, oziv)}>` +
+    `<${znacka(d)} class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''}${stavDlazdice(d, oziv)}>` +
     `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${rezimHtml(d.rezim)}</span>` +
     `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimSr(d.rezim)}` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%;--n:${100 - (d.draha ?? 0)}%"`}></i>` +
     `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
-    `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></button>`;
+    `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></${znacka(d).split(' ')[0]}>`;
+
+/** Prvok dlaždice: tlačidlo, ktoré otvorí detail, alebo bez detailu len blok. @param {Dlazdica} d */
+const znacka = (d) => (d.bezDetailu ? 'div' : 'button type="button"');
 
 /**
  * Zapnutý spotrebič: beží (zapísaný „Už beží“), alebo bojler, ktorému zásuvka zapla relé (to je zmerané).
@@ -116,10 +121,13 @@ const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
  */
 const zapnuty = (d) => d.tone === 'bezi' || d.riadi === 'bezi';
 
-/** Atribúty stavu dlaždice: tón, druh, zapnutý, oživená ikona a id veci. @param {Dlazdica} d @param {Ozivenie | null} oziv */
+/**
+ * Atribúty stavu dlaždice: tón, druh, zapnutý, oživená ikona a id veci - `data-vec` otvorí detail, dlaždica bez detailu
+ * má `data-id`. @param {Dlazdica} d @param {Ozivenie | null} oziv
+ */
 const stavDlazdice = (d, oziv) =>
     ` data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''}${zapnuty(d) ? ' data-zapnuty' : ''}` +
-    `${oziv?.id === d.id ? ` data-oziv="${oziv.druh}"` : ''} data-vec="${d.id}"`;
+    `${oziv?.id === d.id ? ` data-oziv="${oziv.druh}"` : ''} data-${d.bezDetailu ? 'id' : 'vec'}="${d.id}"`;
 
 /**
  * Oživená ikona po ťuknutí na oznámenie (docs/navrhy/oznamenia-animacie.html): dlaždica a druh pohybu - `plan`,
@@ -210,7 +218,17 @@ function dlazdiceCo(co, bojler) {
         draha: r.draha,
         odr: r.odr,
     }));
-    return [...bezia(co, dnes), ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie];
+    return [...bezia(co, dnes), ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie, ...autoCo(co)];
+}
+
+/**
+ * Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html, Z1): v pravom stĺpci pod bojlerom, bez detailu.
+ * `?? null`: model zo starého shared/teraz.js z cache po nasadení `auto` nemá.
+ * @param {NonNullable<Model['co']>} co @returns {Dlazdica[]}
+ */
+function autoCo(co) {
+    const a = co.auto ?? null;
+    return a ? [{ id: 'auto', tone: 'tiche', ...a, bezDetailu: true }] : [];
 }
 
 /**
