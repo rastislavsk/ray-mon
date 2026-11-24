@@ -7,6 +7,7 @@ import { bojlerStav, suctyDna } from './bojler.js';
 import { krivkaVody, stupne, vodaTeraz } from './bojler-voda.js';
 import { fmt1, minutesToTimeStr } from './format.js';
 import { localDateKey, localMinutes } from './solar.js';
+import { bandAt, scheduleFor } from './tariff.js';
 
 /** @typedef {import('./bojler.js').BojlerInfo} BojlerInfo */
 
@@ -166,6 +167,28 @@ function podielDnes(den) {
     const s = den ? suctyDna(den) : null;
     const spolu = s ? s.slnkoKwh + s.sietKwh : 0;
     return s && spolu > 0 ? Math.round((100 * s.slnkoKwh) / spolu) : null;
+}
+
+/**
+ * Koľko dnešnej energie bojlera išlo zo siete v drahom pásme tarify, v % pre červenú časť pásika
+ * (docs/navrhy/plan-dna-oznamenie-vt.html, P1). Worker kedy presne bral zo siete nemeria, preto sa odber zo siete
+ * každého behu rozloží rovnomerne na jeho čas (`od` až `do`, bežiaci beh po teraz). Kým dnes nehrial, 0.
+ * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./config.js').Tariff} tariff
+ */
+export function bojlerDrahaDnes(b, now, tz, tariff) {
+    const den = dnes(b, now, tz);
+    const s = den ? suctyDna(den) : null;
+    const spolu = s ? s.slnkoKwh + s.sietKwh : 0;
+    if (!den || !s || spolu <= 0) return 0;
+    const schedule = scheduleFor(tariff, den.den);
+    const teraz = localMinutes(now, tz);
+    const draha = den.behy.reduce((sum, beh) => {
+        const doMin = Math.max(beh.od + 1, beh.do ?? teraz);
+        let n = 0;
+        for (let m = beh.od; m < doMin; m++) if (bandAt(tariff, schedule, Math.min(m, 24 * 60 - 1)).level === 'draha') n++;
+        return sum + (beh.whSiet * n) / (doMin - beh.od);
+    }, 0);
+    return Math.round((100 * Math.min(draha / 1000, s.sietKwh)) / spolu);
 }
 
 /**

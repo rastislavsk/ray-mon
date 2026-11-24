@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, DEVICES, MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { dayCtx, freeKw, programDraw } from '../shared/mozem-jadro.js';
-import { planDna, planDnaModel } from '../shared/plan-dna.js';
+import { planDna, planDnaModel, podielDrahy } from '../shared/plan-dna.js';
 import { PLAN_DNA_NOTE, PLAN_ZO_SIETE, terazRiadokText } from '../shared/messages.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -244,13 +244,51 @@ test('auto na slnku bez ceny v tarife: len km', () => {
     assert.match(row(m?.rows ?? [], 'auto').why, /^~\d+ km zo slnka$/);
 });
 
+test('podiel drahého pásma: čo slnko nepokryje v minútach VT, bežné pásmo nie je drahé, za polnocou pásma toho dňa', () => {
+    const i = input(at('19:50'));
+    const { plan } = dayCtx(i);
+    const draw = Array.from({ length: 60 }, () => ({ kw: 2 }));
+    const tma = Array.from({ length: 24 * 60 }, () => 0);
+    // 20:00 - 21:00: NT do 20:30, potom VT - polovica.
+    assert.equal(podielDrahy(draw, tma, 20 * 60, plan), 0.5);
+    // Slnko pokryje polovicu odberu každej minúty: v drahom pásme ide zo siete štvrtina.
+    assert.equal(
+        podielDrahy(
+            draw,
+            tma.map(() => 1),
+            20 * 60,
+            plan,
+        ),
+        0.25,
+    );
+    // Za polnocou (23:30 - 0:30) je NT.
+    assert.equal(podielDrahy(draw, tma, 23 * 60 + 30, plan), 0);
+    const bezna = dayCtx({ ...i, tariff: FLAT }).plan;
+    assert.equal(podielDrahy(draw, tma, 20 * 60, bezna), 0);
+    assert.equal(podielDrahy([], tma, 0, plan), 0);
+});
+
+test('sušička po praní večer: pásik povie, koľko ide z drahého pásma', () => {
+    // Práčka dobehla o 20:30, sušička ide hneď 20:30 - 22:00: VT do 21:30 (dve tretiny), potom NT.
+    const i = input(at('20:25'), { bezi: [{ id: 'pracka', d: '2026-09-05', m: 18 * 60 + 30, k: 20 * 60 + 30 }] });
+    const susicka = row(planDnaModel(i, { devices: ['pracka', 'susicka'] })?.rows ?? [], 'susicka');
+    assert.deepEqual([susicka.kind, susicka.start], ['siet', 20 * 60 + 30]);
+    assert.ok(Math.abs(susicka.draha - 2 / 3) < 0.01, `draha ${susicka.draha}`);
+    assert.ok(susicka.podiel + susicka.draha <= 1);
+});
+
 test('lacné pásmo má koniec: do konca pásma, cez polnoc podľa rozvrhu ďalšieho dňa', () => {
-    // 19:50: auto a bojler v lacnom pásme od 20:00 do 20:30, potom je VT.
+    // 19:50: NT od 20:00 do 20:30 je kratšie ako PLAN_DNA.autoMinMin - auto a bojler idú do NT od 21:30 do 22:30.
     const vecer = planDnaModel(input(at('19:50')), { devices: ALL });
-    const auto = row(vecer?.rows ?? [], 'auto');
-    assert.equal(auto.kind, 'cheap');
-    assert.equal(auto.start, 20 * 60);
-    assert.equal(auto.end, 20 * 60 + 30);
+    for (const id of ['auto', 'bojler']) {
+        const r = row(vecer?.rows ?? [], id);
+        assert.equal(r.kind, 'cheap');
+        assert.equal(r.start, 21 * 60 + 30);
+        assert.equal(r.end, 22 * 60 + 30);
+    }
+    // Ráno 7:01 (zistené 24. 11. 2026): koniec NT o 7:30 nie je „nabíjaj teraz“, ďalšie NT je od 8:30 do 9:30.
+    const rano = row(planDnaModel(input(at('07:01'), { forecast: cloudy(0) }), { devices: ['auto'] })?.rows ?? [], 'auto');
+    assert.deepEqual([rano.kind, rano.start, rano.end], ['cheap', 8 * 60 + 30, 9 * 60 + 30]);
     // 23:00: NT od 23:30 pokračuje cez polnoc do 07:30 ďalšieho dňa.
     const noc = planDnaModel(input(at('23:00')), { devices: ALL });
     const bojler = row(noc?.rows ?? [], 'bojler');

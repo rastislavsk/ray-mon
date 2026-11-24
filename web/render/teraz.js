@@ -8,7 +8,7 @@ import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
-import { bojlerDetail, bojlerDlazdica, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
+import { bojlerDetail, bojlerDlazdica, bojlerDrahaDnes, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { localMinutes } from '../../shared/solar.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
@@ -23,7 +23,7 @@ import { dialog, setHtml, setText, show } from './write.js';
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 /**
  * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
- *   meno: string, podiel: number | null, odr: string[], potom?: { text: string, dlho: boolean } | null }} Dlazdica
+ *   meno: string, podiel: number | null, draha?: number, odr: string[], potom?: { text: string, dlho: boolean } | null }} Dlazdica
  */
 
 /** Texty bubliny, keď riadok bublinu nemá. */
@@ -106,7 +106,7 @@ const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
     `<button type="button" class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''}${stavDlazdice(d, oziv)}>` +
     `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${rezimHtml(d.rezim)}</span>` +
     `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}</span><b>${escapeHtml(d.meno)}</b>${rezimSr(d.rezim)}` +
-    `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%"`}></i>` +
+    `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%;--n:${100 - (d.draha ?? 0)}%"`}></i>` +
     `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
     `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></button>`;
 
@@ -194,7 +194,10 @@ function dlazdiceCo(co, bojler) {
     const dnes = !co.den;
     const p = h.dalsi;
     const hore = dnes
-        ? [...h.dlazdice, ...(p ? [{ id: p.id, tone: 'tiche', velky: p.cas, meno: p.name, podiel: p.podiel, odr: p.odr }] : [])]
+        ? [
+              ...h.dlazdice,
+              ...(p ? [{ id: p.id, tone: 'tiche', velky: p.cas, meno: p.name, podiel: p.podiel, draha: p.draha, odr: p.odr }] : []),
+          ]
         : [];
     const dalsie = co.riadky.map((r) => ({
         id: r.id,
@@ -204,6 +207,7 @@ function dlazdiceCo(co, bojler) {
         velky: r.cas,
         meno: r.name,
         podiel: r.podiel,
+        draha: r.draha,
         odr: r.odr,
     }));
     return [...bezia(co, dnes), ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie];
@@ -490,7 +494,12 @@ function renderTokSheet(state, dom) {
 function bojlerTeraz(state, co, plan) {
     // Len pri dnešku - iný deň v hrebeni ukazuje plán, nie čo sa deje teraz.
     if (!co || co.den || !riadeny(state) || !state.bojler) return null;
-    return { id: 'bojler', ...bojlerDlazdica(state.bojler, state.now, state.site.timezone, plan) };
+    const b = state.bojler;
+    return {
+        id: 'bojler',
+        ...bojlerDlazdica(b, state.now, state.site.timezone, plan),
+        draha: bojlerDrahaDnes(b, state.now, state.site.timezone, state.tariff),
+    };
 }
 
 /**

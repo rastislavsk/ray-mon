@@ -56,8 +56,6 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
   domácnosti zdieľa cez objekt účtu Huawei (`UcetHuawei`, možnosť A). Pri inom zdroji merania (kiosk FusionSolar,
   iné meniče) taký objekt nie je a každý telefón si behy drží sám. Doplniť, napr. samostatnú „domácnosť“
   s kódom na spárovanie (možnosť B: vlastný Durable Object, párovanie cez QR).
-- **Ranné oznámenie nepozná učenie ani bojler** (19. 11. 2026): service worker nemá prístup k úložisku telefónu,
-  plán v rannom oznámení ide bez naučenej predpovede a bez bojlera.
 
 - **Dážď a sneh v ikonách počasia** (18. 11. 2026): sada má len jasno / polojasno / zamračené.
   Predpoveď zrážky po hodinách už sťahuje. Treba nakresliť ikony a pravidlo, kedy je deň „daždivý“
@@ -75,6 +73,8 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 
 ## Overiť na telefóne alebo na skutočných dňoch
 
+- Ranné oznámenie a karta Teraz s rovnakými časmi (O2, 24. 11. 2026): zrkadlo sa zapíše až po otvorení novej appky.
+  Pásik s červenou časťou (VT) a auto bez „nabíjaj teraz“ na posledných 15 min NT.
 - Scéna toku energie (17.–18. 11.): dom na kopci, počasie za scénou, impulzy, svietiace okná.
 - Bublina Dnes zo strechy (PR #495).
 - Bojler na prebytky: zapnutie na slnku.

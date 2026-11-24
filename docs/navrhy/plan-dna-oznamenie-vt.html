@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Plán dňa – oznámenie, appka a pásik s VT</title>
+        <style>
+            /* Mockup, nie snímka z appky. Dlaždice sú kreslené ručne podľa css/teraz.css (.dl, .podiel).
+               Scenár „Zamračený deň“ je vymyslený, čísla sú ilustračné, appka ich takto nevypočítala. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(255, 255, 255, 0.82);
+                --line: rgba(242, 240, 234, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --cheap-text: #b0dbff;
+                --costly: #ff7a66;
+                --sun: #ffd166;
+                --amber: #ffc94a;
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p,
+            li {
+                color: var(--dim);
+                max-width: 72ch;
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                border-top: 1px solid var(--line);
+                padding-top: 28px;
+            }
+            .riadok {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: start;
+            }
+            .tel {
+                width: 100%;
+                max-width: 340px;
+                padding: 16px;
+                border-radius: 34px;
+                background: linear-gradient(180deg, #2c3c5c, #46597c 60%, #5a6a86);
+                border: 1px solid var(--line);
+            }
+            .tel h3 {
+                font-size: 0.85rem;
+                color: var(--dim);
+                margin-bottom: 10px;
+                font-weight: 700;
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .dl {
+                display: grid;
+                padding: 14px;
+                border-radius: 24px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                color: #fff;
+            }
+            .dl[data-tone='go'] {
+                background: var(--yes);
+                color: #14300c;
+            }
+            .ico {
+                width: 44px;
+                height: 44px;
+                margin-bottom: 22px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+                display: grid;
+                place-items: center;
+                font-size: 0.7rem;
+                font-weight: 800;
+            }
+            .dl[data-tone='go'] .ico {
+                background: rgba(20, 48, 12, 0.12);
+            }
+            .velky {
+                font-size: 1.75rem;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .velky.modry {
+                color: var(--cheap-text);
+            }
+            .dl b {
+                margin-top: 2px;
+                font-size: 1.25rem;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .podiel {
+                display: flex;
+                height: 6px;
+                margin: 8px 0 4px;
+                border-radius: 3px;
+                overflow: hidden;
+            }
+            .podiel i {
+                display: block;
+                height: 100%;
+            }
+            .s {
+                background: var(--sun);
+            }
+            .l {
+                background: rgba(124, 196, 255, 0.75);
+            }
+            .d {
+                background: var(--costly);
+            }
+            .podiel.stv {
+                gap: 3px;
+                border-radius: 0;
+            }
+            .podiel.stv i {
+                flex: 1;
+                border-radius: 3px;
+            }
+            .dl[data-tone='go'] .podiel {
+                box-shadow: 0 0 0 1.5px rgba(20, 48, 12, 0.35);
+            }
+            .odr {
+                font-size: 0.875rem;
+                font-weight: 600;
+                line-height: 1.3;
+                display: grid;
+            }
+            .odr span {
+                position: relative;
+                padding-left: 0.8em;
+            }
+            .odr span::before {
+                content: '';
+                position: absolute;
+                left: 0.1em;
+                top: 0.55em;
+                width: 0.3em;
+                height: 0.3em;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            .odr .drahe {
+                color: #ffc4ba;
+            }
+            .znak {
+                justify-self: start;
+                margin-top: 6px;
+                padding: 2px 8px;
+                border-radius: 999px;
+                font-size: 0.75rem;
+                font-weight: 800;
+                font-style: normal;
+            }
+            .znak.drahe {
+                background: var(--costly);
+                color: #3a0b03;
+            }
+            .poz {
+                font-size: 0.85rem;
+            }
+            .poz ul {
+                margin: 6px 0 0;
+                padding-left: 18px;
+            }
+            .legenda {
+                display: flex;
+                gap: 16px;
+                flex-wrap: wrap;
+                font-size: 0.85rem;
+                color: var(--dim);
+            }
+            .legenda i {
+                display: inline-block;
+                width: 22px;
+                height: 6px;
+                border-radius: 3px;
+                margin-right: 6px;
+                vertical-align: middle;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 0.9rem;
+                max-width: 900px;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 8px 10px;
+                text-align: left;
+                vertical-align: top;
+                color: var(--dim);
+            }
+            th {
+                color: var(--ink);
+            }
+            .odp {
+                color: var(--amber);
+                font-weight: 800;
+            }
+            code {
+                font-size: 0.85em;
+                color: #ffe3a3;
+            }
+            .pozor {
+                border-left: 3px solid var(--amber);
+                padding: 4px 0 4px 12px;
+            }
+            .nar {
+                color: var(--amber);
+                font-weight: 800;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Plán dňa: oznámenie, appka a pásik s drahým pásmom</h1>
+                <p>
+                    Zadanie 24. 11. 2026: ranné oznámenie o 7:00 a karta Teraz o 7:01 povedali iné časy spotrebičov. Nájsť chybu, preveriť
+                    logiku plánu a navrhnúť pásik v troch farbách: slnko, lacné pásmo (NT), drahé pásmo (VT). Dlaždice v mockupoch sú
+                    kreslené ručne, ich čísla sú ilustračné, appka ich takto nevypočítala.
+                </p>
+                <p class="legenda">
+                    <span><i style="background: var(--sun)"></i>zo slnka</span>
+                    <span><i style="background: rgba(124, 196, 255, 0.75)"></i>sieť, lacné pásmo (NT)</span>
+                    <span><i style="background: var(--costly)"></i>sieť, drahé pásmo (VT)</span>
+                </p>
+            </header>
+
+            <section>
+                <h2><small>Čo sa stalo ráno</small>Oznámenie a appka počítajú tou istou funkciou, ale z iných vstupov</h2>
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>Oznámenie 7:00</th>
+                        <th>Appka 7:01</th>
+                    </tr>
+                    <tr>
+                        <td>Umývačka</td>
+                        <td>08:45</td>
+                        <td>09:00</td>
+                    </tr>
+                    <tr>
+                        <td>Bojler</td>
+                        <td>09:15 (ako bežný spotrebič)</td>
+                        <td>riadi zásuvka, ručný režim, vypnutý – v pláne nie je</td>
+                    </tr>
+                    <tr>
+                        <td>Práčka</td>
+                        <td>10:15</td>
+                        <td>09:30</td>
+                    </tr>
+                    <tr>
+                        <td>Sušička</td>
+                        <td>12:15</td>
+                        <td>11:30 (po práčke)</td>
+                    </tr>
+                    <tr>
+                        <td>Auto</td>
+                        <td>11:15–12:15 zo slnka</td>
+                        <td>do 07:30 lacné pásmo</td>
+                    </tr>
+                </table>
+                <p>
+                    Obe miesta volajú <code>planDna</code> zo <code>shared/plan-dna.js</code>. Service worker (<code>sw.js</code> →
+                    <code>swNotice</code>) však nemá prístup k úložisku telefónu a dostane len zrkadlo v Cache API: poloha, panely, tarifa,
+                    spotrebiče, tón. Chýba mu:
+                </p>
+                <ol>
+                    <li>
+                        <b>Bojler riadený zásuvkou</b> (<code>input.bojler</code>). Oznámenie ho preto rozvrhne ako bežný spotrebič (2 kW na
+                        hodinu o 09:15) – ten si zoberie slnko a práčku so sušičkou odsunie. Appka bojler z riadkov vyradí a odsimuluje
+                        zásuvku; v ručnom režime s vypnutým relé neberie nič, takže práčka ide skôr.
+                    </li>
+                    <li>
+                        <b>Naučená oprava predpovede</b> (<code>naucenaPredpoved</code>, pridáva ju <code>sNaucenim</code> vo
+                        <code>web/render/index.js</code>). Appka ráta s predpoveďou opravenou podľa histórie, oznámenie so surovou.
+                    </li>
+                    <li>
+                        <b>Naučená spotreba domu po hodinách</b> (<code>ctx.dom</code> z <code>domProfil</code>). Oznámenie ráta s pevným
+                        <code>HOUSE_BASE_KW</code>.
+                    </li>
+                    <li>Živé meranie (o 7:00 je tma, ráno to nevadí; cez deň áno).</li>
+                </ol>
+                <p>
+                    Body 2 a 3 sú pravdepodobné vysvetlenie posunu umývačky o 15 min a toho, že appke sa auto na slnko už nezmestilo
+                    (chýbala hodina silného slnka po ostatných spotrebičoch). Medzera je zapísaná v <code>docs/to do later.md</code>
+                    od 19. 11. („Ranné oznámenie nepozná učenie ani bojler“) – nie je to nová chyba, len ju teraz bolo vidno.
+                </p>
+                <p class="pozor">
+                    <b>Čo som overil a čo nie.</b> Mechanizmus bodu 1 som zreprodukoval na predpovedi z testov (fixtures 5. 9., výkon
+                    zmenšený na 35 %): oznámenie dalo práčku 11:15, appka s bojlerom v ručnom režime 10:00, umývačka rovnako. Tvoje skutočné
+                    dáta z 24. 11. (naučený model, predpoveď zo 7:00) sú v telefóne a nevidím ich, takže presné čísla zo screenshotov som
+                    neprepočítal. Body 2 a 3 sú vyvodené z kódu, nie zmerané.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>Ďalšie nálezy v logike plánu</small>Čo ešte nesedí</h2>
+                <ul>
+                    <li>
+                        <span class="nar">N1 · auto „nabíjaj teraz“ na 15 minút.</span> <code>cheapFrom</code> berie prvú lacnú štvrťhodinu
+                        od teraz, aj keď je to posledný kúsok pásma. O 7:01 to dalo „do 07:30, nabíjaj teraz“ – štart plánu je zaokrúhlený
+                        na 7:15, reálne 15 minút nabíjania. Neskoršie lacné pásmo by bolo užitočnejšie. Týka sa aj bojlera bez zásuvky
+                        (<code>cheapGrid</code>).
+                    </li>
+                    <li>
+                        <span class="nar">N2 · bojler v oznámení ako vec na zapnutie.</span> „bojler 09:15“ znie ako pokyn, hoci ho zapína
+                        zásuvka a máš ju v ručnom režime. Je to časť hlavnej príčiny, ale vidno ju aj samostatne.
+                    </li>
+                    <li>
+                        <span class="nar">N3 · drobnosť.</span> <code>volne()</code> odpočíta autu na slnku plný príkon nabíjačky, hoci
+                        <code>onSun</code> mu dá len to, čo slnko má. Ovplyvní to iba podiel slnka riadku v lacnom pásme cez deň (vyjde
+                        menší). Na screenshotoch sa neprejavilo.
+                    </li>
+                    <li>
+                        Prekrývanie umývačky (9:00–11:30) a práčky (9:30–11:30) je v poriadku: ohrevy sa neprekrývajú (umývačka 9:00–9:15 a
+                        11:00–11:15, práčka 9:30–9:50), zvyšok programov berie málo.
+                    </li>
+                    <li>„potom až v piatok“ pri umývačke sedí s oznámením „Od zajtra 2 dni bez slnka“.</li>
+                </ul>
+                <p>Časy v appke sa cez deň budú meniť aj po oprave: appka ráta so živým meraním, oznámenie je snímka zo 7:00.</p>
+            </section>
+
+            <section>
+                <h2><small>Oznámenie · možnosť O1 · najjednoduchšia</small>Oznámenie bez bojlera, ktorý riadi zásuvka</h2>
+                <ul>
+                    <li>Zrkadlo dostane príznak „bojler riadi zásuvka“. Oznámenie bojler nerozvrhuje.</li>
+                    <li><b>Plus:</b> malá zmena, zmizne „bojler 09:15“ a práčka sa priblíži appke.</li>
+                    <li>
+                        <b>Mínus:</b> učenie ostane mimo – rozdiely 15–30 min a pri aute ostanú. Keď zásuvka v automatickom režime bojler
+                        zapne, oznámenie s tým rátať nebude.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>Oznámenie · možnosť O2 · odporúčam</small>Zrkadlo nesie aj naučený model a poslednú snímku bojlera</h2>
+                <ul>
+                    <li>
+                        Appka uloží do zrkadla aj <code>naucene</code> (tabuľky 3×24 a 2×24 a potrebu bojlera, pár kB) a posledný stav
+                        bojlera (<code>BojlerInfo</code>: režim, prahy, relé, dnešný záznam).
+                    </li>
+                    <li>
+                        Service worker zostaví vstup tak ako appka: <code>naucenaPredpoved</code>, <code>ucenie</code>, <code>bojler</code>.
+                        Jedno miesto pravdy – zostavenie vstupu pôjde do <code>shared/</code> a volá ho appka aj service worker.
+                    </li>
+                    <li>
+                        Snímka bojlera platí, kým sa zásuvka ozvala do <code>BOJLER.riadenyHod</code> (24 h) – stačí, keď si appku otvoril
+                        deň predtým.
+                    </li>
+                    <li><b>Plus:</b> oznámenie a appka sa ráno zhodnú (okrem čerstvosti bojlera). Žiadna nová sieť ani tajomstvo.</li>
+                    <li>
+                        <b>Mínus:</b> stredne veľká zmena (zrkadlo, <code>swNotice</code>, testy). Keď appku dlhšie neotvoríš, model v
+                        zrkadle starne – učenie sa mení pomaly, takže to vadí málo.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>Oznámenie · možnosť O3 · najrobustnejšia</small>Service worker si čerstvý stav bojlera stiahne sám</h2>
+                <ul>
+                    <li>Ako O2 a navyše service worker o 7:00 zavolá <code>/bojler-stav</code> s pečaťou telefónu uloženou v zrkadle.</li>
+                    <li><b>Plus:</b> bojler je presne taký, ako ho v tej chvíli vidí appka.</li>
+                    <li>
+                        <b>Mínus:</b> pečať (prístup k meraniu) by ležala aj v Cache API, nielen v localStorage – ďalšie miesto s citlivým
+                        údajom. Ďalšie volanie, ktoré môže zlyhať či zdržať oznámenie; pečať expiruje.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>Oznámenie · možnosť O4 · nekonvenčná</small>Oznámenie bez presných časov</h2>
+                <ul>
+                    <li>„Dnes slnko na 3 veci, prvá umývačka okolo 9:00 – plán v appke.“ Presné časy len v appke.</li>
+                    <li><b>Plus:</b> nič si neodporuje, ani keď sa predpoveď cez deň zmení.</li>
+                    <li><b>Mínus:</b> oznámenie stratí to, kvôli čomu vzniklo – vidieť plán bez otvorenia appky.</li>
+                </ul>
+                <p>Plán počítaný vo Workeri nedáva zmysel: bezplatný Worker má 10 ms procesora a plán skúša všetky poradia spotrebičov.</p>
+            </section>
+
+            <section>
+                <h2><small>Auto v lacnom pásme (N1)</small>Možnosti</h2>
+                <ul>
+                    <li>
+                        <b>A1 · odporúčam:</b> lacné pásmo pre auto (a bojler bez zásuvky) len keď z neho od teraz ostáva aspoň
+                        <code>PLAN_DNA.autoMinMin</code> (60 min); inak ďalší lacný úsek dnes či v noci. Plus: rada má zmysel. Mínus: o 7:01
+                        dlaždica povie napr. „od 22:00“ namiesto „teraz“.
+                    </li>
+                    <li>
+                        <b>A2:</b> nechať, ale dlaždica povie „ešte 15 min“ a ďalšie pásmo. Plus: nič nezatají. Mínus: dva časy na malej
+                        dlaždici.
+                    </li>
+                    <li><b>A3:</b> nechať tak. Najjednoduchšie, ale rada „nabíjaj teraz“ na 15 minút sa nedá použiť.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>Pásik · ako sa ráta</small>Spoločné pre všetky možnosti</h2>
+                <p>
+                    Dnes nesie každý riadok <code>podiel</code> = časť energie programu zo slnka (<code>podielSlnka</code>) a pásik je žltý
+                    + modrý. Nový výpočet pôjde minútu po minúte cez program: čo pokryje voľné slnko, je žlté; zvyšok zo siete dostane farbu
+                    pásma tarify v tej minúte (<code>ctx.plan[…].band.level</code>, za polnocou rozvrh ďalšieho dňa). Riadok dostane
+                    <code>zdroje: { slnko, lacna, draha }</code>, <code>podiel</code> ostáva pre texty. To isté pre iné dni (ich plán z
+                    <code>forecastDayPlan</code>), núdzové časy (<code>shared/tyzden.js</code>) aj behy z „Už beží“. Bojler riadený
+                    zásuvkou: namerané <code>whSiet</code> jeho behov sa rozdelí podľa pásma v čase behu (<code>od</code>–<code>do</code>)
+                    rovnomerne – presnejšie Worker nemeria.
+                </p>
+                <p>Tarifa s jednou cenou nemá NT ani VT: pásik ostáva žltý a modrý.</p>
+            </section>
+
+            <section>
+                <h2><small>Pásik · možnosť P1 · odporúčam</small>Tri farby podľa podielu, v poradí slnko → NT → VT</h2>
+                <div class="riadok">
+                    <div class="tel">
+                        <h3>Ráno, polojasno (ilustrácia)</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <span class="ico">UM</span><span class="velky">09:00</span><b>Umývačka</b>
+                                <span class="podiel"><i class="s" style="width: 100%"></i></span>
+                                <span class="odr"><span>dobehne 11:30</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">PR</span><span class="velky">09:30</span><b>Práčka</b>
+                                <span class="podiel"><i class="s" style="width: 100%"></i></span>
+                                <span class="odr"><span>dobehne 11:30</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">SU</span><span class="velky">11:30</span><b>Sušička</b>
+                                <span class="podiel"><i class="s" style="width: 62%"></i><i class="d" style="width: 38%"></i></span>
+                                <span class="odr"><span>po práčke</span><span>väčšina zo slnka</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">AU</span><span class="velky">22:00</span><b>Auto</b>
+                                <span class="podiel"><i class="l" style="width: 100%"></i></span>
+                                <span class="odr"><span>lacná elektrina</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tel">
+                        <h3>Popoludní, slnko slabne (ilustrácia)</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <span class="ico">PR</span><span class="velky">15:30</span><b>Práčka</b>
+                                <span class="podiel"><i class="s" style="width: 30%"></i><i class="d" style="width: 70%"></i></span>
+                                <span class="odr"><span>tretina zo slnka</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">SU</span><span class="velky">17:30</span><b>Sušička</b>
+                                <span class="podiel"><i class="d" style="width: 100%"></i></span>
+                                <span class="odr"><span>po práčke</span><span>zo siete</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">UM</span><span class="velky">do 06:00</span><b>Umývačka</b>
+                                <span class="podiel"><i class="l" style="width: 100%"></i></span>
+                                <span class="odr"><span>lacná elektrina</span></span>
+                            </div>
+                            <div class="dl">
+                                <span class="ico">SU</span><span class="velky">19:30</span><b>Sušička</b>
+                                <span class="podiel"><i class="l" style="width: 45%"></i><i class="d" style="width: 55%"></i></span>
+                                <span class="odr"><span>po práčke</span><span>zo siete</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li>Šírka farby = podiel energie programu z toho zdroja. Poradie je vždy rovnaké, nie časové.</li>
+                    <li>Bežné pásmo trojpásmových taríf (<code>bezna</code>) je modré – červená znamená len drahé.</li>
+                    <li><b>Plus:</b> číta sa ako dnes, len pribudne tretia farba; výpočet je rozšírenie toho, čo už je.</li>
+                    <li><b>Mínus:</b> nepovie, <i>kedy</i> príde drahá časť (na začiatku či na konci programu).</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>Pásik · možnosť P2</small>Pásik ako časová os programu</h2>
+                <div class="riadok">
+                    <div class="tel">
+                        <h3>Sušička 17:30 (ilustrácia)</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <span class="ico">SU</span><span class="velky">17:30</span><b>Sušička</b>
+                                <span class="podiel"
+                                    ><i class="s" style="width: 20%"></i><i class="d" style="width: 50%"></i
+                                    ><i class="l" style="width: 30%"></i
+                                ></span>
+                                <span class="odr"><span>po práčke</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li>Zľava doprava ide čas programu, farba je zdroj v tej chvíli.</li>
+                    <li><b>Plus:</b> vidno, že by stačilo o pol hodiny počkať a drahá časť zmizne.</li>
+                    <li>
+                        <b>Mínus:</b> farby sa môžu striedať (slnko – VT – NT), na 6 px pásiku pôsobí neupratane. Šírka už nie je energia:
+                        ohrev práčky je krátky, ale berie najviac – pásik by podiel skresľoval.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>Pásik · možnosť P3</small>P1 a štvrtá, šedá farba pre bežné pásmo</h2>
+                <ul>
+                    <li>Pri trojpásmových tarifách (mimo špičky / bežné / špička) by bežné pásmo bolo šedé.</li>
+                    <li><b>Plus:</b> presné pre každú tarifu.</li>
+                    <li><b>Mínus:</b> tvoja tarifa je dvojpásmová (NT/VT), šedú by si nevidel; štyri farby na pásiku sú veľa.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>Odporúčanie</small>O2 + A1 + P1</h2>
+                <p>
+                    O2 odstráni hlavnú príčinu bez nového tajomstva mimo localStorage. A1 zruší radu na 15 minút. P1 je najmenšia zmena
+                    pásika, ktorá povie, koľko ide z drahého. Rozhoduješ ty – nič z toho zatiaľ nie je v kóde.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>Rozhodnutie 24. 11. 2026</small>O2 + A1 + P1</h2>
+                <ul>
+                    <li>
+                        O2: zrkadlo nesie <code>ucenie</code> a posledný stav bojlera (bez bodov teploty), service worker zostaví vstup cez
+                        <code>swInput</code> (<code>shared/oznamenia.js</code>). Poškodené či chýbajúce (staršia appka) sa vynechá -
+                        oznámenie potom ráta ako predtým.
+                    </li>
+                    <li>
+                        A1: <code>cheapFrom</code> s najmenšou dĺžkou <code>PLAN_DNA.autoMinMin</code> pre veci s
+                        <code>cheapGrid</code> (auto, bojler bez zásuvky) v Pláne dňa aj v núdzových časoch.
+                    </li>
+                    <li>
+                        P1: riadky plánu, behy aj núdzové časy nesú <code>draha</code> (<code>podielDrahy</code>), dlaždica
+                        <code>--s</code> a <code>--n</code>. Bojler riadený zásuvkou: <code>bojlerDrahaDnes</code>.
+                    </li>
+                </ul>
+            </section>
+        </main>
+    </body>
+</html>

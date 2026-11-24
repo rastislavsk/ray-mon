@@ -3,7 +3,16 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HISTORIA, HOUSE_BASE_KW, PLANT, SITE, TARIFF, UCENIE } from '../shared/config.js';
 import { addDays } from '../shared/solar.js';
-import { domProfil, naucenaPredpoved, naucene, parseHistoria, potrebaBojlera, triedaOblacnosti, vikend } from '../shared/ucenie.js';
+import {
+    domProfil,
+    naucenaPredpoved,
+    naucene,
+    nauceneZ,
+    parseHistoria,
+    potrebaBojlera,
+    triedaOblacnosti,
+    vikend,
+} from '../shared/ucenie.js';
 import { ucenieSekcia, UCENIE_TEXTS } from '../shared/nastavenie-ucenie.js';
 import { dayCtx, freeKw } from '../shared/mozem-jadro.js';
 import { fixtureData } from './helpers.js';
@@ -231,4 +240,23 @@ test('Nastavenie: učenie z histórie - dni, grafy, bojler a začať odznova', (
     );
     assert.equal(ucenieSekcia({ ucenie: n, doma: ['pracka'] })?.bojler, '', 'bez bojlera doma nič');
     assert.equal(UCENIE_TEXTS.dni(1), '1 deň');
+});
+
+test('nauceneZ: model zo zrkadla pre ranné oznámenie, poškodený null', () => {
+    const n = naucene({ dni: [], snimky: [], behy: [], today: '2026-11-24', od: null });
+    assert.equal(nauceneZ(JSON.parse(JSON.stringify(n))) !== null, true);
+    assert.equal(nauceneZ({ ...n, od: '2026-11-01' }) !== null, true);
+    for (const zle of [
+        null,
+        'x',
+        { ...n, dni: '3' },
+        { ...n, od: 'vcera' },
+        { ...n, oprava: [[1]] },
+        { ...n, dom: { prac: [], vik: [] } },
+    ]) {
+        assert.equal(nauceneZ(zle), null);
+    }
+    assert.equal(nauceneZ({ ...n, bojler: { pasma: ['x'], vsetky: null } }), null);
+    assert.equal(nauceneZ({ ...n, bojler: { pasma: [], vsetky: 'x' } }), null);
+    assert.equal(nauceneZ({ ...n, bojler: null }), null);
 });
