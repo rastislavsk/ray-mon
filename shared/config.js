@@ -1248,15 +1248,15 @@ export const POCASIE = {
 };
 
 /**
- * Hviezdy v noci na karte Teraz (shared/hviezdy.js): skutočná obloha nad elektrárňou, pohľad
- * k rovníku (na severnej pologuli na juh, na južnej a na rovníku na sever), stereografické
+ * Hviezdy v noci na karte Teraz (shared/hviezdy.js): skutočná obloha nad elektrárňou, pohľad vždy
+ * na azimut `smer` (východ), na severnej aj južnej pologuli - vľavo je sever, vpravo juh. Stereografické
  * premietanie so stredom vo výške `vyskaStredu` °. Pole má `sirka` × `vyska` jednotiek, jednotka
  * je v strede pohľadu stupeň; stred pohľadu leží v `stredY` výšky poľa. Vidno hviezdy do
  * magnitúdy `magMax`; oblačnosť 100 % hranicu zníži o `oblakyMag`, spln o `splnMag`. Hviezdy pod
  * `minVyska` ° nie sú (pri obzore ich aj tak skryje opar). Poloha sa počíta po `krokMin`
  * minútach (obloha sa za ten čas pootočí o 1°), aby sa kresba neprepisovala každú minútu.
- * Pohľad smeruje na azimut `smer` (východ), obzor (výška `minVyska`) je pri spodnom okraji poľa.
- * `mesiacR` je polomer kresby Mesiaca, zámerne väčší ako skutočný (0,25°). `text` sú oblasti poľa
+ * Obzor (výška `minVyska`) je pri spodnom okraji poľa.
+ * `mesiacR` je polomer kresby Mesiaca, zámerne väčší ako skutočný (0,25°); 24. 11. 2026 zmenšený o 10 % (z 8,3). `text` sú oblasti poľa
  * za textom karty Teraz na telefóne (číslo a riadok stavu): vľavo od `x`, vo výške `od` až `po`.
  * `mierka` je jednotiek poľa na radián v strede pohľadu (tu 1 jednotka = 1°).
  *
@@ -1269,7 +1269,7 @@ export const POCASIE = {
 const dnesOkraj = 45;
 const dnesMierka = 100 / (2 * Math.tan((dnesOkraj * Math.PI) / 360));
 export const HVIEZDY = {
-    magMax: 3.5,
+    magMax: 4,
     oblakyMag: 2,
     splnMag: 1,
     smer: 90,
@@ -1280,7 +1280,7 @@ export const HVIEZDY = {
     mierka: 180 / Math.PI,
     minVyska: 3,
     krokMin: 4,
-    mesiacR: 8.3,
+    mesiacR: 7.47,
     text: [
         { x: 75, od: 29, po: 88 },
         { x: 108, od: 93, po: 107 },
