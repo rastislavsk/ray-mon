@@ -8,6 +8,7 @@ import {
     TIMEOUT,
     WEATHER_CACHE_MS,
     WEATHER_KEEP_MS,
+    WORKER_AUTO_URL,
     WORKER_BEZI_URL,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_REZIM_URL,
@@ -20,6 +21,7 @@ import {
     WORKER_UCENIE_URL,
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
+import { autoInfoZ } from '../shared/auto-nabija.js';
 import { bojlerInfoZ } from '../shared/bojler.js';
 import { nauceneZ, parseHistoria } from '../shared/ucenie.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
@@ -178,6 +180,22 @@ export async function ulozRezimBojlera(pecat, rucne, fetchImpl = fetch) {
         const res = await postWorker(WORKER_BOJLER_REZIM_URL, JSON.stringify({ pecat, rucne }), fetchImpl);
         const body = res.ok ? await res.json() : null;
         return isObj(body) && body.ok === true ? { bojler: bojlerInfoZ(body.bojler) } : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Nabíjanie auta (Worker `/auto`, docs/navrhy/auto-nabija.html): `{ auto }` - stav a behy (null, kým Durable Object nič
+ * nenameral), alebo null, keď ho Worker nedá.
+ * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ auto: import('../shared/auto-nabija.js').AutoInfo | null } | null>}
+ */
+export async function stavAuta(pecat, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_AUTO_URL, JSON.stringify({ pecat }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) && 'auto' in body ? { auto: autoInfoZ(body.auto) } : null;
     } catch {
         return null;
     }

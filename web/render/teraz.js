@@ -3,13 +3,15 @@
 // dňa je v paneli karty Dnes (render/graf.js). Všetko počíta shared/teraz.js a texty sú v
 // shared/messages.js - tu sa len zapisuje do DOM.
 
+import { AUTO_NABIJA_TEXTS, autoDetail } from '../../shared/auto-nabija.js';
 import { BEZI, HVIEZDY } from '../../shared/config.js';
+import { dayPlan } from '../../shared/day-plan.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerDrahaDnes, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
-import { localMinutes } from '../../shared/solar.js';
+import { localDateKey, localMinutes } from '../../shared/solar.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
@@ -24,8 +26,9 @@ import { dialog, setHtml, setText, show } from './write.js';
 /**
  * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
  *   meno: string, podiel: number | null, draha?: number, odr: string[], potom?: { text: string, dlho: boolean } | null,
- *   bezDetailu?: boolean, za?: string }} Dlazdica
- * `bezDetailu`: dlaždica bez detailu (auto zo slnka) nie je tlačidlo - ťuknutie na ňu nič neotvorí.
+ *   bezDetailu?: boolean, za?: string, zapnuty?: 'nabija' }} Dlazdica
+ * `bezDetailu`: dlaždica bez detailu (auto zo slnka) nie je tlačidlo - ťuknutie na ňu nič neotvorí. `zapnuty: 'nabija'`:
+ * auto sa asi nabíja (oranžová ikona).
  */
 
 /** Texty bubliny, keď riadok bublinu nemá. */
@@ -116,17 +119,21 @@ const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
 const znacka = (d) => (d.bezDetailu ? 'div' : 'button type="button"');
 
 /**
- * Zapnutý spotrebič: beží (zapísaný „Už beží“), alebo bojler, ktorému zásuvka zapla relé (to je zmerané).
- * @param {Dlazdica} d
+ * Zapnutý spotrebič: beží (zapísaný „Už beží“), alebo bojler, ktorému zásuvka zapla relé (to je zmerané). Auto, ktoré
+ * sa asi nabíja (odhad zo spotreby domu, docs/navrhy/auto-nabija.html), je `nabija` - oranžová ikona namiesto zelenej.
+ * @param {Dlazdica} d @returns {'' | 'nabija' | true}
  */
-const zapnuty = (d) => d.tone === 'bezi' || d.riadi === 'bezi';
+const zapnuty = (d) => (d.zapnuty === 'nabija' ? 'nabija' : d.tone === 'bezi' || d.riadi === 'bezi' || '');
+
+/** Atribút zapnutej dlaždice: `data-zapnuty`, pri nabíjaní auta s hodnotou `nabija`. @param {'' | 'nabija' | true} z */
+const zapnutyAttr = (z) => (z === 'nabija' ? ' data-zapnuty="nabija"' : z ? ' data-zapnuty' : '');
 
 /**
  * Atribúty stavu dlaždice: tón, druh, zapnutý, oživená ikona a id veci - `data-vec` otvorí detail, dlaždica bez detailu
  * má `data-id`. @param {Dlazdica} d @param {Ozivenie | null} oziv
  */
 const stavDlazdice = (d, oziv) =>
-    ` data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''}${zapnuty(d) ? ' data-zapnuty' : ''}` +
+    ` data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''}${zapnutyAttr(zapnuty(d))}` +
     `${oziv?.id === d.id ? ` data-oziv="${oziv.druh}"` : ''} data-${d.bezDetailu ? 'id' : 'vec'}="${d.id}"`;
 
 /**
@@ -222,13 +229,14 @@ function dlazdiceCo(co, bojler) {
 }
 
 /**
- * Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html, Z1): v pravom stĺpci pod bojlerom, bez detailu.
- * `?? null`: model zo starého shared/teraz.js z cache po nasadení `auto` nemá.
+ * Dlaždica auta (docs/navrhy/auto-mimo-planu.html, Z1): v pravom stĺpci pod bojlerom. Kým appka vie o nabíjaní od Workera
+ * (docs/navrhy/auto-nabija.html), otvorí panel Auto, inak je bez detailu. `?? null`: model zo starého shared/teraz.js
+ * z cache po nasadení `auto` nemá.
  * @param {NonNullable<Model['co']>} co @returns {Dlazdica[]}
  */
 function autoCo(co) {
     const a = co.auto ?? null;
-    return a ? [{ id: 'auto', tone: 'tiche', ...a, bezDetailu: true }] : [];
+    return a ? [{ id: 'auto', tone: 'tiche', ...a, bezDetailu: !a.detail }] : [];
 }
 
 /**
@@ -669,6 +677,7 @@ export function renderTeraz(state, dom) {
     if (!shows(state, 'terazky')) {
         renderVecSheet(state, null, dom);
         dialog(dom.tzBojlerSheet, false, () => null);
+        dialog(dom.tzAutoSheet, false, () => null);
         dialog(dom.tzTokSheet, false, () => null);
         return;
     }
@@ -706,7 +715,111 @@ export function renderTeraz(state, dom) {
     dom.tzCo.toggleAttribute('data-noc', m.pocasie?.noc === true);
     renderVecSheet(state, m, dom);
     renderBojlerSheet(state, dom, m.bojler);
+    renderAutoSheet(state, dom);
     renderTokSheet(state, dom);
+}
+
+/**
+ * Panel Auto (docs/navrhy/auto-nabija.html, P2): otvorený, kým je v stave tzVec 'auto' a appka vie o nabíjaní od Workera.
+ * Výroba na osi je plán dneška (nameraná krivka, potom predpoveď), slnko dňa to, čo ukazuje dlaždica (autoDen).
+ * `?? null`, `?? {...}`: starý web/state.js z cache po nasadení tieto polia nemá.
+ * @param {import('../state.js').AppState} state @param {Dom} dom
+ */
+function renderAutoSheet(state, dom) {
+    const info = state.tzVec === 'auto' ? (state.autoNabija ?? null) : null;
+    if (info) {
+        const tz = state.site.timezone;
+        const dnes = localDateKey(state.now, tz);
+        const vyroba = state.forecast ? dayPlan(state).map((s) => s.kw) : null;
+        const d = autoDetail(info, {
+            now: state.now,
+            tz,
+            tariff: state.tariff,
+            slnko: state.autoDen?.d === dnes ? state.autoDen : null,
+            vyroba,
+        });
+        dom.tzAutoSheet.toggleAttribute('data-nabija', d.nabija);
+        setHtml(dom.tzAutoIco, vecIcon('auto'));
+        setText(dom.tzAutoTtl, d.nadpis);
+        setText(dom.tzAutoPod, d.pod);
+        renderAutoOs(d.os, dom.tzAutoOs);
+        show(dom.tzAutoBeh, !!d.beh);
+        setHtml(
+            dom.tzAutoBeh,
+            d.beh
+                ? `<b>${escapeHtml(d.beh.km)}<small>km</small></b><p><strong>${escapeHtml(d.beh.kwh)} · ${escapeHtml(d.beh.kedy)}</strong>` +
+                      `${escapeHtml(d.beh.slnko)}</p>`
+                : '',
+        );
+        show(dom.tzAutoEnergia, !!d.beh);
+        setHtml(
+            dom.tzAutoEnergia,
+            d.beh
+                ? stoh(d.beh.energia) +
+                      `<div class="bj-zdroje">${d.beh.energia
+                          .map((c) => `<div><b>${escapeHtml(c.v)}</b><small><i data-tone="${c.tone}"></i>${escapeHtml(c.l)}</small></div>`)
+                          .join('')}</div>`
+                : '',
+        );
+        show(dom.tzAutoBehyB, d.behy.length > 0);
+        setText(dom.tzAutoBehyN, d.behyNadpis);
+        setHtml(
+            dom.tzAutoBehy,
+            d.behy
+                .map(
+                    (r) =>
+                        `<p><span>${escapeHtml(r.cas)}</span>${stoh(r.casti)}<b>${escapeHtml(r.km)}</b>` +
+                        `<span class="sr">, ${escapeHtml(r.sr)}</span></p>`,
+                )
+                .join(''),
+        );
+        setHtml(
+            dom.tzAutoSucty,
+            [d.slnkoDnes, d.tyzden]
+                .filter((x) => x !== null)
+                .map((x) => `<p><span>${escapeHtml(x.l)}</span><b>${escapeHtml(x.v)}</b></p>`)
+                .join(''),
+        );
+        renderAutoOznam(state, dom);
+        setText(dom.tzAutoPozn, d.poznamka);
+    }
+    dialog(dom.tzAutoSheet, !!info, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="auto"]') : null));
+}
+
+/**
+ * Os dňa v paneli Auto: plocha výroby (SVG natiahnuté na šírku), pod ňou pás behov podľa zdroja, čiarka teraz a hodiny.
+ * @param {ReturnType<typeof autoDetail>['os']} os @param {HTMLElement} el
+ */
+function renderAutoOs(os, el) {
+    el.setAttribute('aria-label', os.popis);
+    setHtml(
+        el,
+        (os.krivka
+            ? `<svg class="au-krivka" viewBox="0 0 96 40" preserveAspectRatio="none" aria-hidden="true"><path d="${os.krivka}"/></svg>`
+            : '') +
+            `<div class="bj-pas">${os.useky.map((u) => `<i data-tone="${u.tone}" style="left:${u.left}%;width:${u.width}%"></i>`).join('')}</div>` +
+            `<i class="bj-teraz" style="left:${os.teraz}%"></i>` +
+            `<div class="bj-osi">${[0, 6, 12, 18, 24].map((h) => `<span style="left:${(h / 24) * 100}%">${h}</span>`).join('')}</div>`,
+    );
+}
+
+/**
+ * Vypínače oznámení o začiatku a konci nabíjania a prečo sa nepodarili.
+ * @param {import('../state.js').AppState} state @param {Dom} dom
+ */
+function renderAutoOznam(state, dom) {
+    const T = AUTO_NABIJA_TEXTS;
+    const o = state.autoOznam ?? { z: false, k: false };
+    const stav = state.autoOznamStav ?? null;
+    setText(dom.tzAutoOznamZT, T.oznamZ);
+    setText(dom.tzAutoOznamKT, T.oznamK);
+    dom.tzAutoOznamZ.setAttribute('aria-checked', String(o.z));
+    dom.tzAutoOznamK.setAttribute('aria-checked', String(o.k));
+    dom.tzAutoOznamZ.disabled = stav === 'uklada';
+    dom.tzAutoOznamK.disabled = stav === 'uklada';
+    const chyba = stav === 'zakazane' ? T.zakazane : stav === 'chyba' ? T.chyba : '';
+    show(dom.tzAutoOznamChyba, !!chyba);
+    setText(dom.tzAutoOznamChyba, chyba);
 }
 
 /**

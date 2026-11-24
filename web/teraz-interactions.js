@@ -11,6 +11,7 @@ import { rytmusSBojlerom } from '../shared/zdroje.js';
 import { zladBehy } from './bezi-spolocne.js';
 import { ulozRezimBojlera } from './data.js';
 import { zmenOznamBojlera } from './bojler-oznam.js';
+import { zmenOznamAuta } from './auto-nabija.js';
 import { objednajKoniec } from './koniec.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
@@ -48,6 +49,10 @@ export function initTeraz(store, dom, refresh) {
         if (btn instanceof HTMLElement) zmenRezim(store, btn.dataset.bojlerRezim === 'rucne');
     });
     dom.tzBojlerOznam.addEventListener('click', () => zmenOznamBojlera(store, !store.get().bojlerOznam));
+    // Panel Auto (docs/navrhy/auto-nabija.html): ten istý krok ako detail spotrebiča, oznámenia o začiatku a konci zvlášť.
+    initSheet(dom.tzAutoSheet, () => stepBack(store, { tzVec: null }));
+    dom.tzAutoOznamZ.addEventListener('click', () => zmenOznamAuta(store, 'z', !store.get().autoOznam.z));
+    dom.tzAutoOznamK.addEventListener('click', () => zmenOznamAuta(store, 'k', !store.get().autoOznam.k));
     initSheet(dom.tzTokSheet, () => stepBack(store, { tzChip: null }));
     dom.tzRetry.addEventListener('click', () => {
         store.setState({ loading: true });

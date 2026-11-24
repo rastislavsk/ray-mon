@@ -90,6 +90,9 @@ import { setupInit } from '../shared/setup-flow.js';
  *   trasy: import('../shared/trasy.js').UlozeneTrasy | null,
  *   ucenie: import('../shared/ucenie.js').Naucene | null,
  *   autoDen: import('../shared/auto-slnko.js').AutoDen | null,
+ *   autoNabija: import('../shared/auto-nabija.js').AutoInfo | null,
+ *   autoOznam: { z: boolean, k: boolean },
+ *   autoOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
  */
@@ -121,7 +124,7 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
  * bojlera na prebytky (do skriptu zásuvky) a čo človek zapol („Už beží“ v detaile spotrebiča, shared/bezi.js).
  * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[],
  *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean,
- *   teplomer?: import('../shared/nastavenie-bojler.js').Teplomer }} o
+ *   teplomer?: import('../shared/nastavenie-bojler.js').Teplomer, autoOznam?: { z: boolean, k: boolean } }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
@@ -131,6 +134,7 @@ const telefon = ({
     bezi = [],
     bojlerOznam = false,
     teplomer = { on: false, ip: '' },
+    autoOznam = { z: false, k: false },
 }) => ({
     oznamenia,
     oznamStav,
@@ -150,6 +154,11 @@ const telefon = ({
     ucenie: null,
     // Auto zo slnka dnes (web/auto-den.js): ranný odhad, po západe slnka skutočnosť.
     autoDen: null,
+    // Nabíjanie auta z Durable Objectu účtu (web/auto-nabija.js, docs/navrhy/auto-nabija.html), oznámenia o ňom na tomto
+    // telefóne a či sa práve ukladajú, alebo prečo nie.
+    autoNabija: null,
+    autoOznam,
+    autoOznamStav: /** @type {'uklada' | 'zakazane' | 'chyba' | null} */ (null),
     bojlerSkript: /** @type {import('../shared/nastavenie-bojler.js').BojlerSkript} */ ({ stav: 'nic', text: '', schranka: false }),
     // Prepínač režimu v paneli Bojler dnes: ukladá sa, alebo sa uložiť nepodarilo.
     bojlerRezim: /** @type {'uklada' | 'chyba' | 'ulozene' | null} */ (null),
@@ -187,7 +196,8 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   incoming?: import('../shared/settings.js').Settings | null, linkError?: import('../shared/settings.js').LinkError | null, look?: import('../shared/settings.js').Look,
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy,
- *   bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean, teplomer?: import('../shared/nastavenie-bojler.js').Teplomer }} start
+ *   bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean, teplomer?: import('../shared/nastavenie-bojler.js').Teplomer,
+ *   autoOznam?: { z: boolean, k: boolean } }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)

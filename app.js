@@ -12,6 +12,7 @@ import {
     loadDoma,
     loadBezi,
     loadBojlerOznam,
+    loadAutoOznam,
     loadRanna,
     loadTrasy,
     loadLook,
@@ -26,6 +27,7 @@ import {
 import { initOznamZosulad, initOznamZrkadlo, oznamStav } from './web/oznamenia.js';
 import { initOznamKlik } from './web/oznamenia-klik.js';
 import { obnovOznamBojlera } from './web/bojler-oznam.js';
+import { obnovOznamAuta } from './web/auto-nabija.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -72,6 +74,7 @@ const store = createStore(
         // Čo človek dnes zapol („Už beží“) - Plán dňa s tým ráta.
         bezi: loadBezi(),
         bojlerOznam: loadBojlerOznam(),
+        autoOznam: loadAutoOznam(),
         teplomer: loadTeplomer(),
     }),
 );
@@ -82,6 +85,7 @@ initUrlMirror(store);
 initOznamZrkadlo(store, './');
 initOznamZosulad(store);
 obnovOznamBojlera(store);
+obnovOznamAuta(store);
 // Poslucháči (aj zápis krokov do histórie) sa prihlásia pred prekreslením: nový krok sa tak zapíše
 // skôr, než render posunie stránku (detail karty 7 dní začína hore). Prehliadač si pri zápise
 // pamätá posun opúšťanej položky a po Späť ho obnoví - musí to byť posun prehľadu, nie nula.

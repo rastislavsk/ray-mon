@@ -4,6 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { AUTO_SLNKO, BOJLER, PLAN_ZIVE, PLANT, SITE, TARIFF, UCENIE } from '../shared/config.js';
 import { autoDenZ, autoDna, autoDnes, autoKrok, autoKwh, domDnes } from '../shared/auto-slnko.js';
+import { autoDlazdicaNabija } from '../shared/auto-nabija.js';
 import { terazAutoText } from '../shared/messages.js';
 import { kmOf } from '../shared/mozem-jadro.js';
 import { terazModel } from '../shared/teraz.js';
@@ -114,11 +115,26 @@ test('dlaždica auta na karte Teraz: dnes zamrazené číslo, iný deň odhad, b
     const autoDen = { d: D, kwh: 12.37, km: 70, vecer: false };
     const devices = ['pracka', 'auto'];
     const dnes = terazModel(vstup('13:00', { autoDen }), { devices }).co;
-    assert.deepEqual(dnes?.auto, { ...terazAutoText(autoDen), podiel: 100 });
+    assert.deepEqual(dnes?.auto, { ...terazAutoText(autoDen), podiel: 100, detail: false });
     assert.deepEqual(dnes?.auto?.odr, ['12,4 kWh zo slnka', 'odhad na celý deň']);
     assert.deepEqual([dnes?.auto?.velky, dnes?.auto?.za], ['~70', 'km']);
     assert.equal(terazModel(vstup('13:00', { autoDen: { ...autoDen, d: '2026-09-04' } }), { devices }).co?.auto, null, 'včerajšie nie');
     assert.equal(terazModel(vstup('13:00', { autoDen }), { devices: ['pracka'] }).co?.auto, null, 'bez auta doma');
+});
+
+test('dlaždica auta na karte Teraz: kým sa auto asi nabíja, je o behu (T2) a otvorí panel; iný deň nie', () => {
+    const autoDen = { d: D, kwh: 12.37, km: 70, vecer: false };
+    const devices = ['pracka', 'auto'];
+    const now = at('13:00').getTime();
+    const beh = { m: now - 60 * 60000, k: null, wh: 7200, whSiet: 0, kw: 7.2, q: [] };
+    const autoNabija = { at: now - 60000, behy: [beh] };
+    const dnes = terazModel(vstup('13:00', { autoDen, autoNabija }), { devices }).co?.auto;
+    assert.deepEqual(dnes, { ...autoDlazdicaNabija(beh, SITE.timezone), detail: true });
+    const hotovy = terazModel(vstup('13:00', { autoDen, autoNabija: { ...autoNabija, behy: [{ ...beh, k: now }] } }), { devices }).co?.auto;
+    assert.deepEqual(hotovy, { ...terazAutoText(autoDen), podiel: 100, detail: true }, 'po nabíjaní slnko dňa, panel ostáva');
+    const zajtra = terazModel(vstup('13:00', { autoDen, autoNabija }), { devices, den: 1 }).co?.auto;
+    assert.equal(zajtra?.detail, false);
+    assert.equal(zajtra?.odr[1], 'odhad na celý deň');
 });
 
 test('dlaždica auta na karte Teraz: iný deň odhad z jeho predpovede, deň bez slnka prázdny pásik', () => {

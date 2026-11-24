@@ -15,11 +15,14 @@
 // Behy „Už beží“, ktoré si telefóny domácnosti zdieľajú (docs/navrhy/bezi-spolocne.html, shared/bezi.js), cez /bezi - za
 // HISTORIA.dni dní, telefón dostane len dnešok. Model učenia (docs/navrhy/ucenie-vo-workeri.html, shared/ucenie.js) cez
 // /ucenie: snímky predpovede od telefónov (`hs:`), od kedy sa učí (`uo:`) a model počítaný raz za deň (`um:`).
+// Nabíjanie auta (docs/navrhy/auto-nabija.html, shared/auto-nabija.js): z každého nového merania stav a behy (`an:`),
+// pri začiatku a konci push telefónom, ktoré si to zapli (`ao:`). Appka si stav vezme cez /auto.
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
 
 import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
+import { autoTiche, krokAuta } from '../../shared/auto-nabija.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zariadenieBojlera, zmenaOhrevu } from '../../shared/bojler.js';
 import { zapisZmeny } from '../../shared/bezi.js';
 import { hranicaZ, pridajTeplotu, strazVodu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
@@ -27,7 +30,7 @@ import { domBezBojlera, sBojlerom, zapisMeranie, zlucBehy, zlucSnimky } from '..
 import { NB } from '../../shared/huawei-nb.js';
 import { localDateKey } from '../../shared/solar.js';
 import { naucene, spolocneOd } from '../../shared/ucenie.js';
-import { bojlerZmenaText } from '../../shared/messages-oznamenia.js';
+import { autoZmenaText, bojlerZmenaText } from '../../shared/messages-oznamenia.js';
 import { posliPush, vapidKlic } from './webpush.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
@@ -38,6 +41,7 @@ import { ZdrojChyba, ZDROJE } from './zdroje.js';
 const OPRAVA = { od: '2026-11-23', do: '2026-12-01' };
 /** @typedef {import('../../shared/historia.js').DenHistorie} DenHistorie */
 /** Odber telefónu s oznámeniami bojlera. @typedef {{ e: string, keys: { p256dh: string, auth: string } }} OdberBojlera */
+/** Odber oznámení o nabíjaní auta: začiatok `z`, koniec `k`. @typedef {OdberBojlera & { z: boolean, k: boolean }} OdberAuta */
 /** @typedef {{ get: (k: string) => Promise<unknown>, put: (k: string | Record<string, unknown>, v?: unknown) => Promise<void> }} Uloziste */
 
 // Polia relácie: spoločné pre všetky elektrárne účtu. Heslo sa neukladá nikde.
@@ -74,24 +78,20 @@ export class UcetHuawei {
         const now = new Date(req.now);
         try {
             const path = new URL(request.url).pathname;
-            const body =
-                path === '/bojler'
-                    ? await this.bojler(req, now)
-                    : path === '/rezim'
-                      ? await this.rezim(req, now)
-                      : path === '/hranica'
-                        ? await this.hranica(req, now)
-                        : path === '/stav'
-                          ? await this.stav(req, now)
-                          : path === '/oznam'
-                            ? await this.oznam(req)
-                            : path === '/historia'
-                              ? await this.historia(req)
-                              : path === '/bezi'
-                                ? await this.behy(req)
-                                : path === '/ucenie'
-                                  ? await this.ucenie(req, now)
-                                  : await this.pv(req.pristup, now);
+            /** @type {Record<string, () => Promise<unknown>>} */
+            const cesty = {
+                '/bojler': () => this.bojler(req, now),
+                '/rezim': () => this.rezim(req, now),
+                '/hranica': () => this.hranica(req, now),
+                '/stav': () => this.stav(req, now),
+                '/oznam': () => this.oznam(req),
+                '/historia': () => this.historia(req),
+                '/bezi': () => this.behy(req),
+                '/ucenie': () => this.ucenie(req, now),
+                '/auto': () => this.auto(req),
+                '/auto-oznam': () => this.autoOznam(req),
+            };
+            const body = await (Object.hasOwn(cesty, path) ? cesty[path]() : this.pv(req.pristup, now));
             return Response.json(body);
         } catch (err) {
             const z = err instanceof ZdrojChyba ? err : new ZdrojChyba('vyrobca');
@@ -136,15 +136,18 @@ export class UcetHuawei {
         const res = await ZDROJE['huawei-northbound'].meraj(p, { now, fetchImpl: this.fetchImpl });
         const novy = res.pristup ?? p;
         const plant = String(p.plant ?? '');
+        const auto = await this.doAuta(plant, res.pv, now);
         /** @type {Record<string, unknown>} */ const zapis = {
             [`m:${plant}`]: { at: now.getTime(), pv: res.pv },
             ...(await this.doHistorie(plant, res.pv, now)),
+            [`an:${plant}`]: auto.stav,
         };
         if (res.pristup) {
             zapis[`p:${plant}`] = bez(novy, BEZ_ULOZENIA);
             if (novy.tokenAt !== p.tokenAt) zapis.relacia = vyber(novy, RELACIA);
         }
         await this.storage.put(zapis);
+        if (auto.zmena) await this.oznamAuto(plant, auto.zmena, now);
         return { pv: res.pv, pristup: novy };
     }
 
@@ -166,6 +169,76 @@ export class UcetHuawei {
             ...(r.dni !== dni ? { [`hd:${plant}`]: r.dni } : {}),
             ...(minulyDen ? { [`um:${plant}`]: null } : {}),
         };
+    }
+
+    /**
+     * Nové meranie do stavu nabíjania auta (shared/auto-nabija.js, krokAuta): dom bez bojlera podľa posledného hlásenia
+     * zásuvky - ten istý ako v histórii. Vráti nový stav a zmenu na oznámenie.
+     * @param {string} plant @param {PvData} pv @param {Date} now
+     */
+    async doAuta(plant, pv, now) {
+        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        const stav = /** @type {import('../../shared/auto-nabija.js').StavAuta | undefined} */ (await this.storage.get(`an:${plant}`));
+        const domKw = domBezBojlera(pv.realTimePowerKw, pv.sietKw, bojler, now.getTime());
+        const sietKw = typeof pv.sietKw === 'number' && Number.isFinite(pv.sietKw) ? pv.sietKw : null;
+        return krokAuta(stav ?? null, { at: now.getTime(), domKw, sietKw });
+    }
+
+    /**
+     * Stav nabíjania auta pre appku: posledné meranie a behy (bez počítadiel rozhodovania). Na Huawei nejde nič.
+     * @param {{ pristup: Record<string, unknown> }} req
+     */
+    async auto(req) {
+        const stav = /** @type {import('../../shared/auto-nabija.js').StavAuta | undefined} */ (
+            await this.storage.get(`an:${String(req.pristup.plant ?? '')}`)
+        );
+        return { auto: stav ? { at: stav.at, behy: stav.behy } : null };
+    }
+
+    /**
+     * Oznámenia o nabíjaní auta od appky: odber telefónu so začiatkom (`z`) a koncom (`k`); bez oboch ho odoberie.
+     * Najviac PUSH_TEXT.maxOdberov na elektráreň, najstarší ide preč.
+     * @param {{ pristup: Record<string, unknown>, endpoint: string, keys: OdberBojlera['keys'] | null, z: boolean, k: boolean }} req
+     */
+    async autoOznam(req) {
+        const kluc = `ao:${String(req.pristup.plant ?? '')}`;
+        const stare = /** @type {OdberAuta[]} */ ((await this.storage.get(kluc)) ?? []).filter((o) => o.e !== req.endpoint);
+        const novy = req.keys && (req.z || req.k) ? [{ e: req.endpoint, keys: req.keys, z: req.z, k: req.k }] : [];
+        await this.storage.put(kluc, [...stare, ...novy].slice(-PUSH_TEXT.maxOdberov));
+        return { ok: true };
+    }
+
+    /**
+     * Push o začiatku či konci nabíjania telefónom, ktoré ho chcú; v noci potichu (autoTiche, N3).
+     * @param {string} plant @param {import('../../shared/auto-nabija.js').ZmenaAuta} zmena @param {Date} now
+     */
+    async oznamAuto(plant, zmena, now) {
+        const kluc = `ao:${plant}`;
+        const odbery = /** @type {OdberAuta[]} */ ((await this.storage.get(kluc)) ?? []);
+        const komu = odbery.filter((o) => (zmena.zacal ? o.z : o.k));
+        const tiche = autoTiche(now.getTime(), NB.pasmo) ? { tiche: true } : {};
+        await this.posliVsetkym(kluc, odbery, komu, { ...autoZmenaText(zmena, NB.pasmo), ...tiche, tag: OZNAMENIA.auto }, now);
+    }
+
+    /**
+     * Push s textom (`data`) odberom `komu` zo zoznamu `odbery` pod kľúčom `kluc`. Odber, ktorý push služba už nepozná
+     * (404, 410), zo zoznamu zmaže.
+     * @template {OdberBojlera} T @param {string} kluc @param {T[]} odbery @param {T[]} komu
+     * @param {Record<string, unknown>} data @param {Date} now
+     */
+    async posliVsetkym(kluc, odbery, komu, data, now) {
+        if (!komu.length || !this.env.VAPID_JWK) return;
+        const klic = await vapidKlic(this.env.VAPID_JWK);
+        /** @type {string[]} */ const neplatne = [];
+        for (const o of komu) {
+            const status = await posliPush(o.e, klic, now, this.fetchImpl, { data, keys: o.keys }).catch(() => 0);
+            if (status === 404 || status === 410) neplatne.push(o.e);
+        }
+        if (neplatne.length)
+            await this.storage.put(
+                kluc,
+                odbery.filter((o) => !neplatne.includes(o.e)),
+            );
     }
 
     /**
@@ -426,19 +499,7 @@ export class UcetHuawei {
      */
     async oznamZmenu(plant, text, now) {
         const odbery = /** @type {OdberBojlera[]} */ ((await this.storage.get(`bo:${plant}`)) ?? []);
-        if (!odbery.length || !this.env.VAPID_JWK) return;
-        const klic = await vapidKlic(this.env.VAPID_JWK);
-        const data = { ...text, tag: OZNAMENIA.bojler };
-        /** @type {string[]} */ const neplatne = [];
-        for (const o of odbery) {
-            const status = await posliPush(o.e, klic, now, this.fetchImpl, { data, keys: o.keys }).catch(() => 0);
-            if (status === 404 || status === 410) neplatne.push(o.e);
-        }
-        if (neplatne.length)
-            await this.storage.put(
-                `bo:${plant}`,
-                odbery.filter((o) => !neplatne.includes(o.e)),
-            );
+        await this.posliVsetkym(`bo:${plant}`, odbery, odbery, { ...text, tag: OZNAMENIA.bojler }, now);
     }
 
     /**

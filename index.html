@@ -1129,6 +1129,40 @@
             </div>
         </dialog>
 
+        <!-- Auto (docs/navrhy/auto-nabija.html, P2): otvorí ho dlaždica Auto, kým appka vie o nabíjaní od Workera. Čo sa deje
+             teraz, os dňa s výrobou a behmi, posledný beh, posledné nabíjania, súčty a oznámenia o začiatku a konci. -->
+        <dialog id="tz-auto-sheet" class="sheet vec-sheet bojler-sheet auto-sheet" aria-labelledby="tz-auto-ttl">
+            <div class="sheet-in">
+                <div class="vec-top">
+                    <span id="tz-auto-ico" class="vec-ico" aria-hidden="true"></span>
+                    <div>
+                        <h2 id="tz-auto-ttl"></h2>
+                        <p id="tz-auto-pod" class="bj-pod"></p>
+                    </div>
+                </div>
+                <div class="bj-graf">
+                    <div id="tz-auto-os" role="img"></div>
+                </div>
+                <div id="tz-auto-beh" class="au-beh"></div>
+                <div id="tz-auto-energia" class="bj-energia"></div>
+                <div id="tz-auto-behy-b" class="au-behy">
+                    <p id="tz-auto-behy-n" class="bj-nast-n"></p>
+                    <div id="tz-auto-behy" class="bj-behy"></div>
+                </div>
+                <div id="tz-auto-sucty" class="au-sucty"></div>
+                <button type="button" id="tz-auto-oznam-z" class="bj-oznam" role="switch" aria-checked="false">
+                    <span id="tz-auto-oznam-z-t"></span>
+                    <i class="tg" aria-hidden="true"></i>
+                </button>
+                <button type="button" id="tz-auto-oznam-k" class="bj-oznam au-oznam-k" role="switch" aria-checked="false">
+                    <span id="tz-auto-oznam-k-t"></span>
+                    <i class="tg" aria-hidden="true"></i>
+                </button>
+                <p id="tz-auto-oznam-chyba" class="wz-msg hidden" role="status"></p>
+                <p id="tz-auto-pozn" class="au-pozn"></p>
+            </div>
+        </dialog>
+
         <!-- Elektrina teraz (docs/navrhy/teraz-auto-tok.html, T3): otvorí ho druhé ťuknutie na scénu karty Teraz (s elektromerom).
              Panely, dom a sieť s hodnotami, po vedeniach tečú bodky. -->
         <dialog id="tz-tok-sheet" class="sheet vec-sheet tok-sheet" aria-labelledby="tz-tok-ttl">

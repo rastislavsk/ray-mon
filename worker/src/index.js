@@ -22,11 +22,15 @@
 // POST /historia: pečať telefónu -> história elektrárne pre učenie Plánu dňa (worker/src/ucet.js, shared/historia.js).
 // POST /bezi: pečať telefónu, dnešok a zmeny „Už beží“ -> dnešné behy všetkých telefónov domácnosti (worker/src/ucet.js).
 // POST /ucenie: pečať telefónu, snímky predpovede a „Začať odznova“ -> model učenia Plánu dňa (worker/src/ucet.js).
+// POST /auto: pečať telefónu -> stav a behy nabíjania auta, bez merania (docs/navrhy/auto-nabija.html, worker/src/ucet.js).
+// POST /auto-oznamenia: telefón si zapne či vypne oznámenia o začiatku a konci nabíjania auta (worker/src/ucet.js).
 //
 // Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
 // navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
 
 import {
+    WORKER_AUTO_OZNAM_PATH,
+    WORKER_AUTO_PATH,
     WORKER_BOJLER_PATH,
     WORKER_BOJLER_PECAT_PATH,
     WORKER_BOJLER_OZNAM_PATH,
@@ -346,6 +350,53 @@ export async function handleBojlerOznam(request, env, now) {
 }
 
 /**
+ * POST /auto-oznamenia: `{ pecat, endpoint, keys, z, k }` od appky (pečať telefónu) -> `{ ok }`. Tomuto telefónu zapne
+ * oznámenia o začiatku (`z`) a konci (`k`) nabíjania auta; bez oboch ich vypne (docs/navrhy/auto-nabija.html).
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleAutoOznam(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    const odber = odberAuta(req);
+    if (!obsah || !odber) return json(400, { chyba: 'udaje' });
+    try {
+        await ucet(env.UCTY, obsah.pristup, '/auto-oznam', now, odber);
+        return json(200, { ok: true });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
+ * Odber oznámení o nabíjaní z dopytu appky: adresa, kľúče (bez nich len vypnutie oboch) a voľby `z`, `k`; inak null.
+ * @param {any} req
+ */
+function odberAuta(req) {
+    const keys = klucOdberu(req?.keys);
+    if (!platnyOdber(req?.endpoint) || typeof req.z !== 'boolean' || typeof req.k !== 'boolean') return null;
+    return (req.z || req.k) && !keys ? null : { endpoint: req.endpoint, keys, z: req.z, k: req.k };
+}
+
+/**
+ * POST /auto: `{ pecat }` od appky (pečať telefónu) -> `{ auto }`, stav a behy nabíjania auta (null, kým objekt nič
+ * nenameral). Appka sa pýta pri každej obnove dát, na Huawei nejde nič.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleAuto(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { obsah } = await dopytBojlera(request, key, now);
+    if (!obsah) return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/auto', now);
+        return json(200, { auto: r.auto ?? null });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
  * POST /bojler-rezim: `{ pecat, rucne }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ ok, bojler }`.
  * V ručnom režime skript v zásuvke relé neprepína, len hlási (docs/navrhy/teraz-auto-tok.html).
  * @param {Request} request @param {Env} env @param {Date} now
@@ -491,6 +542,9 @@ const CESTY = {
     [WORKER_PRIPOMEN_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozPripomienku(body, env, now), request) },
     [WORKER_KONIEC_PATH]: { limit: true, run: (request, env, now) => oznam((body) => ulozKoniec(body, env, now), request) },
     [WORKER_BOJLER_OZNAM_PATH]: { limit: true, run: handleBojlerOznam },
+    // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
+    [WORKER_AUTO_PATH]: { limit: false, run: handleAuto },
+    [WORKER_AUTO_OZNAM_PATH]: { limit: true, run: handleAutoOznam },
     [WORKER_HISTORIA_PATH]: { limit: true, run: handleHistoria },
     // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
     [WORKER_BEZI_PATH]: { limit: false, run: handleBezi },

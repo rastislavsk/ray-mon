@@ -3,6 +3,7 @@
 // Dnešok a kedy lepšie (dnesCards) berie karta Dnes (shared/dnes-faza.js). Čisté funkcie,
 // čas aj dáta prichádzajú v parametroch. Texty sú v shared/messages.js.
 
+import { autoDlazdicaNabija, nabijaSa } from './auto-nabija.js';
 import { autoDna } from './auto-slnko.js';
 import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
 import { interpolate } from './chart-model.js';
@@ -42,7 +43,7 @@ import { domProfil } from './ucenie.js';
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
  *   known: import('./settings.js').Known, previewMinutes: number | null,
  *   pristup?: import('./pristup.js').Odmietnutie | null, vecNavrh?: { id: string, min: number } | null,
- *   autoDen?: import('./auto-slnko.js').AutoDen | null }} TerazInput
+ *   autoDen?: import('./auto-slnko.js').AutoDen | null, autoNabija?: import('./auto-nabija.js').AutoInfo | null }} TerazInput
  * @typedef {import('./day-chart.js').Tone} Tone
  */
 
@@ -116,10 +117,15 @@ function tyzdenOf(input, rows, teraz, { span, devices, den, voice }) {
 /**
  * Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html, Z1): dnes to, čo telefón ráno zamrazil a večer
  * prepísal (`autoDen`, web/auto-den.js; kým ho nemá, dlaždica nie je), iný deň (`index`) odhad z jeho predpovede.
- * Pásik je celý žltý - je to celé zo slnka; bez energie prázdny.
+ * Pásik je celý žltý - je to celé zo slnka; bez energie prázdny. Dnes, keď sa auto asi nabíja (docs/navrhy/auto-nabija.html,
+ * T2), je dlaždica o behu - km, ktoré pribudli, od kedy a výkon; pásik podiel slnka v behu. Kým appka vie o nabíjaní
+ * (`autoNabija` od Workera), dnešná dlaždica otvorí panel Auto (`detail`).
  * @param {TerazInput} input @param {number} index
  */
 function autoDlazdica(input, index) {
+    const detail = index === 0 && !!input.autoNabija;
+    const beh = index === 0 ? nabijaSa(input.autoNabija, input.now.getTime()) : null;
+    if (beh) return { ...autoDlazdicaNabija(beh, input.site.timezone), detail };
     const dnes = localDateKey(input.now, input.site.timezone);
     const den = input.forecast?.days[index];
     const a =
@@ -128,7 +134,7 @@ function autoDlazdica(input, index) {
             : input.autoDen?.d === dnes
               ? input.autoDen
               : null;
-    return a && { ...terazAutoText(a), podiel: a.kwh > 0 ? 100 : null };
+    return a && { ...terazAutoText(a), podiel: a.kwh > 0 ? 100 : null, detail };
 }
 
 /**

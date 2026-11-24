@@ -54,6 +54,9 @@
     --yes: #b9f28c;
     --cheap: #7cc4ff;
     --costly: #ff7a66;
+    /* Auto sa asi nabíja (docs/navrhy/auto-nabija.html): oranžová ikona namiesto zelenej - je to odhad zo spotreby
+       domu, nie zapnutie, o ktorom appka vie naisto. */
+    --nabija: #ffb35c;
     --ink: #0b1430;
     /* Čitateľnosť (WCAG, aspoň 4,5 : 1 pri každej oblohe - test/contrast.test.js ich prejde
        všetky). Text priamo na oblohe je vždy biely: stmavený spodok (--s3) je spočítaný práve

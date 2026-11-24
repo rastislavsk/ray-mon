@@ -476,6 +476,28 @@ export const AUTO_SLNKO = { minKw: 4.1, vecerMin: 15 };
 export const AUTO_DEN_STORAGE_KEY = 'auto-den-v1';
 
 /**
+ * Auto sa asi nabíja (docs/navrhy/auto-nabija.html, D2 + R2 + T2 + N3 + P2, 24. 11. 2026). Auto sa appke neozýva - Durable
+ * Object účtu Huawei to odhaduje z každého nového merania: spotreba domu bez bojlera aspoň AUTO_SLNKO.minKw (pod ním nabíjačka
+ * nenabíja) `merani` merania za sebou = začalo, pod `skonciKw` `merani` merania za sebou = skončilo. Medzi meraniami nesmie
+ * byť medzera nad `medzeraMin` - po nej sa počíta odznova. Výkon auta = dom bez bojlera mínus dom tesne pred nabíjaním
+ * (najviac `zakladMaxKw`). Behy drží `dni` dní, najviac `maxBehov`. Stav bez merania dlhšie než `platnostMin` appka
+ * neukáže ako nabíjanie. Oznámenia od `nocOd` do `nocDo` hodiny prídu potichu (N3).
+ */
+export const AUTO_NABIJA = {
+    skonciKw: 3.5,
+    merani: 2,
+    medzeraMin: 15,
+    zakladMaxKw: 1.5,
+    dni: 7,
+    maxBehov: 40,
+    platnostMin: 30,
+    nocOd: 22,
+    nocDo: 6,
+};
+/** Oznámenia o nabíjaní auta na tomto telefóne: { z: začiatok, k: koniec } (prepínače v paneli Auto). */
+export const AUTO_OZNAM_STORAGE_KEY = 'auto-oznam-v1';
+
+/**
  * Hodiny, v ktorých karta Predpoveď na karte Dnes hľadá zrážky (od `od` do `do` bez nej): deň, ako ho
  * ľudia žijú, nie len svetlo - dážď o siedmej večer patrí do predpovede, o tretej v noci nie.
  */
@@ -756,6 +778,7 @@ export const STORAGE_KEYS = [
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
     AUTO_DEN_STORAGE_KEY,
+    AUTO_OZNAM_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
@@ -860,6 +883,12 @@ export const WORKER_BOJLER_HRANICA_PATH = '/bojler-hranica';
 export const WORKER_BOJLER_HRANICA_URL = new URL(WORKER_BOJLER_HRANICA_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_STAV_PATH = '/bojler-stav';
 export const WORKER_BOJLER_STAV_URL = new URL(WORKER_BOJLER_STAV_PATH, WORKER_URL).href;
+// Auto sa nabíja (docs/navrhy/auto-nabija.html): `/auto` vráti appke stav a behy nabíjania z Durable Objectu účtu (bez
+// merania, appka sa pýta pri každej obnove dát), `/auto-oznamenia` zapne či vypne telefónu oznámenia o začiatku a konci.
+export const WORKER_AUTO_PATH = '/auto';
+export const WORKER_AUTO_URL = new URL(WORKER_AUTO_PATH, WORKER_URL).href;
+export const WORKER_AUTO_OZNAM_PATH = '/auto-oznamenia';
+export const WORKER_AUTO_OZNAM_URL = new URL(WORKER_AUTO_OZNAM_PATH, WORKER_URL).href;
 /**
  * História elektrárne z Durable Objectu účtu Huawei (docs/navrhy/plan-dna-ucenie.html). Model učenia z nej počíta Worker
  * (WORKER_UCENIE_PATH); appka si ju stiahne raz za deň po západe slnka - dnešné hodiny domu na večerný prepis auta zo
@@ -1020,6 +1049,8 @@ export const OZNAMENIA = {
     // Push o zmene ohrevu bojlera má túto značku a service worker ju pošle aj bežiacej appke ako správu -
     // appka si hneď stiahne stav bojlera, dlaždica nečaká na ďalší minútový dopyt.
     bojler: 'bojler',
+    // Push o začiatku či konci nabíjania auta (docs/navrhy/auto-nabija.html) - service worker ho tiež pošle bežiacej appke.
+    auto: 'auto',
 };
 
 /**

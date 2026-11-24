@@ -8,6 +8,7 @@ import {
     BEHY_HIST_STORAGE_KEY,
     BEZI_STORAGE_KEY,
     BEZI_CAKA_STORAGE_KEY,
+    AUTO_OZNAM_STORAGE_KEY,
     BOJLER_OZNAM_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     DOMA_STORAGE_KEY,
@@ -42,7 +43,7 @@ import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parsePredpovedHist, pridajBehy, snimkaPredpovede } from '../shared/historia.js';
 import { parseHistoria, nauceneZ } from '../shared/ucenie.js';
-import { DATE_RE } from '../shared/valid.js';
+import { DATE_RE, isObj } from '../shared/valid.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { teplomerZ } from '../shared/nastavenie-bojler.js';
 import { parseRanna } from '../shared/den-trieda.js';
@@ -417,6 +418,23 @@ export function zapisSnimkuPredpovede(forecast, date, nowMin) {
     );
     const nova = snimkaPredpovede(hist, forecast, date, nowMin);
     if (nova !== hist) write(PREDPOVED_HIST_STORAGE_KEY, JSON.stringify(nova));
+}
+
+/**
+ * Oznámenia o nabíjaní auta na tomto telefóne (AUTO_OZNAM_STORAGE_KEY): začiatok `z`, koniec `k`; bez úložiska vypnuté.
+ * @returns {{ z: boolean, k: boolean }}
+ */
+export function loadAutoOznam() {
+    return readJson(
+        AUTO_OZNAM_STORAGE_KEY,
+        (v) => (isObj(v) && typeof v.z === 'boolean' && typeof v.k === 'boolean' ? { z: v.z, k: v.k } : { z: false, k: false }),
+        { z: false, k: false },
+    );
+}
+
+/** @param {{ z: boolean, k: boolean }} o @returns {boolean} podarilo sa? */
+export function saveAutoOznam(o) {
+    return write(AUTO_OZNAM_STORAGE_KEY, JSON.stringify({ z: o.z, k: o.k }));
 }
 
 /** Oznámenia bojlera na tomto telefóne zapnuté (BOJLER_OZNAM_STORAGE_KEY); bez úložiska nie. */
