@@ -22,6 +22,28 @@ const MIN = 60 * 1000;
 /** @type {Pamat} */
 export const PAMAT_ZACIATOK = { meranieAt: 0, nad: 0, pod: 0, rele: false, zmenaAt: 0 };
 
+/** ID zariadenia Shelly, ako ho vráti Shelly.getDeviceInfo() (napr. `shellyplugmg3-8cbfea9a1b2c`). */
+const ID_ZARIADENIA = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * Smie hlásenie riadiť bojler? Bojler riadi jedno zariadenie (docs/navrhy/bojler-jedno-zariadenie.html, možnosť C):
+ * prvé s meraním príkonu, ktoré pošle svoje ID, sa pripne (`pripni`) a hlásenia ostatných sa odmietnu - kým sa
+ * pripnuté ozýva (BOJLER.riadenyHod hodín), potom ho smie nahradiť iné. Bez merania príkonu (`w` chýba - napr.
+ * Shelly 1 Gen3 s teplomerom) nikdy: elektromer zásuvky je základ záznamu dňa. Hlásenie bez ID (skript spred ID)
+ * prejde, len kým nie je nič pripnuté.
+ * @param {string | null} pripnute ID pripnutého zariadenia @param {number | null} kontaktAt posledné prijaté hlásenie
+ * @param {{ id: unknown, w: unknown }} hlasenie @param {number} now
+ * @returns {{ prijmi: boolean, pripni: string | null }}
+ */
+export function zariadenieBojlera(pripnute, kontaktAt, hlasenie, now) {
+    const id = typeof hlasenie.id === 'string' && ID_ZARIADENIA.test(hlasenie.id) ? hlasenie.id : null;
+    if (typeof hlasenie.w !== 'number' || !Number.isFinite(hlasenie.w)) return { prijmi: false, pripni: null };
+    const ozyvaSa = pripnute !== null && kontaktAt !== null && now - kontaktAt < BOJLER.riadenyHod * 60 * MIN;
+    if (ozyvaSa) return { prijmi: id === pripnute, pripni: null };
+    if (id === null) return { prijmi: pripnute === null, pripni: null };
+    return { prijmi: true, pripni: id === pripnute ? null : id };
+}
+
 /**
  * Prahy zo skriptu zásuvky, keď dávajú zmysel (v rozsahu a vypnutie aspoň o BOJLER.medzeraKw nižšie),
  * inak predvolené.

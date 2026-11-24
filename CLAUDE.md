@@ -82,6 +82,9 @@ v Nastavení („Hriať do“, kým nie je, hreje sa po termostat), drží ju Wo
 (`maxC`, `minC` = hranica - `BOJLER.vodaHystC`). Pravidlo `strazVodu` (`shared/bojler-voda.js`) má Worker aj skript zásuvky,
 ktorý ho stráži aj bez internetu; bez teploty hranica nič nebráni. V ručnom režime ju nestráži nikto. Termostat na bojleri
 je nastavený vyššie ako poistka.
+Bojler riadi jedno zariadenie (`docs/navrhy/bojler-jedno-zariadenie.html`, C + D, 24. 11. 2026): skript posiela
+`Shelly.getDeviceInfo().id`, Worker pripne prvú zásuvku s meraním príkonu (`bd:`, `zariadenieBojlera` v `shared/bojler.js`)
+a ostatným vráti 409; hlásenie bez `w` (Shelly 1 Gen3 s teplomerom) neprejde nikdy. Skript patrí len do zásuvky.
 
 ## Spotrebič beží
 

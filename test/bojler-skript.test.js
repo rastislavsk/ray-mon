@@ -17,6 +17,7 @@ function zasuvka(kod, odpoved, teplomer) {
     /** @type {any[]} */ const dopyty = [];
     /** @type {Array<() => void>} */ const casovace = [];
     const Shelly = {
+        getDeviceInfo: () => ({ id: 'shellyplugmg3-abc123', model: 'S3PL-30116EU' }),
         getComponentStatus: (/** @type {string} */ typ) => (typ === 'switch' ? { ...z } : null),
         call: (/** @type {string} */ metoda, /** @type {any} */ p, /** @type {any} */ cb) => {
             if (metoda === 'Switch.Set') {
@@ -44,14 +45,14 @@ function zasuvka(kod, odpoved, teplomer) {
 
 const PECAT = 'v1.abc_DEF-123.xyz';
 
-test('skript: pošle pečať, relé, príkon, počítadlo a prahy, poslúchne Worker', () => {
+test('skript: pošle pečať, ID zariadenia, relé, príkon, počítadlo a prahy, poslúchne Worker', () => {
     const kod = /** @type {string} */ (skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT, zapKw: 2.3, vypKw: 2 }));
     let zapni = true;
     const s = zasuvka(kod, () => ({ code: 200, body: JSON.stringify({ zapni }) }));
     assert.equal(s.dopyty.length, 1, 'hneď po spustení');
     assert.deepEqual(s.dopyty[0], {
         url: WORKER_BOJLER_URL,
-        telo: { pecat: PECAT, rele: false, w: 0, e: 1234.5, zapKw: 2.3, vypKw: 2 },
+        telo: { pecat: PECAT, id: 'shellyplugmg3-abc123', rele: false, w: 0, e: 1234.5, zapKw: 2.3, vypKw: 2 },
     });
     assert.equal(s.z.output, true);
     s.minuta();
@@ -71,8 +72,12 @@ test('skript: bez odpovede drží stav a po BOJLER.tichoMin minútach vypne', ()
     assert.equal(s.z.output, true, `${BOJLER.tichoMin - 1} minút bez odpovede ešte drží`);
     s.minuta();
     assert.equal(s.z.output, false);
-    // Odpoveď 502 a nezmysel v tele sa rátajú ako ticho.
+    // Odpoveď 502, 409 (iné zariadenie, docs/navrhy/bojler-jedno-zariadenie.html) a nezmysel v tele sa rátajú ako ticho.
     const z = zasuvka(kod, () => ({ code: 502, body: 'x' }));
+    const ine = zasuvka(kod, () => ({ code: 409, body: '{"chyba":"zariadenie"}' }));
+    ine.z.output = true;
+    for (let i = 0; i < BOJLER.tichoMin; i++) ine.minuta();
+    assert.equal(ine.z.output, false, 'odmietnuté zariadenie po tichu vypne svoje relé');
     const n = zasuvka(kod, () => ({ code: 200, body: 'nie json' }));
     assert.deepEqual([z.z.output, n.z.output], [false, false]);
 });

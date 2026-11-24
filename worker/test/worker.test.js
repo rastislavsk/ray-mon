@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { ZDIELANIE } from '../../shared/config.js';
+import { BOJLER, ZDIELANIE } from '../../shared/config.js';
 import {
     handleBezi,
     handleBojler,
@@ -1323,6 +1323,66 @@ test('história: Durable Object skladá hodiny z meraní a deň bojlera, telefó
     assert.equal((await handleHistoria(post('/historia', 'nie json'), env, NOW)).status, 400);
     assert.equal((await handleHistoria(post('/historia', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
     assert.equal((await handleRequest(post('/historia', JSON.stringify({ pecat: telefon })), env, po(14 * 60))).status, 200);
+});
+
+test('jedno zariadenie: bojler riadi prvá zásuvka s ID, iné a bez merania príkonu dostanú 409', async () => {
+    const { env, zasuvka } = await sBojlerom({ sietW: () => 2500 });
+    const hlas = (/** @type {object} */ telo, /** @type {number} */ min) =>
+        handleBojler(bojlerReq({ pecat: zasuvka, rele: false, e: 100, ...telo }), env, po(min));
+    // Shelly 1 Gen3 s teplomerom príkon nemeria: nič nezapíše, ani bez ID.
+    assert.equal((await hlas({ id: 'shelly1g3-aa' }, 1)).status, 409);
+    assert.equal((await hlas({}, 1)).status, 409);
+    // Starý skript bez ID prejde, kým nie je nič pripnuté.
+    assert.equal((await hlas({ w: 0 }, 2)).status, 200);
+    assert.equal((await hlas({ id: 'plugmg3-a', w: 0 }, 3)).status, 200, 'prvá s ID sa pripne');
+    assert.equal((await hlas({ id: 'plugmg3-b', w: 0 }, 4)).status, 409, 'druhá zásuvka nie');
+    assert.equal((await hlas({ w: 0 }, 4)).status, 409, 'ani starý skript bez ID');
+    const r = await hlas({ id: 'plugmg3-a', w: 0 }, 5);
+    assert.deepEqual([r.status, (await r.json()).rucne], [200, false]);
+    // Pripnutá mlčí BOJLER.riadenyHod hodín: nahradí ju iná.
+    assert.equal((await hlas({ id: 'plugmg3-b', w: 0 }, 5 + BOJLER.riadenyHod * 60)).status, 200);
+    assert.equal((await hlas({ id: 'plugmg3-a', w: 0 }, 6 + BOJLER.riadenyHod * 60)).status, 409);
+});
+
+test('jednorazová oprava: prvé hlásenie zahodí históriu od 23. 11. 2026, bežiacu hodinu a dnešný záznam bojlera', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom();
+    await handlePv(pvRequest(telefon), env, po(1), s.impl);
+    const { u } = /** @type {any} */ ([...env.UCTY.objekty.values()][0]);
+    const plant = [...u.m.keys()].find((/** @type {string} */ k) => k.startsWith('m:')).slice(2);
+    const den = (/** @type {string} */ d) => ({ d, h: [], b: { wh: 1, hotovo: false } });
+    u.m.set(`hd:${plant}`, [den('2026-11-22'), den('2026-11-23'), den('2026-11-24')]);
+    u.m.set(`hh:${plant}`, { d: '2026-11-24', hod: 5, t: 1, v: [], dom: [] });
+    const beh = { od: 0, do: null, wh: 9e6, whSiet: 0, e0: 0, hrejeMin: 0 };
+    const den24 = { den: '2026-11-24', behy: [beh], hotovo: null, posledneAt: 0 };
+    u.m.set(`b:${plant}`, { kontaktAt: po(1).getTime(), rele: true, w: 2000, prahy: {}, den: den24 });
+    // Pred 23. 11. sa oprava nespustí (ostatné testy bežia v septembri).
+    await handleBojler(bojlerReq({ pecat: zasuvka, id: 'plugmg3-a', rele: true, w: 2000, e: 400 }), env, po(2));
+    assert.equal(u.m.get(`hd:${plant}`).length, 3);
+    u.m.set(`b:${plant}`, { kontaktAt: po(1).getTime(), rele: true, w: 2000, prahy: {}, den: den24 });
+    const v24 = new Date('2026-11-24T05:30:00Z');
+    await handleBojler(bojlerReq({ pecat: zasuvka, id: 'plugmg3-a', rele: true, w: 2000, e: 500 }), env, v24);
+    assert.deepEqual(
+        u.m.get(`hd:${plant}`).map((/** @type {any} */ d) => d.d),
+        ['2026-11-22'],
+    );
+    assert.equal(u.m.get(`hh:${plant}`).v.length, 1, 'bežiaca hodina začala odznova s novým meraním');
+    assert.deepEqual(
+        u.m.get(`b:${plant}`).den.behy.map((/** @type {any} */ b) => [b.e0, b.wh]),
+        [[500, 0]],
+        'nový beh od terajška',
+    );
+    // Druhý raz nič: história ostáva.
+    u.m.set(`hd:${plant}`, [den('2026-11-25')]);
+    await handleBojler(bojlerReq({ pecat: zasuvka, id: 'plugmg3-a', rele: true, w: 2000, e: 600 }), env, new Date(v24.getTime() + 60000));
+    assert.equal(u.m.get(`hd:${plant}`).length, 1);
+    // Po 1. 12. sa už nespustí ani na novom objekte.
+    const druhy = await sBojlerom();
+    await handleBojler(bojlerReq({ pecat: druhy.zasuvka, w: 0, e: 1 }), druhy.env, new Date('2026-12-01T00:00:00Z'));
+    const du = /** @type {any} */ ([...druhy.env.UCTY.objekty.values()][0]).u;
+    assert.equal(
+        [...du.m.keys()].some((/** @type {string} */ k) => k.startsWith('oprava1:')),
+        false,
+    );
 });
 
 test('spoločné behy: telefón zapíše „Už beží“, druhý telefón ho dostane cez /bezi, staršie dni zmiznú', async () => {

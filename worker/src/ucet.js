@@ -18,7 +18,7 @@
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
 
 import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
-import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zmenaOhrevu } from '../../shared/bojler.js';
+import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zariadenieBojlera, zmenaOhrevu } from '../../shared/bojler.js';
 import { zapisZmeny } from '../../shared/bezi.js';
 import { hranicaZ, pridajTeplotu, strazVodu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
 import { domBezBojlera, sBojlerom, zapisMeranie } from '../../shared/historia.js';
@@ -29,6 +29,9 @@ import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
 /** @typedef {import('../../shared/kiosk.js').PvData} PvData */
 /** @typedef {import('../../shared/bojler.js').BojlerInfo} BojlerInfo */
+
+/** Jednorazová oprava histórie po dvoch zariadeniach (opravaDvochZariadeni): od ktorého dňa zahodiť a kedy beží. */
+const OPRAVA = { od: '2026-11-23', do: '2026-12-01' };
 /** @typedef {import('../../shared/historia.js').DenHistorie} DenHistorie */
 /** Odber telefónu s oznámeniami bojlera. @typedef {{ e: string, keys: { p256dh: string, auth: string } }} OdberBojlera */
 /** @typedef {{ get: (k: string) => Promise<unknown>, put: (k: string | Record<string, unknown>, v?: unknown) => Promise<void> }} Uloziste */
@@ -203,19 +206,19 @@ export class UcetHuawei {
      * (rozhodni ho po BOJLER.tichoMin nechá vypnúť).
      * Teplotu vody (`t`) pošle len skript s teplomerom (docs/navrhy/bojler-teplota.html); bez nej ostáva posledná.
      * Hranicu teploty (docs/navrhy/bojler-hranica.html) stráži rovnako ako zásuvka a pošle jej ju (`maxC`, `minC`).
-     * @param {{ pristup: Record<string, unknown>, rele: unknown, w: unknown, e: unknown, prahy: unknown, t?: unknown }} req @param {Date} now
+     * Bojler riadi jedno zariadenie (`bd:`, docs/navrhy/bojler-jedno-zariadenie.html): hlásenie iného či bez merania
+     * príkonu sa odmietne (`odmietnute`) skôr, než sa čokoľvek zmeria či zapíše.
+     * @param {{ pristup: Record<string, unknown>, id?: unknown, rele: unknown, w: unknown, e: unknown, prahy: unknown, t?: unknown }} req
+     * @param {Date} now
      */
     async bojler(req, now) {
         const plant = String(req.pristup.plant ?? '');
-        const pv = await this.meraj(req.pristup, now).then(
-            (r) => r.pv,
-            async () => /** @type {{ pv: PvData } | undefined} */ (await this.storage.get(`m:${plant}`))?.pv ?? null,
-        );
+        if (!(await this.prijmiZariadenie(plant, req, now))) return { odmietnute: true };
+        await this.opravaDvochZariadeni(plant, now);
+        const { sietKw, meranieAt } = await this.meranieBojlera(req.pristup, plant, now);
         const rele = req.rele === true;
         const w = cislo(req.w);
         const prahy = prahyZ(req.prahy);
-        const sietKw = typeof pv?.sietKw === 'number' ? pv.sietKw : null;
-        const meranieAt = pv?.measuredAt ? Date.parse(pv.measuredAt) : 0;
         const pamat = /** @type {import('../../shared/bojler.js').Pamat | undefined} */ (await this.storage.get(`bp:${plant}`));
         const rucne = (await this.storage.get(`br:${plant}`)) === true;
         const stary = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
@@ -254,6 +257,53 @@ export class UcetHuawei {
         if (zmena) await this.oznamZmenu(plant, bojlerZmenaText(zmena), now);
         const minC = v.hranica === null ? null : v.hranica - BOJLER.vodaHystC;
         return { zapni: r.zapni, rucne, prebytokKw: r.prebytokKw, tichoMin: BOJLER.tichoMin, maxC: v.hranica, minC };
+    }
+
+    /**
+     * Dodávka do siete a čas merania pre rozhodnutie bojlera: z nového merania, keď nevyjde, z posledného (bez neho null a 0).
+     * @param {Record<string, unknown>} pristup @param {string} plant @param {Date} now
+     */
+    async meranieBojlera(pristup, plant, now) {
+        const pv = await this.meraj(pristup, now).then(
+            (r) => r.pv,
+            async () => /** @type {{ pv: PvData } | undefined} */ (await this.storage.get(`m:${plant}`))?.pv ?? null,
+        );
+        return {
+            sietKw: typeof pv?.sietKw === 'number' ? pv.sietKw : null,
+            meranieAt: pv?.measuredAt ? Date.parse(pv.measuredAt) : 0,
+        };
+    }
+
+    /**
+     * Smie toto zariadenie riadiť bojler (zariadenieBojlera)? Prvé s meraním a ID si pripne (`bd:`).
+     * @param {string} plant @param {{ id?: unknown, w: unknown }} req @param {Date} now
+     */
+    async prijmiZariadenie(plant, req, now) {
+        const pripnute = /** @type {string | undefined} */ (await this.storage.get(`bd:${plant}`)) ?? null;
+        const predtym = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        const z = zariadenieBojlera(pripnute, predtym?.kontaktAt ?? null, { id: req.id, w: req.w }, now.getTime());
+        if (z.pripni) await this.storage.put(`bd:${plant}`, z.pripni);
+        return z.prijmi;
+    }
+
+    /**
+     * Jednorazová oprava (docs/navrhy/bojler-jedno-zariadenie.html, D): od 23. 11. 2026 hlásil bojler aj Shelly 1 Gen3
+     * s teplomerom (bez merania príkonu), čím pokazil záznam dňa bojlera aj spotrebu domu v histórii. Pri prvom hlásení
+     * po nasadení zahodí z histórie dni od OPRAVA.od, bežiacu hodinu a dnešný záznam bojlera. Zmazať po OPRAVA.do
+     * (docs/to do later.md).
+     * @param {string} plant @param {Date} now
+     */
+    async opravaDvochZariadeni(plant, now) {
+        const t = now.getTime();
+        if (t < Date.parse(OPRAVA.od) || t >= Date.parse(OPRAVA.do) || (await this.storage.get(`oprava1:${plant}`))) return;
+        const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`)) ?? [];
+        const b = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        await this.storage.put({
+            [`oprava1:${plant}`]: now.getTime(),
+            [`hd:${plant}`]: dni.filter((d) => d.d < OPRAVA.od),
+            [`hh:${plant}`]: null,
+            ...(b ? { [`b:${plant}`]: { ...b, den: null } } : {}),
+        });
     }
 
     /**

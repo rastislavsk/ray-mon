@@ -64,6 +64,7 @@ function hlasenie(sTeplotou) {
         "    var sw = Shelly.getComponentStatus('switch', 0);",
         '    var telo = JSON.stringify({',
         '        pecat: PECAT,',
+        '        id: ID,',
         '        rele: sw.output,',
         '        w: sw.apower,',
         '        e: sw.aenergy ? sw.aenergy.total : 0,',
@@ -117,8 +118,8 @@ const KROK_S_TEPLOTOU = [
 ];
 
 /**
- * Text skriptu, alebo null, keď pečať, adresa Workera či teplomer nie je v poriadku. Bez teplomera je skript
- * presne ten, aký bol pred ním (docs/navrhy/bojler-teplota.html, N2).
+ * Text skriptu, alebo null, keď pečať, adresa Workera či teplomer nie je v poriadku. Skript sa vkladá do zásuvky
+ * s bojlerom, nie do Shelly s teplomerom - hlásenie zariadenia bez merania príkonu Worker odmietne.
  * @param {{ url: string, pecat: string, zapKw: number, vypKw: number, teplomer?: { ip: string, heslo: string } | null }} v
  * @returns {string | null}
  */
@@ -151,6 +152,8 @@ export function skriptBojlera(v) {
                   'var nad = false;',
               ]
             : []),
+        // Worker podľa ID prijíma hlásenia len od jednej zásuvky (docs/navrhy/bojler-jedno-zariadenie.html).
+        'var ID = Shelly.getDeviceInfo().id;',
         'var ticho = 0;',
         'var rucne = false;',
         '',
