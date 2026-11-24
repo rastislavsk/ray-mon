@@ -179,6 +179,40 @@ test('bojler s prednosťou: plán ho odsimuluje prvý, práčka ide po ňom, su�
     assert.equal(hotovy.rows.find((/** @type {any} */ r) => r.id === 'pracka').start, predtym.start);
 });
 
+test('pásik bežiaceho spotrebiča: slnko si najprv vezme bojler a skôr zapnutý spotrebič (24. 11. 2026)', () => {
+    const forecast = slabsie(0.4);
+    const devices = ['pracka', 'umyvacka'];
+    const pracka = { id: 'pracka', d: '2026-09-05', m: 570, k: 690 };
+    /** Beh spotrebiča z modelu. @param {object} i @param {string} id */
+    const beh = (i, id) => /** @type {any} */ (planDnaModel(/** @type {any} */ (i), { devices })?.behy.find((b) => b.id === id));
+    const sam = beh(vstup('09:30', null, { forecast, bezi: [pracka] }), 'pracka');
+    // Bojler hreje v ručnom režime od 9:00, práčka zapnutá o 9:30.
+    const hreje = bojlerInfo({
+        kontaktAt: at('09:30').getTime(),
+        rele: true,
+        w: 2000,
+        rucne: true,
+        den: { den: '2026-09-05', behy: [{ od: 540, do: null, wh: 1000, whSiet: 0, e0: 0, hrejeMin: 30 }], hotovo: null, posledneAt: 0 },
+    });
+    const sBojlerom = beh(vstup('09:30', null, { forecast, bezi: [pracka], bojler: hreje }), 'pracka');
+    assert.ok(sBojlerom.podiel < sam.podiel, `${sBojlerom.podiel} < ${sam.podiel}`);
+    // O 9:50 bojler dohrial o 9:40: jeho ohrev je už zo záznamu, práčka slnko z tých minút späť nedostane.
+    const dohrial = bojlerInfo({
+        kontaktAt: at('09:50').getTime(),
+        rele: true,
+        w: 3,
+        rucne: true,
+        den: { den: '2026-09-05', behy: [{ od: 540, do: 580, wh: 1333, whSiet: 0, e0: 0, hrejeMin: 40 }], hotovo: 580, posledneAt: 0 },
+    });
+    const neskor = beh(vstup('09:50', null, { forecast, bezi: [pracka], bojler: dohrial }), 'pracka');
+    assert.ok(neskor.podiel < sam.podiel, `${neskor.podiel} < ${sam.podiel}`);
+    // Umývačka zapnutá po práčke dostane slnko, ktoré ostane po nej.
+    const umyvacka = { id: 'umyvacka', d: '2026-09-05', m: 575, k: 725 };
+    const samotna = beh(vstup('09:40', null, { forecast, bezi: [umyvacka] }), 'umyvacka');
+    const poPracke = beh(vstup('09:40', null, { forecast, bezi: [pracka, umyvacka] }), 'umyvacka');
+    assert.ok(poPracke.podiel < samotna.podiel, `${poPracke.podiel} < ${samotna.podiel}`);
+});
+
 test('texty: po bojleri pri spotrebiči, zapne okolo na dlaždici bojlera, dohreje okolo v paneli', () => {
     const row = /** @type {any} */ ({
         id: 'umyvacka',

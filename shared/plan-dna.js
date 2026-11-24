@@ -206,12 +206,15 @@ function cheapRow(id, start, ctx, input) {
  * Behy z `devices`, ktoré človek dnes zapol („Už beží“, `input.bezi`), podľa začiatku: beží, alebo už dobehol,
  * s podielom slnka z rozpočtu dňa. Zápisy iných dní a spotrebičov, ktoré plán nemá, nič neznamenajú.
  * Zápis zo staršej appky z cache po nasadení nemá koniec - skončí po dĺžke programu.
+ * Slnko si berie najprv bojler riadený zásuvkou (`rezerva`, kW po minútach - bojlerOdberDna), potom behy v poradí
+ * štartu: spotrebič zapnutý počas ohrevu bojlera či po inom nedostane slnko, ktoré si vzali oni (24. 11. 2026).
  * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices
+ * @param {number[] | null} [rezerva]
  * @returns {BehRow[]}
  */
-export function behy(ctx, input, devices) {
+export function behy(ctx, input, devices, rezerva = null) {
     const dnes = localDateKey(input.now, input.site.timezone);
-    const free = Array.from({ length: DAY_MIN }, (_, m) => freeKw(ctx, m));
+    const free = volne(ctx, [], rezerva);
     return (input.bezi ?? [])
         .filter((z) => z.d === dnes && devices.includes(z.id) && daSaZapisat(z.id))
         .sort((a, b) => a.m - b.m)
@@ -220,8 +223,44 @@ export function behy(ctx, input, devices) {
             const end = z.k ?? z.m + /** @type {number} */ (item.runMin);
             const kind = ctx.nowMin < end ? /** @type {const} */ ('run') : /** @type {const} */ ('done');
             const draw = programDraw(item, device.powerKw);
-            return { id: z.id, kind, start: z.m, end, podiel: podielSlnka(draw, free, z.m), draha: podielDrahy(draw, free, z.m, ctx.plan) };
+            const beh = {
+                id: z.id,
+                kind,
+                start: z.m,
+                end,
+                podiel: podielSlnka(draw, free, z.m),
+                draha: podielDrahy(draw, free, z.m, ctx.plan),
+            };
+            draw.forEach(({ kw }, m) => {
+                if (z.m + m < DAY_MIN) free[z.m + m] = Math.max(0, free[z.m + m] - kw);
+            });
+            return beh;
         });
+}
+
+/**
+ * Behy s podielom slnka po bojleri riadenom zásuvkou (`boj`: jeho simulácia od teraz); bez neho `pred`.
+ * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices
+ * @param {BehRow[]} pred @param {{ odber: number[] } | null} boj
+ */
+const behyPoBojleri = (ctx, input, devices, pred, boj) => (boj ? behy(ctx, input, devices, bojlerOdberDna(ctx, input, boj.odber)) : pred);
+
+/**
+ * Odber bojlera riadeného zásuvkou po minútach dňa: do teraz dnešné behy zo záznamu zásuvky (priemerný výkon
+ * z ich energie, bežiaci beh po teraz), od teraz simulácia `buduci` (simulujBojler). Pásik behu tak ostane rovnaký,
+ * aj keď bojler medzitým dohreje.
+ * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {number[]} buduci
+ */
+function bojlerOdberDna(ctx, input, buduci) {
+    const odber = [...buduci];
+    const den = input.bojler?.den;
+    if (!den || den.den !== localDateKey(input.now, input.site.timezone)) return odber;
+    for (const b of den.behy) {
+        const koniec = Math.min(b.do ?? ctx.nowMin, ctx.nowMin);
+        const kw = koniec > b.od ? b.wh / 1000 / ((koniec - b.od) / 60) : 0;
+        for (let m = Math.max(0, b.od); m < koniec; m++) odber[m] = kw;
+    }
+    return odber;
 }
 
 /**
@@ -266,7 +305,8 @@ const zoSieteNatvrdo = (r) =>
 /**
  * Plán dňa (planDna) a k nemu bojler, ktorý riadi zásuvka (bojlerPlanu) - ten riadok nemá, ide pred všetkými.
  * @param {DayCtx} ctx @param {import('./day-plan.js').PlanInput} input @param {readonly string[]} devices
- * @returns {{ rows: PlanRow[], bojler: BojlerPlan | null }}
+ * K tomu behy (`behy`) s podielom slnka po bojleri.
+ * @returns {{ rows: PlanRow[], bojler: BojlerPlan | null, behy: BehRow[] }}
  */
 function planDnaCely(ctx, input, devices) {
     const sim = bojlerPlanu(ctx, input);
@@ -303,6 +343,7 @@ function planDnaCely(ctx, input, devices) {
             return { ...r, podiel: podielSlnka(draw, free, r.start), draha: podielDrahy(draw, free, r.start, ctx.plan) };
         }),
         bojler: boj ? { zapne: boj.zapne, dohreje: boj.dohreje, nahriaty: boj.nahriaty } : null,
+        behy: behyPoBojleri(ctx, input, devices, pred, boj),
     };
 }
 
@@ -542,7 +583,7 @@ export function planDnaModel(input, { devices = PLAN_DNA.devices, voice = 'drzy'
         .sort((a, b) => rowOrder(a) - rowOrder(b))
         .map((row) => ({ ...row, ...planDnaRowText(row, voice), now: row.kind === 'sun' && row.start <= now }))
         .map((row) => ({ ...row, value: planTileText(row).value }));
-    const beh = behy(ctx, input, devices).map((b) => ({ ...b, name: vec(b.id).device.name }));
+    const beh = cely.behy.map((b) => ({ ...b, name: vec(b.id).device.name }));
     return { rows, note: PLAN_DNA_NOTE, behy: beh, bojler: cely.bojler };
 }
 

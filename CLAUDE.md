@@ -157,7 +157,9 @@ ráta s tým istým: appka mu do zrkadla odloží aj `ucenie` a posledný stav b
 (`shared/oznamenia.js`, `docs/navrhy/plan-dna-oznamenie-vt.html`, O2, 24. 11. 2026) - živé meranie nemá.
 
 Pásik dlaždice má tri farby (P1): slnko (`podiel`), lacná či bežná sieť a drahé pásmo (`draha`, `podielDrahy`
-v `shared/plan-dna.js`; bojler `bojlerDrahaDnes`). Auto a bojler bez zásuvky (`cheapGrid`) idú len do lacného
+v `shared/plan-dna.js`; bojler `bojlerDrahaDnes`). Pásik bežiaceho spotrebiča (`behy`) ráta so slnkom, ktoré
+ostane po bojleri riadenom zásuvkou (do teraz z jeho záznamu dňa, potom simulácia, `bojlerOdberDna`) a po skôr
+zapnutých spotrebičoch - inak by súbeh s bojlerom ukázal slnko, ktoré si vzal bojler (24. 11. 2026). Auto a bojler bez zásuvky (`cheapGrid`) idú len do lacného
 pásma, z ktorého ostáva aspoň `PLAN_DNA.autoMinMin` (A1) - koniec NT o 7:30 nie je „nabíjaj teraz“.
 
 ## Scéna toku energie na karte Teraz
