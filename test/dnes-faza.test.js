@@ -293,8 +293,8 @@ test('vysvetlenie odznaku: tá istá trieda ako odznak, veci, stupnica a texty',
     assert.equal(v.chip, DEN_NAZVY[v.cls]);
     assert.deepEqual(
         v.veci.map((x) => x.id),
-        ['pracka', 'susicka', 'umyvacka', 'auto'],
-        'v poradí Plánu dňa',
+        ['pracka', 'susicka', 'umyvacka'],
+        'v poradí Plánu dňa, auto v ňom nie je',
     );
     assert.equal(v.veci[0].name, 'Práčka');
     assert.deepEqual(
@@ -338,11 +338,12 @@ test('trieda s vecami: ktoré sa zmestia, a bez spotrebičov doma predvolené', 
     assert.equal(r.cls, denTrieda(i, ['pracka', 'auto']));
     assert.deepEqual(
         r.veci.map((x) => x.id),
-        ['pracka', 'auto'],
+        ['pracka'],
+        'auto v Pláne dňa nie je',
     );
     assert.deepEqual(
         denTriedaVeci(i, []).veci.map((x) => x.id),
-        ['pracka', 'susicka', 'umyvacka', 'auto'],
+        ['pracka', 'susicka', 'umyvacka'],
     );
     // Bez slnka sa nezmestí nič.
     assert.ok(i.forecast);

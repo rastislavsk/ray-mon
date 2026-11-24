@@ -5,7 +5,7 @@
 // Zo slušnej sa skladá tabuľka do popisu pull requestu.
 
 import { carbonFacts } from '../shared/carbon.js';
-import { MOZEM_ITEMS, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
+import { MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, PRICE_LEVELS, SITE, TARIFF } from '../shared/config.js';
 import { heroModel } from '../shared/hero-model.js';
 import * as M from '../shared/messages.js';
 import { mozemModel } from '../shared/mozem.js';
@@ -180,12 +180,11 @@ function directItems(out, v) {
         out[`tileNote.${k}`] = M.mozemTileNote(a) || '(prázdne)';
     }
     out['tileNote.km'] = M.mozemTileNote({ kind: 'go', end: 900, until: 900, km: 60 });
-    // Dlaždica podľa riadku Plánu dňa: každý druh riadku, auto s km.
+    // Dlaždica podľa riadku Plánu dňa: každý druh riadku.
     /** @type {Array<[string, any]>} */ const rows = [
-        ['teraz', { id: 'pracka', kind: 'sun', start: 600, end: 720, km: null, now: true, time: '10:00', tone: 'go' }],
-        ['autoTeraz', { id: 'auto', kind: 'sun', start: 600, end: 900, km: 120, now: true, time: '10:00–15:00', tone: 'go' }],
-        ['neskor', { id: 'auto', kind: 'sun', start: 660, end: 900, km: 90, now: false, time: '11:00–15:00', tone: 'go' }],
-        ['lacno', { id: 'auto', kind: 'cheap', start: 1320, now: false, time: 'od 22:00', tone: 'cheap' }],
+        ['teraz', { id: 'pracka', kind: 'sun', start: 600, end: 720, now: true, time: '10:00', tone: 'go' }],
+        ['neskor', { id: 'bojler', kind: 'sun', start: 660, end: 720, now: false, time: '11:00', tone: 'go' }],
+        ['lacno', { id: 'bojler', kind: 'cheap', start: 1320, now: false, time: 'od 22:00', tone: 'cheap' }],
         ['inyDen', { id: 'pracka', kind: 'later', now: false, time: 'zajtra 08:00', tone: 'wait' }],
     ];
     for (const [k, r] of rows) strings(M.planTileText(r), `planTile.${k}`, out);
@@ -201,20 +200,19 @@ function directItems(out, v) {
 function directPlan(out, v) {
     const day = { name: 'Zajtra', index: 1, start: 660 };
     const later = { name: 'Pondelok', index: 3, start: 600 };
-    // Plán dňa: každý druh riadku pre každú vec, auto aj s úsporou pod a nad euro.
-    /** @type {Array<[string, import('../shared/plan-dna.js').PlanRow]>} */
+    // Plán dňa: každý druh riadku pre každú vec plánu (auto v ňom nie je).
+    /** @type {Array<[string, any]>} */
     const rows = [
-        ['sun', { id: '', kind: 'sun', start: 540, end: 660, after: null, km: 120, save: 2.85, currency: '€' }],
-        ['sunPo', { id: '', kind: 'sun', start: 660, end: 750, after: 'pracka', km: 0, save: 0.4, currency: '€' }],
-        ['sunBez', { id: '', kind: 'sun', start: 660, end: 750, after: null, km: null, save: null, currency: '€' }],
+        ['sun', { id: '', kind: 'sun', start: 540, end: 660, after: null, currency: '€' }],
+        ['sunPo', { id: '', kind: 'sun', start: 660, end: 750, after: 'pracka', currency: '€' }],
+        ['sunBez', { id: '', kind: 'sun', start: 660, end: 750, after: null, currency: '€', poBojleri: true }],
         ['cheap', { id: '', kind: 'cheap', start: 1320 }],
         ['zajtra', { id: '', kind: 'later', day, after: null }],
         ['neskor', { id: '', kind: 'later', day: later, after: null }],
         ['none', { id: '', kind: 'none' }],
         ['zajtraPo', { id: '', kind: 'later', day, after: 'pracka' }],
     ];
-    for (const item of MOZEM_ITEMS.filter((i) => i.device))
-        for (const [k, r] of rows) strings(M.planDnaRowText({ ...r, id: item.id }, v), `plan.${item.id}.${k}`, out);
+    for (const id of PLAN_DNA.order) for (const [k, r] of rows) strings(M.planDnaRowText({ ...r, id }, v), `plan.${id}.${k}`, out);
     Object.assign(out, { 'plan.note': M.PLAN_DNA_NOTE });
     // Ranné oznámenie: pevné texty, nadpis a text pre každý druh dňa a pripomienky.
     const T = M.oznameniaTexts(v);
@@ -222,14 +220,18 @@ function directPlan(out, v) {
     out['oznam.remind'] = T.remind(555);
     const withId = (/** @type {string} */ id, /** @type {import('../shared/plan-dna.js').PlanRow} */ r) => ({ ...r, id });
     const notices = {
-        jasno: [withId('pracka', rows[0][1]), withId('susicka', rows[1][1]), withId('auto', rows[0][1])],
-        inyDen: [withId('pracka', rows[4][1]), withId('umyvacka', rows[5][1]), withId('bojler', rows[3][1]), withId('auto', rows[3][1])],
+        jasno: [withId('pracka', rows[0][1]), withId('susicka', rows[1][1]), withId('bojler', rows[2][1])],
+        inyDen: [withId('pracka', rows[4][1]), withId('umyvacka', rows[5][1]), withId('bojler', rows[3][1])],
         nic: [withId('pracka', rows[6][1])],
     };
     for (const [k, list] of Object.entries(notices))
         for (const weak of [true, false])
             strings(M.planNoticeText({ rows: list, sunEnd: k === 'jasno' ? 1050 : null, weak }, v), `notice.${k}.${weak}`, out);
     for (const [k, r] of rows) strings(M.reminderText(withId('umyvacka', r), 540, v), `remind.${k}`, out);
+    // Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html): ranný odhad, večer skutočnosť, deň bez slnka.
+    strings(M.terazAutoText({ kwh: 12.37, km: 70, vecer: false }), 'autoSlnko.rano', out);
+    strings(M.terazAutoText({ kwh: 10.4, km: 60, vecer: true }), 'autoSlnko.vecer', out);
+    strings(M.terazAutoText({ kwh: 0, km: 0, vecer: false }), 'autoSlnko.nic', out);
 }
 
 /** Výzvy, veta bez dát, najlepší deň a súhrn. @param {Record<string, string>} out @param {import('../shared/messages.js').Voice} [v] */

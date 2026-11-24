@@ -7,8 +7,11 @@ import { isObj } from './valid.js';
 /** Spotrebiče, ktoré sa dajú vybrať: veci karty Môžem?, ktoré majú spotrebič. */
 export const DOMA_DEVICES = MOZEM_ITEMS.filter((i) => i.device).map((i) => i.id);
 
-/** Pred prvou voľbou: spotrebiče plánu dňa. @returns {string[]} */
-export const domaDefault = () => [...PLAN_DNA.devices];
+/**
+ * Pred prvou voľbou: spotrebiče plánu dňa a auto - to v pláne nie je, ale karta Teraz ukáže, koľko by dalo slnko
+ * (docs/navrhy/auto-mimo-planu.html). @returns {string[]}
+ */
+export const domaDefault = () => [...PLAN_DNA.devices, 'auto'];
 
 /**
  * Spotrebiče z poľa v uloženom JSON: len známe, každý raz. Keď pole nie je, null.

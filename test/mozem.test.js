@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
+import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText } from '../shared/messages.js';
 import { dayWindow, itemAnswer, itemCost, planWindows, sunShare } from '../shared/mozem-jadro.js';
 import { mozemModel, mozemSheetOf, stripGeometry } from '../shared/mozem.js';
@@ -99,9 +99,9 @@ test('durationText a countdownText po slovensky', () => {
 test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy', () => {
     const m = mozemModel(input(FIXED_NOW));
     assert.equal(m.state, 'go');
-    // Slovo hovorí o celom dni: dopoludnie namerané pod predpoveďou, auto by pri mraku nechytilo slnko.
-    assert.deepEqual(m.den, { cls: 'dobry', faza: 'den', change: null });
-    assert.equal(m.word, 'Not baaad dneskaj');
+    // Slovo hovorí o celom dni: všetky spotrebiče sa zmestia aj s rezervou na mrak (auto v Pláne dňa nie je).
+    assert.deepEqual(m.den, { cls: 'vyborny', faza: 'den', change: null });
+    assert.equal(m.word, 'Oskar dnes pujde na plný koule');
     assert.match(m.hero.factV, /^~\d+ mobilov$/);
     assert.ok(m.strip && m.strip.width > 0 && m.strip.now > m.strip.left);
     const pracka = item(m, 'pracka');
@@ -162,22 +162,25 @@ test('karta podľa Plánu dňa: čo ide teraz, čo potom, a keď slnko na nič z
     const bezKrivky = { pv: null };
     const rano = mozemModel(input(at('09:00'), bezKrivky));
     assert.equal(rano.state, 'go');
-    assert.equal(rano.hero.lead, 'Podľa predpovede teraz svieti. Teraz práčka a umývačka, o 09:20 auto.');
+    assert.equal(rano.hero.lead, 'Podľa predpovede teraz svieti. Teraz práčka a umývačka, o 11:00 sušička.');
     assert.match(mozemModel(input(at('09:00'), bezKrivky), { voice: 'slusny' }).hero.lead, /. Teraz práčka a umývačka/);
     // 17:10: zelená ešte svieti, ale na nič z plánu už nestačí - nie „zapni“.
     const vecer = mozemModel(input(at('17:10')));
     assert.equal(vecer.state, 'none');
-    assert.equal(vecer.hero.lead, 'Na veľké veci už slnko nestačí. Auto od 17:15 na lacnú elektrinu, zvyšok zajtra.');
+    assert.equal(vecer.hero.lead, 'Na veľké veci už slnko nestačí. Zvyšok zajtra.');
     assert.match(vecer.strip?.text ?? '', /^Slnko do /, 'pás dňa ostáva podľa slnka');
     assert.equal(vecer.groups[0].value, 'zajtra 07:30');
     assert.equal(vecer.groups[0].note, 'Umývačka zajtra 07:30 · Práčka zajtra 07:45 · Sušička zajtra 09:45');
     const slusne = mozemModel(input(at('17:10')), { voice: 'slusny' });
-    assert.equal(slusne.hero.lead, 'Na veľké spotrebiče už slnko nestačí. Auto od 17:15 z lacnej siete, ostatné zajtra.');
+    assert.equal(slusne.hero.lead, 'Na veľké spotrebiče už slnko nestačí. Ostatné zajtra.');
+    // Bojler bez zásuvky v lacnom pásme: veta povie aj jeho.
+    const sBojlerom = mozemModel(input(at('17:10')), { devices: [...PLAN_DNA.devices, 'bojler'] });
+    assert.equal(sBojlerom.hero.lead, 'Na veľké veci už slnko nestačí. Bojler od 17:15 na lacnú elektrinu, zvyšok zajtra.');
     // Bez spotrebičov doma karta odpovedá podľa slnka a dlaždice podľa vecí.
     const nic = mozemModel(input(at('09:00'), bezKrivky), { devices: [] });
     assert.equal(nic.state, 'go');
     assert.equal(nic.hero.lead, 'Podľa predpovede teraz svieti.');
-    assert.equal(nic.groups.length, 3);
+    assert.equal(nic.groups.length, 2);
 });
 
 test('večer: dnes už nie, auto na lacnú elektrinu, ostatné zajtra', () => {
@@ -364,11 +367,10 @@ test('Plán dňa: časy ako dlaždice', () => {
         [
             ['Práčka', 'teraz'],
             ['Umývačka', 'teraz'],
-            ['Auto', 'o 13:15'],
             ['Sušička', 'o 15:00'],
         ],
     );
-    assert.equal(m.groups.find((g) => g.key === 'auto')?.value, 'o 13:15', 'ten istý čas ako dlaždica');
+    assert.equal(m.groups[0].note, 'Práčka a umývačka teraz · Sušička o 15:00', 'tie isté časy ako dlaždice');
     // Bez spotrebičov doma ani predpovede plán nie je.
     assert.deepEqual(mozemModel(input(FIXED_NOW), { devices: [] }).plan?.rows, []);
     assert.equal(mozemModel(input(FIXED_NOW, { pv: null, forecast: null })).plan, null);

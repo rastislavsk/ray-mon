@@ -25,6 +25,7 @@ import {
     saveSettings,
     saveSucty,
 } from './storage.js';
+import { obnovAutoDen } from './auto-den.js';
 import { obnovUcenie } from './ucenie.js';
 import { zladBehy } from './bezi-spolocne.js';
 
@@ -48,6 +49,7 @@ import { zladBehy } from './bezi-spolocne.js';
  *   bojler: import('../shared/bojler.js').BojlerInfo | null,
  *   ucenie: import('../shared/ucenie.js').Naucene | null,
  *   bezi: import('../shared/bezi.js').Zapis[],
+ *   autoDen: import('../shared/auto-slnko.js').AutoDen | null,
  * }} RefreshState
  * @typedef {{ get: () => RefreshState, setState: (patch: Partial<RefreshState>) => void }} RefreshStore
  */
@@ -243,8 +245,9 @@ export function createRefresh(store) {
         // appka po návrate z pozadia neopýta, výpadok nehlási.
         store.setState({ forecast: result.forecast, loading: false, now, pokusAt: now.getTime(), dayLog, ...pecat, ...meranie, ...bojler });
         zapamatajRannu(store);
-        // Učenie z histórie (web/ucenie.js): históriu z Workera stiahne raz za deň, model prepočíta.
-        void obnovUcenie(store);
+        // Učenie z histórie (web/ucenie.js): model od Workera raz za deň, inak prepočíta v telefóne. Auto zo slnka
+        // (web/auto-den.js) ráta až s ním - ranný odhad sa zamrazí.
+        void obnovUcenie(store).then(() => obnovAutoDen(store));
         // Behy „Už beží“ z ostatných telefónov domácnosti (web/bezi-spolocne.js).
         void zladBehy(store);
     };

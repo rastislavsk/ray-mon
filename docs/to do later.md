@@ -56,9 +56,15 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
   domácnosti zdieľa cez objekt účtu Huawei (`UcetHuawei`, možnosť A). Pri inom zdroji merania (kiosk FusionSolar,
   iné meniče) taký objekt nie je a každý telefón si behy drží sám. Doplniť, napr. samostatnú „domácnosť“
   s kódom na spárovanie (možnosť B: vlastný Durable Object, párovanie cez QR).
-- **Zmazať `/historia` a `historia-v1`** (24. 11. 2026): model učenia počíta Worker (`docs/navrhy/ucenie-vo-workeri.html`),
-  nová appka `/historia` nesťahuje. Cesta ostáva pre staršiu appku v cache, `historia-v1` už len číta telefón bez modelu
-  od Workera. Po pár týždňoch zmazať `handleHistoria`, `WORKER_HISTORIA_PATH`, `HISTORIA_STORAGE_KEY` a jeho čítanie.
+- **Zmazať `historia-v1`** (24. 11. 2026): model učenia počíta Worker (`docs/navrhy/ucenie-vo-workeri.html`),
+  `historia-v1` už len číta telefón bez modelu od Workera. Po pár týždňoch zmazať `HISTORIA_STORAGE_KEY` a jeho čítanie.
+  `/historia` ostáva - appka si ňou večer berie dnešné hodiny domu pre auto zo slnka (`docs/navrhy/auto-mimo-planu.html`).
+- **Učenie domu bez nabíjania auta** (24. 11. 2026): naučená spotreba domu po hodinách (`domDna` v `shared/ucenie.js`)
+  berie aj hodiny, keď sa nabíjalo auto - priemer je potom orezaný na `PLAN_ZIVE.domMax`, ale aj tak vyšší. Večerný prepis
+  auta zo slnka (`domDnes`) také hodiny vynechá; učenie zatiaľ nie. Keď appka bude vedieť o nabíjaní (alebo hodina nad
+  `domMax`), vynechať ich aj z učenia.
+- **Auto zo slnka v rannom oznámení** (24. 11. 2026): oznámenie auto nespomína (`docs/navrhy/auto-mimo-planu.html`).
+  Ak bude treba, veta „Auto zo slnka ~70 km.“ - service worker by ju musel rátať sám (`swInput`).
 
 - **Dážď a sneh v ikonách počasia** (18. 11. 2026): sada má len jasno / polojasno / zamračené.
   Predpoveď zrážky po hodinách už sťahuje. Treba nakresliť ikony a pravidlo, kedy je deň „daždivý“
@@ -77,7 +83,9 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 ## Overiť na telefóne alebo na skutočných dňoch
 
 - Ranné oznámenie a karta Teraz s rovnakými časmi (O2, 24. 11. 2026): zrkadlo sa zapíše až po otvorení novej appky.
-  Pásik s červenou časťou (VT) a auto bez „nabíjaj teraz“ na posledných 15 min NT.
+  Pásik s červenou časťou (VT).
+- Auto zo slnka (24. 11. 2026, `docs/navrhy/auto-mimo-planu.html`): ranné číslo cez deň stojí, po západe slnka sa raz
+  prepíše („dnes naozaj“); porovnať s tým, čo by naozaj dala strecha. Minimum nabíjačky 4,1 kW (3 fázy) - overiť.
 - Scéna toku energie (17.–18. 11.): dom na kopci, počasie za scénou, impulzy, svietiace okná.
 - Bublina Dnes zo strechy (PR #495).
 - Bojler na prebytky: zapnutie na slnku.

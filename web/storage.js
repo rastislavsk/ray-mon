@@ -25,6 +25,7 @@ import {
     RADAR_MODEL_STORAGE_KEY,
     RADAR_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
+    AUTO_DEN_STORAGE_KEY,
     SETTINGS_STORAGE_KEY,
     SITE_STORAGE_KEY,
     STORAGE_KEYS,
@@ -35,6 +36,7 @@ import {
     VYMAZANE_STORAGE_KEY,
     WEATHER_STORAGE_KEY,
 } from '../shared/config.js';
+import { autoDenZ } from '../shared/auto-slnko.js';
 import { parseBezi, parseCaka } from '../shared/bezi.js';
 import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
@@ -276,6 +278,16 @@ export function loadRanna() {
 /** @param {import('../shared/den-trieda.js').RannaTrieda} r @returns {boolean} podarilo sa? */
 export function saveRanna(r) {
     return write(RANNA_TRIEDA_STORAGE_KEY, JSON.stringify(r));
+}
+
+/** Auto zo slnka dnes (AUTO_DEN_STORAGE_KEY, web/auto-den.js); bez úložiska null. @returns {import('../shared/auto-slnko.js').AutoDen | null} */
+export function loadAutoDen() {
+    return readJson(AUTO_DEN_STORAGE_KEY, autoDenZ, null);
+}
+
+/** @param {import('../shared/auto-slnko.js').AutoDen} a @returns {boolean} podarilo sa? */
+export function saveAutoDen(a) {
+    return write(AUTO_DEN_STORAGE_KEY, JSON.stringify(a));
 }
 
 /** Ranné oznámenie (OZNAMENIA_STORAGE_KEY); bez úložiska predvolené. @returns {import('../shared/oznamenia.js').Oznamenia} */

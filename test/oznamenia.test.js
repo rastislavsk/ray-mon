@@ -34,7 +34,7 @@ const FLAT = {
     bands: [{ id: 'j', name: 'Cena', level: 'bezna', price: null }],
     schedules: [{ days: ALL_DAYS, months: ALL_MONTHS, changes: [{ from: '00:00', band: 'j' }] }],
 };
-const DEVICES = [...PLAN_DNA.devices];
+const DEVICES = [...PLAN_DNA.devices, 'auto'];
 /** Miestny čas 5. 9. 2026 v Bratislave (letný čas). @param {string} hm */
 const at = (hm) => new Date(`2026-09-05T${hm}:00+02:00`);
 /** Vstup bez merania, ako ho má service worker. @param {Date} now @param {object} [extra] */
@@ -109,24 +109,19 @@ test('morningDue: prvá štvrťhodina zvolenej hodiny v pásme telefónu', () =>
     assert.ok(morningDue(at('08:00'), 'Europe/London', 7), '8:00 v Bratislave je 7:00 v Londýne');
 });
 
-test('ranné oznámenie o 9:00 za jasna: nadpis s koncom slnka, poradie od teraz, auto s km a úsporou, bez cien pri spotrebičoch', () => {
+test('ranné oznámenie o 9:00 za jasna: nadpis s koncom slnka, poradie od teraz, bez auta a bez cien', () => {
     const n = planNotice(input(at('09:00')), { devices: DEVICES });
     assert.equal(n.title, 'Dnes slnko do 17:30');
-    assert.match(
-        n.body,
-        /^Práčka 09:00 · umývačka \d\d:\d\d · sušička \d\d:\d\d\. Auto \d\d:\d\d–\d\d:\d\d: ~\d+ km zo slnka, ušetríš ~\d+ €\.$/,
-    );
-    assert.ok(n.body.length <= 200, `krátke: ${n.body.length}`);
-    assert.equal(n.body.match(/€/g)?.length, 1, 'cena len pri aute');
+    // Auto v Pláne dňa nie je, ani keď ho človek má doma (docs/navrhy/auto-mimo-planu.html).
+    assert.match(n.body, /^Práčka 09:00 · umývačka \d\d:\d\d · sušička \d\d:\d\d\.$/);
+    assert.doesNotMatch(n.body, /€/);
     assert.ok(n.remind && n.remind.id !== 'pracka' && n.remind.at > 9 * 60, 'pripomienka najbližšieho, ktorý nie je na rade hneď');
-    const slusne = planNotice(input(at('09:00')), { devices: DEVICES, voice: 'slusny' });
-    assert.match(slusne.body, /ušetríte/);
 });
 
 test('ranné oznámenie: večer, zamračený deň a týždeň bez slnka', () => {
     const vecer = planNotice(input(at('19:50')), { devices: DEVICES });
     assert.equal(vecer.title, 'Dnes slnko na spotrebiče nestačí');
-    assert.equal(vecer.body, 'Práčka, sušička a umývačka radšej zajtra. Auto nabi v lacnom pásme od 21:30.');
+    assert.equal(vecer.body, 'Práčka, sušička a umývačka radšej zajtra.');
     assert.equal(vecer.remind, null);
     const { forecast } = fixtureData(at('09:00'));
     const scale = (/** @type {number} */ k) => ({
@@ -163,7 +158,7 @@ test('planNoticeText: deň v pláne ako časť vety („v stredu“, „vo štvr
     assert.equal(t.body, 'Práčka radšej v stredu. Sušička radšej vo štvrtok. Bojler v lacnom pásme od 22:00.');
     assert.equal(
         planNoticeText({
-            rows: [{ id: 'pracka', kind: 'sun', start: 480, end: 600, after: null, km: null, save: null, currency: '€' }],
+            rows: [{ id: 'pracka', kind: 'sun', start: 480, end: 600, after: null, currency: '€' }],
             sunEnd: 690,
             weak: false,
         }).title,
@@ -176,7 +171,8 @@ test('pripomienka: teraz, keď je na rade; inak povie, čo sa zmenilo', () => {
     assert.equal(teraz?.title, 'Umývačka · teraz');
     assert.match(teraz?.body ?? '', /^Oba ohrevy chytia slnko\. Dobehne o \d\d:\d\d\.$/);
     assert.equal(reminderNotice(input(at('19:50')), { id: 'susicka' })?.title, 'Sušička radšej zajtra');
-    assert.equal(reminderNotice(input(at('19:50')), { id: 'auto' })?.title, 'Auto v lacnom pásme');
+    // Auto v pláne nie je - stará pripomienka auta nič nepovie, oznámenie ukáže plán dňa.
+    assert.equal(reminderNotice(input(at('19:50')), { id: 'auto' }), null);
 });
 
 test('koniec programu: čo je hotové, pri praní aj sušička podľa plánu v chvíli zápisu', () => {

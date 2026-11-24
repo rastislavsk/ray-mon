@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { PLAN_DNA } from '../shared/config.js';
 import { DOMA_DEVICES, domaDefault, domaToStored, domaZOznameni, parseDoma, prepniSpotrebic } from '../shared/doma.js';
 
-const DEVICES = [...PLAN_DNA.devices];
+const DEVICES = [...PLAN_DNA.devices, 'auto'];
 
 test('parseDoma: predvolené spotrebiče plánu, neznáme a dvojité zahodí, poškodené nahradí', () => {
     assert.deepEqual(domaDefault(), DEVICES);

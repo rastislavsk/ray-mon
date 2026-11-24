@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Auto mimo Plánu dňa – km čisto zo slnka</title>
+        <style>
+            /* Mockup, nie snímka z appky. Dlaždice sú kreslené ručne podľa css/teraz.css (.dl, .podiel).
+               Všetky čísla v mockupe sú ilustračné, appka ich takto nevypočítala. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(255, 255, 255, 0.82);
+                --line: rgba(242, 240, 234, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --costly: #ff7a66;
+                --sun: #ffd166;
+                --amber: #ffc94a;
+                --glass: rgba(8, 16, 40, 0.3);
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1180px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.2;
+            }
+            h2 small {
+                display: block;
+                font-size: 0.8rem;
+                letter-spacing: 0.12em;
+                text-transform: uppercase;
+                color: var(--amber);
+                margin-bottom: 4px;
+            }
+            p,
+            li {
+                color: var(--dim);
+                max-width: 76ch;
+            }
+            section {
+                display: grid;
+                gap: 16px;
+                border-top: 1px solid var(--line);
+                padding-top: 28px;
+            }
+            .riadok {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 28px;
+                align-items: start;
+            }
+            .tel {
+                width: 100%;
+                max-width: 340px;
+                padding: 16px;
+                border-radius: 34px;
+                background: linear-gradient(180deg, #2c3c5c, #46597c 60%, #5a6a86);
+                border: 1px solid var(--line);
+            }
+            .tel h3 {
+                font-size: 0.85rem;
+                color: var(--dim);
+                margin-bottom: 10px;
+                font-weight: 700;
+            }
+            .mriezka {
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 10px;
+            }
+            .dl {
+                display: grid;
+                align-content: start;
+                padding: 14px;
+                border-radius: 24px;
+                background: var(--glass);
+                backdrop-filter: blur(14px);
+                color: #fff;
+            }
+            .ico {
+                width: 44px;
+                height: 44px;
+                margin-bottom: 22px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.14);
+                display: grid;
+                place-items: center;
+                font-size: 0.7rem;
+                font-weight: 800;
+            }
+            .velky {
+                font-size: 1.75rem;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .dl b {
+                margin-top: 2px;
+                font-size: 1.25rem;
+                font-weight: 800;
+                line-height: 1.1;
+            }
+            .podiel {
+                display: flex;
+                height: 6px;
+                margin: 8px 0 4px;
+                border-radius: 3px;
+                overflow: hidden;
+            }
+            .podiel i {
+                display: block;
+                height: 100%;
+            }
+            .s {
+                background: var(--sun);
+            }
+            .l {
+                background: rgba(124, 196, 255, 0.75);
+            }
+            .pr {
+                background: rgba(255, 255, 255, 0.18);
+            }
+            .odr {
+                font-size: 0.875rem;
+                font-weight: 600;
+                line-height: 1.3;
+                display: grid;
+            }
+            .odr span {
+                position: relative;
+                padding-left: 0.8em;
+            }
+            .odr span::before {
+                content: '';
+                position: absolute;
+                left: 0.1em;
+                top: 0.55em;
+                width: 0.3em;
+                height: 0.3em;
+                border-radius: 50%;
+                background: currentColor;
+            }
+            .poz {
+                font-size: 0.85rem;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 0.9rem;
+                max-width: 1000px;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 8px 10px;
+                text-align: left;
+                vertical-align: top;
+                color: var(--dim);
+            }
+            th {
+                color: var(--ink);
+            }
+            code {
+                font-size: 0.85em;
+                color: #ffe3a3;
+            }
+            .pozor {
+                border-left: 3px solid var(--amber);
+                padding: 4px 0 4px 12px;
+            }
+            .odp {
+                color: var(--amber);
+                font-weight: 800;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Auto mimo Plánu dňa – km čisto zo slnka</h1>
+                <p>
+                    Návrh 24. 11. 2026. Auto sa z Plánu dňa vyberie (nabíjanie riadiš sám a appka o ňom zatiaľ nič nevie). Namiesto rady
+                    „nabíjaj od – do“ dlaždica auta povie, koľko kWh a km by dalo samotné slnko, keby auto viselo na nabíjačke celý deň a
+                    práčka, sušička ani umývačka nebežali. Bojler sa ráta podľa histórie a učenia. Ráno odhad, večer prepis podľa skutočnej
+                    výroby a spotreby.
+                </p>
+                <p class="pozor">Nič z toho zatiaľ nie je v kóde. Čísla v mockupoch sú ilustračné, appka ich takto nevypočítala.</p>
+            </header>
+
+            <section>
+                <h2><small>1</small>Ako to appka ráta dnes</h2>
+                <ul>
+                    <li>
+                        <b>Rozpočet slnka</b> (<code>volne</code> v <code>shared/plan-dna.js</code>): pre každú minútu dňa výroba z
+                        predpovede (opravená učením, štvrťhodina teraz z merania) mínus spotreba domu po hodinách (<code>domProfil</code> –
+                        naučené z histórie, inak <code>HOUSE_BASE_KW</code> 0,4 kW).
+                    </li>
+                    <li>
+                        <b>Bojler so zásuvkou ide prvý</b> (<code>bojlerPrvy</code>): <code>simulujBojler</code> púšťa to isté
+                        <code>rozhodni</code> ako Worker nad rozpočtom, potrebu berie z učenia (<code>potrebaBojlera</code> podľa teploty
+                        dňa) mínus to, čo dnes už nahrial. Práčka a sušička idú potom natvrdo, bojler sa odsimuluje znova a ostatné dostanú
+                        zvyšok.
+                    </li>
+                    <li>
+                        <b>Domáce spotrebiče</b> (<code>onSun</code>/<code>polozit</code>): najskorší štart, keď počas ohrevov ostáva aspoň
+                        ich príkon. Pásik dlaždice = <code>podielSlnka</code> (žltá), zvyšok lacná/bežná sieť (modrá) a drahé pásmo
+                        (<code>podielDrahy</code>, červená).
+                    </li>
+                    <li>
+                        <b>Auto ide vždy posledné</b> (<code>autoSpan</code>): najdlhší súvislý úsek, kde po všetkom ostáva aspoň silné
+                        slnko (<code>th.highKw</code>), aspoň 60 min (<code>autoMinMin</code>); berie z neho najviac 11 kW a km = kWh × 6
+                        (<code>EVERYDAY.evKmPerKwh</code>), nadol na desiatky. Keď sa nezmestí, ide do lacného pásma
+                        (<code>cheapGrid</code>). Km navyše rozhodujú aj o poradí ostatných (<code>betterKm</code>).
+                    </li>
+                    <li>
+                        Auto je aj v rannom oznámení (<code>sunParts</code>, <code>elsewhereParts</code>), v dlaždici Teraz
+                        (<code>terazDlazdicaText</code>, <code>terazRiadokText</code>) a v odpovedi karty Dnes (<code>itemAnswer</code>,
+                        <code>kmFromSun</code>).
+                    </li>
+                </ul>
+                <p>
+                    Výsledok: km auta dnes závisia od toho, kam appka postavila práčku a spol., a číslo sa mení pri každej obnove. To je
+                    presne to, čo nechceš.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>2</small>Čo sa zmení vo všetkých možnostiach</h2>
+                <ul>
+                    <li>
+                        Auto vypadne z <code>PLAN_DNA.order</code> a <code>PLAN_DNA.devices</code>; zmažú sa <code>autoSpan</code>, vetva
+                        auta v <code>onSun</code> a <code>cheapDraw</code>, <code>betterKm</code>, km v
+                        <code>rozvrh</code>/<code>lepsi</code>, „Auto … v lacnom pásme“ v oznámení.
+                    </li>
+                    <li>Práčka, sušička, umývačka a bojler sa plánujú presne ako doteraz – len bez auta na konci.</li>
+                    <li>
+                        Nový čistý výpočet v <code>shared/</code> (napr. <code>shared/auto-slnko.js</code>):
+                        <code>kWh = Σ min(11 kW, max(0, výroba − dom − bojler))</code> za celý deň od polnoci, km = kWh × 6. Dom = naučený
+                        profil bez práčky, sušičky a umývačky (už dnes <code>domDna</code> vynecháva hodiny s behom z „Už beží“). Bojler =
+                        jeho naučená potreba.
+                    </li>
+                    <li>Dlaždica auta ostáva vpravo pod bojlerom (<code>TERAZ_STLPCE</code>), len hovorí niečo iné.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>3</small>Rozhodnutie A – kde a kedy sa číslo ráta</h2>
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>Ako</th>
+                        <th>Výhody</th>
+                        <th>Nevýhody</th>
+                    </tr>
+                    <tr>
+                        <td class="odp">A1 telefón, zamrazené</td>
+                        <td>
+                            Pri prvej obnove dňa telefón spočíta celý deň od polnoci z predpovede (opravenej učením) a uloží
+                            (<code>auto-den-v1</code>). Po západe slnka (<code>daylightSpan</code>) to prepíše výpočtom zo skutočnosti:
+                            hodiny dneška z <code>/historia</code> (výroba, dom bez bojlera) a skutočný odber bojlera zo záznamu zásuvky
+                            (<code>bojler.den.behy</code>).
+                        </td>
+                        <td>Bez zmeny Workera. Ráno číslo stojí, ako chceš. Malý kód.</td>
+                        <td>
+                            Dva telefóny môžu mať iné ranné číslo (iná predpoveď v čase otvorenia). <code>/historia</code> sa dnes sťahuje
+                            raz za deň – večer treba druhý raz.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="odp">A2 Worker</td>
+                        <td>
+                            Ranné číslo zapíše do objektu <code>UcetHuawei</code> prvý telefón dňa (všetci ho potom čítajú), večerné spočíta
+                            Worker sám z <code>hd:</code> a záznamu bojlera pri uzavretí poslednej hodiny so slnkom.
+                        </td>
+                        <td>Celá domácnosť vidí to isté číslo. Večerné je hotové, aj keď nikto appku neotvorí.</td>
+                        <td>
+                            Viac kódu, nové kľúče v objekte, ručné nasadenie Workera. Worker nemá predpoveď, ranné číslo aj tak ráta
+                            telefón.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="odp">A3 živé, bez zamrazenia</td>
+                        <td>Pri každej obnove: skutočnosť do teraz + predpoveď do večera. Večer z toho sama vyjde skutočnosť.</td>
+                        <td>Najjednoduchšie, nič sa neukladá, ráno aj večer zadarmo.</td>
+                        <td>Číslo sa cez deň hýbe – presne opak „raz ráno“.</td>
+                    </tr>
+                </table>
+            </section>
+
+            <section>
+                <h2><small>4</small>Rozhodnutie K – čo je „km čisto zo slnka“</h2>
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>Ako</th>
+                        <th>Výhody</th>
+                        <th>Nevýhody</th>
+                    </tr>
+                    <tr>
+                        <td class="odp">K1 každý prebytok</td>
+                        <td>Ráta sa všetko nad domom a bojlerom, až po 11 kW. Nabíjačka ako ideálna, plynulo od 0 W.</td>
+                        <td>Najjednoduchšie, je to „čo slnko dalo navyše“.</td>
+                        <td>
+                            Nadhodnotí slabé dni – skutočná nabíjačka pod ~1,4 kW (1 fáza, 6 A) či ~4,1 kW (3 fázy, 6 A) nenabíja, alebo
+                            dobieha zo siete.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="odp">K2 nad minimom nabíjačky</td>
+                        <td>
+                            Ráta sa len minúta, keď prebytok dosiahne minimum nabíjačky (nová konštanta, napr. 1,4 kW); vtedy celý prebytok
+                            do 11 kW.
+                        </td>
+                        <td>Najbližšie k tomu, čo by auto naozaj zobralo bez siete.</td>
+                        <td>Treba vedieť, akú nabíjačku máš (1 či 3 fázy) – jedno číslo navyše.</td>
+                    </tr>
+                    <tr>
+                        <td class="odp">K3 ako dnes</td>
+                        <td>Len úseky so silným slnkom (<code>highKw</code>), aspoň 60 min v kuse.</td>
+                        <td>Rovnaké čísla ako doteraz, žiadna nová konštanta.</td>
+                        <td>V polooblačný deň ukáže 0 km, hoci slnko by niečo dalo. Hranica highKw je pre „zapoj auto teraz“.</td>
+                    </tr>
+                </table>
+            </section>
+
+            <section>
+                <h2><small>5</small>Rozhodnutie B – bojler pred autom</h2>
+                <table>
+                    <tr>
+                        <th></th>
+                        <th>Ako</th>
+                        <th>Výhody</th>
+                        <th>Nevýhody</th>
+                    </tr>
+                    <tr>
+                        <td class="odp">B1 simulácia zásuvky</td>
+                        <td>
+                            Ráno <code>simulujBojler</code> nad celodenným prebytkom s potrebou z učenia (ako v Pláne dňa), autu ostane
+                            zvyšok po minútach. Večer skutočný odber zo záznamu zásuvky.
+                        </td>
+                        <td>Bojler je tam, kde naozaj hreje (aj ráno, keď slnka je málo). Kód už existuje.</td>
+                        <td>Ráta s tým, že bojler má prednosť – keby auto naozaj viselo celý deň, zásuvka by prebytok nevidela.</td>
+                    </tr>
+                    <tr>
+                        <td class="odp">B2 len energia</td>
+                        <td>Od kWh dňa sa odpočíta naučená potreba bojlera (Wh) ako celok, bez času.</td>
+                        <td>Najjednoduchšie, nezávisí od simulácie.</td>
+                        <td>Keď by bojler bral prebytok nad 11 kW stropom nabíjačky, odpočíta sa zbytočne – km mierne menej.</td>
+                    </tr>
+                </table>
+                <p class="poz">
+                    Bojler bez zásuvky (žiadne meranie) sa neodpočíta – ide v lacnom pásme zo siete, slnko mu dnes plán nedáva.
+                </p>
+            </section>
+
+            <section>
+                <h2><small>6</small>Rozhodnutie Z – dlaždica auta</h2>
+                <div class="riadok">
+                    <div class="tel">
+                        <h3>Z1 – veľké km, ráno</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <div class="ico">BOJ</div>
+                                <div class="velky">11:15</div>
+                                <b>Bojler</b>
+                                <div class="podiel"><i class="s" style="width: 86%"></i><i class="l" style="width: 14%"></i></div>
+                                <div class="odr"><span>zapne zásuvka</span></div>
+                            </div>
+                            <div class="dl">
+                                <div class="ico">AUTO</div>
+                                <div class="velky">~70 km</div>
+                                <b>Auto</b>
+                                <div class="podiel"><i class="s" style="width: 100%"></i></div>
+                                <div class="odr"><span>12 kWh zo slnka</span><span>odhad na celý deň</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tel">
+                        <h3>Z1 – večer po prepise</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <div class="ico">BOJ</div>
+                                <div class="velky">hotovo</div>
+                                <b>Bojler</b>
+                                <div class="odr"><span>nahriaty</span></div>
+                            </div>
+                            <div class="dl">
+                                <div class="ico">AUTO</div>
+                                <div class="velky">~60 km</div>
+                                <b>Auto</b>
+                                <div class="podiel"><i class="s" style="width: 100%"></i></div>
+                                <div class="odr"><span>10,4 kWh zo slnka</span><span>dnes naozaj</span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tel">
+                        <h3>Z2 – veľké kWh, pásik prebytku</h3>
+                        <div class="mriezka">
+                            <div class="dl">
+                                <div class="ico">BOJ</div>
+                                <div class="velky">11:15</div>
+                                <b>Bojler</b>
+                                <div class="podiel"><i class="s" style="width: 86%"></i><i class="l" style="width: 14%"></i></div>
+                                <div class="odr"><span>zapne zásuvka</span></div>
+                            </div>
+                            <div class="dl">
+                                <div class="ico">AUTO</div>
+                                <div class="velky">12 kWh</div>
+                                <b>Auto</b>
+                                <div class="podiel">
+                                    <i class="pr" style="width: 18%"></i><i class="s" style="width: 52%"></i
+                                    ><i class="pr" style="width: 30%"></i>
+                                </div>
+                                <div class="odr"><span>~70 km zo slnka</span><span>9:40 – 14:50</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul class="poz">
+                    <li>
+                        <b>Z1</b>: km sú to, čo človek pochopí hneď; kWh a „odhad / dnes naozaj“ v odrážkach. Pásik je celý žltý (je to celé
+                        zo slnka) – dal by sa aj vynechať.
+                    </li>
+                    <li>
+                        <b>Z2</b>: veľké kWh, pásik ukazuje deň (sivá = bez prebytku, žltá = kedy slnko nabíja) a odrážka čas prebytku. Viac
+                        informácie, ale pásik tu znamená niečo iné ako pri ostatných dlaždiciach.
+                    </li>
+                    <li>
+                        Iný deň v páse dní: tá istá dlaždica s odhadom z predpovede toho dňa (bez prepisu). Ranné oznámenie: namiesto „Auto
+                        10:00–14:00“ veta „Auto zo slnka ~70 km.“ – alebo auto z oznámenia úplne preč.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2><small>7</small>Odporúčanie a rozhodnutie</h2>
+                <p class="pozor">
+                    <b>Rozhodnuté 24. 11. 2026: A1 + K2 + B1 + Z1.</b> Minimum nabíjačky som nastavil na 4,1 kW (11 kW = 3 fázy, 6 A) – keď
+                    je nabíjačka jednofázová, stačí zmeniť <code>AUTO_SLNKO.minKw</code>. Auto vypadlo aj z karty Dnes (skupina Auto, trieda
+                    dňa) a z ranného oznámenia; dlaždica auta nemá detail. Iný deň v páse dní ukáže odhad z predpovede toho dňa.
+                </p>
+                <p>
+                    <b>A1 + K2 + B1 + Z1</b>. A1 robí presne „ráno raz, večer prepis“ bez zásahu do Workera. K2 je najbližšie k tomu, čo by
+                    auto naozaj zobralo; minimum nabíjačky (1,4 kW pri 1 fáze, 4,1 kW pri 3 fázach) mi povedz. B1 použije simuláciu, ktorú
+                    plán už má, takže čísla bojlera v dlaždici bojlera a v aute sedia. Z1, lebo km sú pointa a pásik nemení význam.
+                </p>
+                <p class="poz">
+                    Otvorené: ako často večer sťahovať <code>/historia</code> (stačí raz po západe slnka) a či má Plán dňa na karte Dnes
+                    (odpoveď auta v <code>itemAnswer</code>) hovoriť rovnaké km, alebo auto vypadne aj odtiaľ.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>

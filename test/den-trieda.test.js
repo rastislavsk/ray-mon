@@ -30,13 +30,13 @@ function den(k, now = FIXED_NOW) {
 test('trieda dňa podľa toho, koľko spotrebičov sa za deň zmestí na slnko', () => {
     const cls = (/** @type {number} */ k) => denTrieda(den(k), PLAN_DNA.devices);
     assert.equal(cls(1), 'vyborny', 'jasný deň: všetky aj s rezervou na mrak');
-    assert.equal(cls(0.7), 'dobry', 'všetky, ale bez rezervy');
-    assert.equal(cls(0.4), 'slaby', 'len niektoré');
+    assert.equal(cls(0.4), 'dobry', 'všetky, ale bez rezervy');
+    assert.equal(cls(0.3), 'slaby', 'len niektoré');
     assert.equal(cls(0.1), 'nanic', 'ani jeden');
 });
 
 test('trieda dňa bez spotrebičov doma: ako s predvolenými', () => {
-    for (const k of [1, 0.7, 0.4, 0.1]) assert.equal(denTrieda(den(k), []), denTrieda(den(k), PLAN_DNA.devices), String(k));
+    for (const k of [1, 0.4, 0.3, 0.1]) assert.equal(denTrieda(den(k), []), denTrieda(den(k), PLAN_DNA.devices), String(k));
 });
 
 test('trieda dňa ráta celý deň od polnoci, nie od teraz', () => {

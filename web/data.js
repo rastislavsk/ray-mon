@@ -13,6 +13,7 @@ import {
     WORKER_BOJLER_REZIM_URL,
     WORKER_BOJLER_HRANICA_URL,
     WORKER_BOJLER_STAV_URL,
+    WORKER_HISTORIA_URL,
     WORKER_PRIPOJ_URL,
     WORKER_PV_URL,
     WORKER_TRASY_URL,
@@ -20,7 +21,7 @@ import {
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
 import { bojlerInfoZ } from '../shared/bojler.js';
-import { nauceneZ } from '../shared/ucenie.js';
+import { nauceneZ, parseHistoria } from '../shared/ucenie.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
@@ -97,6 +98,22 @@ export async function bojlerPecat(pecat, fetchImpl = fetch) {
         const res = await postWorker(WORKER_BOJLER_PECAT_URL, pecat, fetchImpl);
         const body = res.ok ? await res.json() : null;
         return body && typeof body.pecat === 'string' && isPecat(body.pecat) ? body.pecat : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * História elektrárne od Workera (`/historia`): dni po hodinách aj s dneškom do poslednej uzavretej hodiny, alebo null,
+ * keď to nevyšlo. Na večerný prepis auta zo slnka (web/auto-den.js).
+ * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<import('../shared/historia.js').DenHistorie[] | null>}
+ */
+export async function historiaZWorkera(pecat, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_HISTORIA_URL, JSON.stringify({ pecat }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) ? parseHistoria(body.dni) : null;
     } catch {
         return null;
     }

@@ -89,6 +89,7 @@ import { setupInit } from '../shared/setup-flow.js';
  *   bojlerOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
  *   trasy: import('../shared/trasy.js').UlozeneTrasy | null,
  *   ucenie: import('../shared/ucenie.js').Naucene | null,
+ *   autoDen: import('../shared/auto-slnko.js').AutoDen | null,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
  */
@@ -147,6 +148,8 @@ const telefon = ({
     bojler: null,
     // Čo sa appka naučila z histórie (web/ucenie.js, shared/ucenie.js) - prepočíta sa raz za deň.
     ucenie: null,
+    // Auto zo slnka dnes (web/auto-den.js): ranný odhad, po západe slnka skutočnosť.
+    autoDen: null,
     bojlerSkript: /** @type {import('../shared/nastavenie-bojler.js').BojlerSkript} */ ({ stav: 'nic', text: '', schranka: false }),
     // Prepínač režimu v paneli Bojler dnes: ukladá sa, alebo sa uložiť nepodarilo.
     bojlerRezim: /** @type {'uklada' | 'chyba' | 'ulozene' | null} */ (null),

@@ -168,8 +168,19 @@ ráta s tým istým: appka mu do zrkadla odloží aj `ucenie` a posledný stav b
 Pásik dlaždice má tri farby (P1): slnko (`podiel`), lacná či bežná sieť a drahé pásmo (`draha`, `podielDrahy`
 v `shared/plan-dna.js`; bojler `bojlerDrahaDnes`). Pásik bežiaceho spotrebiča (`behy`) ráta so slnkom, ktoré
 ostane po bojleri riadenom zásuvkou (do teraz z jeho záznamu dňa, potom simulácia, `bojlerOdberDna`) a po skôr
-zapnutých spotrebičoch - inak by súbeh s bojlerom ukázal slnko, ktoré si vzal bojler (24. 11. 2026). Auto a bojler bez zásuvky (`cheapGrid`) idú len do lacného
-pásma, z ktorého ostáva aspoň `PLAN_DNA.autoMinMin` (A1) - koniec NT o 7:30 nie je „nabíjaj teraz“.
+zapnutých spotrebičoch - inak by súbeh s bojlerom ukázal slnko, ktoré si vzal bojler (24. 11. 2026). Bojler bez zásuvky (`cheapGrid`) ide len do lacného
+pásma, z ktorého ostáva aspoň `PLAN_DNA.lacnaMinMin` (A1) - koniec NT o 7:30 nie je „zapni teraz“.
+
+## Auto mimo Plánu dňa
+
+Návrh a rozhodnutie: `docs/navrhy/auto-mimo-planu.html` (A1 + K2 + B1 + Z1, 24. 11. 2026). Auto v Pláne dňa nie je
+(`PLAN_DNA.order`) - nabíjanie riadi človek sám, takže ho nemá ani trieda dňa, karta Dnes ani ranné oznámenie. Dlaždica auta
+na karte Teraz (pod bojlerom, bez detailu) povie, koľko kWh a km by dalo slnko, keby auto viselo na nabíjačke celý deň
+a práčka, sušička ani umývačka nebežali (`shared/auto-slnko.js`): prebytok nad naučenou spotrebou domu a nad bojlerom riadeným
+zásuvkou (simulácia ako v Pláne dňa, `bojlerDna`), len minúty nad minimom nabíjačky (`AUTO_SLNKO.minKw`), najviac jej príkon.
+Telefón číslo ráno zamrazí (`auto-den-v1`, `web/auto-den.js`) a po západe slnka ho raz prepíše skutočnosťou: výroba z krivky dneška,
+dom z hodín `/historia` (hodina s behom „Už beží“ alebo nad `PLAN_ZIVE.domMax` sa nahradí naučeným profilom, `domDnes`) a bojler
+zo záznamu zásuvky. Iný deň v páse dní ukáže odhad z jeho predpovede (`autoDna`).
 
 ## Scéna toku energie na karte Teraz
 
