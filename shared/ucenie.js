@@ -1,5 +1,6 @@
-// Učenie Plánu dňa z histórie (docs/navrhy/plan-dna-ucenie.html, rozhodnuté 19. 11. 2026: Worker zbiera, telefón sa učí,
-// tabuľky s váhou podľa veku). Nie je to neurónová sieť, ale pár desiatok čísel z histórie jednej domácnosti:
+// Učenie Plánu dňa z histórie (docs/navrhy/plan-dna-ucenie.html, rozhodnuté 19. 11. 2026: tabuľky s váhou podľa veku).
+// Pri Huawei Northbound model počíta Worker (Durable Object účtu, raz za deň) a telefóny domácnosti ho dostanú hotový
+// (docs/navrhy/ucenie-vo-workeri.html, 24. 11. 2026); telefón s iným zdrojom merania ho počíta sám. Nie je to neurónová sieť, ale pár desiatok čísel z histórie jednej domácnosti:
 // a) o koľko sa strecha líši od predpovede podľa hodiny a oblačnosti, b) spotreba domu bez spotrebičov po hodinách
 // v pracovný deň a cez víkend, c) koľko energie potrebuje bojler podľa teploty dňa. Model nemá vlastný stav - každý
 // deň sa prepočíta z histórie (shared/historia.js), takže „Začať odznova“ len posunie deň, od ktorého sa učí. Bez
@@ -185,32 +186,6 @@ const suhrn = (x) =>
     (Array.isArray(x) && x.length === 3 && (x[0] === null || cislo(x[0])) && (x[1] === null || cislo(x[1])) && Number.isInteger(x[2]));
 
 /**
- * Naučený model zo zrkadla pre service worker (shared/oznamenia.js, docs/navrhy/plan-dna-oznamenie-vt.html, O2), alebo null,
- * keď nemá tvar Naucene - ranné oznámenie potom ráta bez učenia.
- * @param {unknown} raw @returns {Naucene | null}
- */
-export function nauceneZ(raw) {
-    if (!isObj(raw)) return null;
-    const n = /** @type {Record<string, any>} */ (raw);
-    const hodiny = (/** @type {unknown} */ a) => Array.isArray(a) && a.length === 24 && a.every(cislo);
-    const casti = [
-        () => cislo(n.dni),
-        () => n.od === null || (typeof n.od === 'string' && DATE_RE.test(n.od)),
-        () => Array.isArray(n.oprava) && n.oprava.length === 3 && n.oprava.every(hodiny),
-        () => isObj(n.dom) && hodiny(n.dom.prac) && hodiny(n.dom.vik),
-        () => bojlerZ(n.bojler),
-    ];
-    return casti.every((ok) => ok()) ? /** @type {Naucene} */ (raw) : null;
-}
-
-/** Naučená potreba bojlera v zrkadle: pásma teploty a všetky dni (číslo či null). @param {unknown} b */
-const bojlerZ = (b) =>
-    isObj(b) &&
-    Array.isArray(/** @type {any} */ (b).pasma) &&
-    /** @type {unknown[]} */ (/** @type {any} */ (b).pasma).every((x) => x === null || cislo(x)) &&
-    /** @type {any} */ (b.vsetky === null || cislo(/** @type {any} */ (b).vsetky));
-
-/**
  * História dní od Workera či z úložiska. Dáta sú nedôveryhodné: deň, ktorý nesedí, vypadne.
  * @param {unknown} raw @returns {DenHistorie[]}
  */
@@ -225,4 +200,58 @@ export function parseHistoria(raw) {
             return typeof d === 'string' && DATE_RE.test(d) && Array.isArray(h) && h.length === 24 && h.every(suhrn) && bOk;
         })
     ).slice(-HISTORIA.dni);
+}
+
+/** @param {unknown} a @param {number} n @returns {a is number[]} */
+const cisla = (a, n) => Array.isArray(a) && a.length === n && a.every(cislo);
+/** @param {unknown} x @returns {x is number | null} */
+const cisloAleboNic = (x) => x === null || cislo(x);
+
+/** Má model od Workera či z úložiska tvar Naucene? @param {unknown} raw */
+function tvarNaucene(raw) {
+    if (!isObj(raw)) return false;
+    const { dni, od, oprava, dom, bojler } = /** @type {Record<string, any>} */ (raw);
+    const odOk = od === null || DATE_RE.test(String(od));
+    const opravaOk = Array.isArray(oprava) && oprava.length === 3 && oprava.every((r) => cisla(r, 24));
+    const domOk = isObj(dom) && cisla(dom.prac, 24) && cisla(dom.vik, 24);
+    return Number.isInteger(dni) && dni >= 0 && odOk && opravaOk && domOk && tvarBojlera(bojler);
+}
+
+/** @param {unknown} b */
+function tvarBojlera(b) {
+    if (!isObj(b)) return false;
+    const { pasma, vsetky } = /** @type {Record<string, unknown>} */ (b);
+    return Array.isArray(pasma) && pasma.length === 3 && pasma.every(cisloAleboNic) && cisloAleboNic(vsetky);
+}
+
+/**
+ * Naučený model od Workera, z úložiska telefónu (docs/navrhy/ucenie-vo-workeri.html) či zo zrkadla pre service worker
+ * (shared/oznamenia.js, docs/navrhy/plan-dna-oznamenie-vt.html, O2). Dáta sú nedôveryhodné: čo nemá tvar Naucene, je
+ * null - appka potom počíta sama, ranné oznámenie bez učenia. Hodnoty sa orežú na rozsahy, aké dáva naucene.
+ * @param {unknown} raw @returns {Naucene | null}
+ */
+export function nauceneZ(raw) {
+    if (!tvarNaucene(raw)) return null;
+    const { dni, od, oprava, dom, bojler } = /** @type {Naucene} */ (raw);
+    const domKw = (/** @type {number[]} */ a) => a.map((x) => orez(x, [PLAN_ZIVE.domMin, PLAN_ZIVE.domMax]));
+    const wh = (/** @type {number | null} */ x) => (x === null ? null : orez(x, UCENIE.bojlerWh));
+    return {
+        dni,
+        od,
+        oprava: oprava.map((r) => r.map((/** @type {number} */ k) => orez(k, UCENIE.oprava))),
+        dom: { prac: domKw(dom.prac), vik: domKw(dom.vik) },
+        bojler: { pasma: bojler.pasma.map(wh), vsetky: wh(bojler.vsetky) },
+    };
+}
+
+/**
+ * Od ktorého dňa sa domácnosť učí („Začať odznova“), keď ho Worker drží: neskorší z toho, čo má, a čo poslal telefón
+ * pri prechode (jeho ucenie-od-v1). Deň po dnešku (`today`) či nezmysel sa neráta.
+ * @param {unknown} stare @param {unknown} zTelefonu @param {string} today @returns {string | null}
+ */
+export function spolocneOd(stare, zTelefonu, today) {
+    const den = (/** @type {unknown} */ x) => (typeof x === 'string' && DATE_RE.test(x) && x <= today ? x : null);
+    const a = den(stare);
+    const b = den(zTelefonu);
+    return a && b ? (a > b ? a : b) : (a ?? b);
 }

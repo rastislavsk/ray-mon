@@ -1,7 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BOJLER, HISTORIA } from '../shared/config.js';
-import { domBezBojlera, parsePredpovedHist, pridajBehy, sBojlerom, snimkaPredpovede, zapisMeranie } from '../shared/historia.js';
+import {
+    domBezBojlera,
+    parsePredpovedHist,
+    pridajBehy,
+    sBojlerom,
+    snimkaPredpovede,
+    zapisMeranie,
+    zlucBehy,
+    zlucSnimky,
+} from '../shared/historia.js';
 import { addDays } from '../shared/solar.js';
 
 const TZ = 'Europe/Bratislava';
@@ -142,4 +151,31 @@ test('pridajBehy: dnešné behy podľa zápisu „Už beží“ (aj zrušený zm
     const dnes = { id: 'umyvacka', d: D, m: 700, k: 850 };
     const h = pridajBehy([stary, vcera, { id: 'susicka', d: D, m: 500, k: 590 }], [dnes], D);
     assert.deepEqual(h, [vcera, dnes]);
+});
+
+test('zlucSnimky: Worker berie prvú snímku dňa, nič po dnešku ani staršie než HISTORIA.dni, nezmysly vypadnú', () => {
+    const D = '2026-09-05';
+    const ok = snimkaPredpovede([], predpoved(D), D, 600)[0];
+    const vcera = { ...ok, d: addDays(D, -1) };
+    const stara = { ...ok, d: addDays(D, -HISTORIA.dni - 1) };
+    const zajtra = { ...ok, d: addDays(D, 1) };
+    assert.deepEqual(zlucSnimky(undefined, [ok, vcera, stara, zajtra, null, { ...ok, k: 'x' }], D), [vcera, ok]);
+    assert.deepEqual(zlucSnimky([vcera], [{ ...vcera, m: 900 }], D), [vcera], 'snímku, ktorú má, nič neprepíše');
+    assert.deepEqual(zlucSnimky([vcera], 'x', D), [vcera]);
+    const vela = [...Array.from({ length: HISTORIA.dni + 1 }, () => null), ok];
+    assert.deepEqual(zlucSnimky([], vela, D), [], 'viac než HISTORIA.dni + 1 snímok Worker neprijme');
+});
+
+test('zlucBehy: behy z histórie telefónu len pred dneškom a HISTORIA.dni dní, ten istý beh ostane z Workera', () => {
+    const D = '2026-09-05';
+    const vcera = { id: 'pracka', d: addDays(D, -1), m: 600, k: 720 };
+    const stary = { id: 'pracka', d: addDays(D, -HISTORIA.dni - 1), m: 600, k: 720 };
+    const dnes = { id: 'umyvacka', d: D, m: 700, k: 850 };
+    assert.deepEqual(zlucBehy([dnes], [vcera, stary, dnes, { ...dnes, d: addDays(D, -2), k: 900 }, 'x'], D), [
+        { ...dnes, d: addDays(D, -2), k: 900 },
+        vcera,
+        dnes,
+    ]);
+    assert.deepEqual(zlucBehy([vcera], [{ ...vcera, k: 800 }], D), [vcera], 'Worker má prednosť');
+    assert.deepEqual(zlucBehy(undefined, null, D), []);
 });

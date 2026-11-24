@@ -704,10 +704,12 @@ export const UCENIE = {
     teploty: [5, 15],
     bojlerWh: [500, 6000],
 };
-/** História elektrárne z Workera (`/historia`) stiahnutá dnes: { d, dni }. Telefón sa pýta raz za deň. */
+/** História elektrárne z Workera (`/historia`): { d, dni }. Nová appka ju už len číta, keď nemá model od Workera. */
 export const HISTORIA_STORAGE_KEY = 'historia-v1';
 /** Od ktorého dňa sa appka učí - „Začať odznova“ v Nastavení. Formát: dátum YYYY-MM-DD. */
 export const UCENIE_OD_STORAGE_KEY = 'ucenie-od-v1';
+/** Model učenia od Workera (docs/navrhy/ucenie-vo-workeri.html): { d, z, s, n, o, model }, web/ucenie.js. */
+export const UCENIE_WORKER_STORAGE_KEY = 'ucenie-worker-v1';
 /** Oznámenia bojlera na tomto telefóne zapnuté (vypínač v paneli Bojler dnes). */
 export const BOJLER_OZNAM_STORAGE_KEY = 'bojler-oznam-v1';
 
@@ -738,6 +740,7 @@ export const STORAGE_KEYS = [
     BEHY_HIST_STORAGE_KEY,
     HISTORIA_STORAGE_KEY,
     UCENIE_OD_STORAGE_KEY,
+    UCENIE_WORKER_STORAGE_KEY,
     RANNA_TRIEDA_STORAGE_KEY,
     TRASY_STORAGE_KEY,
 ];
@@ -844,15 +847,23 @@ export const WORKER_BOJLER_HRANICA_PATH = '/bojler-hranica';
 export const WORKER_BOJLER_HRANICA_URL = new URL(WORKER_BOJLER_HRANICA_PATH, WORKER_URL).href;
 export const WORKER_BOJLER_STAV_PATH = '/bojler-stav';
 export const WORKER_BOJLER_STAV_URL = new URL(WORKER_BOJLER_STAV_PATH, WORKER_URL).href;
-/** História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. */
+/**
+ * História pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html), z Durable Objectu účtu Huawei. Nová appka ju už
+ * nesťahuje (model počíta Worker, WORKER_UCENIE_PATH); ostáva pre staršiu appku v cache (docs/to do later.md).
+ */
 export const WORKER_HISTORIA_PATH = '/historia';
-export const WORKER_HISTORIA_URL = new URL(WORKER_HISTORIA_PATH, WORKER_URL).href;
 /**
  * Spoločné behy „Už beží“ telefónov domácnosti (docs/navrhy/bezi-spolocne.html), v Durable Objecte účtu Huawei.
  * Appka sa pýta pri každej obnove dát (každú minútu a po návrate do appky) a pošle aj nepotvrdené zmeny.
  */
 export const WORKER_BEZI_PATH = '/bezi';
 export const WORKER_BEZI_URL = new URL(WORKER_BEZI_PATH, WORKER_URL).href;
+/**
+ * Model učenia Plánu dňa z Durable Objectu účtu Huawei (docs/navrhy/ucenie-vo-workeri.html): Worker ho počíta raz za
+ * deň, telefóny domácnosti ho dostanú hotový. Telefón sa pýta raz za deň a keď má novú snímku predpovede dneška.
+ */
+export const WORKER_UCENIE_PATH = '/ucenie';
+export const WORKER_UCENIE_URL = new URL(WORKER_UCENIE_PATH, WORKER_URL).href;
 export const WORKER_RADAR_PATH = '/radar/';
 export const WORKER_RADAR_URL = new URL(WORKER_RADAR_PATH, WORKER_URL).href;
 

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Návrh: Model učenia Plánu dňa počíta Worker</title>
+        <style>
+            /* Zmrazený snímok rozhodnutia (viď README v tomto priečinku). Zmena v appke nie je vidieť, preto bez snímok. */
+            @font-face {
+                font-family: 'Archivo';
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+                font-weight: 100 900;
+            }
+            :root {
+                color-scheme: dark;
+                --ink: #f2f0ea;
+                --dim: rgba(242, 240, 234, 0.66);
+                --line: rgba(242, 240, 234, 0.16);
+                --green: #b9f28c;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: #070b18;
+                color: var(--ink);
+                font-family: 'Archivo', system-ui, sans-serif;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 860px;
+                margin: 0 auto;
+                padding: 28px 16px 80px;
+            }
+            h2 {
+                margin-top: 36px;
+            }
+            .moznost {
+                border: 1px solid var(--line);
+                border-radius: 14px;
+                padding: 4px 18px;
+                margin: 14px 0;
+            }
+            .zvolene {
+                border-color: var(--green);
+            }
+            .zvolene h3::after {
+                content: ' – zvolené';
+                color: var(--green);
+            }
+            p.dim,
+            li.dim {
+                color: var(--dim);
+            }
+            code {
+                font-size: 0.92em;
+            }
+            table {
+                border-collapse: collapse;
+            }
+            td,
+            th {
+                border-bottom: 1px solid var(--line);
+                padding: 6px 12px 6px 0;
+                text-align: left;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <h1>Model učenia Plánu dňa počíta Worker</h1>
+            <p class="dim">24. 11. 2026. Mení rozhodnutie C z docs/navrhy/plan-dna-ucenie.html („Worker zbiera, telefón sa učí“).</p>
+
+            <h2>Otázka</h2>
+            <p>
+                Učenie (<code>shared/ucenie.js</code>, <code>naucene</code>) sa počítalo v každom telefóne zvlášť. Telefóny tej istej
+                domácnosti mali rozdielne snímky predpovede, históriu behov aj „Začať odznova“, takže sa naučili niečo iné a Plán dňa sa na
+                nich líšil. Zo štyroch možností (nechať tak, vstupy do Workera, model vo Workeri, len zdieľané „Začať odznova“) padla voľba
+                na model vo Workeri: Durable Object účtu Huawei (<code>UcetHuawei</code>) model počíta a telefóny ho dostanú hotový.
+            </p>
+
+            <h2>Meranie</h2>
+            <p>
+                <code>naucene</code> nad 60 dňami (<code>HISTORIA.dni</code>), plné dni, 60 snímok a 180 behov. Dáta boli vygenerované, nie
+                skutočné; Node 22 na PC, nie Cloudflare.
+            </p>
+            <table>
+                <tr>
+                    <th>Čo</th>
+                    <th>Čas procesora</th>
+                </tr>
+                <tr>
+                    <td>prvé volanie v novom procese</td>
+                    <td>5,9 – 7,8 ms</td>
+                </tr>
+                <tr>
+                    <td>zahriate, medián / p99</td>
+                    <td>1,5 / 5,1 ms</td>
+                </tr>
+                <tr>
+                    <td>JSON.parse vstupu (117 kB)</td>
+                    <td>2,3 – 3,3 ms</td>
+                </tr>
+            </table>
+            <p>
+                Pri každom dopyte by to bolo na hrane 10 ms bezplatného Workera. Dokumentácia Cloudflare uvádza pre Durable Objects aj 30 s
+                na dopyt, na inom mieste rovnaký limit ako Worker - neoverené, ktoré platí pre bezplatný plán. Preto raz za deň.
+            </p>
+
+            <h2>Kedy Worker model prepočíta</h2>
+            <div class="moznost">
+                <h3>A – pri každom dopyte</h3>
+                <p>Najjednoduchšie, vždy čerstvé. Riziko prekročenia 10 ms.</p>
+            </div>
+            <div class="moznost zvolene">
+                <h3>B – raz za deň, výsledok v objekte</h3>
+                <p>
+                    Model je pod <code>um:</code> s dňom. Prepočíta ho prvý dopyt dňa alebo zmena vstupu staršieho dňa (uzavretá hodina
+                    včerajška, deň bojlera, beh či snímka staršieho dňa, „Začať odznova“) - tie <code>um:</code> zmažú. Dnešok do modelu
+                    nevstupuje, takže dnešná snímka ani dnešné behy prepočet nespustia.
+                </p>
+            </div>
+            <div class="moznost">
+                <h3>C – pri novom dni histórie</h3>
+                <p>Naviazané na zápis. Snímky a behy prichádzajú inokedy, takže aj tak treba pravidlo z B.</p>
+            </div>
+
+            <h2>Snímky predpovede</h2>
+            <div class="moznost zvolene">
+                <h3>S1 – prvý telefón, ktorý snímku dňa má, ju pošle</h3>
+                <p>Na <code>POST /ucenie</code>, Worker ju drží pod <code>hs:</code> a platí prvá (<code>zlucSnimky</code>).</p>
+            </div>
+            <div class="moznost">
+                <h3>S2 – snímka s každým meraním</h3>
+                <p>Bez novej cesty, ale každé meranie je väčšie.</p>
+            </div>
+            <div class="moznost">
+                <h3>S3 – Worker si predpoveď stiahne sám</h3>
+                <p>Ďalšie volanie Open-Meteo (limit 429 sme už raz trafili) a výpočet predpovede v 10 ms.</p>
+            </div>
+
+            <h2>Behy za 60 dní</h2>
+            <div class="moznost zvolene">
+                <h3>B1 – spoločné behy <code>bz:</code> držia HISTORIA.dni dní</h3>
+                <p><code>zapisZmeny</code> zahodí len staršie dni, <code>/bezi</code> vracia telefónu len dnešok.</p>
+            </div>
+            <div class="moznost">
+                <h3>B2 – zvláštny kľúč pre staršie dni</h3>
+                <p>Dnešný zoznam ostane malý, ale pribudne kľúč a krok presunu.</p>
+            </div>
+
+            <h2>„Začať odznova“</h2>
+            <div class="moznost zvolene">
+                <h3>O1 – spoločné vo Workeri</h3>
+                <p><code>uo:</code>, <code>odznova: true</code> na <code>/ucenie</code>. Jeden telefón zresetuje celú domácnosť.</p>
+            </div>
+            <div class="moznost">
+                <h3>O2 – ostane v telefóne</h3>
+                <p>Modely by sa zase rozišli.</p>
+            </div>
+
+            <h2>Telefóny bez Northbound a prechod</h2>
+            <div class="moznost zvolene">
+                <h3>P1 – telefón raz nahrá, čo sa naučil sám</h3>
+                <p>
+                    Prvý dopyt nesie všetky snímky (<code>predpoved-hist-v1</code>), behy (<code>behy-hist-v1</code>) a
+                    <code>ucenie-od-v1</code>. Worker zlúči: snímka, ktorú má, ostane; behy len pred dneškom; od kedy sa učí - neskorší deň.
+                    Potom telefón posiela len dnešnú snímku. Kým model od Workera nemá, počíta ho sám ako doteraz. Pri inom zdroji merania
+                    sa nič nemení.
+                </p>
+            </div>
+            <div class="moznost">
+                <h3>P2 – bez nahrania</h3>
+                <p>Jednoduchšie, ale oprava predpovede by začala od nuly (bez snímok).</p>
+            </div>
+
+            <h2>Čo to robí v telefóne</h2>
+            <ul>
+                <li>
+                    <code>web/ucenie.js</code>: pri obnove dát sa pýta Workera, keď model nie je z dneška, keď má dnešnú snímku, ktorú
+                    Worker ešte nedostal, a keď čaká „Začať odznova“. Najviac jeden dopyt naraz.
+                </li>
+                <li>
+                    Model od Workera je v <code>ucenie-worker-v1</code> spolu s menom elektrárne - iná elektráreň ho nepoužije. Zlyhaný
+                    dopyt nechá posledný model, prvýkrát počíta telefón sám.
+                </li>
+                <li>
+                    <code>/historia</code> ostáva pre staršiu appku v cache, nová ju nesťahuje. <code>historia-v1</code> sa už len číta.
+                </li>
+                <li class="dim">Nová migrácia Durable Objectu netreba, sú to nové kľúče v tom istom objekte.</li>
+            </ul>
+        </main>
+    </body>
+</html>

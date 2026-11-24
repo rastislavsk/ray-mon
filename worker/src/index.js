@@ -21,6 +21,7 @@
 // POST /bojler-oznamenia: telefón si zapne či vypne oznámenia o zapnutí a vypnutí bojlera (worker/src/ucet.js).
 // POST /historia: pečať telefónu -> história elektrárne pre učenie Plánu dňa (worker/src/ucet.js, shared/historia.js).
 // POST /bezi: pečať telefónu, dnešok a zmeny „Už beží“ -> dnešné behy všetkých telefónov domácnosti (worker/src/ucet.js).
+// POST /ucenie: pečať telefónu, snímky predpovede a „Začať odznova“ -> model učenia Plánu dňa (worker/src/ucet.js).
 //
 // Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
 // navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
@@ -41,6 +42,7 @@ import {
     WORKER_PV_PATH,
     WORKER_RADAR_PATH,
     WORKER_TRASY_PATH,
+    WORKER_UCENIE_PATH,
     WORKER_ZDIELAJ_PATH,
     ZDIELANIE,
 } from '../../shared/config.js';
@@ -76,6 +78,8 @@ const HEADERS = {
 
 // Najdlhšie telo požiadavky. Odkaz na kiosk má okolo stovky znakov, údaje z formulára tiež málo.
 const MAX_BODY = 10000;
+/** /ucenie: pri prechode telefón pošle naraz všetky svoje snímky predpovede a behy (HISTORIA.dni dní, asi 25 kB). */
+const MAX_BODY_UCENIE = 60000;
 
 /** @param {number} status @param {unknown} body */
 const json = (status, body) => new Response(JSON.stringify(body), { status, headers: HEADERS });
@@ -102,10 +106,10 @@ function zalogujMeranie(sposob, pv) {
     console.log(`meranie: ${sposob}${pv.realTimePowerKw === null ? ' (bez výkonu)' : ''}`);
 }
 
-/** Telo požiadavky ako text, najviac MAX_BODY znakov; dlhšie je null. @param {Request} request */
-async function telo(request) {
+/** Telo požiadavky ako text, najviac `max` znakov; dlhšie je null. @param {Request} request @param {number} [max] */
+async function telo(request, max = MAX_BODY) {
     const text = await request.text();
-    return text.length <= MAX_BODY ? text : null;
+    return text.length <= max ? text : null;
 }
 
 /**
@@ -283,10 +287,10 @@ export async function handleBojlerPecat(request, env, now) {
  * @param {Request} request @param {Promise<CryptoKey>} key @param {Date} now
  * @returns {Promise<{ req: any, obsah: Awaited<ReturnType<typeof otvor>> }>}
  */
-async function dopytBojlera(request, key, now) {
+async function dopytBojlera(request, key, now, max = MAX_BODY) {
     /** @type {any} */ let req = null;
     try {
-        req = JSON.parse((await telo(request)) ?? '');
+        req = JSON.parse((await telo(request, max)) ?? '');
     } catch {
         return { req: null, obsah: null };
     }
@@ -435,6 +439,27 @@ export async function handleBezi(request, env, now) {
     }
 }
 
+/**
+ * POST /ucenie: `{ pecat, snimky?, behy?, od?, odznova? }` od appky (pečať telefónu) -> `{ ucenie }`, model učenia Plánu
+ * dňa, ten istý pre všetky telefóny domácnosti (docs/navrhy/ucenie-vo-workeri.html). Telefón pošle snímku predpovede
+ * dneška, raz pri prechode aj všetky svoje snímky, behy a „Začať odznova“; `odznova: true` sa učí od dneška. Dáta
+ * prečistí Durable Object. Len Huawei Northbound - iné zdroje Durable Object nemajú.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleUcenie(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now, MAX_BODY_UCENIE);
+    if (!obsah) return json(400, { chyba: 'udaje' });
+    try {
+        const { snimky, behy, od, odznova } = req;
+        const r = await ucet(env.UCTY, obsah.pristup, '/ucenie', now, { snimky, behy, od, odznova });
+        return json(200, { ucenie: r.ucenie });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
 /** Odpoveď na uloženie odberu či pripomienky podľa stavu. @param {number} status */
 const oznamOdpoved = (status) => json(status, status === 200 ? { ok: true } : { chyba: status === 400 ? 'udaje' : 'server' });
 
@@ -469,6 +494,8 @@ const CESTY = {
     [WORKER_HISTORIA_PATH]: { limit: true, run: handleHistoria },
     // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
     [WORKER_BEZI_PATH]: { limit: false, run: handleBezi },
+    // Raz za deň, so snímkou predpovede a pri „Začať odznova“.
+    [WORKER_UCENIE_PATH]: { limit: true, run: handleUcenie },
     [WORKER_TRASY_PATH]: {
         limit: true,
         run: async (request, env, now, fetchImpl) => {

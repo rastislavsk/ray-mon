@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BEZI } from '../shared/config.js';
+import { BEZI, HISTORIA } from '../shared/config.js';
+import { addDays } from '../shared/solar.js';
 import {
     behyVeci,
     beziaci,
@@ -165,9 +166,11 @@ test('behyVeci: behy jedného spotrebiča v ten deň', () => {
     assert.deepEqual(behyVeci(list, 'pracka', D), [list[0]]);
 });
 
-test('zapisZmeny: behy spotrebiča v deň zmeny nahradí, iné nechá, staršie dni a nezmysly zahodí', () => {
+test('zapisZmeny: behy spotrebiča v deň zmeny nahradí, iné nechá, dni staršie než HISTORIA.dni a nezmysly zahodí', () => {
+    const vcera = { id: 'pracka', d: '2026-09-04', m: 600, k: 720 };
     const spolocne = [
-        { id: 'pracka', d: '2026-09-04', m: 600, k: 720 },
+        { id: 'umyvacka', d: addDays(D, -HISTORIA.dni - 1), m: 600, k: 720 },
+        vcera,
         { id: 'pracka', d: D, m: 420, k: 540 },
         { id: 'umyvacka', d: D, m: 500, k: 650 },
     ];
@@ -186,12 +189,13 @@ test('zapisZmeny: behy spotrebiča v deň zmeny nahradí, iné nechá, staršie 
         null,
     ];
     assert.deepEqual(zapisZmeny(spolocne, zmeny, D), [
+        vcera,
         { id: 'pracka', d: D, m: 420, k: 540 },
         { id: 'umyvacka', d: D, m: 500, k: 650 },
         { id: 'pracka', d: D, m: 600, k: 720 },
     ]);
     // „Nebeží“: prázdne behy spotrebič zo zoznamu odstránia.
-    assert.deepEqual(zapisZmeny(spolocne, [{ id: 'umyvacka', d: D, behy: [] }], D), [{ id: 'pracka', d: D, m: 420, k: 540 }]);
+    assert.deepEqual(zapisZmeny(spolocne, [{ id: 'umyvacka', d: D, behy: [] }], D), [vcera, { id: 'pracka', d: D, m: 420, k: 540 }]);
     // Bez zmien len prečistí; zlé vstupy nič nezhodia.
     assert.deepEqual(zapisZmeny(spolocne, undefined, D), spolocne.slice(1));
     assert.deepEqual(zapisZmeny('x', 'y', D), []);

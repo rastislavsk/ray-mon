@@ -16,6 +16,11 @@ import {
     OZNAMENIA,
     BEZI_CAKA_STORAGE_KEY,
     WORKER_BEZI_URL,
+    WORKER_UCENIE_URL,
+    PREDPOVED_HIST_STORAGE_KEY,
+    BEHY_HIST_STORAGE_KEY,
+    UCENIE_OD_STORAGE_KEY,
+    UCENIE_WORKER_STORAGE_KEY,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_STAV_URL,
     WORKER_BOJLER_REZIM_URL,
@@ -31,6 +36,8 @@ import { pripojenieText } from '../../shared/messages-core.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
+import { UCENIE_TEXTS } from '../../shared/nastavenie-ucenie.js';
+import { naucene } from '../../shared/ucenie.js';
 import { bojlerDetail, bojlerDlazdica, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { scenaModel } from '../../shared/teraz-scena.js';
 import { kwpText, minutesToTimeStr } from '../../shared/format.js';
@@ -1307,6 +1314,52 @@ test.describe('bojler na prebytky', () => {
         expect(dopyty.at(-1).zmeny).toEqual([{ id: 'pracka', d, behy: [] }]);
         expect(spolocne).toEqual([]);
         await expect(prDl).not.toHaveAttribute('data-zapnuty');
+        expect(errors).toEqual([]);
+    });
+
+    test('učenie vo Workeri: model príde hotový, prvý dopyt nesie dáta telefónu, „Začať odznova“ ide Workeru', async ({ page }) => {
+        // docs/navrhy/ucenie-vo-workeri.html: Worker podvrhnutý modelom, ktorý by sa telefón sám nenaučil (12 dní).
+        const d = '2026-09-05';
+        const vcera = '2026-09-04';
+        const hod = (/** @type {number | null} */ x) => Array.from({ length: 24 }, () => x);
+        const snimkaVcera = { d: vcera, m: 360, k: hod(1), c: hod(20), t: 12 };
+        const behVcera = { id: 'pracka', d: vcera, m: 600, k: 720 };
+        await page.addInitScript(
+            ([kluce, hodnoty]) => kluce.forEach((k, i) => localStorage.getItem(k) || localStorage.setItem(k, hodnoty[i])),
+            [
+                [DOMA_STORAGE_KEY, PREDPOVED_HIST_STORAGE_KEY, BEHY_HIST_STORAGE_KEY, UCENIE_OD_STORAGE_KEY],
+                [JSON.stringify(domaToStored(['pracka'])), JSON.stringify([snimkaVcera]), JSON.stringify([behVcera]), '2026-08-01'],
+            ],
+        );
+        const model = { ...naucene({ dni: [], snimky: [], behy: [], today: d, od: null }), dni: 12 };
+        /** @type {any[]} */ const dopyty = [];
+        await page.route(WORKER_UCENIE_URL, (route) => {
+            const telo = JSON.parse(route.request().postData() ?? '{}');
+            dopyty.push(telo);
+            return route.fulfill({ json: { ucenie: { ...model, od: telo.odznova ? d : null } } });
+        });
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ } });
+        await expect.poll(() => dopyty.length).toBe(1);
+        // Prvýkrát telefón pošle všetko, čo sa naučil sám: snímky (aj dnešnú), behy a od kedy sa učí.
+        expect(dopyty[0].pecat).toBe(NB_ZDROJ.pecat);
+        expect(dopyty[0].snimky.map((/** @type {any} */ s) => s.d)).toEqual([vcera, d]);
+        expect(dopyty[0].behy).toEqual([behVcera]);
+        expect(dopyty[0].od).toBe('2026-08-01');
+        await page.locator('#nav-nastavenie').click();
+        const doma = page.locator('#ns-fold-doma');
+        if ((await doma.getAttribute('aria-expanded')) !== 'true') await doma.click();
+        await expect(page.locator('#ns-ucenie-dni'), 'model od Workera, nie z telefónu').toHaveText(UCENIE_TEXTS.dni(12));
+        // Obnova dát v ten istý deň sa Workera nepýta znova.
+        await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+        await page.locator('#ns-ucenie-odznova').click();
+        await expect.poll(() => dopyty.length).toBe(2);
+        // Ďalej len dnešná snímka a „Začať odznova“ pre celú domácnosť.
+        expect(dopyty[1].odznova).toBe(true);
+        expect(dopyty[1].behy).toBeUndefined();
+        expect(dopyty[1].snimky.map((/** @type {any} */ s) => s.d)).toEqual([d]);
+        await expect
+            .poll(() => page.evaluate((k) => JSON.parse(localStorage.getItem(k) ?? 'null'), UCENIE_WORKER_STORAGE_KEY))
+            .toMatchObject({ d, z: NB_ZDROJ.nazov, s: true, n: true, o: false, model: { od: d } });
         expect(errors).toEqual([]);
     });
 
