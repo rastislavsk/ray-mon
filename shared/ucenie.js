@@ -103,15 +103,26 @@ function opravaDna(t, w, s, vaha) {
 }
 
 /**
- * Spotreba domu dňa do tabuľky: hodiny s dosť meraniami, bez hodín, keď bežal spotrebič z „Už beží“ (jeho odber
- * by sa rátal ako dom). Vráti počet použitých hodín.
+ * Je hodina histórie `x` bežná spotreba domu? Dosť meraní (UCENIE.minMerani) a medián domu najviac PLAN_ZIVE.domMax -
+ * nad ním nabíjalo auto (appka ho nevie zmerať) alebo bežalo niečo veľké, čo do bežnej spotreby nepatrí. To isté
+ * pravidlo má učenie (`domDna`) aj večerný prepis auta (`domDnes` v shared/auto-slnko.js).
+ * @param {import('./historia.js').SuhrnHodiny | null | undefined} x
+ * @returns {x is import("./historia.js").SuhrnHodiny & [number | null, number, number]}
+ */
+export function hodinaDomu(x) {
+    return !!x && x[1] !== null && x[2] >= UCENIE.minMerani && x[1] <= PLAN_ZIVE.domMax;
+}
+
+/**
+ * Spotreba domu dňa do tabuľky: len bežné hodiny (`hodinaDomu` - bez nabíjania auta a veľkých odberov nad
+ * PLAN_ZIVE.domMax), bez hodín, keď bežal spotrebič z „Už beží“ (jeho odber by sa rátal ako dom). Vráti počet použitých hodín.
  * @param {Array<{ w: number, x: number, n: number }>} t @param {DenHistorie} w @param {import('./bezi.js').Zapis[]} behy @param {number} vaha
  */
 function domDna(t, w, behy, vaha) {
     const dnes = behy.filter((z) => z.d === w.d);
     let n = 0;
     w.h.forEach((x, hod) => {
-        if (!x || x[1] === null || x[2] < UCENIE.minMerani) return;
+        if (!hodinaDomu(x)) return;
         if (dnes.some((z) => z.m < (hod + 1) * 60 && z.k > hod * 60)) return;
         t[hod].w += vaha;
         t[hod].x += vaha * x[1];

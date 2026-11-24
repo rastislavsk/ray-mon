@@ -4,10 +4,11 @@
 // riadi zásuvka (ide pred autom, tak ako v Pláne dňa). Ráno odhad z predpovede, ktorý telefón zamrazí, po západe slnka
 // prepis skutočnosťou (web/auto-den.js). Čisté funkcie - čas a dáta prichádzajú ako parametre.
 
-import { AUTO_SLNKO, DEVICES, PLAN_ZIVE, UCENIE } from './config.js';
+import { AUTO_SLNKO, DEVICES } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { dayCtx, freeKw, kmOf } from './mozem-jadro.js';
 import { bojlerDna, bojlerInyDen } from './plan-dna.js';
+import { hodinaDomu } from './ucenie.js';
 import { DATE_RE, isObj } from './valid.js';
 
 /**
@@ -65,8 +66,8 @@ export function autoDna(input, index, dom) {
 
 /**
  * Skutočná spotreba domu dneška `d` po hodinách na večerný prepis: uzavretá hodina z histórie Workera (medián domu bez
- * bojlera), keď v nej bolo dosť meraní (UCENIE.minMerani), nebežal spotrebič z „Už beží“ (`behy`) a nie je nad
- * PLAN_ZIVE.domMax - vtedy v dome bežalo niečo veľké (aj auto), čo do bežnej spotreby nepatrí. Inak naučený `profil`.
+ * bojlera), keď je bežná (`hodinaDomu` v shared/ucenie.js: dosť meraní, nie nad PLAN_ZIVE.domMax) a nebežal v nej
+ * spotrebič z „Už beží“ (`behy`). Inak naučený `profil`.
  * @param {number[]} profil @param {import('./historia.js').DenHistorie[]} dni @param {import('./bezi.js').Zapis[]} behy
  * @param {string} d @returns {number[]}
  */
@@ -75,7 +76,7 @@ export function domDnes(profil, dni, behy, d) {
     const bezi = behy.filter((z) => z.d === d);
     return profil.map((kw, hod) => {
         const x = den?.h[hod];
-        if (!x || x[1] === null || x[2] < UCENIE.minMerani || x[1] > PLAN_ZIVE.domMax) return kw;
+        if (!hodinaDomu(x)) return kw;
         return bezi.some((z) => z.m < (hod + 1) * 60 && z.k > hod * 60) ? kw : x[1];
     });
 }
