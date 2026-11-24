@@ -414,7 +414,8 @@
     width: 26px;
     height: 26px;
 }
-/* Pásik: koľko programu dá slnko (zlatá) a koľko sieť (modrá), docs/navrhy/teraz-pasik-zdroje.html. Kde nie je
+/* Pásik: koľko programu dá slnko (zlatá, do `--s`), sieť v lacnom či bežnom pásme (modrá, do `--n`) a sieť v drahom
+   pásme (červená, zvyšok), docs/navrhy/teraz-pasik-zdroje.html a plan-dna-oznamenie-vt.html (P1). Kde nie je
    čo ukázať (bojler, ktorý dnes ešte nehrial), je prázdny a drží miesto - odrážky pod ním tak sedia s vedľajšou
    dlaždicou. */
 .podiel {
@@ -423,7 +424,12 @@
     height: 6px;
     margin: 8px 0 4px;
     border-radius: 3px;
-    background: linear-gradient(90deg, #ffd166 0 var(--s), var(--pas-siet, rgba(124, 196, 255, 0.75)) var(--s) 100%);
+    background: linear-gradient(
+        90deg,
+        #ffd166 0 var(--s),
+        rgba(124, 196, 255, 0.75) var(--s) var(--n, 100%),
+        var(--costly) var(--n, 100%) 100%
+    );
 }
 .podiel[data-prazdny] {
     visibility: hidden;

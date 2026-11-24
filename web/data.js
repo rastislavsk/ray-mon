@@ -20,7 +20,7 @@ import {
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
 import { bojlerInfoZ } from '../shared/bojler.js';
-import { parseNaucene } from '../shared/ucenie.js';
+import { nauceneZ } from '../shared/ucenie.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
 import { parseGeocode } from '../shared/settings.js';
 import { buildForecast } from '../shared/solar.js';
@@ -112,7 +112,7 @@ export async function ucenieZWorkera(pecat, telo, fetchImpl = fetch) {
     try {
         const res = await postWorker(WORKER_UCENIE_URL, JSON.stringify({ ...telo, pecat }), fetchImpl);
         const body = res.ok ? await res.json() : null;
-        return isObj(body) ? parseNaucene(body.ucenie) : null;
+        return isObj(body) ? nauceneZ(body.ucenie) : null;
     } catch {
         return null;
     }

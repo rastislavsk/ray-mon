@@ -225,11 +225,12 @@ function tvarBojlera(b) {
 }
 
 /**
- * Model od Workera či z úložiska telefónu (docs/navrhy/ucenie-vo-workeri.html). Dáta sú nedôveryhodné: čo nesedí,
- * je null - appka vtedy počíta sama. Hodnoty sa orežú na rozsahy, aké dáva naucene.
+ * Naučený model od Workera, z úložiska telefónu (docs/navrhy/ucenie-vo-workeri.html) či zo zrkadla pre service worker
+ * (shared/oznamenia.js, docs/navrhy/plan-dna-oznamenie-vt.html, O2). Dáta sú nedôveryhodné: čo nemá tvar Naucene, je
+ * null - appka potom počíta sama, ranné oznámenie bez učenia. Hodnoty sa orežú na rozsahy, aké dáva naucene.
  * @param {unknown} raw @returns {Naucene | null}
  */
-export function parseNaucene(raw) {
+export function nauceneZ(raw) {
     if (!tvarNaucene(raw)) return null;
     const { dni, od, oprava, dom, bojler } = /** @type {Naucene} */ (raw);
     const domKw = (/** @type {number[]} */ a) => a.map((x) => orez(x, [PLAN_ZIVE.domMin, PLAN_ZIVE.domMax]));

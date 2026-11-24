@@ -227,7 +227,8 @@ export async function initOznamZosulad(store) {
 
 /**
  * Odkladá service workeru nastavenie (Cache API) pri každej zmene stavu, ktorá sa ho týka - len
- * keď je oznámenie zapnuté a appka pozná aspoň polohu. `app`: ktorú appku ťuknutie na oznámenie
+ * keď je oznámenie zapnuté a appka pozná aspoň polohu. S ním aj čo sa appka naučila a posledný stav bojlera
+ * (docs/navrhy/plan-dna-oznamenie-vt.html, O2), aby ranný plán sedel s kartou Teraz; body teploty vody nie, plán ich nepotrebuje. `app`: ktorú appku ťuknutie na oznámenie
  * otvorí, cesta voči koreňu (`./`). Keď sa pri zapnutom oznámení zmení
  * časové pásmo elektrárne (iná poloha), pošle ho aj Workeru - ráta v ňom ranný čas.
  * @param {{ get: () => MirrorSource, subscribe: (fn: (s: MirrorSource) => void) => unknown }} store
@@ -245,8 +246,9 @@ export function initOznamZrkadlo(store, app) {
             return;
         }
         const { hour } = s.oznamenia;
+        const bojler = s.bojler && { ...s.bojler, teploty: undefined };
         /** @type {import('../shared/oznamenia.js').Zrkadlo} */
-        const z = { site: s.site, plant: s.plant, tariff: s.tariff, devices: s.doma, voice: s.voice, app, hour };
+        const z = { site: s.site, plant: s.plant, tariff: s.tariff, devices: s.doma, voice: s.voice, app, hour, ucenie: s.ucenie, bojler };
         const text = JSON.stringify(z);
         if (text === posledne) return;
         posledne = text;
@@ -270,5 +272,6 @@ export function initOznamZrkadlo(store, app) {
  * Časť stavu, z ktorej vzniká zrkadlo pre service worker.
  * @typedef {{ site: import('../shared/config.js').Site, plant: import('../shared/config.js').Plant,
  *   tariff: import('../shared/config.js').Tariff, known: import('../shared/settings.js').Known,
- *   oznamenia: import('../shared/oznamenia.js').Oznamenia, doma: string[], voice: import('../shared/messages.js').Voice }} MirrorSource
+ *   oznamenia: import('../shared/oznamenia.js').Oznamenia, doma: string[], voice: import('../shared/messages.js').Voice,
+ *   ucenie: import('../shared/ucenie.js').Naucene | null, bojler: import('../shared/bojler.js').BojlerInfo | null }} MirrorSource
  */

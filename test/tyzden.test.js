@@ -173,7 +173,7 @@ test('núdzový čas bez lacného pásma: bežná elektrina, pri jednej cene s t
     const s = nudzoveCasy(spicka.ctx, [], ['pracka', 'auto']);
     assert.deepEqual(s[0].zdroj, 'bezna');
     assert.ok(s[0].start !== null && s[0].start >= 7 * 60 && s[0].start + 120 <= 17 * 60, 'celá mimo drahého pásma');
-    assert.deepEqual(s[1], { id: 'auto', start: null, end: null, podiel: null, zdroj: 'siet' });
+    assert.deepEqual(s[1], { id: 'auto', start: null, end: null, podiel: null, draha: 0, zdroj: 'siet' });
     // Jedna cena: zamračený deň dá aspoň trochu slnka okolo poludnia.
     const jedna = dniTyzdna(input({ '2026-09-06': 0.08 }, RANO, JEDNA), VSETKO)[1];
     const j = nudzoveCasy(jedna.ctx, [], ['pracka'])[0];
@@ -182,7 +182,7 @@ test('núdzový čas bez lacného pásma: bežná elektrina, pri jednej cene s t
     assert.ok(j.start !== null && j.start > 8 * 60 && j.start < 15 * 60);
     // Dnes večer po západe, jedna cena: slnko nepomôže, je to jedno. Tesne pred polnocou program nedobehne.
     const vecer = dayCtx(input({}, at('21:30'), JEDNA));
-    assert.deepEqual(nudzoveCasy(vecer, [], ['pracka']), [{ id: 'pracka', start: null, end: null, podiel: 0, zdroj: 'siet' }]);
+    assert.deepEqual(nudzoveCasy(vecer, [], ['pracka']), [{ id: 'pracka', start: null, end: null, podiel: 0, draha: 0, zdroj: 'siet' }]);
     const polnoc = dayCtx(input({}, at('23:20'), JEDNA));
     assert.deepEqual(nudzoveCasy(polnoc, [], ['pracka', 'auto'])[0].start, null);
     // S lacným pásmom cez polnoc: štart v ňom, aj keď program dobehne až zajtra.
@@ -216,6 +216,7 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
         cas: '10:30',
         odr: ['lacná elektrina'],
         podiel: 0,
+        draha: 0,
     });
     const v = nedela.veci.find((x) => x.id === 'pracka');
     assert.deepEqual(
@@ -241,6 +242,7 @@ test('denInyModel: deň bez slnka - núdzové časy s dňom pri čase, bez štar
         cas: '–',
         odr: ['slnko nepomôže'],
         podiel: 0,
+        draha: 0,
     });
     assert.equal(jedna.veci[0].slot, null);
 });
@@ -267,6 +269,8 @@ test('karta Teraz počas dní bez slnka: núdzové časy namiesto „o 3 dni“ 
     assert.deepEqual(
         m.co?.riadky.map((r) => [r.id, r.kind, r.cas, r.odr, r.podiel]),
         [
+            // Auto: koniec NT o 9:30 je krátky (PLAN_DNA.autoMinMin), ide do ďalšieho NT od 10:30.
+            ['auto', 'cheap', '10:30', ['lacná elektrina'], 0],
             ['pracka', 'nudza', '10:30', ['lacná elektrina', 'celá v utorok'], 0],
             ['umyvacka', 'nudza', '10:30', ['lacná elektrina', 'celá v utorok'], 0],
             ['susicka', 'nudza', '12:30', ['lacná elektrina', 'celá v utorok'], 0],

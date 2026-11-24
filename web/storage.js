@@ -39,7 +39,7 @@ import { parseBezi, parseCaka } from '../shared/bezi.js';
 import { prahyZ } from '../shared/bojler.js';
 import { parseDayLog } from '../shared/daylog.js';
 import { parsePredpovedHist, pridajBehy, snimkaPredpovede } from '../shared/historia.js';
-import { parseHistoria, parseNaucene } from '../shared/ucenie.js';
+import { parseHistoria, nauceneZ } from '../shared/ucenie.js';
 import { DATE_RE } from '../shared/valid.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { teplomerZ } from '../shared/nastavenie-bojler.js';
@@ -377,7 +377,7 @@ export function loadUcenieWorkera() {
         UCENIE_WORKER_STORAGE_KEY,
         (/** @type {any} */ x) =>
             x && typeof x.d === 'string' && typeof x.z === 'string'
-                ? { d: x.d, z: x.z, s: x.s === true, n: x.n === true, o: x.o === true, model: parseNaucene(x.model) }
+                ? { d: x.d, z: x.z, s: x.s === true, n: x.n === true, o: x.o === true, model: nauceneZ(x.model) }
                 : null,
         null,
     );

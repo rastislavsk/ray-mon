@@ -1642,7 +1642,8 @@ test.describe('karta Teraz', () => {
     test('večer: auto z lacnej siete teraz s koncom pásma, ostatné s núdzovým časom; zajtrajšok po ťuknutí v hrebeni s dňom aj v detaile', async ({
         page,
     }) => {
-        const time = at('19:50');
+        // 21:20: NT 21:30 - 22:30 (kúsok NT 20:00 - 20:30 je pre auto krátky, PLAN_DNA.autoMinMin).
+        const time = at('21:20');
         const errors = await openTeraz(page, { time });
         const m = terazModel(vstupTeraz(time));
         await expect(page.locator('#tz-dlazdice [data-vec="auto"]')).toHaveAttribute('data-tone', 'cheap');

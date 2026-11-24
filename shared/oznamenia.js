@@ -6,7 +6,9 @@ import { OZNAMENIA, PLAN_DNA, TARIFF_LIMITS } from './config.js';
 import { koniecText, oznameniaTexts, planNoticeText, reminderText } from './messages-core.js';
 import { dayCtx, planWindows } from './mozem-jadro.js';
 import { planDna, vec } from './plan-dna.js';
+import { bojlerInfoZ } from './bojler.js';
 import { buildForecast, localMinutes } from './solar.js';
+import { naucenaPredpoved, nauceneZ } from './ucenie.js';
 import { isObj } from './valid.js';
 import { vyhladOznamenia } from './vyhlad.js';
 
@@ -166,10 +168,27 @@ export function reminderNotice(input, { id, voice = 'drzy' }) {
 /**
  * Čo service worker vie bez localStorage: nastavenie, ktoré mu appka odloží (poloha, panely,
  * tarifa, spotrebiče, tón, ktorú appku ťuknutie otvorí - cesta voči koreňu - a hodina, s ktorou sa
- * pri obnove odberu prihlási znova).
+ * pri obnove odberu prihlási znova). Aby plán v oznámení sedel s kartou Teraz (docs/navrhy/plan-dna-oznamenie-vt.html,
+ * O2), odloží aj to, čo sa naučila (`ucenie`), a posledný stav bojlera, ktorý riadi zásuvka (`bojler`); zrkadlo
+ * zo staršej appky ich nemá.
  * @typedef {{ site: import('./config.js').Site, plant: import('./config.js').Plant, tariff: import('./config.js').Tariff,
- *   devices: string[], voice: import('./messages.js').Voice, app: string, hour: number }} Zrkadlo
+ *   devices: string[], voice: import('./messages.js').Voice, app: string, hour: number,
+ *   ucenie?: import('./ucenie.js').Naucene | null, bojler?: import('./bojler.js').BojlerInfo | null }} Zrkadlo
  */
+
+/**
+ * Vstup Plánu dňa pre service worker: ten istý, s akým ráta karta Teraz - predpoveď opravená učením (ako sNaucenim vo
+ * web/render/index.js), naučená spotreba domu a potreba bojlera a bojler riadený zásuvkou. Živé meranie service worker
+ * nemá. Zrkadlo leží v telefóne, ale overí sa ako dáta zvonka - poškodené učenie či bojler sa vynechá.
+ * @param {Zrkadlo} z @param {Parameters<typeof buildForecast>[0]} weather @param {Date} now
+ * @returns {import('./day-plan.js').PlanInput}
+ */
+export function swInput(z, weather, now) {
+    const ucenie = nauceneZ(z.ucenie);
+    const bojler = bojlerInfoZ(z.bojler);
+    const forecast = naucenaPredpoved(buildForecast(weather, now, z.site, z.plant), ucenie);
+    return { now, site: z.site, plant: z.plant, tariff: z.tariff, pv: null, forecast, ucenie, bojler };
+}
 /** Pripomienka z tlačidla: spotrebič a kedy (ISO čas). @typedef {{ id: string, at: string }} Pripomienka */
 
 /**
@@ -181,8 +200,7 @@ export function reminderNotice(input, { id, voice = 'drzy' }) {
  * @param {import('./vyhlad.js').Vyhlad | null} [posledny]
  */
 export function swNotice(z, reminders, weather, now, posledny = null) {
-    const forecast = buildForecast(weather, now, z.site, z.plant);
-    const input = { now, site: z.site, plant: z.plant, tariff: z.tariff, pv: null, forecast };
+    const input = swInput(z, weather, now);
     const off = (/** @type {Pripomienka} */ r) => (new Date(r.at).getTime() - now.getTime()) / 60000;
     const due = reminders.find((r) => Math.abs(off(r)) <= OZNAMENIA.remindWindowMin);
     const keep = reminders.filter((r) => r !== due && off(r) > -OZNAMENIA.remindWindowMin);

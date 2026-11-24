@@ -451,7 +451,9 @@ export const MOZEM_ITEMS = [
  * (docs/navrhy/plan-dna-poradie.html). `after`: spotrebič, na ktorý vec čaká (sušička suší, čo
  * práčka vyprala) - ide vždy hneď po jej konci a v ten istý deň, aj zo siete, nikdy nečaká na slnko
  * (variant B, 18. 11. 2026). `zoSiete`: pod týmto podielom slnka povie, že taká vec pôjde zo siete. `devices`: s čím plán ráta, kým si človek nevyberie sám. Auto ide vždy posledné
- * a berie silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse.
+ * a berie silné slnko, ktoré ostane - aspoň `autoMinMin` minút v kuse. Kratší kúsok lacného pásma nestojí za
+ * zapojenie ani pri aute a bojleri bez zásuvky (cheapGrid): tie idú do lacného pásma, z ktorého od štartu ostáva
+ * aspoň `autoMinMin` minút (docs/navrhy/plan-dna-oznamenie-vt.html, A1).
  */
 export const PLAN_DNA = {
     order: ['pracka', 'susicka', 'umyvacka', 'bojler', 'auto'],

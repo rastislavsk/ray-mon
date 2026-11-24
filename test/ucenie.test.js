@@ -7,8 +7,8 @@ import {
     domProfil,
     naucenaPredpoved,
     naucene,
+    nauceneZ,
     parseHistoria,
-    parseNaucene,
     potrebaBojlera,
     spolocneOd,
     triedaOblacnosti,
@@ -187,10 +187,10 @@ test('parseHistoria: od Workera či z úložiska len platné dni', () => {
     assert.equal(parseHistoria(Array.from({ length: HISTORIA.dni + 3 }, (_, i) => den(addDays(DNES, -i)))).length, HISTORIA.dni);
 });
 
-test('parseNaucene: model od Workera či z úložiska len v tvare naucene, hodnoty orezané', () => {
+test('nauceneZ: model od Workera či z úložiska len v tvare naucene, hodnoty orezané', () => {
     const ok = naucene({ dni: dni(21, (d) => den(d, { b: { wh: 2500, hotovo: true } })), snimky: [], behy: [], today: DNES, od: null });
-    assert.deepEqual(parseNaucene(ok), ok);
-    assert.deepEqual(parseNaucene(JSON.parse(JSON.stringify({ ...ok, od: '2026-11-01' }))), { ...ok, od: '2026-11-01' });
+    assert.deepEqual(nauceneZ(ok), ok);
+    assert.deepEqual(nauceneZ(JSON.parse(JSON.stringify({ ...ok, od: '2026-11-01' }))), { ...ok, od: '2026-11-01' });
     for (const zly of [
         null,
         'x',
@@ -206,8 +206,8 @@ test('parseNaucene: model od Workera či z úložiska len v tvare naucene, hodno
         { ...ok, bojler: { pasma: [null, null, 'x'], vsetky: null } },
         { ...ok, bojler: { pasma: [null, null, null], vsetky: 'x' } },
     ])
-        assert.equal(parseNaucene(zly), null);
-    const mimo = parseNaucene({
+        assert.equal(nauceneZ(zly), null);
+    const mimo = nauceneZ({
         ...ok,
         oprava: ok.oprava.map((r) => r.map(() => 9)),
         dom: { prac: ok.dom.prac.map(() => -1), vik: ok.dom.vik },
@@ -282,4 +282,23 @@ test('Nastavenie: učenie z histórie - dni, grafy, bojler a začať odznova', (
     );
     assert.equal(ucenieSekcia({ ucenie: n, doma: ['pracka'] })?.bojler, '', 'bez bojlera doma nič');
     assert.equal(UCENIE_TEXTS.dni(1), '1 deň');
+});
+
+test('nauceneZ: model zo zrkadla pre ranné oznámenie, poškodený null', () => {
+    const n = naucene({ dni: [], snimky: [], behy: [], today: '2026-11-24', od: null });
+    assert.equal(nauceneZ(JSON.parse(JSON.stringify(n))) !== null, true);
+    assert.equal(nauceneZ({ ...n, od: '2026-11-01' }) !== null, true);
+    for (const zle of [
+        null,
+        'x',
+        { ...n, dni: '3' },
+        { ...n, od: 'vcera' },
+        { ...n, oprava: [[1]] },
+        { ...n, dom: { prac: [], vik: [] } },
+    ]) {
+        assert.equal(nauceneZ(zle), null);
+    }
+    assert.equal(nauceneZ({ ...n, bojler: { pasma: ['x'], vsetky: null } }), null);
+    assert.equal(nauceneZ({ ...n, bojler: { pasma: [], vsetky: 'x' } }), null);
+    assert.equal(nauceneZ({ ...n, bojler: null }), null);
 });
