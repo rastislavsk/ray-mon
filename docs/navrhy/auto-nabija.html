@@ -1,0 +1,937 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Auto sa nabíja – návrh</title>
+        <style>
+            /* Návrh (24. 11. 2026): dlaždica Auto na karte Teraz povie, či sa auto asi nabíja (spotreba domu bez bojlera
+               nad 4,1 kW), oznámenia o začiatku a konci nabíjania a panel Auto teraz. Samostatný súbor, nič neimportuje
+               z appky. Čísla a časy sú ilustračné, nie namerané. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --sheet: #101a3a;
+                --ink: #0b1430;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.14);
+                --sun: #ffd166;
+                --siet: #7cc4ff;
+                --vt: #ff7a66;
+                --yes: #b9f28c;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 56px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 18px;
+                font-weight: 800;
+            }
+            p,
+            li {
+                max-width: 74ch;
+            }
+            p {
+                margin: 0;
+            }
+            ul {
+                margin: 0;
+                padding-left: 1.2em;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 32px;
+                align-items: flex-start;
+            }
+            .popis {
+                flex: 1 1 300px;
+                display: grid;
+                gap: 10px;
+                align-content: start;
+                font-size: 15px;
+            }
+            .plus,
+            .minus {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--yes);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+            .pozor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--vt);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+            }
+            .tab {
+                overflow-x: auto;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 14px;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 8px 12px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+
+            /* ===== dlaždica (ako na karte Teraz, sklo + biely text) ===== */
+            .nebo {
+                width: 360px;
+                max-width: 100%;
+                padding: 16px;
+                border-radius: 24px;
+                background: linear-gradient(180deg, #3d6fb8, #6f9fd8 60%, #9cc0e6);
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+            .nebo .cap {
+                grid-column: 1 / -1;
+                font-size: 12px;
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+            }
+            .dl {
+                padding: 12px;
+                border-radius: 20px;
+                background: rgba(255, 255, 255, 0.16);
+                border: 1.5px solid rgba(255, 255, 255, 0.22);
+                display: grid;
+                gap: 6px;
+                align-content: start;
+                min-height: 128px;
+            }
+            .dl[data-zapnuty] {
+                border-color: #fff;
+                box-shadow: 0 0 0 1px #fff inset;
+            }
+            .dl .h {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .dl .kruh {
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.18);
+                display: grid;
+                place-items: center;
+                position: relative;
+            }
+            .dl .kruh svg {
+                width: 22px;
+                height: 22px;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 1.7;
+                stroke-linejoin: round;
+            }
+            .dl[data-zapnuty] .kruh svg {
+                stroke: var(--yes);
+            }
+            .dl .blesk {
+                position: absolute;
+                right: -3px;
+                bottom: -3px;
+                width: 15px;
+                height: 15px;
+                border-radius: 50%;
+                background: var(--yes);
+                display: grid;
+                place-items: center;
+            }
+            .dl .blesk svg {
+                width: 10px;
+                height: 10px;
+                fill: var(--ink);
+                stroke: none;
+            }
+            .dl .meno {
+                font-weight: 800;
+                font-size: 15px;
+            }
+            .dl .velky {
+                font-size: 30px;
+                font-weight: 900;
+                line-height: 1;
+                font-variant-numeric: tabular-nums;
+            }
+            .dl .velky small {
+                font-size: 14px;
+                font-weight: 800;
+                margin-left: 3px;
+            }
+            .dl .odr {
+                font-size: 12px;
+                line-height: 1.35;
+            }
+            .dl .odr div::before {
+                content: '· ';
+            }
+            .dl.tlmene {
+                opacity: 0.55;
+            }
+
+            /* ===== oznámenie (Android) ===== */
+            .ozn {
+                width: 360px;
+                max-width: 100%;
+                padding: 12px 14px;
+                border-radius: 22px;
+                background: #1d2433;
+                display: grid;
+                grid-template-columns: 34px 1fr;
+                gap: 4px 12px;
+                font-size: 14px;
+            }
+            .ozn .logo {
+                grid-row: span 3;
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                background: #2b3b66;
+                display: grid;
+                place-items: center;
+                font-weight: 900;
+                font-size: 12px;
+            }
+            .ozn .app {
+                font-size: 12px;
+                color: var(--dim);
+            }
+            .ozn b {
+                font-size: 15px;
+            }
+            .ozn .tiche {
+                grid-column: 2;
+                font-size: 11px;
+                color: var(--dim);
+                font-style: italic;
+            }
+            .stlpec {
+                display: grid;
+                gap: 10px;
+            }
+
+            /* ===== panel (ako sheet v appke) ===== */
+            .panel {
+                width: 340px;
+                max-width: 100%;
+                padding: 18px 16px;
+                border-radius: 28px;
+                border: 1px solid var(--line);
+                background: linear-gradient(180deg, #14214a, var(--sheet) 40%, #0d1631);
+                font-size: 14px;
+                display: grid;
+                gap: 14px;
+                align-content: start;
+            }
+            .top {
+                display: flex;
+                gap: 12px;
+                align-items: center;
+            }
+            .ico {
+                flex: 0 0 auto;
+                width: 46px;
+                height: 46px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.08);
+                display: grid;
+                place-items: center;
+            }
+            .ico svg {
+                width: 26px;
+                height: 26px;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 1.7;
+                stroke-linejoin: round;
+            }
+            .ico[data-zap] svg {
+                stroke: var(--yes);
+            }
+            .top h4 {
+                margin: 0;
+                font-size: 22px;
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            .top p {
+                font-size: 13px;
+                color: var(--dim);
+            }
+            .top .x {
+                margin-left: auto;
+                align-self: flex-start;
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.1);
+                display: grid;
+                place-items: center;
+                font-size: 15px;
+            }
+            .hero {
+                display: flex;
+                align-items: flex-end;
+                gap: 14px;
+            }
+            .hero b {
+                font-size: 46px;
+                font-weight: 900;
+                line-height: 0.95;
+                font-variant-numeric: tabular-nums;
+            }
+            .hero b small {
+                font-size: 18px;
+                margin-left: 4px;
+            }
+            .hero p {
+                font-size: 13px;
+                color: var(--dim);
+                padding-bottom: 3px;
+            }
+            .hero p strong {
+                color: #fff;
+                display: block;
+                font-size: 15px;
+            }
+            .lbl {
+                font-size: 11px;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .sep {
+                border-top: 1px solid var(--line);
+                padding-top: 14px;
+                display: grid;
+                gap: 10px;
+            }
+            .stoh {
+                display: flex;
+                height: 12px;
+                border-radius: 6px;
+                overflow: hidden;
+                gap: 2px;
+            }
+            .stoh i {
+                display: block;
+            }
+            .s {
+                background: var(--sun);
+            }
+            .n {
+                background: var(--siet);
+            }
+            .v {
+                background: var(--vt);
+            }
+            .tri {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+            .tri b {
+                display: block;
+                font-size: 19px;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+                line-height: 1.1;
+            }
+            .tri small {
+                font-size: 12px;
+                color: var(--dim);
+                display: flex;
+                align-items: center;
+                gap: 5px;
+            }
+            .bod {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+            }
+            .graf svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                overflow: visible;
+            }
+            .graf text {
+                fill: var(--dim);
+                font: 700 9px var(--font);
+            }
+            .tg-r {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                font-weight: 700;
+                gap: 12px;
+            }
+            .tg {
+                flex: 0 0 auto;
+                width: 44px;
+                height: 26px;
+                border-radius: 13px;
+                background: rgba(255, 255, 255, 0.25);
+                position: relative;
+            }
+            .tg::after {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 20px;
+                height: 20px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .tg[data-on] {
+                background: var(--yes);
+            }
+            .tg[data-on]::after {
+                left: 21px;
+                background: var(--ink);
+            }
+            .poznamka {
+                font-size: 13px;
+                color: var(--dim);
+            }
+            .beh {
+                display: grid;
+                grid-template-columns: 6.4em 1fr 4.6em;
+                white-space: nowrap;
+                gap: 10px;
+                align-items: center;
+                height: 38px;
+                border-bottom: 1px solid var(--line);
+                font-size: 13px;
+                font-variant-numeric: tabular-nums;
+            }
+            .beh:last-child {
+                border-bottom: 0;
+            }
+            .beh .stoh {
+                height: 8px;
+            }
+            .beh b {
+                text-align: right;
+            }
+            .zdroj {
+                display: flex;
+                justify-content: space-between;
+                font-size: 13px;
+                color: var(--dim);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Auto sa nabíja</h1>
+                <p class="dim">
+                    Návrh 24. 11. 2026. Dlaždica Auto na karte Teraz zozelenie, keď sa auto asi nabíja, telefón dostane oznámenie o začiatku
+                    a konci nabíjania a ťuknutie na dlaždicu otvorí panel Auto teraz. Auto samo appke nič nepovie, appka to vie len zo
+                    spotreby domu, preto všade „asi“. Všetky čísla a časy na obrázkoch sú ilustračné.
+                </p>
+                <p class="odpor">
+                    <b>Rozhodnuté 24. 11. 2026: D2 + R2 + T2 + N3 + P2.</b> Ikona počas nabíjania je <b>oranžová</b>, nie zelená - zelenú
+                    majú spotrebiče, o ktorých appka vie naisto, že sú zapnuté. Pri realizácii sa oproti návrhu zmenilo: stav ide cez
+                    vlastnú cestu <code>/auto</code> (nie s <code>/bojler-stav</code>) a behy sú v tom istom kľúči <code>an:</code>; výkon
+                    auta je dom mínus spotreba domu tesne pred nabíjaním (najviac 1,5 kW), nie naučený profil - objekt ho nemá po ruke;
+                    prepínače oznámení sú predvolene vypnuté (zapnutie si pýta povolenie prehliadača, bez ťuknutia sa nedá); oznámenie o
+                    konci neuvádza VT - Worker tarifu telefónu nepozná.
+                </p>
+            </section>
+
+            <section>
+                <h2>Z čoho to appka spozná</h2>
+                <ul>
+                    <li>
+                        Spotreba domu = výroba − dodávka do siete (elektromer Huawei). Bez bojlera = mínus príkon zásuvky (to isté robí už
+                        bojler a učenie).
+                    </li>
+                    <li>
+                        Nabíjačka 11 kW pod 4,1 kW nenabíja (3 fázy × 6 A, <code>AUTO_SLNKO.minKw</code>). Dom bez bojlera nad 4,1 kW teda
+                        takmer vždy znamená auto. Výnimka: súbeh rúry, sušičky, varnej dosky.
+                    </li>
+                    <li>
+                        Meranie Huawei je raz za 5 minút. Do Workera chodí každú minútu zásuvka bojlera, takže Worker má nové meranie
+                        každých 5 minút, aj v noci a aj pri zatvorenej appke.
+                    </li>
+                    <li>
+                        Dobité a odpojené vyzerá rovnako (spotreba klesne). Appka nevie, či je auto plné, vie len, že nabíjanie skončilo.
+                        Pri nabíjaní doma cez noc to je skoro vždy „plné“.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>1. Kde sa to rozpoznáva</h2>
+                <div class="tab">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>Ako</th>
+                            <th>Plusy</th>
+                            <th>Mínusy</th>
+                        </tr>
+                        <tr>
+                            <td><b>D1</b><br />len telefón</td>
+                            <td>Appka pri každom meraní porovná dom s prahom a zafarbí ikonu.</td>
+                            <td><span class="plus">najjednoduchšie, nič vo Workeri</span></td>
+                            <td>
+                                <span class="minus">oznámenie nepríde, keď je appka zatvorená - a práve to chceš</span
+                                ><span class="minus">každý telefón by mal svoj stav</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>D2</b><br />Worker (objekt <code>UcetHuawei</code>)</td>
+                            <td>
+                                Pri každom novom meraní objekt posunie stav nabíjania (pravidlo v <code>shared/</code>), pri zmene pošle
+                                push ako pri bojleri. Appka si stav vezme s <code>/bojler-stav</code>
+                                každú minútu.
+                            </td>
+                            <td>
+                                <span class="plus">oznámenie aj pri zatvorenej appke</span
+                                ><span class="plus">jeden stav pre všetky telefóny domácnosti</span
+                                ><span class="plus">nič nové na Huawei, žiadne náklady, len pár porovnaní</span>
+                            </td>
+                            <td>
+                                <span class="minus">závisí od zásuvky bojlera - keď sa neozýva, Worker meria len pri otvorenej appke</span
+                                ><span class="minus">nová pamäť v objekte (<code>an:</code> beh, <code>ah:</code> 7 dní)</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>D3</b><br />meradlo na prívode nabíjačky</td>
+                            <td>Shelly Pro 3EM (alebo 3 klieštiny) na prívod wallboxu, hlási ako zásuvka bojlera.</td>
+                            <td>
+                                <span class="plus">presne kW a kWh auta, žiadne „asi“</span
+                                ><span class="plus">meranie každú minútu, nie raz za 5</span>
+                            </td>
+                            <td>
+                                <span class="minus">kúpa (rádovo 100 €) a elektrikár do rozvádzača</span
+                                ><span class="minus">ďalšie zariadenie, skript a údržba</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>D4</b><br />neoficiálne API MG iSmart</td>
+                            <td>Worker by sa prihlásil do účtu MG a čítal stav batérie (SoC).</td>
+                            <td><span class="plus">jediné, čo naozaj povie „nabité na 80 %“</span></td>
+                            <td>
+                                <span class="minus">neoficiálne, môže sa kedykoľvek rozbiť, možno proti podmienkam MG</span
+                                ><span class="minus">heslo k účtu auta vo Workeri - väčšie riziko než pri Huawei</span
+                                ><span class="minus">prebúdzanie auta zo spánku míňa jeho 12 V batériu</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <p class="odpor">
+                    <b>Odporúčam D2.</b> Oznámenia sú hlavný dôvod a bez Workera nejdú. Všetko potrebné tam už je: meranie každých 5 minút,
+                    príkon bojlera aj odosielanie pushov. D3 má zmysel, keby sa „asi“ ukázalo často chybné.
+                </p>
+            </section>
+
+            <section>
+                <h2>2. Pravidlo: kedy „nabíja sa“</h2>
+                <div class="tab">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>Pravidlo</th>
+                            <th>Plusy</th>
+                            <th>Mínusy</th>
+                        </tr>
+                        <tr>
+                            <td><b>R1</b> prah</td>
+                            <td>Nabíja sa, kým je dom bez bojlera nad 4,1 kW. Jedno meranie stačí.</td>
+                            <td><span class="plus">najjednoduchšie, presne ako si napísal</span></td>
+                            <td>
+                                <span class="minus">rúra + sušička na 5 minút = falošné „začalo“ aj „skončilo“, dve oznámenia</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><b>R2</b> prah s potvrdením</td>
+                            <td>
+                                Začne po <b>2 meraniach za sebou</b> nad 4,1 kW (≈ 10 min), skončí po <b>2 meraniach</b>
+                                pod 3,5 kW. Medzera v meraní nad 15 min stav nemení a nič neoznamuje.
+                            </td>
+                            <td>
+                                <span class="plus">krátke súbehy v kuchyni neprejdú</span><span class="plus">stav neskáče okolo prahu</span>
+                            </td>
+                            <td><span class="minus">oznámenie príde o 5 – 10 min neskôr</span></td>
+                        </tr>
+                        <tr>
+                            <td><b>R3</b> skok</td>
+                            <td>
+                                Ako R2, ale navyše musí dom medzi dvoma meraniami skočiť aspoň o 3,5 kW (auto sa zapína naraz, kuchyňa
+                                postupne).
+                            </td>
+                            <td><span class="plus">najmenej falošných</span></td>
+                            <td>
+                                <span class="minus">keď meranie vypadne práve pri zapojení, nabíjanie neuvidí vôbec</span
+                                ><span class="minus">ťažšie sa ladí a vysvetľuje</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <p class="odpor">
+                    <b>Odporúčam R2.</b> Desať minút oneskorenia je pri aute jedno, dve falošné oznámenia za večer nie. Prahy 4,1 / 3,5 kW a
+                    „2 merania“ by boli v <code>shared/config.js</code> a dali sa doladiť podľa skutočných dní.
+                </p>
+                <p class="dim">
+                    Výkon auta = dom bez bojlera − naučená spotreba domu v tej hodine. Energia behu = súčet po meraniach, zdroj (slnko /
+                    sieť / VT) rovnako ako pri bojleri: slnko je to, čo by inak odtieklo do siete.
+                </p>
+            </section>
+
+            <section>
+                <h2>3. Dlaždica</h2>
+                <p class="dim">
+                    Zelená ikona a biely obrys ako pri bežiacom spotrebiči (<code>data-zapnuty</code>, 3A z 22. 11.). Dlaždica dostane
+                    detail, už nebude <code>bezDetailu</code>.
+                </p>
+                <div class="rad">
+                    <div class="nebo">
+                        <div class="cap">Teraz · nenabíja sa</div>
+                        <div class="dl tlmene">
+                            <div class="h"><span class="meno">Bojler</span></div>
+                        </div>
+                        <div class="dl">
+                            <div class="h">
+                                <span class="kruh"
+                                    ><svg viewBox="0 0 24 24"><use href="#car" /></svg></span
+                                ><span class="meno">Auto</span>
+                            </div>
+                            <div class="velky">~80<small>km</small></div>
+                            <div class="odr">
+                                <div>13,4 kWh zo slnka</div>
+                                <div>odhad na celý deň</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nebo">
+                        <div class="cap">T1 · nabíja sa, texty ostanú</div>
+                        <div class="dl tlmene">
+                            <div class="h"><span class="meno">Bojler</span></div>
+                        </div>
+                        <div class="dl" data-zapnuty>
+                            <div class="h">
+                                <span class="kruh"
+                                    ><svg viewBox="0 0 24 24"><use href="#car" /></svg
+                                    ><span class="blesk"
+                                        ><svg viewBox="0 0 24 24"><use href="#bolt" /></svg></span></span
+                                ><span class="meno">Auto</span>
+                            </div>
+                            <div class="velky">~80<small>km</small></div>
+                            <div class="odr">
+                                <div>13,4 kWh zo slnka</div>
+                                <div>odhad na celý deň</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nebo">
+                        <div class="cap">T2 · nabíja sa, dlaždica o behu</div>
+                        <div class="dl tlmene">
+                            <div class="h"><span class="meno">Bojler</span></div>
+                        </div>
+                        <div class="dl" data-zapnuty>
+                            <div class="h">
+                                <span class="kruh"
+                                    ><svg viewBox="0 0 24 24"><use href="#car" /></svg
+                                    ><span class="blesk"
+                                        ><svg viewBox="0 0 24 24"><use href="#bolt" /></svg></span></span
+                                ><span class="meno">Auto</span>
+                            </div>
+                            <div class="velky">+70<small>km</small></div>
+                            <div class="odr">
+                                <div>asi sa nabíja od 13:20</div>
+                                <div>≈ 7,2 kW</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="rad">
+                    <div class="popis">
+                        <b>T1 – len zelená ikona</b>
+                        <span class="plus">najmenšia zmena, dlaždica ostáva o slnku</span>
+                        <span class="minus">koľko už nabilo, uvidíš až v paneli</span>
+                    </div>
+                    <div class="popis">
+                        <b>T2 – počas nabíjania o behu</b>
+                        <span class="plus">na prvý pohľad: od kedy, koľko km už pribudlo, akým výkonom</span>
+                        <span class="minus"
+                            >číslo km raz znamená „zo slnka za deň“, raz „nabité v tomto behu“ (+ to odlišuje, ale treba si zvyknúť)</span
+                        >
+                        <span class="dim">Po skončení sa dlaždica vráti k slnku dňa, posledný beh je v paneli.</span>
+                    </div>
+                </div>
+                <p class="odpor"><b>Odporúčam T2.</b> Keď auto visí na nabíjačke, „koľko už má“ je to, čo chceš vedieť.</p>
+            </section>
+
+            <section>
+                <h2>4. Oznámenia</h2>
+                <div class="rad">
+                    <div class="stlpec">
+                        <div class="lbl">Začiatok</div>
+                        <div class="ozn">
+                            <span class="logo">RM</span><span class="app">Ray-mon · teraz</span><b>Auto sa asi nabíja</b
+                            ><span>Od 13:20, ≈ 7,2 kW. Slnko teraz pokryje asi polovicu.</span>
+                        </div>
+                        <div class="lbl">Koniec</div>
+                        <div class="ozn">
+                            <span class="logo">RM</span><span class="app">Ray-mon · teraz</span><b>Auto sa prestalo nabíjať</b
+                            ><span>Asi je nabité. 13:20 – 15:00, 11,8 kWh ≈ 70 km, 62 % zo slnka.</span>
+                        </div>
+                        <div class="lbl">Koniec v noci (N3)</div>
+                        <div class="ozn">
+                            <span class="logo">RM</span><span class="app">Ray-mon · 3:40</span><b>Auto sa prestalo nabíjať</b
+                            ><span>Asi je nabité. 22:05 – 3:40, 38 kWh ≈ 220 km, celé v lacnom pásme.</span
+                            ><span class="tiche">tiché - bez zvuku a vibrácie, ráno ho uvidíš</span>
+                        </div>
+                    </div>
+                    <div class="popis">
+                        <b>N1 – začiatok aj koniec</b>
+                        <span class="plus">potvrdí, že sa nabíjanie vôbec rozbehlo (zabudnutý kábel)</span>
+                        <span class="minus">dve oznámenia na každé nabíjanie</span>
+                        <b>N2 – len koniec</b>
+                        <span class="plus">presne to, čo MG iSmart nevie - „už je nabité“</span>
+                        <span class="minus">keď sa nabíjanie nespustí, nič sa nedozvieš</span>
+                        <b>N3 – ako N1, v noci (22:00 – 6:00) potichu</b>
+                        <span class="plus">nočné nabíjanie v lacnom pásme nebudí</span>
+                        <span class="minus">tiché oznámenie (<code>silent</code>) treba overiť na S22</span>
+                        <p class="dim">
+                            Zapína sa v paneli Auto teraz (ako oznámenia bojlera), každý telefón zvlášť. Text skladá
+                            <code>shared/</code>, posiela Worker rovnako ako zmenu ohrevu bojlera.
+                        </p>
+                    </div>
+                </div>
+                <p class="odpor"><b>Odporúčam N3</b> s dvoma prepínačmi v paneli (začiatok, koniec), predvolene zapnutý len koniec.</p>
+            </section>
+
+            <section>
+                <h2>5. Panel Auto teraz</h2>
+                <div class="rad">
+                    <div class="panel">
+                        <div class="lbl">P1 – kompaktný</div>
+                        <div class="top">
+                            <span class="ico" data-zap
+                                ><svg viewBox="0 0 24 24"><use href="#car" /></svg
+                            ></span>
+                            <div>
+                                <h4>Auto</h4>
+                                <p>Asi sa nabíja od 13:20</p>
+                            </div>
+                            <span class="x">✕</span>
+                        </div>
+                        <div class="hero">
+                            <b>+70<small>km</small></b>
+                            <p><strong>11,8 kWh</strong>1 h 40 min · teraz ≈ 7,2 kW</p>
+                        </div>
+                        <div class="stoh"><i class="s" style="flex: 62"></i><i class="n" style="flex: 38"></i></div>
+                        <div class="tri">
+                            <div>
+                                <b>7,3</b><small><span class="bod s"></span>slnko</small>
+                            </div>
+                            <div>
+                                <b>4,5</b><small><span class="bod n"></span>sieť</small>
+                            </div>
+                            <div>
+                                <b>0</b><small><span class="bod v"></span>drahá sieť</small>
+                            </div>
+                        </div>
+                        <div class="sep">
+                            <div class="zdroj"><span>Slnko by dnes dalo</span><b>~80 km · 13,4 kWh</b></div>
+                        </div>
+                        <div class="sep">
+                            <div class="tg-r"><span>Oznámiť začiatok</span><span class="tg"></span></div>
+                            <div class="tg-r"><span>Oznámiť koniec</span><span class="tg" data-on></span></div>
+                        </div>
+                        <p class="poznamka">Auto sa appke neozýva. Že sa nabíja, appka odhaduje zo spotreby domu nad 4,1 kW.</p>
+                    </div>
+
+                    <div class="panel">
+                        <div class="lbl">P2 – s osou dňa a behmi</div>
+                        <div class="top">
+                            <span class="ico" data-zap
+                                ><svg viewBox="0 0 24 24"><use href="#car" /></svg
+                            ></span>
+                            <div>
+                                <h4>Auto</h4>
+                                <p>Asi sa nabíja od 13:20 · ≈ 7,2 kW</p>
+                            </div>
+                            <span class="x">✕</span>
+                        </div>
+                        <div class="graf">
+                            <svg viewBox="0 0 300 92" aria-label="Os dňa: výroba a nabíjanie auta">
+                                <path
+                                    d="M60 70 C 90 66, 110 18, 150 14 S 210 60, 240 70 Z"
+                                    fill="rgba(255,209,102,.22)"
+                                    stroke="#ffd166"
+                                    stroke-width="1.5"
+                                />
+                                <line x1="0" y1="70" x2="300" y2="70" stroke="rgba(255,255,255,.25)" />
+                                <rect x="0" y="76" width="300" height="8" rx="4" fill="rgba(255,255,255,.08)" />
+                                <rect x="12" y="76" width="14" height="8" rx="2" fill="#7cc4ff" />
+                                <rect x="166" y="76" width="12" height="8" rx="2" fill="#ffd166" />
+                                <rect x="178" y="76" width="8" height="8" rx="2" fill="#7cc4ff" />
+                                <line x1="186" y1="8" x2="186" y2="88" stroke="#fff" stroke-dasharray="2 3" />
+                                <text x="0" y="98">0</text>
+                                <text x="70" y="98">6</text>
+                                <text x="145" y="98">12</text>
+                                <text x="220" y="98">18</text>
+                                <text x="288" y="98">24</text>
+                            </svg>
+                        </div>
+                        <div class="hero">
+                            <b>+70<small>km</small></b>
+                            <p><strong>11,8 kWh v tomto behu</strong>62 % zo slnka</p>
+                        </div>
+                        <div class="stoh"><i class="s" style="flex: 62"></i><i class="n" style="flex: 38"></i></div>
+                        <div class="sep">
+                            <div class="lbl">Posledné nabíjania</div>
+                            <div>
+                                <div class="beh">
+                                    <span>dnes 13:20</span
+                                    ><span class="stoh"><i class="s" style="flex: 62"></i><i class="n" style="flex: 38"></i></span
+                                    ><b>70 km</b>
+                                </div>
+                                <div class="beh">
+                                    <span>dnes 0:40</span><span class="stoh"><i class="n" style="flex: 1"></i></span><b>40 km</b>
+                                </div>
+                                <div class="beh">
+                                    <span>po 22:05</span
+                                    ><span class="stoh"><i class="n" style="flex: 85"></i><i class="v" style="flex: 15"></i></span
+                                    ><b>220 km</b>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="sep">
+                            <div class="zdroj"><span>Slnko by dnes dalo</span><b>~80 km</b></div>
+                            <div class="zdroj"><span>Zo slnka za 7 dní</span><b>~190 km · ušetrené ≈ 4,60 €</b></div>
+                        </div>
+                        <div class="sep">
+                            <div class="tg-r"><span>Oznámiť začiatok</span><span class="tg"></span></div>
+                            <div class="tg-r"><span>Oznámiť koniec</span><span class="tg" data-on></span></div>
+                        </div>
+                        <p class="poznamka">Auto sa appke neozýva. Že sa nabíja, appka odhaduje zo spotreby domu nad 4,1 kW.</p>
+                    </div>
+                </div>
+                <div class="rad">
+                    <div class="popis">
+                        <b>P1 – kompaktný</b>
+                        <span class="plus">krátky, jedno veľké číslo, rýchlo hotový</span>
+                        <span class="plus">farby slnko / sieť / drahá sieť ako pásik dlaždíc a bojler</span>
+                        <span class="minus">bez histórie - po skončení len posledný beh</span>
+                    </div>
+                    <div class="popis">
+                        <b>P2 – os dňa a behy (ako panel Bojler dnes)</b>
+                        <span class="plus">na osi vidno, kedy auto ťahalo a kedy svietilo slnko</span>
+                        <span class="plus">behy za 7 dní, súčet zo slnka a úspora v € (pri aute cenu chceš)</span>
+                        <span class="minus">väčší, viac kódu a pamäte vo Workeri (<code>ah:</code>)</span>
+                    </div>
+                </div>
+                <p class="odpor">
+                    <b>Odporúčam P2</b> - zapadne k panelu Bojler dnes a os dňa najlepšie ukáže, či auto ťahá zo slnka. Keď auto nenabíja,
+                    hlavička povie „Nenabíja sa · naposledy dnes 15:00“ a veľké číslo je posledný beh.
+                </p>
+            </section>
+
+            <section>
+                <h2>Čo z toho vyjde (D2 + R2 + T2 + N3 + P2)</h2>
+                <ul>
+                    <li><code>shared/auto-nabija.js</code>: pravidlo R2, výkon a energia behu, texty oznámení - testy.</li>
+                    <li>
+                        Worker: objekt pri novom meraní posunie stav (<code>an:</code>), uloží beh (<code>ah:</code>, 7 dní), pri zmene
+                        pošle push. <code>/bojler-stav</code> vráti aj <code>auto</code>. Novú migráciu objektu netreba, sú to len nové
+                        kľúče.
+                    </li>
+                    <li>Appka: dlaždica T2, panel P2 cez <code>tzVec</code>, prepínače oznámení.</li>
+                </ul>
+                <p class="pozor">
+                    Ohraničenia: Worker meria Huawei len vtedy, keď sa ho niekto pýta - každú minútu skript v zásuvke bojlera, inak otvorená
+                    appka. Nejde o to, či bojler hreje (relé vypnuté v appke Shelly nevadí, skript beží ďalej), ale o to, či zásuvka beží a
+                    má sieť: keď je odpojená a appka zatvorená, meranie ani oznámenie nepríde. Prvé dni treba porovnať s tým, kedy auto
+                    naozaj nabíjalo (falošné „nabíja sa“ od kuchyne).
+                </p>
+            </section>
+        </main>
+        <svg width="0" height="0" style="position: absolute">
+            <symbol id="car" viewBox="0 0 24 24">
+                <path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z" />
+                <path d="M3.5 12.3h17" />
+                <circle cx="7.5" cy="16.5" r="1.7" />
+                <circle cx="16.5" cy="16.5" r="1.7" />
+            </symbol>
+            <symbol id="bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></symbol>
+        </svg>
+    </body>
+</html>

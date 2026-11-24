@@ -194,6 +194,16 @@ Telefón číslo ráno zamrazí (`auto-den-v1`, `web/auto-den.js`) a po západe 
 dom z hodín `/historia` (hodina s behom „Už beží“ alebo nad `PLAN_ZIVE.domMax` sa nahradí naučeným profilom, `domDnes`) a bojler
 zo záznamu zásuvky. Iný deň v páse dní ukáže odhad z jeho predpovede (`autoDna`).
 
+Či sa auto nabíja (`docs/navrhy/auto-nabija.html`, D2 + R2 + T2 + N3 + P2, 24. 11. 2026), auto appke nepovie - odhaduje to
+Durable Object `UcetHuawei` z každého nového merania (`krokAuta` v `shared/auto-nabija.js`, kľúč `an:`): dom bez bojlera
+aspoň `AUTO_SLNKO.minKw` dve merania za sebou = začalo, pod `AUTO_NABIJA.skonciKw` dve merania = skončilo, medzera nad
+`medzeraMin` počíta odznova. Pri zmene pošle push tým, čo si to zapli v paneli Auto (`/auto-oznamenia`, `ao:`, začiatok
+a koniec zvlášť), v noci potichu (`autoTiche`, `silent` v `sw.js`). Appka si stav berie cez `/auto` pri každej obnove
+(`web/auto-nabija.js`). Počas nabíjania je dlaždica o behu s **oranžovou** ikonou (`data-zapnuty="nabija"`, `--nabija`) -
+zelenú majú len spotrebiče, o ktorých appka vie naisto. Dlaždica otvorí panel Auto (`tzVec` 'auto'), kým appka stav od
+Workera má. Dobité a odpojené vyzerá rovnako, preto texty vždy „asi“. Meria sa len, keď sa Workera niekto pýta (zásuvka
+bojlera každú minútu, inak otvorená appka).
+
 ## Scéna toku energie na karte Teraz
 
 Návrh a rozhodnutia: `docs/navrhy/teraz-tok-energie.html` (návrh 1). Namiesto veľkého čísla kW je hore scéna: dom

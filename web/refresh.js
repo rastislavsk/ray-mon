@@ -28,6 +28,7 @@ import {
 import { obnovAutoDen } from './auto-den.js';
 import { obnovUcenie } from './ucenie.js';
 import { zladBehy } from './bezi-spolocne.js';
+import { obnovAuto } from './auto-nabija.js';
 
 /**
  * Polia stavu, ktoré obnova číta a zapisuje.
@@ -50,6 +51,7 @@ import { zladBehy } from './bezi-spolocne.js';
  *   ucenie: import('../shared/ucenie.js').Naucene | null,
  *   bezi: import('../shared/bezi.js').Zapis[],
  *   autoDen: import('../shared/auto-slnko.js').AutoDen | null,
+ *   autoNabija?: import('../shared/auto-nabija.js').AutoInfo | null,
  * }} RefreshState
  * @typedef {{ get: () => RefreshState, setState: (patch: Partial<RefreshState>) => void }} RefreshStore
  */
@@ -250,6 +252,8 @@ export function createRefresh(store) {
         void obnovUcenie(store).then(() => obnovAutoDen(store));
         // Behy „Už beží“ z ostatných telefónov domácnosti (web/bezi-spolocne.js).
         void zladBehy(store);
+        // Nabíjanie auta z Durable Objectu účtu (web/auto-nabija.js, docs/navrhy/auto-nabija.html).
+        void obnovAuto(store);
     };
     return ({ skus = false } = {}) => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.
@@ -292,5 +296,8 @@ export function startTicks(store, refresh) {
     setInterval(() => !document.hidden && store.setState({ now: new Date() }), REFRESH.clockMs);
     setInterval(() => !document.hidden && refresh(), REFRESH.dataMs);
     document.addEventListener('visibilitychange', () => !document.hidden && refresh());
-    navigator.serviceWorker?.addEventListener('message', (e) => e.data === OZNAMENIA.bojler && !document.hidden && refresh());
+    navigator.serviceWorker?.addEventListener(
+        'message',
+        (e) => (e.data === OZNAMENIA.bojler || e.data === OZNAMENIA.auto) && !document.hidden && refresh(),
+    );
 }

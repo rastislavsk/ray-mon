@@ -118,11 +118,13 @@ async function obnovOdber(e) {
 
 self.addEventListener('install', () => self.skipWaiting());
 /**
- * Push s obsahom (docs/navrhy/spotrebic-koniec-opakovanie.html): koniec programu či zmena ohrevu bojlera - text poslal
- * Worker zašifrovaný, netreba nič počítať. Prázdny push je ranné oznámenie či pripomienka (ukaz). Ťuknutie otvorí appku.
- * @param {{ title: string, body: string, tag: string }} d
+ * Push s obsahom (docs/navrhy/spotrebic-koniec-opakovanie.html): koniec programu, zmena ohrevu bojlera či nabíjanie auta -
+ * text poslal Worker zašifrovaný, netreba nič počítať. Prázdny push je ranné oznámenie či pripomienka (ukaz). Ťuknutie
+ * otvorí appku. `tiche`: v noci bez zvuku a vibrácie (docs/navrhy/auto-nabija.html, N3).
+ * @param {{ title: string, body: string, tag: string, tiche?: boolean }} d
  */
-const ukazText = (d) => ukazOznamenie(d.tag, d, { data: { app: './', ciel: cielPushu(d.tag) } });
+const ukazText = (d) =>
+    ukazOznamenie(d.tag, d, { data: { app: './', ciel: cielPushu(d.tag) }, ...(d.tiche === true ? { silent: true } : {}) });
 
 /** Obsah pushu ako JSON s nadpisom, textom a značkou, inak null. */
 function obsah(data) {
@@ -135,17 +137,19 @@ function obsah(data) {
 }
 
 /**
- * Zmena ohrevu bojlera: okrem oznámenia aj správa každému oknu appky (aj tomu, ktoré tento service worker neovláda) -
- * otvorená appka si hneď stiahne stav a dlaždica Bojler sa prekreslí spolu s oznámením (web/refresh.js).
+ * Zmena ohrevu bojlera či nabíjania auta: okrem oznámenia aj správa každému oknu appky (aj tomu, ktoré tento service
+ * worker neovláda) - otvorená appka si hneď stiahne stav a dlaždica sa prekreslí spolu s oznámením (web/refresh.js).
+ * @param {string} tag
  */
-async function povedzOknam() {
+async function povedzOknam(tag) {
     const okna = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const okno of okna) okno.postMessage(OZNAMENIA.bojler);
+    for (const okno of okna) okno.postMessage(tag);
 }
 
 self.addEventListener('push', (e) => {
     const d = obsah(e.data);
-    e.waitUntil(d ? Promise.all([ukazText(d), d.tag === OZNAMENIA.bojler ? povedzOknam() : null]) : ukaz());
+    const okna = d && (d.tag === OZNAMENIA.bojler || d.tag === OZNAMENIA.auto);
+    e.waitUntil(d ? Promise.all([ukazText(d), okna ? povedzOknam(d.tag) : null]) : ukaz());
 });
 self.addEventListener('pushsubscriptionchange', (e) => e.waitUntil(obnovOdber(e).catch(() => null)));
 self.addEventListener('notificationclick', (e) => {

@@ -26,13 +26,13 @@ const KLIK_PARAM = 'z';
 
 /**
  * Na čo sa ťuklo (docs/navrhy/oznamenia-animacie.html): ranný plán dňa, alebo oznámenie jedného spotrebiča -
- * koniec programu, pripomienka, zmena ohrevu bojlera. Appka podľa toho oživí ikonu dlaždice.
- * @typedef {{ udalost: 'plan' } | { udalost: 'koniec' | 'pripomen' | 'bojler', vec: string }} Ciel
+ * koniec programu, pripomienka, zmena ohrevu bojlera, začiatok či koniec nabíjania auta. Appka podľa toho oživí ikonu dlaždice.
+ * @typedef {{ udalost: 'plan' } | { udalost: 'koniec' | 'pripomen' | 'bojler' | 'auto', vec: string }} Ciel
  */
 
 /** @type {Ciel} */
 const PLAN = { udalost: 'plan' };
-const UDALOSTI = ['koniec', 'pripomen', 'bojler'];
+const UDALOSTI = ['koniec', 'pripomen', 'bojler', 'auto'];
 
 /**
  * Značka ťuknutia v adrese aj v správe bežiacej appke. Plán je holé OZNAMENIA.klik ako pred cieľmi, takže ho pozná
@@ -56,11 +56,12 @@ export function klikCiel(znacka) {
 
 /**
  * Cieľ oznámenia s obsahom podľa jeho značky: koniec programu (`koniec-pracka`, worker/src/budik.js), zmena
- * ohrevu bojlera (OZNAMENIA.bojler). Inak plán.
+ * ohrevu bojlera (OZNAMENIA.bojler), nabíjanie auta (OZNAMENIA.auto). Inak plán.
  * @param {string} tag @returns {Ciel}
  */
 export function cielPushu(tag) {
     if (tag === OZNAMENIA.bojler) return { udalost: 'bojler', vec: 'bojler' };
+    if (tag === OZNAMENIA.auto) return { udalost: 'auto', vec: 'auto' };
     const vec = /^koniec-([a-z]+)$/.exec(tag)?.[1];
     return vec ? { udalost: 'koniec', vec } : PLAN;
 }

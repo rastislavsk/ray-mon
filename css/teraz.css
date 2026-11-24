@@ -1368,6 +1368,10 @@
     color: var(--yes);
     background: rgba(185, 242, 140, 0.2);
 }
+.dl[data-zapnuty='nabija'] .dl-ico {
+    color: var(--nabija);
+    background: rgba(255, 179, 92, 0.2);
+}
 /* Značka režimu bojlera na kraji kruhu s ikonou, kde bývala bodka stavu: ručne biely kruh s rukou, riadi appka
    slnko na tmavom kruhu. */
 .dl-ico {
@@ -1655,6 +1659,85 @@
     stroke-width: 2.6;
     stroke-linecap: round;
     stroke-linejoin: round;
+}
+/* Panel Auto (docs/navrhy/auto-nabija.html, P2): os dňa s výrobou (plocha) a behmi nabíjania, posledný beh veľkými km,
+   energia podľa zdroja, posledné nabíjania, súčty a dva vypínače oznámení. Pás, osi, zdroje a behy sú tie isté ako
+   v paneli Bojler dnes (.bj-*). Ikona pri nabíjaní oranžová ako na dlaždici. */
+.auto-sheet[data-nabija] .vec-ico {
+    color: var(--nabija);
+}
+.au-krivka {
+    display: block;
+    width: 100%;
+    height: 56px;
+    margin-bottom: 4px;
+}
+.au-krivka path {
+    fill: rgba(255, 209, 102, 0.22);
+    stroke: #ffd166;
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+}
+.au-beh {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    margin-top: 10px;
+}
+.au-beh b {
+    font-size: 2.6rem;
+    font-weight: 900;
+    line-height: 0.95;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+.au-beh b small {
+    margin-left: 4px;
+    font-size: 1.1rem;
+}
+.au-beh p {
+    margin: 0;
+    padding-bottom: 3px;
+    font-size: 0.875rem;
+    color: var(--dim);
+}
+.au-beh p strong {
+    display: block;
+    color: #fff;
+    font-size: 1rem;
+}
+.au-behy {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+}
+.au-sucty {
+    display: grid;
+    gap: 6px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.16);
+    font-size: 0.875rem;
+}
+.au-sucty p {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 0;
+    color: var(--dim);
+}
+.au-sucty b {
+    color: #fff;
+    text-align: right;
+}
+.au-oznam-k {
+    margin-top: 4px;
+    border-top: 0;
+}
+.au-pozn {
+    margin: 12px 0 0;
+    font-size: 0.8125rem;
+    color: var(--dim);
 }
 /* Vypínač oznámení bojlera na konci panela Bojler dnes (docs/navrhy/spotrebic-koniec-opakovanie.html); prepínač .tg
    je spoločný s Nastavením (css/nastavenie.css). */

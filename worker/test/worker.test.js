@@ -4,6 +4,8 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { BOJLER, ZDIELANIE } from '../../shared/config.js';
 import {
+    handleAuto,
+    handleAutoOznam,
     handleBezi,
     handleBojler,
     handleBojlerOznam,
@@ -18,6 +20,8 @@ import {
     handleUcenie,
 } from '../src/index.js';
 import { naucene } from '../../shared/ucenie.js';
+import { autoTiche } from '../../shared/auto-nabija.js';
+import { NB } from '../../shared/huawei-nb.js';
 import { UcetHuawei } from '../src/ucet.js';
 import { otvor, pecatKey, zapecat } from '../src/pecat.js';
 import { odberTelefonu, rozsifruj, vapidTest } from './push-pomoc.js';
@@ -1252,6 +1256,68 @@ test('oznámenia bojlera: telefón si ich zapne, pri každej zmene ohrevu príde
         env,
         po(40),
     );
+    assert.equal(cez.status, 200);
+});
+
+test('nabíjanie auta: objekt ho spozná z meraní, pošle push o začiatku a konci tomu, kto chce, telefón vidí behy', async () => {
+    let siet = 3800;
+    const { s, env, telefon } = await sBojlerom({ sietW: () => siet, pushStatus: () => 201 }, { VAPID_JWK: await vapidTest() });
+    const { ua, keys } = await odberTelefonu();
+    const FCM = 'https://fcm.googleapis.com/fcm/send/auto1';
+    const oznam = (/** @type {object} */ o) =>
+        handleAutoOznam(
+            post('/auto-oznamenia', JSON.stringify({ pecat: telefon, endpoint: FCM, keys, z: true, k: false, ...o })),
+            env,
+            po(1),
+        );
+    assert.deepEqual(await (await oznam({})).json(), { ok: true });
+    let videne = 0;
+    const nove = async () => {
+        const out = [];
+        for (const p of s.pushe.slice(videne)) out.push(JSON.parse(await rozsifruj(p.init.body, ua, keys.auth)));
+        videne = s.pushe.length;
+        return out;
+    };
+    const meraj = (/** @type {number} */ min) => handlePv(pvRequest(telefon), env, po(min), s.impl);
+    // Dom 0,4 kW (výroba 4,2 kW, dodávka 3,8 kW), potom auto: dom 7,2 kW, zo siete 3 kW.
+    await meraj(1);
+    siet = -3000;
+    await meraj(6);
+    assert.deepEqual(await nove(), [], 'jedno meranie nestačí');
+    await meraj(11);
+    const zac = await nove();
+    assert.equal(zac.length, 1);
+    assert.equal(zac[0].title, 'Auto sa asi nabíja');
+    assert.equal(zac[0].tag, 'auto');
+    assert.match(zac[0].body, /≈ 6,8 kW\. Slnko teraz dáva asi 56 %\./);
+    assert.equal(zac[0].tiche === true, autoTiche(po(11).getTime(), NB.pasmo));
+    const stav = await (await handleAuto(post('/auto', JSON.stringify({ pecat: telefon })), env, po(12))).json();
+    assert.equal(stav.auto.behy.length, 1);
+    assert.equal(stav.auto.behy[0].k, null);
+    assert.equal(stav.auto.at, po(11).getTime());
+    // Koniec chce len iný telefón: tento ho po zmene volieb nedostane, začiatok už nie.
+    await oznam({ z: false, k: true });
+    siet = 3800;
+    await meraj(16);
+    await meraj(21);
+    const kon = await nove();
+    assert.equal(kon.length, 1);
+    assert.equal(kon[0].title, 'Auto sa prestalo nabíjať');
+    assert.match(kon[0].body, /^Asi je nabité\. .* 0,6 kWh, 56 % zo slnka\.$/);
+    // Vypnuté obe: nič.
+    await oznam({ z: false, k: false, keys: null });
+    siet = -3000;
+    await meraj(26);
+    await meraj(31);
+    assert.deepEqual(await nove(), []);
+    // Zlé dopyty a bez objektov.
+    assert.equal((await oznam({ keys: null })).status, 400);
+    assert.equal((await oznam({ endpoint: 'https://zly.example/x' })).status, 400);
+    assert.equal((await oznam({ z: 'ano' })).status, 400);
+    assert.equal((await handleAuto(post('/auto', JSON.stringify({ pecat: 'x' })), env, NOW)).status, 400);
+    assert.equal((await handleAuto(post('/auto', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
+    assert.equal((await handleAutoOznam(post('/auto-oznamenia', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
+    const cez = await handleRequest(post('/auto', JSON.stringify({ pecat: telefon })), env, po(40));
     assert.equal(cez.status, 200);
 });
 

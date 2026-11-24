@@ -111,6 +111,23 @@ function terazBojlerDom() {
         tzBojlerOznam: /** @type {HTMLButtonElement} */ (byId('tz-bojler-oznam')),
         tzBojlerOznamT: byId('tz-bojler-oznam-t'),
         tzBojlerOznamChyba: byId('tz-bojler-oznam-chyba'),
+        tzAutoSheet: /** @type {HTMLDialogElement} */ (byId('tz-auto-sheet')),
+        tzAutoIco: byId('tz-auto-ico'),
+        tzAutoTtl: byId('tz-auto-ttl'),
+        tzAutoPod: byId('tz-auto-pod'),
+        tzAutoOs: byId('tz-auto-os'),
+        tzAutoBeh: byId('tz-auto-beh'),
+        tzAutoEnergia: byId('tz-auto-energia'),
+        tzAutoBehyB: byId('tz-auto-behy-b'),
+        tzAutoBehyN: byId('tz-auto-behy-n'),
+        tzAutoBehy: byId('tz-auto-behy'),
+        tzAutoSucty: byId('tz-auto-sucty'),
+        tzAutoOznamZ: /** @type {HTMLButtonElement} */ (byId('tz-auto-oznam-z')),
+        tzAutoOznamZT: byId('tz-auto-oznam-z-t'),
+        tzAutoOznamK: /** @type {HTMLButtonElement} */ (byId('tz-auto-oznam-k')),
+        tzAutoOznamKT: byId('tz-auto-oznam-k-t'),
+        tzAutoOznamChyba: byId('tz-auto-oznam-chyba'),
+        tzAutoPozn: byId('tz-auto-pozn'),
     };
 }
 

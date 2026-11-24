@@ -1,8 +1,10 @@
 // Texty ranného oznámenia a pripomienky (shared/oznamenia.js). Čisté funkcie bez DOM.
 
-import { fmt1 } from './format.js';
+import { kmBehu } from './auto-nabija.js';
+import { fmt1, minutesToTimeStr } from './format.js';
 import { mozemTexts, planDnaRowText } from './messages-mozem.js';
 import { andList, cap, dniSlovo, hm, onDay, polite } from './messages-zaklad.js';
+import { localMinutes } from './solar.js';
 
 // ---- Ranné oznámenie (shared/oznamenia.js) -------------------------------------------
 // Jedno oznámenie ráno: nadpis o dni a v texte poradie spotrebičov. Text do ~200 znakov, zamknutá
@@ -246,4 +248,26 @@ export function bojlerZmenaText({ zapol, dovod, kw, hranica }) {
         hranica: `Voda má ${hranica ?? ''} °C, viac nehreje.`,
     };
     return { title, body: body[dovod] };
+}
+
+/**
+ * Nabíjanie auta (docs/navrhy/auto-nabija.html, N3): začalo - od kedy, výkon a koľko z neho teraz dáva slnko; skončilo -
+ * asi je nabité (dobité a odpojené vyzerá rovnako), od - do, kWh, km a podiel slnka. Časy v pásme elektrárne `tz`.
+ * @param {import('./auto-nabija.js').ZmenaAuta} z @param {string} tz
+ */
+export function autoZmenaText({ zacal, beh, slnkoKw }, tz) {
+    const cas = (/** @type {number} */ at) => minutesToTimeStr(localMinutes(new Date(at), tz));
+    if (zacal) {
+        const pct = beh.kw > 0 ? Math.round((100 * Math.min(slnkoKw, beh.kw)) / beh.kw) : 0;
+        const slnko = pct >= 95 ? 'Celé teraz zo slnka.' : pct >= 5 ? `Slnko teraz dáva asi ${pct} %.` : 'Teraz zo siete.';
+        return { title: 'Auto sa asi nabíja', body: `Od ${cas(beh.m)}, ≈ ${fmt1(beh.kw)} kW. ${slnko}` };
+    }
+    const pct = beh.wh > 0 ? Math.round((100 * (beh.wh - Math.min(beh.wh, beh.whSiet))) / beh.wh) : 0;
+    const km = kmBehu(beh);
+    return {
+        title: 'Auto sa prestalo nabíjať',
+        body:
+            `Asi je nabité. ${cas(beh.m)} – ${cas(/** @type {number} */ (beh.k))}, ${fmt1(beh.wh / 1000)} kWh` +
+            `${km ? ` ≈ ${km} km` : ''}, ${pct} % zo slnka.`,
+    };
 }

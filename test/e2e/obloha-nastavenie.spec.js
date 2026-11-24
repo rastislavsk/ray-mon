@@ -16,6 +16,7 @@ import {
     OZNAMENIA,
     BEZI_CAKA_STORAGE_KEY,
     WORKER_BEZI_URL,
+    WORKER_AUTO_URL,
     WORKER_UCENIE_URL,
     PREDPOVED_HIST_STORAGE_KEY,
     BEHY_HIST_STORAGE_KEY,
@@ -33,6 +34,7 @@ import {
     PRIPOJENIE_BUBLINA_MS,
 } from '../../shared/config.js';
 import { pripojenieText } from '../../shared/messages-core.js';
+import { autoDetail, autoDlazdicaNabija } from '../../shared/auto-nabija.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
@@ -1242,6 +1244,78 @@ test.describe('bojler na prebytky', () => {
         await expect(sheet).toBeHidden();
         expect(errors).toEqual([]);
     });
+    test('auto sa nabíja (docs/navrhy/auto-nabija.html): oranžová ikona, dlaždica o behu a panel Auto; push ho obnoví hneď', async ({
+        page,
+    }) => {
+        await page.addInitScript(
+            ([k, v]) => localStorage.setItem(k, v),
+            [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['pracka', 'auto']))],
+        );
+        const t = FIXED_NOW.getTime();
+        // Nabíja sa od pred hodinou, polovica zo slnka; včera večer celé zo siete.
+        const beh = {
+            m: t - 3600000,
+            k: null,
+            wh: 7200,
+            whSiet: 3600,
+            kw: 7.2,
+            q: [
+                [1800, 900],
+                [1800, 900],
+                [1800, 900],
+                [1800, 900],
+            ],
+        };
+        const vcera = { m: t - 18 * 3600000, k: t - 15 * 3600000, wh: 20000, whSiet: 20000, kw: 0, q: [[20000, 20000]] };
+        let auto = { at: t - 60000, behy: [vcera, beh] };
+        /** @type {string[]} */
+        const dopyty = [];
+        await page.route(WORKER_AUTO_URL, (route) => {
+            dopyty.push(route.request().postData() ?? '');
+            return route.fulfill({ json: { auto } });
+        });
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ } });
+        const dl = page.locator('#tz-dlazdice [data-vec="auto"]');
+        const t2 = autoDlazdicaNabija(beh, SITE.timezone);
+        await expect(dl).toHaveAttribute('data-zapnuty', 'nabija');
+        await expect(dl.locator('.dl-ico')).toHaveCSS('color', 'rgb(255, 179, 92)');
+        await expect(dl.locator('.velky')).toHaveText(`${t2.velky} ${t2.za}`);
+        await expect(dl.locator('small > span:not(.sr)')).toHaveText(t2.odr);
+        expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });
+        await dl.click();
+        const sheet = page.locator('#tz-auto-sheet');
+        await expect(sheet).toBeVisible();
+        await expect(page.locator('#tz-vec-sheet')).toBeHidden();
+        const d = autoDetail(auto, { now: FIXED_NOW, tz: SITE.timezone, tariff: TARIFF, slnko: null, vyroba: null });
+        await expect(page.locator('#tz-auto-pod')).toHaveText(d.pod);
+        await expect(sheet.locator('.vec-ico')).toHaveCSS('color', 'rgb(255, 179, 92)');
+        await expect(page.locator('#tz-auto-beh b')).toHaveText(`${d.beh?.km}km`);
+        await expect(page.locator('#tz-auto-energia .bj-zdroje b')).toHaveText((d.beh?.energia ?? []).map((c) => c.v));
+        await expect(page.locator('#tz-auto-os .bj-pas i')).toHaveCount(d.os.useky.length);
+        await expect(page.locator('#tz-auto-os .au-krivka path')).toHaveCount(1);
+        await expect(page.locator('#tz-auto-os .bj-osi span')).toHaveText(['0', '6', '12', '18', '24']);
+        const behy = page.locator('#tz-auto-behy p');
+        await expect(behy.locator('> span:first-child')).toHaveText(d.behy.map((r) => r.cas));
+        await expect(behy.locator('b')).toHaveText(d.behy.map((r) => r.km));
+        await expect(page.locator('#tz-auto-sucty p b').last()).toHaveText(d.tyzden.v);
+        await expect(page.locator('#tz-auto-oznam-z')).toHaveAttribute('aria-checked', 'false');
+        await expect(page.locator('#tz-auto-oznam-k')).toHaveAttribute('aria-checked', 'false');
+        await expect(page.locator('#tz-auto-pozn')).toHaveText(d.poznamka);
+        expect((await new AxeBuilder({ page }).include('#tz-auto-sheet').analyze()).violations).toEqual([]);
+        await page.locator('#tz-auto-sheet').screenshot({ path: test.info().outputPath('auto-panel.png') });
+        await page.keyboard.press('Escape');
+        await expect(sheet).toBeHidden();
+        await expect(dl).toBeFocused();
+        // Push o konci nabíjania: appka si stav stiahne hneď, dlaždica sa vráti k slnku dňa a ikona nie je oranžová.
+        auto = { at: t, behy: [vcera, { ...beh, k: t - 60000, kw: 0 }] };
+        await page.evaluate((x) => navigator.serviceWorker.dispatchEvent(new MessageEvent('message', { data: x })), OZNAMENIA.auto);
+        await expect(dl).not.toHaveAttribute('data-zapnuty', 'nabija');
+        await dl.click();
+        await expect(page.locator('#tz-auto-pod')).toHaveText(/^Nenabíja sa · naposledy dnes /);
+        await page.keyboard.press('Escape');
+        expect(errors).toEqual([]);
+    });
+
     test('dlaždica Bojler sa prekreslí s hlásením zásuvky, nečaká na meranie; push zmeny ohrevu ju obnoví hneď', async ({ page }) => {
         await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['bojler']))]);
         /** @type {object} */
