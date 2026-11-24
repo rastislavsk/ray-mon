@@ -3,7 +3,7 @@
 // dňa je v paneli karty Dnes (render/graf.js). Všetko počíta shared/teraz.js a texty sú v
 // shared/messages.js - tu sa len zapisuje do DOM.
 
-import { BEZI } from '../../shared/config.js';
+import { BEZI, HVIEZDY } from '../../shared/config.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, voiceTexts } from '../../shared/messages-core.js';
@@ -738,12 +738,14 @@ export function kresliPocasie(el, p) {
     // Bez nich (cez deň, alebo staršie jadro z cache po nasadení) ostanú hviezdy z CSS.
     const ma = Array.isArray(p.hviezdy);
     el.toggleAttribute('data-hviezdy', ma);
-    const [a, b] = ma ? hviezdySvg(/** @type {import('../../shared/hviezdy.js').Hviezda[]} */ (p.hviezdy)) : ['', ''];
+    // Staršie jadro z cache pole pohľadu nepošle - jeho hviezdy sú v poli karty Teraz.
+    const pole = p.pole ?? HVIEZDY;
+    const [a, b] = ma ? hviezdySvg(/** @type {import('../../shared/hviezdy.js').Hviezda[]} */ (p.hviezdy), pole) : ['', ''];
     const vrstvy = el.querySelectorAll('.wx-stars, .wx-stars2');
     setHtml(vrstvy[0], a);
     setHtml(vrstvy[1], b);
     // Mesiac len vtedy, keď naozaj stojí v poli pohľadu; rovnako mimo HTML počasia.
-    const [svetlo, mesiac] = p.mesiac ? mesiacSvg(p.mesiac) : ['', ''];
+    const [svetlo, mesiac] = p.mesiac ? mesiacSvg(p.mesiac, pole) : ['', ''];
     const luna = el.querySelectorAll('.wx-moonglow, .wx-moon');
     setHtml(luna[0], svetlo);
     setHtml(luna[1], mesiac);

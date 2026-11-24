@@ -7,6 +7,7 @@ import { pocasieStav } from '../../web/pocasie.js';
 import { PARTS } from '../../web/state.js';
 import {
     BEZI_STORAGE_KEY,
+    HVIEZDY,
     LOOK_STORAGE_KEY,
     OLD_STORAGE_KEYS,
     PANELS,
@@ -2623,6 +2624,31 @@ test.describe('počasie v pozadí karty Teraz', () => {
         expect(stav.transform).toContain(`rotate(${270 - m.uhol})`);
         expect(stav.mesiac).toEqual(stav.hviezdy);
         await expect(page.locator('#wx .wx-moon g')).toBeVisible();
+        expect(errors).toEqual([]);
+    });
+
+    test('na karte Dnes je obloha od čiary posuvníka (obzor) po vrch obrazovky (zenit), Mesiac v nej', async ({ page }) => {
+        await page.setViewportSize({ width: 360, height: 780 });
+        const rano = new Date('2026-09-06T02:30:00+02:00');
+        const errors = await openTeraz(page, { time: rano });
+        await naDnes(page);
+        const n = dnesNeboModel(vstupTeraz(rano), null);
+        const m = n?.pocasie?.mesiac;
+        if (!m) throw new Error('model karty Dnes nemá Mesiac');
+        expect(n?.pocasie?.pole).toEqual(HVIEZDY.dnes);
+        await expect(page.locator('#wx .wx-moon g')).toHaveAttribute('transform', new RegExp(`translate\\(${m.x} ${m.y}\\)`));
+        const stav = await page.evaluate(() => ({
+            wx: document.querySelector('#wx')?.getBoundingClientRect().toJSON(),
+            hviezdy: document.querySelector('#wx .wx-stars svg')?.getBoundingClientRect().toJSON(),
+            mesiac: document.querySelector('#wx .wx-moon svg')?.getBoundingClientRect().toJSON(),
+            ciara: document.querySelector('#mz-os .mz-os-ciara')?.getBoundingClientRect().toJSON(),
+            viewBox: document.querySelector('#wx .wx-stars svg')?.getAttribute('viewBox'),
+        }));
+        if (!stav.wx || !stav.hviezdy || !stav.ciara) throw new Error('pole hviezd alebo posuvník nie je');
+        expect(stav.viewBox).toBe(`0 0 ${HVIEZDY.dnes.sirka} ${HVIEZDY.dnes.vyska}`);
+        expect(stav.mesiac).toEqual(stav.hviezdy);
+        expect(Math.abs(stav.hviezdy.top - stav.wx.top)).toBeLessThanOrEqual(1);
+        expect(Math.abs(stav.hviezdy.bottom - (stav.ciara.top + stav.ciara.height / 2))).toBeLessThanOrEqual(1);
         expect(errors).toEqual([]);
     });
 

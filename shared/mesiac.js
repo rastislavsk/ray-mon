@@ -78,19 +78,20 @@ export function mesiacNaOblohe(date, lat, lon) {
 
 /**
  * Mesiac v poli pohľadu rovnakým premietaním ako hviezdy. Null, keď je mimo poľa - appka ho vtedy
- * nekreslí. `stlmeny` je Mesiac za textom karty (HVIEZDY.text), ktorý by inak zhoršil čitateľnosť.
+ * nekreslí. `stlmeny` je Mesiac za textom karty (`text` poľa), ktorý by inak zhoršil čitateľnosť.
  * @param {{ vyska: number, azimut: number, faza: number, uhol: number }} m Mesiac nad obzorom
+ * @param {import('./hviezdy.js').Pole} [pole] pole pohľadu, bez neho karta Teraz
  * @returns {MesiacVPoli | null}
  */
-export function mesiacVPoli({ vyska, azimut, faza, uhol }) {
-    const { x, y } = premietni(vyska, azimut);
+export function mesiacVPoli({ vyska, azimut, faza, uhol }, pole = HVIEZDY) {
+    const { x, y } = premietni(vyska, azimut, pole);
     const r = HVIEZDY.mesiacR;
-    if (x < 0 || x > HVIEZDY.sirka || y < -r) return null;
+    if (x < 0 || x > pole.sirka || y < -r) return null;
     return {
         x: Math.round(x * 10) / 10,
         y: Math.round(y * 10) / 10,
         faza,
         uhol: Math.round(uhol),
-        stlmeny: HVIEZDY.text.some((t) => x - r < t.x && y + r > t.od && y - r < t.po),
+        stlmeny: pole.text.some((t) => x - r < t.x && y + r > t.od && y - r < t.po),
     };
 }

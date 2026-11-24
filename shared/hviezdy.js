@@ -4,7 +4,11 @@
 import { HVIEZDY } from './config.js';
 import { HVIEZDY_DATA } from './hviezdy-data.js';
 
-/** @typedef {{ x: number, y: number, mag: number }} Hviezda poloha v poli HVIEZDY (sirka × vyska, y nadol) */
+/** @typedef {{ x: number, y: number, mag: number }} Hviezda poloha v poli pohľadu (sirka × vyska, y nadol) */
+/**
+ * @typedef {{ vyskaStredu: number, sirka: number, vyska: number, stredY: number, mierka: number,
+ *   text: { x: number, od: number, po: number }[] }} Pole pole pohľadu: karta Teraz (HVIEZDY) alebo Dnes (HVIEZDY.dnes)
+ */
 
 const toRad = (/** @type {number} */ deg) => (deg * Math.PI) / 180;
 const toDeg = (/** @type {number} */ rad) => (rad * 180) / Math.PI;
@@ -47,30 +51,30 @@ export function hranicaJasu(oblacnost, mesiac) {
 }
 
 /**
- * Stereografické premietanie do poľa pohľadu na východ (`HVIEZDY.smer`): súhvezdia majú svoj tvar,
+ * Stereografické premietanie do poľa pohľadu `pole` na východ (`HVIEZDY.smer`): súhvezdia majú svoj tvar,
  * len k okrajom poľa rastú. Vľavo je sever, vpravo juh, na oboch pologuliach.
- * @param {number} vyska @param {number} azimut @returns {{ x: number, y: number }}
+ * @param {number} vyska @param {number} azimut @param {Pole} [pole] @returns {{ x: number, y: number }}
  */
-export function premietni(vyska, azimut) {
-    const sin0 = Math.sin(toRad(HVIEZDY.vyskaStredu));
-    const cos0 = Math.cos(toRad(HVIEZDY.vyskaStredu));
+export function premietni(vyska, azimut, pole = HVIEZDY) {
+    const sin0 = Math.sin(toRad(pole.vyskaStredu));
+    const cos0 = Math.cos(toRad(pole.vyskaStredu));
     const alt = toRad(vyska);
     const daz = toRad(azimut - HVIEZDY.smer);
-    const k = toDeg(2 / (1 + sin0 * Math.sin(alt) + cos0 * Math.cos(alt) * Math.cos(daz)));
+    const k = (2 * pole.mierka) / (1 + sin0 * Math.sin(alt) + cos0 * Math.cos(alt) * Math.cos(daz));
     return {
-        x: HVIEZDY.sirka / 2 + k * Math.cos(alt) * Math.sin(daz),
-        y: HVIEZDY.vyska * HVIEZDY.stredY - k * (cos0 * Math.sin(alt) - sin0 * Math.cos(alt) * Math.cos(daz)),
+        x: pole.sirka / 2 + k * Math.cos(alt) * Math.sin(daz),
+        y: pole.vyska * pole.stredY - k * (cos0 * Math.sin(alt) - sin0 * Math.cos(alt) * Math.cos(daz)),
     };
 }
 
 /**
- * Hviezdy v poli pohľadu nad miestom `lat`, `lon` v chvíli `chvila`, len tie, ktoré oblačnosť
- * `oblacnost` (%) a mesiac nechajú vidieť. Mesiac pod obzorom oblohu nerozjasní, volajúci vtedy
- * pošle `mesiac` 0.
- * @param {{ chvila: Date, lat: number, lon: number, oblacnost: number, mesiac: number }} vstup
+ * Hviezdy v poli pohľadu `pole` (bez neho karta Teraz) nad miestom `lat`, `lon` v chvíli `chvila`, len tie,
+ * ktoré oblačnosť `oblacnost` (%) a mesiac nechajú vidieť. Mesiac pod obzorom oblohu nerozjasní, volajúci
+ * vtedy pošle `mesiac` 0.
+ * @param {{ chvila: Date, lat: number, lon: number, oblacnost: number, mesiac: number, pole?: Pole }} vstup
  * @returns {Hviezda[]}
  */
-export function hviezdy({ chvila, lat, lon, oblacnost, mesiac }) {
+export function hviezdy({ chvila, lat, lon, oblacnost, mesiac, pole = HVIEZDY }) {
     const lst = hviezdnyCas(chvila, lon);
     const limit = hranicaJasu(oblacnost, mesiac);
     /** @type {Hviezda[]} */ const out = [];
@@ -79,8 +83,8 @@ export function hviezdy({ chvila, lat, lon, oblacnost, mesiac }) {
         if (mag > limit) continue;
         const { vyska, azimut } = naOblohe(HVIEZDY_DATA[i], HVIEZDY_DATA[i + 1], lst, lat);
         if (vyska < HVIEZDY.minVyska) continue;
-        const { x, y } = premietni(vyska, azimut);
-        if (x < 0 || x > HVIEZDY.sirka || y < 0 || y > HVIEZDY.vyska) continue;
+        const { x, y } = premietni(vyska, azimut, pole);
+        if (x < 0 || x > pole.sirka || y < 0 || y > pole.vyska) continue;
         out.push({ x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, mag });
     }
     return out;

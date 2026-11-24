@@ -33,6 +33,7 @@ test('pocasie: jas a zrážky z hodiny predpovede, cez deň bez Mesiaca a hviezd
         noc: false,
         mesiac: null,
         hviezdy: null,
+        pole: HVIEZDY,
     });
     // Hodina bez poľa zrážok (staršia predpoveď) je bez zrážok.
     assert.equal(pocasie({ point: hodina(10), noc: true, chvila: NOW, site: NITRA, merane: null })?.zrazky, null);
@@ -127,6 +128,10 @@ test('pocasie: Mesiac v noci len tam, kde naozaj je, pod obzorom ani nerozjasní
     const dole = nocne(0, new Date('2026-11-06T21:00:00Z'));
     assert.equal(dole.mesiac, null);
     assert.ok(dole.hviezdy.some((h) => h.mag > HVIEZDY.magMax - 0.1));
+    // V poli karty Dnes je ten istý Mesiac vyššie nad obzorom, lebo pole siaha od obzoru po zenit.
+    const dnes = pocasie({ point: hodina(0), noc: true, chvila: spln, site: NITRA, merane: null, pole: HVIEZDY.dnes });
+    assert.deepEqual(dnes?.mesiac, mesiacVPoli(m, HVIEZDY.dnes));
+    assert.ok(dnes?.mesiac && hore.mesiac && dnes.mesiac.y / HVIEZDY.dnes.vyska < hore.mesiac.y / HVIEZDY.vyska);
     // Nad obzorom, ale na západe, teda za chrbtom: 13. 1. 2027 o 22:00.
     assert.equal(nocne(0, new Date('2027-01-13T21:00:00Z')).mesiac, null);
 });

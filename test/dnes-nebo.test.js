@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DNES_OS, PLANT, SITE, TARIFF } from '../shared/config.js';
+import { DNES_OS, HVIEZDY, PLANT, SITE, TARIFF } from '../shared/config.js';
 import { fmt1 } from '../shared/format.js';
 import { dnesNeboModel, dnesOsMinuta } from '../shared/dnes-nebo.js';
 import { heroModel } from '../shared/hero-model.js';
@@ -45,7 +45,7 @@ test('teraz: výkon z toho istého výpočtu ako karta Teraz, odkiaľ je, bežec
     assert.equal(hero.source, 'live');
     assert.equal(n.cas, '13:00');
     assert.equal(n.veta, `Teraz 13:00, ${fmt1(hero.power)} kW`);
-    assert.deepEqual(n.pocasie, pocasieTeraz({ ...i, previewMinutes: null }));
+    assert.deepEqual(n.pocasie, pocasieTeraz({ ...i, previewMinutes: null }, HVIEZDY.dnes));
     const { rise, set } = sunTimes(SITE, localDateKey(i.now, SITE.timezone));
     assert.ok(rise !== null && set !== null);
     assert.equal(n.os.vychod, hm(rise));
@@ -76,6 +76,8 @@ test('iný čas: dozadu namerané, dopredu predpoveď, bežec v ňom a teraz ost
     const noc = dnesNeboModel(i, min('23:00'));
     assert.equal(noc?.slnko, null);
     assert.equal(noc?.pocasie?.noc, true);
+    // Hviezdy a Mesiac sú v poli karty Dnes: obzor na čiare posuvníka, hore zenit.
+    assert.equal(noc?.pocasie?.pole, HVIEZDY.dnes);
 });
 
 test('typická strecha je odhad s vlnovkou; bez polohy a bez predpovede nič', () => {
