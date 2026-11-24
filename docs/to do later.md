@@ -78,6 +78,9 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 - Scéna toku energie (17.–18. 11.): dom na kopci, počasie za scénou, impulzy, svietiace okná.
 - Bublina Dnes zo strechy (PR #495).
 - Bojler na prebytky: zapnutie na slnku.
+- Bojler – jedno zariadenie (24. 11. 2026): po vložení nového skriptu do zásuvky panel Bojler dnes ukazuje rozumné
+  hodnoty a Shelly 1 Gen3 dostáva 409. **Po 1. 12. 2026 zmazať** `opravaDvochZariadeni` a `OPRAVA` vo `worker/src/ucet.js`
+  aj s ich testom (príznak `oprava1:` v objekte môže ostať).
 - Km autom v Štatistike (PR #469, #470).
 - Karta Graf dňa – variant D (PR #458).
 - Teraz ako týždeň; prah `TYZDEN.minPodiel` (25 %) na skutočných dňoch.

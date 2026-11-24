@@ -1,7 +1,17 @@
 // Bojler na prebytky: rozhodovanie s hysterézou a záznam dňa (shared/bojler.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { bojlerStav, PAMAT_ZACIATOK, prahyZ, prebytokBezBojlera, rozhodni, suctyDna, zaznamenaj, zmenaOhrevu } from '../shared/bojler.js';
+import {
+    bojlerStav,
+    PAMAT_ZACIATOK,
+    prahyZ,
+    prebytokBezBojlera,
+    rozhodni,
+    suctyDna,
+    zariadenieBojlera,
+    zaznamenaj,
+    zmenaOhrevu,
+} from '../shared/bojler.js';
 import { BOJLER } from '../shared/config.js';
 
 const MIN = 60 * 1000;
@@ -200,4 +210,27 @@ test('hranica teploty (docs/navrhy/bojler-hranica.html): nahriatu vodu nepustí,
     });
     // Už bola nahriata (napr. ručne zapnutá a vypnutá): dôvod nie je hranica.
     assert.equal(zmenaOhrevu({ ...stary, nahriata: true }, { ...b, kontaktAt: T0 + MIN, nahriata: true, hranica: 60 })?.dovod, 'appka');
+});
+
+test('zariadenieBojlera: riadi jedna zásuvka s meraním, po BOJLER.riadenyHod ticha ju nahradí iná', () => {
+    const H = 60 * MIN;
+    const z = (/** @type {string | null} */ p, /** @type {number | null} */ k, /** @type {object} */ h, now = T0) =>
+        zariadenieBojlera(p, k, /** @type {any} */ ({ id: undefined, w: 0, ...h }), now);
+    // Bez merania príkonu (Shelly 1 Gen3) nikdy.
+    assert.deepEqual(z(null, null, { id: 'shelly1g3-a', w: undefined }), { prijmi: false, pripni: null });
+    assert.deepEqual(z(null, null, { w: Number.NaN }), { prijmi: false, pripni: null });
+    // Nič pripnuté: bez ID prejde, s ID sa pripne.
+    assert.deepEqual(z(null, null, {}), { prijmi: true, pripni: null });
+    assert.deepEqual(z(null, null, { id: 'plug-a' }), { prijmi: true, pripni: 'plug-a' });
+    assert.deepEqual(z(null, null, { id: 'zlé id!' }), { prijmi: true, pripni: null }, 'neplatné ID ako bez ID');
+    // Pripnutá sa ozýva: len ona.
+    assert.deepEqual(z('plug-a', T0 - H, { id: 'plug-a' }), { prijmi: true, pripni: null });
+    assert.deepEqual(z('plug-a', T0 - H, { id: 'plug-b' }), { prijmi: false, pripni: null });
+    assert.deepEqual(z('plug-a', T0 - H, {}), { prijmi: false, pripni: null });
+    // Pripnutá mlčí: nahradí ju iná s ID, bez ID nie.
+    const ticho = T0 - BOJLER.riadenyHod * H;
+    assert.deepEqual(z('plug-a', ticho, { id: 'plug-b' }), { prijmi: true, pripni: 'plug-b' });
+    assert.deepEqual(z('plug-a', ticho, { id: 'plug-a' }), { prijmi: true, pripni: null });
+    assert.deepEqual(z('plug-a', ticho, {}), { prijmi: false, pripni: null });
+    assert.deepEqual(z('plug-a', null, { id: 'plug-b' }), { prijmi: true, pripni: 'plug-b' });
 });

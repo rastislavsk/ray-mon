@@ -296,9 +296,10 @@ async function dopytBojlera(request, key, now) {
 }
 
 /**
- * POST /bojler: `{ pecat, rele, w, e, zapKw, vypKw, t? }` od skriptu zásuvky (stav relé, príkon vo W,
+ * POST /bojler: `{ pecat, id, rele, w, e, zapKw, vypKw, t? }` od skriptu zásuvky (ID zariadenia, stav relé, príkon vo W,
  * počítadlo energie vo Wh, prahy a s teplomerom teplota vody v °C, docs/navrhy/bojler-teplota.html) -> `{ zapni, rucne, prebytokKw, maxC, minC }` (hranica teploty a návrat). V ručnom režime je `zapni` stav relé, takže ho
- * nezmení ani starší skript, ktorý `rucne` nepozná. Rozhoduje Durable Object účtu (shared/bojler.js).
+ * nezmení ani starší skript, ktorý `rucne` nepozná. Rozhoduje Durable Object účtu (shared/bojler.js). Hlásenie
+ * od iného zariadenia, než ktoré bojler riadi, či bez merania príkonu -> 409 (zariadenieBojlera v shared/bojler.js).
  * @param {Request} request @param {Env} env @param {Date} now
  */
 export async function handleBojler(request, env, now) {
@@ -308,7 +309,10 @@ export async function handleBojler(request, env, now) {
     if (!obsah) return json(400, { chyba: 'udaje' });
     try {
         const prahy = { zapKw: req.zapKw, vypKw: req.vypKw };
-        const r = await ucet(env.UCTY, obsah.pristup, '/bojler', now, { rele: req.rele, w: req.w, e: req.e, prahy, t: req.t });
+        const hlasenie = { id: req.id, rele: req.rele, w: req.w, e: req.e, prahy, t: req.t };
+        const r = await ucet(env.UCTY, obsah.pristup, '/bojler', now, hlasenie);
+        // Iné zariadenie než to, ktoré bojler riadi (docs/navrhy/bojler-jedno-zariadenie.html): skript to berie ako ticho.
+        if (r.odmietnute) return json(409, { chyba: 'zariadenie' });
         // Hranicu teploty (docs/navrhy/bojler-hranica.html) si skript zásuvky pamätá a stráži ju aj bez Workera.
         const hranica = { maxC: r.maxC ?? null, minC: r.minC ?? null };
         return json(200, { zapni: r.zapni === true, rucne: r.rucne === true, prebytokKw: r.prebytokKw ?? null, ...hranica });
