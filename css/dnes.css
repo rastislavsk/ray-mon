@@ -114,6 +114,12 @@
     --wx-flare-dx: -150px;
     --wx-diff-x: calc(8% + var(--mz-f, 0.5) * 84%);
 }
+/* Hviezdy a Mesiac na karte Dnes (HVIEZDY.dnes, docs/navrhy/dnes-hviezdy-vysek.html, R1): pole siaha od čiary
+   posuvníka (obzor) po vrch obrazovky, kde je zenit - obloha tak, ako ju vidno pri pohľade na východ. */
+.wx[data-dnes] :is(.wx-stars, .wx-stars2, .wx-moonglow, .wx-moon) svg {
+    top: 0;
+    height: var(--wx-obzor);
+}
 /* Posuvník dňa (0 - 24 h): jedna čiara, deň od východu po západ sýtejšia biela, noc bledšia, pod ňou len časy
    východu a západu. Plocha na prst je celá výška obalu; zvislý ťah cez ňu posúva stránku (pan-y), vodorovný čas. */
 .mz-os-obal {

@@ -48,6 +48,11 @@ východu po západ sýtejšia biela, pod čiarou len ich časy, bežec je plný 
 (ťuknutie ho vráti). Zvolený čas je `mzCas` v stave (nie krok navigácie, iná karta ho vráti na teraz); výkon, farby neba
 aj kresba počasia `#wx` sú vtedy v tej chvíli (`shared/dnes-nebo.js`, `render/index.js`, `render/mozem.js`).
 
+Hviezdy a Mesiac v noci (`docs/navrhy/dnes-hviezdy-vysek.html`, R1, 24. 11. 2026) sú na Dnes tak, ako ich vidno pri pohľade
+na východ: vlastné pole `HVIEZDY.dnes` so stredom pohľadu na obzore - obzor je čiara posuvníka, kraje SV a JV, vrch obrazovky
+zenit (`.wx[data-dnes]` v `css/dnes.css`). Pole ide s modelom počasia (`pocasieTeraz(…, HVIEZDY.dnes)`, `pole` v `Pocasie`);
+karta Teraz má ďalej svoje pole nad scénou.
+
 Nižšie dlaždice a zarovnanie s Teraz: `docs/navrhy/dnes-nizsie-dlazdice.html` (D + Z2), 23. 11. 2026. Graf dňa (Kheinshmetke)
 je zrušený aj s panelom, `grafModel` a stavom `terazPreview`; krivku dňa kreslí ďalej detail dňa karty 7 dní. Dlaždica pásu
 nesie jednu kartu alebo dvojicu s tenkou čiarou medzi nimi (`DVOJICE` v `shared/dnes-faza.js`: Veľké veci | Nabehlo,

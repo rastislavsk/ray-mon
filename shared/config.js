@@ -1227,7 +1227,16 @@ export const POCASIE = {
  * Pohľad smeruje na azimut `smer` (východ), obzor (výška `minVyska`) je pri spodnom okraji poľa.
  * `mesiacR` je polomer kresby Mesiaca, zámerne väčší ako skutočný (0,25°). `text` sú oblasti poľa
  * za textom karty Teraz na telefóne (číslo a riadok stavu): vľavo od `x`, vo výške `od` až `po`.
+ * `mierka` je jednotiek poľa na radián v strede pohľadu (tu 1 jednotka = 1°).
+ *
+ * `dnes` je pole karty Dnes (docs/navrhy/dnes-hviezdy-vysek.html, R1, 24. 11. 2026): obloha tak, ako ju človek
+ * vidí, keď sa pozrie na východ. Stred pohľadu je na obzore, takže obzor je rovná čiara pri spodnom okraji
+ * (čiara posuvníka), kraje poľa sú na obzore V ± `dnesOkraj` ° (SV a JV) a vrch poľa je zenit. Pole siaha
+ * od čiary posuvníka po vrch obrazovky; na užšej obrazovke ubudne do strán, na širšej zhora. `text` je veľké
+ * číslo výkonu a riadok pod ním (namerané na 360 × 780, 24. 11. 2026).
  */
+const dnesOkraj = 45;
+const dnesMierka = 100 / (2 * Math.tan((dnesOkraj * Math.PI) / 360));
 export const HVIEZDY = {
     magMax: 3.5,
     oblakyMag: 2,
@@ -1237,6 +1246,7 @@ export const HVIEZDY = {
     sirka: 200,
     vyska: 112,
     stredY: 0.6875,
+    mierka: 180 / Math.PI,
     minVyska: 3,
     krokMin: 4,
     mesiacR: 8.3,
@@ -1244,4 +1254,15 @@ export const HVIEZDY = {
         { x: 75, od: 29, po: 88 },
         { x: 108, od: 93, po: 107 },
     ],
+    dnes: {
+        vyskaStredu: 0,
+        sirka: 200,
+        vyska: 2 * dnesMierka,
+        stredY: 1,
+        mierka: dnesMierka,
+        text: [
+            { x: 125, od: 38, po: 78 },
+            { x: 80, od: 78, po: 92 },
+        ],
+    },
 };

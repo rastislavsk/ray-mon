@@ -11,12 +11,13 @@ import { skyWeather } from './sky.js';
 /**
  * @typedef {'mrholenie' | 'slaby' | 'dazd' | 'silny'} DazdSila
  * @typedef {{ jas: import('./sky.js').SkyWeather, zamracenost: number, zrazky: import('./solar.js').Precip, dazd: DazdSila | null,
- *   noc: boolean, mesiac: import('./mesiac.js').MesiacVPoli | null, hviezdy: import('./hviezdy.js').Hviezda[] | null }} Pocasie
+ *   noc: boolean, mesiac: import('./mesiac.js').MesiacVPoli | null, hviezdy: import('./hviezdy.js').Hviezda[] | null,
+ *   pole: import('./hviezdy.js').Pole }} Pocasie
  *   `zamracenost` 0 (jasno) až 1 (zamračené) z toho istého zdroja ako `jas`, pri zrážkach 1 - podľa nej
  *   je modrosivá Obloha (docs/navrhy/obloha-farba-podla-pocasia.html);
  *   `dazd` sila dažďa, keď prší (docs/navrhy/dazd-sily.html); `mesiac` v noci skutočný Mesiac v poli pohľadu
  *   (shared/mesiac.js), null keď tam nie je; `hviezdy` v noci skutočná obloha nad elektrárňou
- *   (shared/hviezdy.js), cez deň null
+ *   (shared/hviezdy.js), cez deň null; `pole` pole pohľadu, v ktorom sú Mesiac a hviezdy (karta Teraz alebo Dnes)
  */
 
 /**
@@ -71,12 +72,12 @@ function zamracenostZ(cloud, podiel, zrazky) {
 
 /**
  * Mesiac na kresbe (cez deň a pod obzorom nie je) a fáza, ktorou rozjasňuje oblohu: pod obzorom 0.
- * @param {Date} t @param {boolean} noc @param {{ lat: number, lon: number }} site
+ * @param {Date} t @param {boolean} noc @param {{ lat: number, lon: number }} site @param {import('./hviezdy.js').Pole} pole
  */
-function mesiacVNoci(t, noc, site) {
+function mesiacVNoci(t, noc, site, pole) {
     const m = noc ? mesiacNaOblohe(t, site.lat, site.lon) : null;
     if (!m || m.vyska < HVIEZDY.minVyska) return { mesiac: null, jasOblohy: 0 };
-    return { mesiac: mesiacVPoli(m), jasOblohy: m.faza };
+    return { mesiac: mesiacVPoli(m, pole), jasOblohy: m.faza };
 }
 
 /**
@@ -86,21 +87,23 @@ function mesiacVNoci(t, noc, site) {
  * appka v tej chvíli meria, jas berie z merania (rozhodnutie z 1. 11. 2026 - predpoveď sa môže
  * mýliť, meranie nie), zrážky vždy z predpovede. Mesiac
  * a hviezdy sú z chvíle zaokrúhlenej na HVIEZDY.krokMin minút. Bez hodiny predpovede alebo bez
- * oblačnosti v nej null - kresba netvrdí počasie, ktoré appka nepozná.
+ * oblačnosti v nej null - kresba netvrdí počasie, ktoré appka nepozná. Mesiac a hviezdy sú v poli pohľadu
+ * `pole` (bez neho karta Teraz).
  * @param {{ point: import('./solar.js').HourPoint | undefined, zrazkyPoint?: import('./solar.js').HourPoint,
  *   noc: boolean, chvila: Date,
  *   site: { lat: number, lon: number },
- *   merane: { kw: number, clearKw: number, installedKw: number } | null }} vstup
+ *   merane: { kw: number, clearKw: number, installedKw: number } | null,
+ *   pole?: import('./hviezdy.js').Pole }} vstup
  * @returns {Pocasie | null}
  */
-export function pocasie({ point, zrazkyPoint, noc, chvila, site, merane }) {
+export function pocasie({ point, zrazkyPoint, noc, chvila, site, merane, pole = HVIEZDY }) {
     if (!point || point.cloud === null) return null;
     const podiel = noc ? null : podielZMerania(merane);
     const jas = (!noc && jasZMerania(merane)) || skyWeather(point.cloud);
     const zrazky = (zrazkyPoint ?? point).precip ?? null;
     const krok = HVIEZDY.krokMin * 60000;
     const t = new Date(Math.round(chvila.getTime() / krok) * krok);
-    const { mesiac, jasOblohy } = mesiacVNoci(t, noc, site);
+    const { mesiac, jasOblohy } = mesiacVNoci(t, noc, site, pole);
     return {
         jas,
         zamracenost: zamracenostZ(point.cloud, podiel, zrazky !== null),
@@ -108,6 +111,7 @@ export function pocasie({ point, zrazkyPoint, noc, chvila, site, merane }) {
         dazd: silaDazda(zrazkyPoint ?? point),
         noc,
         mesiac,
-        hviezdy: noc ? hviezdy({ chvila: t, lat: site.lat, lon: site.lon, oblacnost: point.cloud, mesiac: jasOblohy }) : null,
+        hviezdy: noc ? hviezdy({ chvila: t, lat: site.lat, lon: site.lon, oblacnost: point.cloud, mesiac: jasOblohy, pole }) : null,
+        pole,
     };
 }

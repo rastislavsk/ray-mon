@@ -131,38 +131,43 @@ export function pocasieHtml() {
  */
 export const pocasieStav = (p) => p.zrazky ?? p.jas;
 
-/** Pole oblohy v SVG: obzor pri spodnom okraji, čo sa nezmestí nad neho, kreslí sa ďalej (overflow v CSS). */
-const POLE = `viewBox="0 0 ${HVIEZDY.sirka} ${HVIEZDY.vyska}" preserveAspectRatio="xMidYMax slice"`;
+/**
+ * Pole oblohy v SVG: obzor pri spodnom okraji, čo sa nezmestí nad neho, kreslí sa ďalej (overflow v CSS).
+ * @param {import('../shared/hviezdy.js').Pole} pole
+ */
+const poleSvg = (pole) => `viewBox="0 0 ${pole.sirka} ${pole.vyska}" preserveAspectRatio="xMidYMax slice"`;
 
 /**
  * Skutočné hviezdy (shared/hviezdy.js) ako SVG vrstvy: párne do prvej, nepárne do druhej, aby
  * blikali striedavo ako hviezdy z CSS. Jasnejšia hviezda je väčšia a plnšia.
- * @param {import('../shared/hviezdy.js').Hviezda[]} zoznam @returns {[string, string]}
+ * @param {import('../shared/hviezdy.js').Hviezda[]} zoznam @param {import('../shared/hviezdy.js').Pole} pole
+ * @returns {[string, string]}
  */
-export function hviezdySvg(zoznam) {
+export function hviezdySvg(zoznam, pole) {
     const kruhy = zoznam.map((h) => {
         const r = Math.max(0.52, 1.2 - 0.18 * h.mag).toFixed(2);
         const a = Math.min(1, Math.max(0.6, 1 - 0.1 * h.mag)).toFixed(2);
         return `<circle cx="${h.x}" cy="${h.y}" r="${r}" opacity="${a}"/>`;
     });
-    const svg = (/** @type {number} */ zvysok) => `<svg ${POLE}>${kruhy.filter((_, i) => i % 2 === zvysok).join('')}</svg>`;
+    const svg = (/** @type {number} */ zvysok) => `<svg ${poleSvg(pole)}>${kruhy.filter((_, i) => i % 2 === zvysok).join('')}</svg>`;
     return [svg(0), svg(1)];
 }
 
 /**
  * Skutočný Mesiac (shared/mesiac.js) v tom istom poli ako hviezdy: svetlo okolo neho a kotúč s
  * osvetlenou stranou natočenou k Slnku. @param {import('../shared/mesiac.js').MesiacVPoli} m
- * @returns {[string, string]}
+ * @param {import('../shared/hviezdy.js').Pole} pole @returns {[string, string]}
  */
-export function mesiacSvg({ x, y, faza, uhol }) {
+export function mesiacSvg({ x, y, faza, uhol }, pole) {
+    const svg = poleSvg(pole);
     const svetlo =
         '<radialGradient id="wx-moonlight"><stop offset=".09" stop-color="#dce1ff" stop-opacity=".16"/>' +
         '<stop offset=".25" stop-color="#c8d2ff" stop-opacity=".07"/><stop offset=".54" stop-color="#c8d2ff" stop-opacity=".03"/>' +
         '<stop offset="1" stop-color="#c8d2ff" stop-opacity="0"/></radialGradient>';
     const mierka = ((2 * HVIEZDY.mesiacR) / 46).toFixed(3);
     return [
-        `<svg ${POLE}>${svetlo}<circle cx="${x}" cy="${y}" r="155" fill="url(#wx-moonlight)"/></svg>`,
-        `<svg ${POLE}><g transform="translate(${x} ${y}) scale(${mierka}) rotate(${270 - uhol}) translate(-23 -23)">` +
+        `<svg ${svg}>${svetlo}<circle cx="${x}" cy="${y}" r="155" fill="url(#wx-moonlight)"/></svg>`,
+        `<svg ${svg}><g transform="translate(${x} ${y}) scale(${mierka}) rotate(${270 - uhol}) translate(-23 -23)">` +
             `<circle class="wx-moon-dark" cx="23" cy="23" r="23"/><path class="wx-moon-lit" d="${mesiacTvar(faza)}"/></g></svg>`,
     ];
 }

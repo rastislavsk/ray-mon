@@ -232,21 +232,21 @@ function nastavenieCasu(list, id, d, nowMin, min) {
  * Počasie karty Teraz v zvolenej chvíli (teraz, alebo pri náhľade iného času v ňom - dopredu
  * z predpovede, dozadu z merania) bez zvyšku modelu karty. Z neho je farba Oblohy na všetkých
  * kartách (docs/navrhy/obloha-farba-podla-pocasia.html), takže nebo a kresba počasia hovoria to
- * isté. Bez predpovede null.
- * @param {TerazInput} input
+ * isté. Bez predpovede null. Mesiac a hviezdy sú v poli pohľadu `pole` (karta Dnes má vlastné, HVIEZDY.dnes).
+ * @param {TerazInput} input @param {import('./hviezdy.js').Pole} [pole]
  */
-export function pocasieTeraz(input) {
+export function pocasieTeraz(input, pole) {
     if (input.known === 'nic' || !input.forecast) return null;
-    return pocasieOf(input, heroModel(input));
+    return pocasieOf(input, heroModel(input), pole);
 }
 
 /**
  * Počasie v pozadí karty v zvolenej chvíli (aj v náhľade iného času): hodina predpovede, a keď
  * je výkon v tej chvíli nameraný, aj jeho podiel z jasnej oblohy (shared/pocasie.js). Mesiac
- * a hviezdy sú z tej istej chvíle, nie z teraz.
- * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero
+ * a hviezdy sú z tej istej chvíle, nie z teraz, v poli pohľadu `pole` (bez neho karta Teraz).
+ * @param {TerazInput} input @param {ReturnType<typeof heroModel>} hero @param {import('./hviezdy.js').Pole} [pole]
  */
-function pocasieOf(input, hero) {
+function pocasieOf(input, hero, pole) {
     const hour = Math.floor(hero.minutes / 60);
     const point = input.forecast?.hourlyToday.find((h) => h.hour === hour);
     // Zrážky z hodiny, ktorá sa končí po tejto chvíli (o 23:xx je to polnoc zajtrajška).
@@ -260,7 +260,7 @@ function pocasieOf(input, hero) {
     // Minúta náhľadu je miestny čas elektrárne, hviezdy a mesiac potrebujú okamih v UTC.
     const tz = input.site.timezone;
     const chvila = hero.preview ? localToUtc(localDateKey(input.now, tz), hero.minutes, tz) : input.now;
-    return pocasie({ point, zrazkyPoint, noc: hero.isNight, chvila, site: input.site, merane });
+    return pocasie({ point, zrazkyPoint, noc: hero.isNight, chvila, site: input.site, merane, pole });
 }
 
 /**

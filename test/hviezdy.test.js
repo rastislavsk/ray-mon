@@ -120,3 +120,24 @@ test('hviezdy-data: trojice v rozsahu, zoradené od najjasnejšej, do magnitúdy
         if (i) assert.ok(HVIEZDY_DATA[i + 2] >= HVIEZDY_DATA[i - 1]);
     }
 });
+
+test('premietni: pole karty Dnes - obzor rovno pri spodnom okraji, kraje SV a JV, hore zenit', () => {
+    const p = HVIEZDY.dnes;
+    for (const az of [45, 60, 90, 120, 135]) assert.ok(Math.abs(premietni(0, az, p).y - p.vyska) < 1e-9, `obzor ${az}°`);
+    assert.ok(Math.abs(premietni(0, 45, p).x) < 1e-9, 'SV na ľavom kraji');
+    assert.ok(Math.abs(premietni(0, 135, p).x - p.sirka) < 1e-9, 'JV na pravom kraji');
+    const zenit = premietni(90, 0, p);
+    assert.ok(Math.abs(zenit.x - p.sirka / 2) < 1e-9 && Math.abs(zenit.y) < 1e-9, 'zenit hore v strede');
+    // Hviezda 30° nad východom je v tretine poľa od obzoru (2 tg 15° / 2 = 0,27 výšky).
+    assert.ok(Math.abs(premietni(30, 90, p).y - p.vyska * (1 - Math.tan(Math.PI / 12))) < 1e-9);
+});
+
+test('hviezdy: v poli karty Dnes len to, čo vidno pri pohľade na východ', () => {
+    const t = naVychode(BETELGEUZA, NITRA);
+    const z = hviezdy({ chvila: new Date(t.getTime() + 2 * 3600000), ...NITRA, oblacnost: 0, mesiac: 0, pole: HVIEZDY.dnes });
+    assert.ok(z.length > 10);
+    for (const h of z) assert.ok(h.x >= 0 && h.x <= HVIEZDY.dnes.sirka && h.y >= 0 && h.y <= HVIEZDY.dnes.vyska);
+    // Betelgeuza dve hodiny po východe stojí asi 20° nad obzorom, vpravo od východu.
+    const b = najdi(z, BETELGEUZA.mag);
+    assert.ok(b && b.x > HVIEZDY.dnes.sirka / 2 && b.y < HVIEZDY.dnes.vyska * 0.9, JSON.stringify(b));
+});

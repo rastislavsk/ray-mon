@@ -3,7 +3,7 @@
 // Výkon a počasie sú z toho istého výpočtu ako graf dňa a pozadie appky (heroModel, pocasieTeraz) - dozadu
 // meranie, dopredu predpoveď. Čisté funkcie, čas aj dáta prichádzajú v parametroch.
 
-import { DNES_OS, MINUTES_PER_DAY } from './config.js';
+import { DNES_OS, HVIEZDY, MINUTES_PER_DAY } from './config.js';
 import { fmt1 } from './format.js';
 import { heroModel } from './hero-model.js';
 import { dnesNeboText, hm, terazSourceText } from './messages-core.js';
@@ -38,7 +38,8 @@ export function dnesNeboModel(input, cas, voice = 'drzy') {
         kw,
         druh,
         ...dnesNeboText({ druh, min: hero.minutes, zdroj, kw: cislo }),
-        pocasie: pocasieTeraz(chvila),
+        // Hviezdy a Mesiac tak, ako ich vidno pri pohľade na východ: obzor na čiare posuvníka, hore zenit.
+        pocasie: pocasieTeraz(chvila, HVIEZDY.dnes),
         slnko: slnkoNaDrahe(d.svetlo, hero.minutes),
         os: {
             min: hero.minutes,
