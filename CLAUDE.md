@@ -76,6 +76,8 @@ by sa inak navzájom odhlasovali. Do objektu nepatrí heslo – prichádza vždy
 JavaScript (bez šípok a čiarok na konci) a HTTP.POST nesmie mať prázdne telo; stráži to `test/bojler-skript.test.js`.
 Ručný režim (prepínač v paneli Bojler dnes, `/bojler-rezim`, kľúč `br:` v objekte): skript beží ďalej a hlási,
 ale relé neprepne ani pri tichu; Worker mu vtedy vráti `zapni` rovné stavu relé, aby nič neprepol ani starší skript.
+Beh v zázname dňa je jeden ohrev, nie jedno zapnutie relé: keď termostat po nahriatí zapne znova a relé je stále
+zapnuté, starý beh skončí v čase nahriatia a začne nový (`dalsiOhrev` v `shared/bojler.js`, 25. 11. 2026).
 Kým sa zásuvka ozýva (`BOJLER.riadenyHod`), karta Teraz bojler neradí: má dlaždicu so stavom a panel Bojler dnes
 (`shared/teraz-bojler.js`), otvorený tým istým krokom `tzVec` ako detail spotrebiča.
 Stav bojlera chodí s meraním Huawei len raz za 5 minút, preto sa appka medzi meraniami pýta každú minútu na

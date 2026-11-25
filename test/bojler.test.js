@@ -156,6 +156,37 @@ test('záznam dňa: behy, energia z počítadla, podiel zo siete, nahriata voda 
     assert.equal(noc.behy[0].q?.length, 1, 'beh po polnoci má štvrťhodiny od začiatku');
 });
 
+test('záznam dňa: termostat po nahriatí zapne znova pri zapnutom relé - nový beh, nie pokračovanie', () => {
+    const tz = 'Europe/Bratislava';
+    const v = (/** @type {number} */ min, /** @type {object} */ o) => ({
+        now: new Date(T0 + min * MIN),
+        tz,
+        rele: true,
+        w: 2200,
+        energiaWh: 1000,
+        sietKw: 0.1,
+        ...o,
+    });
+    // Ohrev 10:31 - 11:01 (1100 Wh), potom voda nahriata, relé ostáva zapnuté.
+    let den = zaznamenaj(null, v(31, {}));
+    for (let m = 32; m <= 61; m++) den = zaznamenaj(den, v(m, { energiaWh: 1000 + ((m - 31) * 2200) / 60 }));
+    den = zaznamenaj(den, v(62, { w: 3, energiaWh: 2100 }));
+    den = zaznamenaj(den, v(150, { w: 3, energiaWh: 2105 }));
+    assert.deepEqual([den.behy.length, den.hotovo], [1, 10 * 60 + 62]);
+    // Termostat zapol o 12:31: prvý beh skončí v čase nahriatia, nový začína teraz.
+    den = zaznamenaj(den, v(151, { energiaWh: 2140 }));
+    assert.equal(den.behy.length, 2);
+    assert.deepEqual([den.behy[0].od, den.behy[0].do], [10 * 60 + 31, 10 * 60 + 62]);
+    assert.deepEqual([den.behy[1].od, den.behy[1].do], [10 * 60 + 151, null]);
+    assert.equal(Math.round(den.behy[1].wh), 35, 'energia od posledného dopytu patrí novému behu');
+    assert.equal(den.hotovo, null);
+    assert.ok(Math.abs(den.behy[0].wh + den.behy[1].wh - 1140) < 0.5, 'nič sa nestratí ani nezráta dvakrát');
+    assert.equal(suctyDna(den).zapnuti, 2);
+    // Ďalší dopyt už pokračuje v novom behu.
+    den = zaznamenaj(den, v(152, { energiaWh: 2176 }));
+    assert.deepEqual([den.behy.length, Math.round(den.behy[1].wh)], [2, 71]);
+});
+
 test('záznam dňa: energia a odber zo siete po štvrťhodinách (D2) sedia so súčtom behu', () => {
     const tz = 'Europe/Bratislava';
     const v = (/** @type {number} */ min, /** @type {object} */ o) => ({
