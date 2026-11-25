@@ -35,34 +35,34 @@ export const DEN_WORDS = {
         horsi: 'Dojebabralo sa nám to dneskaj',
     },
     vecer: {
-        vyborny: 'Oskar to dnes odpálil na plný koule',
+        vyborny: 'Oskar to odpálil na plný koule',
         dobry: 'Not baad, zer gút',
         slaby: 'Dneskaj ništ moc, nem džo',
-        nanic: 'Dnes to bolo pjekne nagovno',
+        nanic: 'Pjekne nagovno',
     },
     iny: {
-        vyborny: 'Oskar pujde na plný koule',
+        vyborny: 'Oskar na plný koule',
         dobry: 'Not baaad',
         slaby: 'NAGOVNO DEŇ',
-        nanic: 'ÚPLNE NAHOVNO DEŇ',
+        nanic: 'ÚPLNE NAHOVNO',
     },
 };
 
 /** @type {typeof DEN_WORDS} */
 export const DEN_WORDS_SLUSNE = {
     zmena: {
-        lepsi: 'Deň bude lepší, ako sa čakalo',
-        horsi: 'Deň bude slabší, ako sa čakalo',
+        lepsi: 'Lepšie ako ranná predpoveď',
+        horsi: 'Horšie ako ranná predpoveď',
     },
     vecer: {
-        vyborny: 'Dnes to bol výborný deň',
-        dobry: 'Dnes to bol dobrý deň',
-        slaby: 'Dnes to bol slabý deň',
-        nanic: 'Dnes sme takmer nič nevyrobili',
+        vyborny: 'Skvelý deň, vysoká výroba',
+        dobry: 'Dobrý deň, slušná výroba',
+        slaby: 'Slabý deň, výroba nízka',
+        nanic: 'Veľmi nízka výroba',
     },
     iny: {
-        vyborny: 'Výborný deň',
-        dobry: 'Dobrý deň',
+        vyborny: 'Dosť slnka aj s rezervou',
+        dobry: 'Slnko natesno, bez rezervy',
         slaby: 'Slabý deň',
         nanic: 'Takmer nič nevyrobíme',
     },

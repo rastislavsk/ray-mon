@@ -105,7 +105,7 @@ test('karta Dnes: veľké slovo o celom dni v oboch tónoch', () => {
     const rano = mozemModel({ ...den(1, at('05:30')), loading: false });
     assert.deepEqual(rano.den, { cls: 'vyborny', faza: 'rano', change: null });
     assert.equal(rano.word, DEN_WORDS.iny.vyborny);
-    assert.equal(mozemModel({ ...den(1, at('05:30')), loading: false }, { voice: 'slusny' }).word, 'Výborný deň');
+    assert.equal(mozemModel({ ...den(1, at('05:30')), loading: false }, { voice: 'slusny' }).word, 'Dosť slnka aj s rezervou');
 
     // Ráno bolo výborne, cez deň sa zamračilo: hláška o zmene.
     const ranna = recordRanna(null, { date: '2026-09-05', devices: PLAN_DNA.devices, cls: 'vyborny', faza: 'den' });

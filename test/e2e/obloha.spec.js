@@ -1727,7 +1727,7 @@ test.describe('karta Teraz', () => {
         const zajtra = terazModel(vstup, { den: 1 });
         await expect(dni.nth(1)).toHaveAttribute('aria-pressed', 'true');
         await expect(dni.nth(1)).toBeFocused();
-        expect(zajtra.co?.den).toBe('ÚPLNE NAHOVNO DEŇ');
+        expect(zajtra.co?.den).toBe('ÚPLNE NAHOVNO');
         await expect(page.locator('#tz-den-hlaska')).toHaveText(zajtra.co?.den ?? '-');
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(zajtra));
         expect(

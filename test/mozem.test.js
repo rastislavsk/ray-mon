@@ -101,7 +101,7 @@ test('13:00 za jasna: zapínaj, s meraním nabitia mobilu a spotrebiče dokedy',
     assert.equal(m.state, 'go');
     // Slovo hovorí o celom dni: všetky spotrebiče sa zmestia aj s rezervou na mrak (auto v Pláne dňa nie je).
     assert.deepEqual(m.den, { cls: 'vyborny', faza: 'den', change: null });
-    assert.equal(m.word, 'Oskar pujde na plný koule');
+    assert.equal(m.word, 'Oskar na plný koule');
     assert.match(m.hero.factV, /^~\d+ mobilov$/);
     assert.ok(m.strip && m.strip.width > 0 && m.strip.now > m.strip.left);
     const pracka = item(m, 'pracka');

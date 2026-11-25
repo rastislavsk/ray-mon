@@ -127,7 +127,7 @@ test.describe('tón hlášok', () => {
         const errors = await openObloha(page);
         const drzy = modelMozem(FIXED_NOW, 'drzy');
         const slusny = modelMozem(FIXED_NOW, 'slusny');
-        expect(slusny.word).toBe('Výborný deň');
+        expect(slusny.word).toBe('Dosť slnka aj s rezervou');
         await karta(page, 'mozem');
         await expect(page.locator('#mz-word')).toHaveText(drzy.word);
 
