@@ -1355,15 +1355,13 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
-/* Zapnutý spotrebič (docs/navrhy/teraz-zapnuty-farba.html, I2, 25. 11. 2026): beží, bojleru zásuvka zapla relé alebo
-   sa auto asi nabíja. Zapnutie povie len kruh s ikonou - plný vo farbe oblohy (--s4, tá istá ako ikona aktívnej karty
-   v navigácii) s tmavou ikonou a žiarou; dlaždica ostáva na skle ako ostatné, bez obrysu, cez deň aj v noci. Farba je
-   rovnaká pre spotrebiče aj auto, to, že nabíjanie je len odhad, hovoria texty („asi“). Tmavá ikona má na --s4 dosť
-   kontrastu vždy: jas --s4 je aspoň SKY.navJas. */
+/* Zapnutý spotrebič (docs/navrhy/teraz-zapnuty-farba.html, F1 bez žiary, 25. 11. 2026): beží, bojleru zásuvka zapla
+   relé alebo sa auto asi nabíja. Zapnutie povie len kruh s ikonou - plný biely (--zapnuty) s tmavou ikonou, bez žiary,
+   rovnako veľký ako vypnutý; dlaždica ostáva na skle ako ostatné, bez obrysu, cez deň aj v noci. Farba je rovnaká pre
+   spotrebiče aj auto, to, že nabíjanie je len odhad, hovoria texty („asi“). */
 .dl[data-zapnuty] .dl-ico {
     color: var(--ink);
-    background: var(--s4);
-    box-shadow: 0 0 16px color-mix(in srgb, var(--s4) 65%, transparent);
+    background: var(--zapnuty);
 }
 /* Značka režimu bojlera na kraji kruhu s ikonou, kde bývala bodka stavu: ručne biely kruh s rukou, riadi appka
    slnko na tmavom kruhu. */
