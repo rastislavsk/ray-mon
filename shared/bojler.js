@@ -109,7 +109,9 @@ function vysledok(zapni, p, v, prebytokKw) {
 }
 
 /**
- * Jeden beh bojlera v dni: od a do (minúty od polnoci, `do` null kým beží), energia behu vo Wh
+ * Jeden beh bojlera v dni: ohrev od zapnutia relé, alebo od chvíle, keď termostat po nahriatí zapol znova (relé
+ * ostalo zapnuté), po vypnutie relé alebo ďalšie zapnutie termostatom. Od a do (minúty od polnoci, `do` null kým beží;
+ * pri ďalšom zapnutí termostatom je `do` čas nahriatia), energia behu vo Wh
  * (z počítadla zásuvky, `e0` je jeho stav na začiatku), koľko z nej išlo zo siete (`whSiet`) a koľko
  * minút bojler naozaj hrial (`hrejeMin`; relé môže byť zapnuté aj s nahriatou vodou). `q` je to isté po
  * štvrťhodinách od tej, v ktorej beh začal: [Wh, Wh zo siete] (docs/navrhy/bojler-panel.html, D2) - appka z neho
@@ -117,7 +119,7 @@ function vysledok(zapni, p, v, prebytokKw) {
  * @typedef {{ od: number, do: number | null, wh: number, whSiet: number, e0: number, hrejeMin: number, q?: Array<[number, number]> }} Beh
  */
 /**
- * Záznam dňa: dátum (v pásme elektrárne), behy (ich počet = počet zapnutí) a kedy termostat
+ * Záznam dňa: dátum (v pásme elektrárne), behy (ich počet = počet ohrevov) a kedy termostat
  * bojler vypol (`hotovo`, minúty). `posledneAt` je čas posledného dopytu zásuvky.
  * @typedef {{ den: string, behy: Beh[], hotovo: number | null, posledneAt: number }} Den
  */
@@ -144,11 +146,13 @@ export function zaznamenaj(den, v) {
         behy.push(aktivny);
     }
     const hreje = v.rele && v.w >= BOJLER.hotovoW;
+    const predtym = dnes ? /** @type {Den} */ (den).hotovo : null;
+    if (aktivny && hreje) aktivny = dalsiOhrev(behy, aktivny, predtym, min);
     if (aktivny) zapocitaj(aktivny, v, cas, hreje, min);
     return {
         den: kluc,
         behy,
-        hotovo: kedyHotovo(dnes ? /** @type {Den} */ (den).hotovo : null, hreje, v.rele, aktivny, min),
+        hotovo: kedyHotovo(predtym, hreje, v.rele, aktivny, min),
         posledneAt: t,
     };
 }
@@ -161,6 +165,20 @@ export function zaznamenaj(den, v) {
 function kedyHotovo(predtym, hreje, rele, beh, min) {
     if (hreje) return null;
     return predtym ?? (rele && beh && beh.wh > 0 ? min : null);
+}
+
+/**
+ * Bojler hreje: keď ho termostat počas behu už vypol (voda nahriata, relé ostalo zapnuté) a teraz zapol znova, je to
+ * nový ohrev, nie pokračovanie. Starý beh skončí v čase nahriatia, nový začína od stavu počítadla pri poslednom
+ * dopyte a pribudne do `behy`. Inak ostáva bežiaci beh.
+ * @param {Beh[]} behy @param {Beh} beh @param {number | null} hotovo @param {number} min @returns {Beh}
+ */
+function dalsiOhrev(behy, beh, hotovo, min) {
+    if (hotovo === null || hotovo < beh.od) return beh;
+    beh.do = hotovo;
+    const novy = novyBeh(min, beh.e0 + beh.wh);
+    behy.push(novy);
+    return novy;
 }
 
 /** @param {number} od @param {number} e0 @returns {Beh} */
