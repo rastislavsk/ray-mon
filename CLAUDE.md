@@ -58,9 +58,12 @@ je zrušený aj s panelom, `grafModel` a stavom `terazPreview`; krivku dňa kres
 pásu nesie dvojicu s tenkou čiarou medzi nimi (`docs/navrhy/dnes-vsetky-dvojice.html`, A + O2, 25. 11. 2026; `DVOJICE`
 v `shared/dnes-faza.js`): Dnes | Veľké veci, večer Dnešok | Zajtra (bez zajtrajška Dnešok | Kedy lepšie), Zo strechy | Ako keby,
 Predpoveď | Oblačnosť, Najviac slnka | Kedy lepšie. Sama ostane karta len bez dát. Karta Nabehlo nie je - cez deň je to pásik
-a riadok pod číslom Zo strechy. Odznak triedy dňa je v nadpise len krúžok s i vo farbe triedy (slovo má čítačka a bublina)
-a veľké slovo je krátke (`DEN_WORDS.iny` ráno, cez deň aj pri Zajtra, meno dňa povie nadpis) - v polovici dlaždice
-sa pri 360 px nič dlhšie nezmestí. Texty kariet sú krátke, prirovnania sú ikony. Posuvník dňa stojí presne vo výške stredu poľa toku karty Teraz: obloha nad ním
+a riadok pod číslom Zo strechy. Prvá dlaždica sa delí vodorovne (`docs/navrhy/dnes-dlazdica-dnes.html`, B, 25. 11. 2026,
+`data-dnes`): hore hláška na celú šírku užším rezom, pod čiarou druhá karta riadkom - Veľké veci (ráno čas okna, cez deň
+odpočet), večer Zajtra (kWh a okno, bez hlášky). Veľkosť hlášky vyberá CSS z miesta (polovica je kontajner aj na výšku)
+a z `--word-w` / `--text-w` z renderu: najväčšie písmo, pri ktorom sa zmestí na jeden až tri riadky; overené pre všetky
+hlášky pri 320, 360 a 412 px. Za nadpisom Dnes a Zajtra je šípka › vo farbe triedy dňa - tlačidlo na vysvetlenie triedy
+(slovo má čítačka). Hláška ráno a cez deň je `DEN_WORDS.iny`. Texty kariet sú krátke, prirovnania sú ikony. Posuvník dňa stojí presne vo výške stredu poľa toku karty Teraz: obloha nad ním
 je `--scena-h` (výška scény Teraz, `css/zaklad.css`) + 126 px, pás dlaždíc vyplní zvyšok (najmenej 124 px, potom sa
 stránka posúva). Keď sa na Teraz zmení niečo nad poľom toku, zmeň aj tých 126 px v `css/dnes.css` - stráži to e2e
 „posuvník dňa vo výške poľa toku karty Teraz“.

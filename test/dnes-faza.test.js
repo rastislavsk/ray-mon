@@ -7,13 +7,11 @@ import {
     countdownText,
     denVysvetlenieText,
     DEN_NAZVY,
-    DEN_WORDS,
     dnesLepsieText,
     dnesNabehloText,
     dnesPopisText,
     DNES_TEXTS,
     spanText,
-    voiceTexts,
 } from '../shared/messages.js';
 import { weekDayName } from '../shared/format.js';
 import { dnesDay, mozemModel } from '../shared/mozem.js';
@@ -55,8 +53,9 @@ test('ráno pred východom: plán na dnes s oknom na veľké veci a trieda dňa'
     assert.equal(d.faza, 'rano');
     assert.equal(d.kick, '', 'nadpis je Dnes ako cez deň');
     assert.equal(d.chip, DEN_NAZVY[m.den.cls]);
-    assert.equal(d.line, `medzi ${spanText(m.facts.window)}`);
-    assert.equal(d.count, null);
+    // Čas okna je hodnota riadku Veľké veci (docs/navrhy/dnes-dlazdica-dnes.html, B).
+    assert.deepEqual(d.count, { value: spanText(m.facts.window), text: '' });
+    assert.equal(d.line, '');
     assert.equal(d.grade, null);
     assert.equal(d.tomorrow, null);
     assert.deepEqual(
@@ -92,7 +91,7 @@ test('cez deň pred oknom: odpočet do začiatku okna', () => {
     const w = m.facts?.window;
     assert.ok(d && w && w.from > 6 * 60 + 45, 'okno ešte nezačalo');
     assert.equal(d.faza, 'den');
-    assert.deepEqual(d.count, { value: countdownText(w.from - (6 * 60 + 45)), text: `okno ${spanText(w)}` });
+    assert.deepEqual(d.count, { value: countdownText(w.from - (6 * 60 + 45)), text: `od ${spanText(w).split(' – ')[0]}` });
 });
 
 test('cez deň po okne: bez odpočtu, veta, že okno už bolo', () => {
@@ -129,10 +128,9 @@ test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse predpove�
     assert.equal(o.pct, i.forecast.days[1].cloudAvgPct, 'oblačnosť na zajtra je zo zajtrajška');
     const cls = denTriedaDna(i, 1, PLAN_DNA.devices);
     assert.equal(d.tomorrow.cls, cls);
-    assert.equal(d.tomorrow.word, DEN_WORDS.iny[cls]);
     assert.equal(d.tomorrow.chip, DEN_NAZVY[cls], 'Zajtra hovorí nadpis dlaždice');
-    assert.match(d.tomorrow.text, new RegExp(`^~${Math.round(i.forecast.days[1].kwhTotal)} kWh · \\d\\d:\\d\\d – \\d\\d:\\d\\d$`));
-    assert.equal(faza(i, 'slusny').d?.tomorrow?.word, voiceTexts('slusny').DEN_WORDS.iny[cls]);
+    assert.equal(d.tomorrow.value, `~${Math.round(i.forecast.days[1].kwhTotal)} kWh`);
+    assert.match(d.tomorrow.text, /^\d\d:\d\d – \d\d:\d\d$/);
 });
 
 test('večer bez zajtrajška v predpovedi: ostáva karta Kedy lepšie', () => {
@@ -363,7 +361,7 @@ test('pás: ráno Dnes, Veľké veci s plánom, Zo strechy s Ako keby a dvojice 
     assert.deepEqual(druhy(karty), ['dnes|velke', 'strecha|eq', 'predpoved|oblacnost', 'slnko|lepsie']);
     assert.deepEqual(karty[0], [
         { kind: 'dnes', title: DNES_TEXTS.dnes, chip: d.chip, cls: sky.den.cls, word: sky.word, text: '' },
-        { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: d.line },
+        { kind: 'velke', title: DNES_TEXTS.velke, value: d.count?.value, text: '' },
     ]);
     assert.deepEqual(karty[1], [
         { kind: 'strecha', title: sky.day.label, value: sky.day.value, text: DNES_TEXTS.celyDen, pct: null },
@@ -401,7 +399,7 @@ test('pás: večer Ako dopadol dnešok, namerané s predpoveďou a Zajtra', () =
     assert.equal(karty[0][0].title, DNES_TEXTS.grade);
     assert.deepEqual(karty[1][0], { kind: 'strecha', title: sky.day.label, value: d.grade, text: d.line, pct: null });
     const t = d.tomorrow;
-    assert.deepEqual(karty[0][1], { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, word: t.word, text: t.text });
+    assert.deepEqual(karty[0][1], { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, value: t.value, text: t.text });
     // Bez zajtrajška ide k dnešku Kedy lepšie.
     assert.deepEqual(druhy(dnesKarty(sky, { ...d, tomorrow: null, karty: d.karty.filter((k) => k.kind === 'lepsie') })), [
         'dnes',
