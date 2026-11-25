@@ -1,8 +1,8 @@
 // Karta Dnes podľa časti dňa (smer C v docs/navrhy/dnes-tri-smery.html): ráno plán na dnes, cez deň
 // odpočet okna na veľké veci, večer ako dopadol dnešok a zajtrajšok. Pod číslami pás kariet na
 // posúvanie (docs/navrhy/dnes-upravy.html, nové karty docs/navrhy/dnes-predpoved-graf.html): Predpoveď,
-// Oblačnosť, Najviac slnka, Nabehlo a Kedy lepšie, večer Predpoveď na zajtra. Dlaždica pásu nesie jednu kartu
-// alebo dvojicu (docs/navrhy/dnes-nizsie-dlazdice.html, D).
+// Oblačnosť, Najviac slnka a Kedy lepšie, večer Predpoveď na zajtra. Dlaždica pásu nesie dvojicu kariet
+// (docs/navrhy/dnes-nizsie-dlazdice.html, D; všetky na dve docs/navrhy/dnes-vsetky-dvojice.html, A).
 // K tomu vysvetlenie odznaku triedy dňa. Veľké slovo a čo dá strecha za celý deň počíta
 // shared/mozem.js, tu je len to, čo sa mení s časťou dňa. Čisté funkcie bez DOM, texty sú
 // v messages-core.js.
@@ -41,9 +41,9 @@ import { dnesCards, todayOf } from './teraz.js';
 /**
  * Karta v páse pod číslami. `preslo` pri stĺpcoch: hodina je už za nami (kreslí sa stlmene).
  * Predpoveď: `weather` oblačnosť dňa (ikona), `min` a `max` teplota („3°“). Oblačnosť: priemerná oblačnosť
- * dňa v % (`pct`). Ako keby: čo dá strecha za deň v mobiloch, km autom a CO2 (`ikona` kreslí render).
- * @typedef {{ kind: 'nabehlo', title: string, value: string, text: string, pct: number | null }
- *   | { kind: 'lepsie', title: string, value: string, text: string }
+ * dňa v % (`pct`). Ako keby: čo dá strecha za deň v mobiloch, km autom a CO2 (`ikona` kreslí render). Zo strechy:
+ * cez deň `pct` koľko z predpovede už nabehlo (pásik), inak null.
+ * @typedef {{ kind: 'lepsie', title: string, value: string, text: string }
  *   | { kind: 'predpoved', title: string, popis: string, weather: import('./sky.js').SkyWeather | null,
  *       min: string, max: string }
  *   | { kind: 'oblacnost', title: string, value: string, pct: number }
@@ -52,7 +52,7 @@ import { dnesCards, todayOf } from './teraz.js';
  *       stlpce: { hour: number, pct: number, max: boolean, preslo: boolean }[] }
  *   | { kind: 'dnes', title: string, chip: string, cls: import('./den-trieda.js').DenTrieda | null, word: string, text: string }
  *   | { kind: 'velke', title: string, value: string, text: string }
- *   | { kind: 'strecha', title: string, value: string, text: string }
+ *   | { kind: 'strecha', title: string, value: string, text: string, pct: number | null }
  *   | { kind: 'zajtra', title: string, chip: string, cls: import('./den-trieda.js').DenTrieda, word: string, text: string }} Karta
  */
 
@@ -82,14 +82,16 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         kick: '',
         /** @type {ReturnType<typeof dnesCountText> | null} */ count: null,
         /** @type {string | null} */ grade: null,
+        /** @type {ReturnType<typeof cezDen>['nabehlo']} */ nabehlo: null,
         line: '',
         /** @type {Karta[]} */ karty: pas([predpoved, oblacnost, slnko, lepsie]),
         /** @type {Tomorrow | null} */ tomorrow: null,
     };
-    if (den.faza === 'rano') return { ...base, kick: DNES_TEXTS.plan, line: dnesPlanText(window) };
+    // Ráno nadpis Dnes ako cez deň - „Plán na dnes“ sa s odznakom do polovice dlaždice nezmestí, plán povedia Veľké veci.
+    if (den.faza === 'rano') return { ...base, line: dnesPlanText(window) };
     if (den.faza === 'den') {
         const d = cezDen(input, window, cards.today);
-        return { ...base, count: d.count, line: d.line, karty: pas([predpoved, oblacnost, slnko, d.nabehlo, lepsie]) };
+        return { ...base, count: d.count, line: d.line, nabehlo: d.nabehlo };
     }
     const t = cards.today;
     const grade = dnesGradeText(t.doneKwh, t.forecastKwh);
@@ -108,16 +110,14 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
 }
 
 /**
- * Cez deň: odpočet okna, kým prebieha alebo príde, inak veta o okne; a karta Nabehlo - koľko
- * z predpovede už nabehlo.
+ * Cez deň: odpočet okna, kým prebieha alebo príde, inak veta o okne; a koľko z predpovede už nabehlo -
+ * pásik a riadok karty Zo strechy (docs/navrhy/dnes-vsetky-dvojice.html, A).
  * @param {Input} input @param {Window | null} window @param {ReturnType<typeof import('./teraz.js').todayCard>} t
  */
 function cezDen(input, window, t) {
     const nowMin = localMinutes(input.now, input.site.timezone);
     const kind = !window ? null : window.from > nowMin ? 'wait' : window.to > nowMin ? 'go' : null;
-    /** @type {Karta | null} */
-    const nabehlo =
-        t.forecastKwh === null ? null : { kind: 'nabehlo', ...dnesNabehloText({ ...t, forecastKwh: t.forecastKwh }), pct: t.pct };
+    const nabehlo = t.forecastKwh === null ? null : { text: dnesNabehloText(t), pct: t.pct };
     return {
         count: window && kind ? dnesCountText(kind, window, kind === 'go' ? window.to - nowMin : window.from - nowMin) : null,
         nabehlo,
@@ -277,14 +277,15 @@ export function dnesKarty(sky, d) {
 }
 
 /**
- * Ktoré karty idú na jednu dlaždicu (docs/navrhy/dnes-nizsie-dlazdice.html, D): prvá kľúčom, druhá hodnotou.
- * @type {Partial<Record<Karta['kind'], Karta['kind']>>}
+ * Ktoré karty idú na jednu dlaždicu (docs/navrhy/dnes-vsetky-dvojice.html, A): prvá kľúčom, druhá prvou z hodnoty,
+ * ktorá v páse je. Dnes ráno a cez deň s Veľkými vecami, večer so Zajtra, bez zajtrajška s Kedy lepšie.
+ * @type {Partial<Record<Karta['kind'], Karta['kind'][]>>}
  */
-const DVOJICE = { velke: 'nabehlo', strecha: 'eq', predpoved: 'oblacnost', slnko: 'lepsie' };
+const DVOJICE = { dnes: ['velke', 'zajtra', 'lepsie'], strecha: ['eq'], predpoved: ['oblacnost'], slnko: ['lepsie'] };
 
 /**
  * Karty v poradí pásu poskladané do dlaždíc: prvá z dvojice si k sebe vezme druhú, nech je v páse kdekoľvek;
- * keď druhá nie je (ráno ešte nič nenabehlo, večer niet slnka), ostane na dlaždici sama.
+ * keď druhá nie je (bez dát len Dnes, strecha celý deň nedá nič), ostane na dlaždici sama.
  * @param {Karta[]} karty @returns {Karta[][]}
  */
 function dvojice(karty) {
@@ -292,22 +293,28 @@ function dvojice(karty) {
     const vzate = new Set();
     return karty.flatMap((k) => {
         if (vzate.has(k)) return [];
-        const druha = karty.find((x) => x.kind === DVOJICE[k.kind] && !vzate.has(x));
+        const druha = (DVOJICE[k.kind] ?? []).map((kind) => karty.find((x) => x.kind === kind && !vzate.has(x))).find(Boolean);
         if (druha) vzate.add(druha);
         return [druha ? [k, druha] : [k]];
     });
 }
 
 /**
- * Karty Zo strechy a Ako keby: čo dá strecha za celý deň (večer namerané a čo sľubovala predpoveď) a to isté
- * v mobiloch, km autom a CO2.
+ * Karty Zo strechy a Ako keby: čo dá strecha za celý deň (cez deň s tým, koľko už nabehlo; večer namerané a čo
+ * sľubovala predpoveď) a to isté v mobiloch, km autom a CO2.
  * @param {{ label: string, value: string, eq: { ikona: string, value: string, label: string }[] } | null} day @param {DnesFaza} d
  * @returns {Karta[]}
  */
 function strechaOf(day, d) {
     if (!day) return [];
     return [
-        { kind: 'strecha', title: day.label, value: d.grade ?? day.value, text: d.faza === 'vecer' ? d.line : DNES_TEXTS.celyDen },
+        {
+            kind: 'strecha',
+            title: day.label,
+            value: d.grade ?? day.value,
+            text: d.faza === 'vecer' ? d.line : (d.nabehlo?.text ?? DNES_TEXTS.celyDen),
+            pct: d.nabehlo?.pct ?? null,
+        },
         { kind: 'eq', title: DNES_TEXTS.akoKeby, eq: day.eq },
     ];
 }

@@ -1040,9 +1040,9 @@ test.describe('karta Dnes', () => {
         const errors = await openObloha(page, { time: at('13:00') });
         await naDnes(page);
         const karty = page.locator('#mz-karty .karta');
-        await expect(karty).toHaveCount(5);
+        await expect(karty).toHaveCount(4);
         const bodky = page.locator('#mz-bodky i');
-        await expect(bodky).toHaveCount(5);
+        await expect(bodky).toHaveCount(4);
         const spat = page.getByRole('button', { name: 'Predchádzajúca karta' });
         const dalej = page.getByRole('button', { name: 'Ďalšia karta' });
         const aktivna = () => bodky.evaluateAll((b) => b.findIndex((x) => x.hasAttribute('data-on')));
@@ -1061,7 +1061,7 @@ test.describe('karta Dnes', () => {
         await expect.poll(aktivna).toBe(1);
         // Posun pásu (ako prstom) rozsvieti bodku sám, na konci je šípka ďalej vypnutá.
         await page.locator('#mz-karty').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
-        await expect.poll(aktivna).toBe(4);
+        await expect.poll(aktivna).toBe(3);
         await expect(dalej).toBeDisabled();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
         // Zvislý ťah prstom cez pás posúva stránku.

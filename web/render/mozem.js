@@ -126,7 +126,7 @@ function obsahHtml(k) {
         return `<ul class="eq">${k.eq
             .map((e) => `<li>${kartaIcon(e.ikona)}<b>${escapeHtml(e.value)}</b><span class="sr"> ${escapeHtml(e.label)}</span></li>`)
             .join('')}</ul>`;
-    if (k.kind === 'nabehlo') return `${val(k.value)}${bar(k.pct)}${text(k.text)}`;
+    if (k.kind === 'strecha') return `${val(k.value)}${bar(k.pct)}${text(k.text)}`;
     if (k.kind === 'slnko')
         return (
             val(k.value) +
@@ -138,7 +138,8 @@ function obsahHtml(k) {
 }
 
 /**
- * Nadpis karty. Pri Dnes a Zajtra je v ňom aj odznak triedy dňa - tlačidlo na jej vysvetlenie (`data-trieda`).
+ * Nadpis karty. Pri Dnes a Zajtra je v ňom aj odznak triedy dňa - tlačidlo na jej vysvetlenie (`data-trieda`). Odznak je
+ * len krúžok s i vo farbe triedy, trieda slovom je pre čítačku (docs/navrhy/dnes-vsetky-dvojice.html, O2).
  * @param {Karta} k
  */
 function nadpisHtml(k) {
@@ -146,7 +147,7 @@ function nadpisHtml(k) {
     if ((k.kind !== 'dnes' && k.kind !== 'zajtra') || !k.chip) return head;
     return (
         `<div class="k-hlava">${head}<button type="button" class="chip-tap" data-trieda="${k.kind}" aria-haspopup="dialog">` +
-        `<span class="chip info"${k.cls ? ` data-cls="${k.cls}"` : ''}>${escapeHtml(k.chip)}</span></button></div>`
+        `<span class="chip info"${k.cls ? ` data-cls="${k.cls}"` : ''}><span class="sr">${escapeHtml(k.chip)}</span></span></button></div>`
     );
 }
 

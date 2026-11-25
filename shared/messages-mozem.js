@@ -23,18 +23,13 @@ export const MOZEM_WORDS_SLUSNE = {
 };
 
 /**
- * Veľké slovo o celom dni (shared/den-trieda.js, docs/navrhy/dnes-hlasky-dna.html): ráno a cez
- * deň podľa triedy dňa, cez deň zmena oproti rannej triede, večer zhodnotenie nameraného. `iny`: hláška
- * iného dňa na karte Teraz namiesto mena a dátumu - bez mena dňa, aby sedela na zajtra aj o tri dni.
+ * Veľké slovo o celom dni (shared/den-trieda.js, docs/navrhy/dnes-hlasky-dna.html): `iny` podľa triedy dňa - ráno
+ * a cez deň na karte Dnes, večer pri Zajtra a pri inom dni na karte Teraz namiesto mena a dátumu. Je bez mena
+ * dňa, ten povie nadpis dlaždice či zvolený čip, a krátke, lebo je v polovici dlaždice (docs/navrhy/dnes-vsetky-dvojice.html,
+ * O2). Cez deň zmena oproti rannej triede, večer zhodnotenie nameraného.
  * Rozdiel NAGOVNO / NAHOVNO je zámerný.
  */
 export const DEN_WORDS = {
-    rano: {
-        vyborny: 'Oskar dnes pujde na plný koule',
-        dobry: 'Not baaad dneskaj',
-        slaby: 'NAGOVNO DEŇ',
-        nanic: 'ÚPLNE NAHOVNO DEŇ',
-    },
     zmena: {
         lepsi: 'Tak jo, Oskar nakoniec vylezie',
         horsi: 'Dojebabralo sa nám to dneskaj',
@@ -44,12 +39,6 @@ export const DEN_WORDS = {
         dobry: 'Not baad, zer gút',
         slaby: 'Dneskaj ništ moc, nem džo',
         nanic: 'Dnes to bolo pjekne nagovno',
-    },
-    zajtra: {
-        vyborny: 'Zajtra Oskar pujde na plný koule',
-        dobry: 'Zajtra not baaad',
-        slaby: 'Zajtra NAGOVNO DEŇ',
-        nanic: 'Zajtra ÚPLNE NAHOVNO DEŇ',
     },
     iny: {
         vyborny: 'Oskar pujde na plný koule',
@@ -61,12 +50,6 @@ export const DEN_WORDS = {
 
 /** @type {typeof DEN_WORDS} */
 export const DEN_WORDS_SLUSNE = {
-    rano: {
-        vyborny: 'Dnes bude výborný deň',
-        dobry: 'Dnes bude dobrý deň',
-        slaby: 'Dnes bude slabý deň',
-        nanic: 'Dnes takmer nič nevyrobíme',
-    },
     zmena: {
         lepsi: 'Deň bude lepší, ako sa čakalo',
         horsi: 'Deň bude slabší, ako sa čakalo',
@@ -76,12 +59,6 @@ export const DEN_WORDS_SLUSNE = {
         dobry: 'Dnes to bol dobrý deň',
         slaby: 'Dnes to bol slabý deň',
         nanic: 'Dnes sme takmer nič nevyrobili',
-    },
-    zajtra: {
-        vyborny: 'Zajtra bude výborný deň',
-        dobry: 'Zajtra bude dobrý deň',
-        slaby: 'Zajtra bude slabý deň',
-        nanic: 'Zajtra takmer nič nevyrobíme',
     },
     iny: {
         vyborny: 'Výborný deň',
@@ -99,7 +76,7 @@ export const DEN_WORDS_SLUSNE = {
 export function denWord({ cls, faza, change }, voice) {
     const w = mozemTexts(voice).DEN_WORDS;
     if (change) return w.zmena[change];
-    return faza === 'vecer' ? w.vecer[cls] : w.rano[cls];
+    return faza === 'vecer' ? w.vecer[cls] : w.iny[cls];
 }
 
 /** Trieda dňa slovami - štítok na karte Dnes. Bez postoja, jedna pre oba tóny. */
@@ -107,8 +84,8 @@ export const DEN_NAZVY = { vyborny: 'výborný deň', dobry: 'dobrý deň', slab
 
 /** Pevné texty karty Dnes podľa časti dňa (shared/dnes-faza.js). */
 export const DNES_TEXTS = {
-    plan: 'Plán na dnes',
-    grade: 'Ako dopadol dnešok',
+    /** Večer nad slovom dneška - krátko, je v polovici dlaždice vedľa Zajtra (docs/navrhy/dnes-vsetky-dvojice.html, A). */
+    grade: 'Dnešok',
     zoStrechy: 'Zo strechy',
     /** Prirovnania vedľa Zo strechy (docs/navrhy/dnes-nizsie-dlazdice.html, D): mobily, auto, CO2 ikonami. */
     akoKeby: 'Ako keby',
@@ -196,16 +173,12 @@ export function dnesCountText(kind, w, left) {
 }
 
 /**
- * Cez deň: karta Nabehlo - koľko už nabehlo z predpovede dneška, z merania naisto, bez neho podľa predpovede.
- * @param {{ forecastKwh: number, doneKwh: number, measured: boolean, pct: number | null }} d
+ * Cez deň: riadok pod číslom Zo strechy - koľko z predpovede dneška už nabehlo, z merania naisto, bez neho podľa
+ * predpovede („asi“). Koľko percent, ukazuje pásik nad ním (docs/navrhy/dnes-vsetky-dvojice.html, A).
+ * @param {{ doneKwh: number, measured: boolean }} d
  */
-export function dnesNabehloText({ forecastKwh, doneKwh, measured, pct }) {
-    const z = `z ~${fmtSum(Math.round(forecastKwh), 0)} kWh`;
-    return {
-        title: measured ? 'Nabehlo' : 'Nabehlo asi',
-        value: `${fmt1(doneKwh)} kWh`,
-        text: pct === null ? z : `${pct} % ${z}`,
-    };
+export function dnesNabehloText({ doneKwh, measured }) {
+    return `${measured ? 'nabehlo' : 'asi nabehlo'} ${fmt1(doneKwh)} kWh`;
 }
 
 /** Večer: namerané za dnešok a čo sľubovala predpoveď. @param {number} kwh @param {number | null} forecastKwh */
@@ -221,13 +194,13 @@ export function dnesGradeText(kwh, forecastKwh) {
  * @param {{ cls: import('./den-trieda.js').DenTrieda, kwh: number, window: { from: number, to: number } | null }} d @param {import('./messages-zaklad.js').Voice} voice
  */
 export function dnesZajtraText({ cls, kwh, window }, voice) {
-    const okolo = `Okolo ${fmtSum(Math.round(kwh), 0)} kWh`;
+    const okolo = `~${fmtSum(Math.round(kwh), 0)} kWh`;
     return {
         kick: 'Zajtra',
         // Nadpis dlaždice už hovorí Zajtra - odznak nesie len triedu dňa.
         chip: DEN_NAZVY[cls],
-        word: mozemTexts(voice).DEN_WORDS.zajtra[cls],
-        text: window ? `${okolo}, veľké veci ${spanText(window)}.` : `${okolo}, okno na veľké veci nebude.`,
+        word: mozemTexts(voice).DEN_WORDS.iny[cls],
+        text: window ? `${okolo} · ${spanText(window)}` : `${okolo} · bez okna`,
     };
 }
 
