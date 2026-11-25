@@ -1206,21 +1206,11 @@ test.describe('bojler na prebytky', () => {
         await expect(dl).toHaveAttribute('data-tone', t.tone);
         await expect(dl).toContainText(t.meno);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
-        // Značka pri ikone: riadi appka. Bojler hreje, preto má plný kruh ikony vo farbe oblohy (docs/navrhy/teraz-zapnuty-farba.html, I2).
+        // Značka pri ikone: riadi appka. Bojler hreje, preto má plný biely kruh ikony (docs/navrhy/teraz-zapnuty-farba.html, F1).
         await expect(dl.locator('.dl-ico .dl-rz')).toHaveAttribute('data-rezim', 'appka');
         await expect(dl).toHaveAttribute('data-zapnuty', '');
-        // Kruh vo farbe oblohy; --s4 má prechod, preto sa obe farby čítajú naraz.
-        await expect
-            .poll(() =>
-                dl
-                    .locator('.dl-ico')
-                    .evaluate(
-                        (el) =>
-                            getComputedStyle(el).backgroundColor ===
-                            getComputedStyle(document.documentElement).getPropertyValue('--s4').trim(),
-                    ),
-            )
-            .toBe(true);
+        await expect(dl.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
+        await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'none');
         await expect(dl).toHaveCSS('box-shadow', 'none');
         await expect(page.locator('#tz-co [data-vec="bojler"]'), 'bojler, ktorý riadi zásuvka, appka neradí').toHaveCount(1);
         await dl.click();
@@ -1256,7 +1246,7 @@ test.describe('bojler na prebytky', () => {
         await expect(sheet).toBeHidden();
         expect(errors).toEqual([]);
     });
-    test('auto sa nabíja (docs/navrhy/auto-nabija.html): kruh ikony vo farbe oblohy, dlaždica o behu a panel Auto; push ho obnoví hneď', async ({
+    test('auto sa nabíja (docs/navrhy/auto-nabija.html): biely kruh ikony, dlaždica o behu a panel Auto; push ho obnoví hneď', async ({
         page,
     }) => {
         await page.addInitScript(
@@ -1290,18 +1280,8 @@ test.describe('bojler na prebytky', () => {
         const dl = page.locator('#tz-dlazdice [data-vec="auto"]');
         const t2 = autoDlazdicaNabija(beh, SITE.timezone);
         await expect(dl).toHaveAttribute('data-zapnuty', 'nabija');
-        // Kruh vo farbe oblohy; --s4 má prechod, preto sa obe farby čítajú naraz.
-        await expect
-            .poll(() =>
-                dl
-                    .locator('.dl-ico')
-                    .evaluate(
-                        (el) =>
-                            getComputedStyle(el).backgroundColor ===
-                            getComputedStyle(document.documentElement).getPropertyValue('--s4').trim(),
-                    ),
-            )
-            .toBe(true);
+        await expect(dl.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
+        await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'none');
         await expect(dl.locator('.velky')).toHaveText(`${t2.velky} ${t2.za}`);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t2.odr);
         expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });

@@ -1595,20 +1595,10 @@ test.describe('karta Teraz', () => {
         const posunuty = terazModel(vstupTeraz(time, { bezi: [{ id: 'pracka', d, m: 12 * 60 + 25, k: 14 * 60 + 25 }] }));
         const t = posunuty.co?.bezi[0];
         await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
-        // Bežiaci spotrebič má plný kruh ikony vo farbe oblohy (docs/navrhy/teraz-zapnuty-farba.html, I2), sušička nie.
+        // Bežiaci spotrebič má plný biely kruh ikony (docs/navrhy/teraz-zapnuty-farba.html, F1), sušička nie.
         await expect(dlazdica).toHaveAttribute('data-zapnuty', '');
-        // Kruh vo farbe oblohy; --s4 má prechod, preto sa obe farby čítajú naraz.
-        await expect
-            .poll(() =>
-                dlazdica
-                    .locator('.dl-ico')
-                    .evaluate(
-                        (el) =>
-                            getComputedStyle(el).backgroundColor ===
-                            getComputedStyle(document.documentElement).getPropertyValue('--s4').trim(),
-                    ),
-            )
-            .toBe(true);
+        await expect(dlazdica.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
+        await expect(dlazdica.locator('.dl-ico')).toHaveCSS('box-shadow', 'none');
         await expect(page.locator('#tz-co [data-vec="susicka"]')).not.toHaveAttribute('data-zapnuty');
         await expect(dlazdica.locator('.velky')).toHaveText(`${t?.pred} ${t?.velky}`);
         // Práčka je polovica dvojice so sušičkou: jedna odrážka.

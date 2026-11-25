@@ -57,6 +57,8 @@
     /* Auto sa asi nabíja (docs/navrhy/auto-nabija.html): oranžová ikona namiesto zelenej - je to odhad zo spotreby
        domu, nie zapnutie, o ktorom appka vie naisto. */
     --nabija: #ffb35c;
+    /* Kruh ikony zapnutého spotrebiča na karte Teraz (docs/navrhy/teraz-zapnuty-farba.html, F1 bez žiary). */
+    --zapnuty: #f2f5fb;
     --ink: #0b1430;
     /* Čitateľnosť (WCAG, aspoň 4,5 : 1 pri každej oblohe - test/contrast.test.js ich prejde
        všetky). Text priamo na oblohe je vždy biely: stmavený spodok (--s3) je spočítaný práve

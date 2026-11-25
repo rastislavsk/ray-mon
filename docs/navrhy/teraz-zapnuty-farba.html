@@ -97,6 +97,23 @@
             .minus {
                 color: #ff9b8a;
             }
+            .trio {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+                gap: 12px;
+            }
+            .trio img {
+                max-width: 100%;
+            }
+            h3 {
+                margin: 12px 0 0;
+                font-size: 18px;
+            }
+            .kod {
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--dim);
+            }
             .karta {
                 padding: 18px;
                 border: 1px solid var(--line);
@@ -121,6 +138,150 @@
                     (v testovacích dátach nebeží nič). Súmrak ani zamračenú oblohu som nesnímal – fixtures majú len jasný deň.
                 </p>
             </section>
+            <section>
+                <h2>Šieste kolo: stále farby</h2>
+                <p>
+                    Jedna farba na celý deň, rovnaká pre všetky spotrebiče aj auto, s tmavou ikonou a tou istou žiarou ako I2. Vybral som
+                    farby, ktoré sa s modrou dennou, ružovou súmračnou aj tmavou nočnou oblohou neperú a nemajú v appke iný význam: zelená
+                    (slnko stačí), modrá (lacná sieť), červená (drahá sieť) a zlatá (slnko v pásiku) sú obsadené. Snímky sú zo skutočnej
+                    appky o 13:00, 19:35 (súmrak) a 21:30.
+                </p>
+                <p>
+                    <b>Je zapnutá ikona väčšia?</b> Nie. Zapnutý aj vypnutý kruh má presne 44 px (v dvojici 34 px) a ikona 26 px (20 px) –
+                    zmerané v appke. Väčšia sa zdá, lebo je plná a svetlá (svetlá plocha na tmavom pozadí pôsobí väčšia ako rovnako veľká
+                    tmavá) a žiara siaha ešte asi 8 px za kruh. Porovnaj „Farba oblohy“ a „bez žiary“ – bez žiary vyzerá kruh rovnako veľký
+                    ako vypnutý.
+                </p>
+                <h3>Farba oblohy (dnes v PR, I2) <span class="kod">mení sa s oblohou: modrastá, ružová, strieborná</span></h3>
+                <div class="trio">
+                    <figure>
+                        <img src="img/zapnuty/f-nebo-den.png" alt="Farba oblohy (dnes v PR, I2), 13:00" />
+                        <figcaption>13:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-nebo-sumrak.png" alt="Farba oblohy (dnes v PR, I2), 19:35 súmrak" />
+                        <figcaption>19:35 súmrak</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-nebo-noc.png" alt="Farba oblohy (dnes v PR, I2), 21:30 noc" />
+                        <figcaption>21:30 noc</figcaption>
+                    </figure>
+                </div>
+                <h3>Farba oblohy bez žiary <span class="kod">na porovnanie veľkosti</span></h3>
+                <div class="trio">
+                    <figure>
+                        <img src="img/zapnuty/f-nebo0-den.png" alt="Farba oblohy bez žiary, 13:00" />
+                        <figcaption>13:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-nebo0-sumrak.png" alt="Farba oblohy bez žiary, 19:35 súmrak" />
+                        <figcaption>19:35 súmrak</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-nebo0-noc.png" alt="Farba oblohy bez žiary, 21:30 noc" />
+                        <figcaption>21:30 noc</figcaption>
+                    </figure>
+                </div>
+                <h3>F1 · Biela <span class="kod">#f2f5fb</span></h3>
+                <div class="trio">
+                    <figure>
+                        <img src="img/zapnuty/f-biela-den.png" alt="F1 · Biela, 13:00" />
+                        <figcaption>13:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-biela-sumrak.png" alt="F1 · Biela, 19:35 súmrak" />
+                        <figcaption>19:35 súmrak</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-biela-noc.png" alt="F1 · Biela, 21:30 noc" />
+                        <figcaption>21:30 noc</figcaption>
+                    </figure>
+                </div>
+                <h3>F2 · Krémová (svetlo v okne) <span class="kod">#ffe2a6</span></h3>
+                <div class="trio">
+                    <figure>
+                        <img src="img/zapnuty/f-krem-den.png" alt="F2 · Krémová (svetlo v okne), 13:00" />
+                        <figcaption>13:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-krem-sumrak.png" alt="F2 · Krémová (svetlo v okne), 19:35 súmrak" />
+                        <figcaption>19:35 súmrak</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-krem-noc.png" alt="F2 · Krémová (svetlo v okne), 21:30 noc" />
+                        <figcaption>21:30 noc</figcaption>
+                    </figure>
+                </div>
+                <h3>F3 · Svetlá tyrkysová <span class="kod">#8fe0e6</span></h3>
+                <div class="trio">
+                    <figure>
+                        <img src="img/zapnuty/f-tyrkys-den.png" alt="F3 · Svetlá tyrkysová, 13:00" />
+                        <figcaption>13:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-tyrkys-sumrak.png" alt="F3 · Svetlá tyrkysová, 19:35 súmrak" />
+                        <figcaption>19:35 súmrak</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-tyrkys-noc.png" alt="F3 · Svetlá tyrkysová, 21:30 noc" />
+                        <figcaption>21:30 noc</figcaption>
+                    </figure>
+                </div>
+                <h3>F4 · Levanduľová <span class="kod">#c6b8ff</span></h3>
+                <div class="trio">
+                    <figure>
+                        <img src="img/zapnuty/f-levandula-den.png" alt="F4 · Levanduľová, 13:00" />
+                        <figcaption>13:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-levandula-sumrak.png" alt="F4 · Levanduľová, 19:35 súmrak" />
+                        <figcaption>19:35 súmrak</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/f-levandula-noc.png" alt="F4 · Levanduľová, 21:30 noc" />
+                        <figcaption>21:30 noc</figcaption>
+                    </figure>
+                </div>
+                <div class="rad">
+                    <div class="karta">
+                        <b>F1 · Biela</b>
+                        <ul>
+                            <li class="plus">Neutrálna, sedí k bielemu textu a ku každej oblohe; „svetlo zapnuté“.</li>
+                            <li class="minus">Vypnutý kruh je tiež biely (priesvitný) – rozdiel je len v plnosti, nie vo farbe.</li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>F2 · Krémová</b>
+                        <ul>
+                            <li class="plus">Teplá ako svetlo v okne domu, v noci a pri súmraku najútulnejšia.</li>
+                            <li class="minus">Blízko zlatej slnka v pásiku – môže pôsobiť ako „ide zo slnka“.</li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>F3 · Svetlá tyrkysová</b>
+                        <ul>
+                            <li class="plus">Svieža, v noci výrazná, s dennou oblohou ladí (susedná farba).</li>
+                            <li class="minus">Cez deň blízko modrej oblohy aj modrej lacnej siete v pásiku.</li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>F4 · Levanduľová</b>
+                        <ul>
+                            <li class="plus">
+                                V appke nemá žiadny iný význam; s modrou oblohou ladí, so súmrakom a nocou splýva farebne, nie jasom.
+                            </li>
+                            <li class="plus">Zreteľná vo všetkých troch časoch.</li>
+                            <li class="minus">Najmenej „vypínačová“ farba, treba si na ňu zvyknúť.</li>
+                        </ul>
+                    </div>
+                </div>
+                <p>
+                    <b>Rozhodnuté 25. 11. 2026: F1 · biela bez žiary.</b> Pôvodne som odporúčal F4 · levanduľovú: jediná je zreteľná cez
+                    deň, pri súmraku aj v noci a nič iné v appke neznamená. Ak chceš najneutrálnejšie riešenie, F1 bielu. Žiaru by som v
+                    každom prípade zmenšil alebo vypustil, ak ti kruh pôsobí priveľký. Rozhodneš ty – kým si nevyberieš, v PR nič nemením.
+                </p>
+            </section>
+
             <section>
                 <h2>Cez deň</h2>
                 <div class="rad">
@@ -210,8 +371,7 @@
                     odhad je povedaný slovami.
                 </p>
                 <p>
-                    <b>Rozhodnuté 25. 11. 2026: I2 · plný kruh vo farbe oblohy.</b> Je jasný na prvý pohľad a ladí s oblohou aj s
-                    navigáciou.
+                    <b>Najprv zvolené I2, potom nahradené stálou farbou (šieste kolo).</b>
                 </p>
             </section>
         </main>
