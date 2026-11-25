@@ -53,13 +53,13 @@ import { dnesCards, todayOf } from './teraz.js';
  *   | { kind: 'dnes', title: string, chip: string, cls: import('./den-trieda.js').DenTrieda | null, word: string, text: string }
  *   | { kind: 'velke', title: string, value: string, text: string }
  *   | { kind: 'strecha', title: string, value: string, text: string, pct: number | null }
- *   | { kind: 'zajtra', title: string, chip: string, cls: import('./den-trieda.js').DenTrieda, value: string, text: string }} Karta
+ *   | { kind: 'zajtra', title: string, chip: string, cls: import('./den-trieda.js').DenTrieda, word: string, text: string }} Karta
  */
 
 /**
  * Čo karta Dnes ukáže podľa časti dňa. `faza` je časť dňa veľkého slova (denSlovo: večer bez
  * nameraného ostáva ráno). `chip` trieda dneška slovami (večer prázdna - hovorí zajtrajšok),
- * `kick` riadok nad slovom, `count` hodnota Veľkých vecí (ráno čas okna, cez deň odpočet, kým okno prebieha alebo príde),
+ * `kick` riadok nad slovom, `count` odpočet okna (cez deň, kým okno prebieha alebo príde),
  * `grade` večer namerané za dnešok, `line` veta o okne či predpovedi, `karty` pás pod číslami
  * a `tomorrow` večer zajtrajšok. Bez slova o dni (`den` null - načítava sa, dáta nie sú) alebo bez
  * predpovede null.
@@ -80,7 +80,7 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         faza: den.faza,
         chip: DEN_NAZVY[den.cls],
         kick: '',
-        /** @type {{ value: string, text: string } | null} */ count: null,
+        /** @type {ReturnType<typeof dnesCountText> | null} */ count: null,
         /** @type {string | null} */ grade: null,
         /** @type {ReturnType<typeof cezDen>['nabehlo']} */ nabehlo: null,
         line: '',
@@ -88,17 +88,14 @@ export function dnesFaza(input, den, window, { voice = 'drzy', devices = PLAN_DN
         /** @type {Tomorrow | null} */ tomorrow: null,
     };
     // Ráno nadpis Dnes ako cez deň - „Plán na dnes“ sa s odznakom do polovice dlaždice nezmestí, plán povedia Veľké veci.
-    if (den.faza === 'rano') {
-        const plan = dnesPlanText(window);
-        return { ...base, count: plan.value ? plan : null, line: plan.text };
-    }
+    if (den.faza === 'rano') return { ...base, line: dnesPlanText(window) };
     if (den.faza === 'den') {
         const d = cezDen(input, window, cards.today);
         return { ...base, count: d.count, line: d.line, nabehlo: d.nabehlo };
     }
     const t = cards.today;
     const grade = dnesGradeText(t.doneKwh, t.forecastKwh);
-    const tomorrow = tomorrowOf(input, devices);
+    const tomorrow = tomorrowOf(input, devices, voice);
     return {
         ...base,
         chip: '',
@@ -221,14 +218,14 @@ function slnkoOf(input) {
 /**
  * Zajtrajšok z predpovede: trieda dňa, koľko dá strecha a hlavné okno na veľké veci. Keď predpoveď
  * nezačína dneškom alebo zajtrajšok nemá, null.
- * @param {Input} input @param {readonly string[]} devices
+ * @param {Input} input @param {readonly string[]} devices @param {import('./messages.js').Voice} voice
  */
-function tomorrowOf(input, devices) {
+function tomorrowOf(input, devices, voice) {
     const next = todayOf(input) && input.forecast ? input.forecast.days[1] : null;
     if (!next || !input.forecast) return null;
     const data = { ...input, forecast: input.forecast };
     const cls = denTriedaDna(data, 1, devices);
-    return { cls, ...dnesZajtraText({ cls, kwh: next.kwhTotal, window: mainWindow(sunWindows(forecastDayPlan(data, 1))) }) };
+    return { cls, ...dnesZajtraText({ cls, kwh: next.kwhTotal, window: mainWindow(sunWindows(forecastDayPlan(data, 1))) }, voice) };
 }
 
 /**
@@ -331,9 +328,9 @@ function velkeOf(d) {
     return d.line ? { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: d.line } : null;
 }
 
-/** Riadok Zajtra (večer): trieda (šípka), kWh a okno zajtrajška. @param {Tomorrow | null} t @returns {Karta | null} */
+/** Dlaždica Zajtra (večer): trieda, veľké slovo a veta zajtrajška. @param {Tomorrow | null} t @returns {Karta | null} */
 function zajtraOf(t) {
-    return t ? { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, value: t.value, text: t.text } : null;
+    return t ? { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, word: t.word, text: t.text } : null;
 }
 
 /** @typedef {NonNullable<ReturnType<typeof dnesFaza>>} DnesFaza */

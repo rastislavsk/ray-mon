@@ -259,16 +259,14 @@
     justify-self: start;
     background: rgba(14, 36, 80, 0.3);
 }
-/* Šípka › za nadpisom Dnes a Zajtra: tlačidlo na vysvetlenie triedy dňa, farba šípky je trieda dňa
-   (docs/navrhy/dnes-dlazdica-dnes.html, B). Tlačidlo má 44 px na prst, no riadok nadpisu nezvýši ani neodsunie, čo je
-   za ním; jeho ::before pokryje celý riadok nadpisu, takže sa dá ťuknúť aj na nadpis. */
+/* Odznak, ktorý sa dá ťuknúť: vysvetlenie triedy dňa. Tlačidlo má výšku na prst, odznak v ňom je
+   menší; krúžok s i hovorí, že je za ním viac. */
 .chip-tap {
-    flex: none;
-    display: inline-grid;
-    place-items: center;
-    min-width: 44px;
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
     min-height: 44px;
-    margin: -14px -18px -14px -22px;
+    margin-block: -6px;
     padding: 0;
     border: 0;
     border-radius: 999px;
@@ -277,21 +275,53 @@
     font: inherit;
     cursor: pointer;
 }
-.chip-tap::before {
-    content: '';
-    position: absolute;
-    inset: 0;
+.chip.info {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
-.k-sip {
-    font-size: 1.125rem;
+.chip.info::after {
+    content: 'i';
+    display: grid;
+    place-items: center;
+    width: 15px;
+    height: 15px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    font-size: 0.625rem;
     font-weight: 900;
-    line-height: 1;
+    letter-spacing: 0;
+    text-transform: none;
 }
-.chip-tap[data-cls='vyborny'] .k-sip {
-    color: var(--yes);
+/* V nadpise dlaždice je odznak len krúžok s i vo farbe triedy, vysoký ako verzálky nadpisu - trieda slovom je pre
+   čítačku a v bubline; v polovici dlaždice by slovo vytlačilo nadpis (docs/navrhy/dnes-vsetky-dvojice.html, O2).
+   Tlačidlo ostáva 44 px na prst, no riadok nadpisu nezvýši - hlavička je rovnako vysoká ako v druhej polovici. */
+.k-hlava .chip-tap {
+    justify-content: center;
+    min-width: 44px;
+    margin-block: -14px;
+    /* Krúžok stojí 4 px za nadpisom (aj „Zajtra“ sa zmestí pri 320 px); doprava tlačidlo nepresahuje, aby nič netrčalo
+       z polovice. */
+    margin-inline-start: -21px;
 }
-.chip-tap[data-cls='dobry'] .k-sip {
-    color: #ffc94a;
+.k-hlava .chip.info {
+    justify-content: center;
+    width: 1cap;
+    height: 1cap;
+    padding: 0;
+    border-width: 1px;
+    letter-spacing: 0;
+}
+.k-hlava .chip.info::after {
+    width: auto;
+    height: auto;
+    border: 0;
+    font-size: 0.4375rem;
+}
+/* Dlaždica s dneškom: hláška začína v tej istej výške ako obsah druhej polovice (Veľké veci, Zajtra), nie v strede
+   svojej polovice - pri rôzne dlhých textoch by inak každá polovica začínala inde. */
+.karta:has(> .cast[data-kind='dnes']) .cast > :nth-child(2) {
+    margin-top: 4px;
 }
 .mozem .chip[data-cls='vyborny'] {
     background: var(--yes);
@@ -379,62 +409,12 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-/* Nadpis Dnes a Zajtra so šípkou v jednom riadku. */
+/* Nadpis Dnes a Zajtra s odznakom triedy dňa v jednom riadku. */
 .k-hlava {
-    position: relative;
     display: flex;
     align-items: center;
     gap: 8px;
     min-width: 0;
-}
-/* Dlaždica s dneškom (docs/navrhy/dnes-dlazdica-dnes.html, B): hore hláška na celú šírku, pod tenkou čiarou druhá
-   karta (Veľké veci, večer Zajtra či Kedy lepšie) riadkom - nadpis, hodnota a veta; keď sa nezmestí, zalomí sa
-   a hláške ostane menej miesta. */
-.karty > .karta[data-dnes] {
-    grid-auto-flow: row;
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr) 1px auto;
-    gap: 8px;
-}
-.karta[data-dnes] > .deli {
-    margin: 0;
-}
-.karta[data-dnes] > .cast:last-child {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 2px 8px;
-}
-.karta[data-dnes] > .cast:last-child > * {
-    margin: 0;
-}
-.karta[data-dnes] > .cast:last-child .k-val {
-    font-size: 1rem;
-}
-/* Riadok je pri spodnom okraji dlaždice - plocha šípky na ťuknutie siaha len nahor, aby netrčala z dlaždice. */
-.karta[data-dnes] > .cast:last-child .chip-tap {
-    min-height: 30px;
-    margin-bottom: 0;
-}
-/* Hláška hore: užší rez a najväčšie písmo, pri ktorom sa zmestí na jeden, dva či tri riadky. Polovica je kontajner aj
-   na výšku; --word-w je najdlhšie slovo a --text-w celá hláška v znakoch (verzálka 1,3), znak užšieho rezu má asi
-   0,49 em, 24 px je nadpis s medzerou a 1,15 / 1,2 rezerva na zalomenie. */
-.karta[data-dnes] > .cast:first-child {
-    container-type: size;
-}
-.karta[data-dnes] .k-slovo {
-    font-size: min(
-        3rem,
-        calc(100cqi / (var(--word-w, 10) * 0.49)),
-        max(
-            min(calc(100cqi / (var(--text-w, 20) * 0.49)), calc(100cqh - 24px)),
-            min(calc(200cqi / (var(--text-w, 20) * 0.49 * 1.15)), calc((100cqh - 24px) / 2)),
-            min(calc(300cqi / (var(--text-w, 20) * 0.49 * 1.2)), calc((100cqh - 24px) / 3))
-        )
-    );
-    font-variation-settings: 'wdth' 75;
-    letter-spacing: -0.01em;
-    line-height: 0.92;
 }
 /* Veľké slovo v dlaždici Dnes a Zajtra: veľkosť podľa dĺžky (--word z renderu), v úzkej karte ešte menšia podľa
    najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo. Široké verzálky majú na znak takmer 1 em. */

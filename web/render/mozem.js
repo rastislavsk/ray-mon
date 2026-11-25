@@ -31,24 +31,8 @@ export function wordSize(word) {
     return word.length <= 7 ? 46 : word.length <= 11 ? 38 : word.length <= 16 ? 32 : 26;
 }
 
-/**
- * Šírka textu v znakoch, verzálka ako 1,3 malého písmena - pre veľkosť hlášky v CSS (docs/navrhy/dnes-dlazdica-dnes.html, B).
- * @param {string} t
- */
-const sirka = (t) => [...t].reduce((n, ch) => n + (ch !== ch.toLowerCase() ? 1.3 : 1), 0);
-
-/**
- * Atribút style veľkého slova: veľkosť podľa dĺžky, najdlhšie slovo v ňom (`--word-len`, `--word-w`) a šírka celej
- * hlášky (`--text-w`) - z nich štýl vyberie najväčšie písmo, pri ktorom sa hláška zmestí na jeden až tri riadky.
- * @param {string} word
- */
-const wordStyle = (word) => {
-    const slova = word.split(/\s+/);
-    return (
-        `--word:${wordSize(word)}px;--word-len:${Math.max(1, ...slova.map((w) => w.length))};` +
-        `--word-w:${Math.max(1, ...slova.map(sirka))};--text-w:${Math.max(1, sirka(word))}`
-    );
-};
+/** Atribút style veľkého slova: veľkosť podľa dĺžky a najdlhšie slovo v ňom. @param {string} word */
+const wordStyle = (word) => `--word:${wordSize(word)}px;--word-len:${Math.max(1, ...word.split(/\s+/).map((w) => w.length))}`;
 
 /** Čas alebo úsek časov vo vete („17:30“, „07:15 – 17:30“). */
 const CAS = /\d\d:\d\d(?: – \d\d:\d\d)?/g;
@@ -134,7 +118,8 @@ function obsahHtml(k) {
     const val = (/** @type {string} */ v) => (v ? `<p class="k-val">${escapeHtml(v).replace(/ kWh$/, ' <small>kWh</small>')}</p>` : '');
     const bar = (/** @type {number | null} */ pct) =>
         pct === null ? '' : `<div class="bar" aria-hidden="true"><i style="width:${pct}%"></i></div>`;
-    if (k.kind === 'dnes') return `<p id="mz-word" class="k-slovo" style="${wordStyle(k.word)}">${escapeHtml(k.word)}</p>${text(k.text)}`;
+    if (k.kind === 'dnes' || k.kind === 'zajtra')
+        return `<p${k.kind === 'dnes' ? ' id="mz-word"' : ''} class="k-slovo" style="${wordStyle(k.word)}">${escapeHtml(k.word)}</p>${text(k.text)}`;
     if (k.kind === 'predpoved') return predpovedHtml(k);
     if (k.kind === 'oblacnost') return `<p class="k-val k-ikona">${weatherIcon('zamracene')}${escapeHtml(k.value)}</p>${bar(k.pct)}`;
     if (k.kind === 'eq')
@@ -153,16 +138,16 @@ function obsahHtml(k) {
 }
 
 /**
- * Nadpis karty. Pri Dnes a Zajtra je za ním šípka › vo farbe triedy dňa - tlačidlo na jej vysvetlenie (`data-trieda`),
- * ktoré pokryje aj nadpis; trieda slovom je pre čítačku (docs/navrhy/dnes-dlazdica-dnes.html, B).
+ * Nadpis karty. Pri Dnes a Zajtra je v ňom aj odznak triedy dňa - tlačidlo na jej vysvetlenie (`data-trieda`). Odznak je
+ * len krúžok s i vo farbe triedy, trieda slovom je pre čítačku (docs/navrhy/dnes-vsetky-dvojice.html, O2).
  * @param {Karta} k
  */
 function nadpisHtml(k) {
     const head = `<h2 class="glass-ttl">${escapeHtml(k.title)}</h2>`;
     if ((k.kind !== 'dnes' && k.kind !== 'zajtra') || !k.chip) return head;
     return (
-        `<div class="k-hlava">${head}<button type="button" class="chip-tap" data-trieda="${k.kind}"${k.cls ? ` data-cls="${k.cls}"` : ''}` +
-        ` aria-haspopup="dialog"><span class="k-sip" aria-hidden="true">›</span><span class="sr">${escapeHtml(k.chip)}</span></button></div>`
+        `<div class="k-hlava">${head}<button type="button" class="chip-tap" data-trieda="${k.kind}" aria-haspopup="dialog">` +
+        `<span class="chip info"${k.cls ? ` data-cls="${k.cls}"` : ''}><span class="sr">${escapeHtml(k.chip)}</span></span></button></div>`
     );
 }
 
@@ -173,9 +158,7 @@ function nadpisHtml(k) {
  */
 function dlazdicaHtml(d) {
     const cast = (/** @type {Karta} */ k) => `<div class="cast" data-kind="${k.kind}">${nadpisHtml(k)}${obsahHtml(k)}</div>`;
-    // Dlaždica s dneškom: hláška na celú šírku hore, druhá karta riadkom dole (docs/navrhy/dnes-dlazdica-dnes.html, B).
-    const dnes = d.length > 1 && d[0].kind === 'dnes' ? ' data-dnes' : '';
-    return `<section class="karta glass"${d.length > 1 ? ' data-dvoj' : ''}${dnes}>${d.map(cast).join('<i class="deli" aria-hidden="true"></i>')}</section>`;
+    return `<section class="karta glass"${d.length > 1 ? ' data-dvoj' : ''}>${d.map(cast).join('<i class="deli" aria-hidden="true"></i>')}</section>`;
 }
 
 /**

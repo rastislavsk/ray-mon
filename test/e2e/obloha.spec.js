@@ -873,8 +873,7 @@ const kartaVStranke = (page) =>
                           text(el, '.glass-ttl'),
                           text(el, '.k-val, .k-popis, .k-slovo'),
                           text(el, '.k-text, .k-teplo'),
-                          el.querySelector('[data-trieda] .sr')?.textContent ??
-                              [...el.querySelectorAll('.eq b')].map((b) => b.textContent).join('|'),
+                          el.querySelector('.chip')?.textContent ?? [...el.querySelectorAll('.eq b')].map((b) => b.textContent).join('|'),
                       ]),
                   )
                 : [],
@@ -884,8 +883,7 @@ const kartaVStranke = (page) =>
 /** Dlaždica z modelu, ako ju ukazuje stránka. @param {import('../../shared/dnes-faza.js').Karta} k */
 const kartaZDlazdice = (k) => {
     if (k.kind === 'predpoved') return [k.kind, k.title, k.popis, `najnižšia ${k.min}najvyššia ${k.max}`, ''];
-    if (k.kind === 'dnes') return [k.kind, k.title, k.word, k.text, k.chip];
-    if (k.kind === 'zajtra') return [k.kind, k.title, k.value, k.text, k.chip];
+    if (k.kind === 'dnes' || k.kind === 'zajtra') return [k.kind, k.title, k.word, k.text, k.chip];
     if (k.kind === 'eq') return [k.kind, k.title, '', '', k.eq.map((e) => e.value).join('|')];
     if (k.kind === 'oblacnost') return [k.kind, k.title, k.value, '', ''];
     return [k.kind, k.title, k.value, k.text, ''];
@@ -942,13 +940,12 @@ test.describe('karta Dnes', () => {
     test('časy okna sú tučne: odpočet cez deň, plán ráno aj zajtrajšok večer', async ({ page }) => {
         for (const [hm, sel] of /** @type {const} */ ([
             ['13:00', '#mz-karty [data-kind="velke"] .k-text'],
-            ['05:30', '#mz-karty [data-kind="velke"] .k-val'],
+            ['05:30', '#mz-karty [data-kind="velke"] .k-text'],
             ['21:00', '#mz-karty [data-kind="zajtra"] .k-text'],
         ])) {
             const errors = await openObloha(page, { time: at(hm) });
             await naDnes(page);
-            // Ráno je čas okna celá hodnota riadku Veľké veci (docs/navrhy/dnes-dlazdica-dnes.html, B), inak tučný čas vo vete.
-            const cas = page.locator(sel.endsWith('.k-val') ? sel : `${sel} strong.cas`);
+            const cas = page.locator(`${sel} strong.cas`);
             await expect(cas).toHaveCount(1);
             await expect(cas).toHaveText(/^\d\d:\d\d( – \d\d:\d\d)?$/);
             expect(Number(await cas.evaluate((el) => getComputedStyle(el).fontWeight))).toBeGreaterThanOrEqual(700);
