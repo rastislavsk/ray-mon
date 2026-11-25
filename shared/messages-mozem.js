@@ -158,9 +158,12 @@ export function denVysvetlenieText(cls, kedy, voice) {
     return { title, text, note };
 }
 
-/** Ráno: kedy dnes pustiť veľké veci, krátko pod nadpisom Veľké veci. @param {{ from: number, to: number } | null} w */
+/**
+ * Ráno: kedy dnes pustiť veľké veci - čas okna ako hodnota v riadku Veľké veci (docs/navrhy/dnes-dlazdica-dnes.html, B),
+ * bez okna len veta. @param {{ from: number, to: number } | null} w
+ */
 export function dnesPlanText(w) {
-    return w ? `medzi ${spanText(w)}` : 'dnes nebude okno';
+    return w ? { value: spanText(w), text: '' } : { value: '', text: 'dnes nebude okno' };
 }
 
 /**
@@ -168,7 +171,8 @@ export function dnesPlanText(w) {
  * @param {'go' | 'wait'} kind @param {{ from: number, to: number }} w @param {number} left minúty
  */
 export function dnesCountText(kind, w, left) {
-    const text = kind === 'go' ? `do ${endHm(w.to)}` : `okno ${spanText(w)}`;
+    // Krátko - je to riadok pod hláškou (docs/navrhy/dnes-dlazdica-dnes.html, B).
+    const text = kind === 'go' ? `do ${endHm(w.to)}` : `od ${hm(w.from)}`;
     return { value: countdownText(left), text };
 }
 
@@ -190,17 +194,16 @@ export function dnesGradeText(kwh, forecastKwh) {
 }
 
 /**
- * Večer: zajtrajšok - trieda dňa, veľké slovo, koľko dá strecha a okno na veľké veci.
- * @param {{ cls: import('./den-trieda.js').DenTrieda, kwh: number, window: { from: number, to: number } | null }} d @param {import('./messages-zaklad.js').Voice} voice
+ * Večer: zajtrajšok v riadku pod dnešnou hláškou (docs/navrhy/dnes-dlazdica-dnes.html, B) - trieda dňa (šípka
+ * k vysvetleniu), koľko dá strecha a okno na veľké veci.
+ * @param {{ cls: import('./den-trieda.js').DenTrieda, kwh: number, window: { from: number, to: number } | null }} d
  */
-export function dnesZajtraText({ cls, kwh, window }, voice) {
-    const okolo = `~${fmtSum(Math.round(kwh), 0)} kWh`;
+export function dnesZajtraText({ cls, kwh, window }) {
     return {
         kick: 'Zajtra',
-        // Nadpis dlaždice už hovorí Zajtra - odznak nesie len triedu dňa.
         chip: DEN_NAZVY[cls],
-        word: mozemTexts(voice).DEN_WORDS.iny[cls],
-        text: window ? `${okolo} · ${spanText(window)}` : `${okolo} · bez okna`,
+        value: `~${fmtSum(Math.round(kwh), 0)} kWh`,
+        text: window ? spanText(window) : 'bez okna',
     };
 }
 
