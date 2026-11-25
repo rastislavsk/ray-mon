@@ -53,7 +53,7 @@ test('ráno pred východom: plán na dnes s oknom na veľké veci a trieda dňa'
     const { m, d } = faza(input(at('05:30')));
     assert.ok(d && m.den && m.facts?.window);
     assert.equal(d.faza, 'rano');
-    assert.equal(d.kick, DNES_TEXTS.plan);
+    assert.equal(d.kick, '', 'nadpis je Dnes ako cez deň');
     assert.equal(d.chip, DEN_NAZVY[m.den.cls]);
     assert.equal(d.line, `medzi ${spanText(m.facts.window)}`);
     assert.equal(d.count, null);
@@ -78,13 +78,12 @@ test('cez deň v okne: odpočet do konca okna a koľko už nabehlo', () => {
     });
     assert.deepEqual(
         d.karty.map((k) => k.kind),
-        ['predpoved', 'oblacnost', 'slnko', 'nabehlo', 'lepsie'],
+        ['predpoved', 'oblacnost', 'slnko', 'lepsie'],
+        'čo nabehlo, je v Zo strechy',
     );
-    const n = d.karty[3];
-    assert.ok(n.kind === 'nabehlo' && n.pct !== null && n.pct > 0);
-    assert.equal(n.title, 'Nabehlo');
-    assert.match(n.value, /^\d+,\d kWh$/);
-    assert.equal(n.text, `${n.pct} % z ~61 kWh`);
+    const n = d.nabehlo;
+    assert.ok(n && n.pct !== null && n.pct > 0);
+    assert.match(n.text, /^nabehlo \d+,\d kWh$/);
     assert.equal(d.line, '', 'okno povie odpočet, veta by ho opakovala');
 });
 
@@ -106,10 +105,7 @@ test('cez deň po okne: bez odpočtu, veta, že okno už bolo', () => {
 
 test('bez merania: odhad z predpovede', () => {
     const { d } = faza(input(at('13:00'), { pv: null }));
-    const n = d?.karty.find((k) => k.kind === 'nabehlo');
-    assert.ok(n?.kind === 'nabehlo');
-    assert.equal(n.title, 'Nabehlo asi', 'že je to odhad, hovorí nadpis');
-    assert.match(n.text, /^\d+ % z ~61 kWh$/);
+    assert.match(d?.nabehlo?.text ?? '', /^asi nabehlo \d+,\d kWh$/, 'že je to odhad, hovorí „asi“');
 });
 
 test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse predpoveď a oblačnosť na zajtra', () => {
@@ -133,13 +129,10 @@ test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse predpove�
     assert.equal(o.pct, i.forecast.days[1].cloudAvgPct, 'oblačnosť na zajtra je zo zajtrajška');
     const cls = denTriedaDna(i, 1, PLAN_DNA.devices);
     assert.equal(d.tomorrow.cls, cls);
-    assert.equal(d.tomorrow.word, DEN_WORDS.zajtra[cls]);
+    assert.equal(d.tomorrow.word, DEN_WORDS.iny[cls]);
     assert.equal(d.tomorrow.chip, DEN_NAZVY[cls], 'Zajtra hovorí nadpis dlaždice');
-    assert.match(
-        d.tomorrow.text,
-        new RegExp(`^Okolo ${Math.round(i.forecast.days[1].kwhTotal)} kWh, veľké veci \\d\\d:\\d\\d – \\d\\d:\\d\\d\\.$`),
-    );
-    assert.equal(faza(i, 'slusny').d?.tomorrow?.word, voiceTexts('slusny').DEN_WORDS.zajtra[cls]);
+    assert.match(d.tomorrow.text, new RegExp(`^~${Math.round(i.forecast.days[1].kwhTotal)} kWh · \\d\\d:\\d\\d – \\d\\d:\\d\\d$`));
+    assert.equal(faza(i, 'slusny').d?.tomorrow?.word, voiceTexts('slusny').DEN_WORDS.iny[cls]);
 });
 
 test('večer bez zajtrajška v predpovedi: ostáva karta Kedy lepšie', () => {
@@ -208,8 +201,9 @@ test('karta Kedy lepšie: dnes ešte silnejšie slnko, najbližší silný deň,
     assert.deepEqual(dnesLepsieText({ wait: null, todayStrong: false, next: null }), { value: 'nie', text: 'v týždni silný deň nie je' });
 });
 
-test('karta Nabehlo bez percenta (predpoveď dňa nula)', () => {
-    assert.equal(dnesNabehloText({ forecastKwh: 0, doneKwh: 0, measured: true, pct: null }).text, 'z ~0 kWh');
+test('riadok Zo strechy cez deň: koľko nabehlo, bez merania „asi“', () => {
+    assert.equal(dnesNabehloText({ doneKwh: 0, measured: true }), 'nabehlo 0,0 kWh');
+    assert.equal(dnesNabehloText({ doneKwh: 4.24, measured: false }), 'asi nabehlo 4,2 kWh');
 });
 
 test('karta Predpoveď: teploty a popis dneška z predpovede, vedľa nej Oblačnosť', () => {
@@ -366,11 +360,13 @@ const druhy = (k) => k.map((d) => d.map((x) => x.kind).join('|'));
 test('pás: ráno Dnes, Veľké veci s plánom, Zo strechy s Ako keby a dvojice kariet časti dňa', () => {
     const { sky, d, karty } = pas(input(at('05:30')));
     assert.ok(d && sky.den && sky.day);
-    assert.deepEqual(druhy(karty), ['dnes', 'velke', 'strecha|eq', 'predpoved|oblacnost', 'slnko|lepsie'], 'ráno ešte nič nenabehlo');
-    assert.deepEqual(karty[0], [{ kind: 'dnes', title: DNES_TEXTS.plan, chip: d.chip, cls: sky.den.cls, word: sky.word, text: '' }]);
-    assert.deepEqual(karty[1], [{ kind: 'velke', title: DNES_TEXTS.velke, value: '', text: d.line }]);
-    assert.deepEqual(karty[2], [
-        { kind: 'strecha', title: sky.day.label, value: sky.day.value, text: DNES_TEXTS.celyDen },
+    assert.deepEqual(druhy(karty), ['dnes|velke', 'strecha|eq', 'predpoved|oblacnost', 'slnko|lepsie']);
+    assert.deepEqual(karty[0], [
+        { kind: 'dnes', title: DNES_TEXTS.dnes, chip: d.chip, cls: sky.den.cls, word: sky.word, text: '' },
+        { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: d.line },
+    ]);
+    assert.deepEqual(karty[1], [
+        { kind: 'strecha', title: sky.day.label, value: sky.day.value, text: DNES_TEXTS.celyDen, pct: null },
         { kind: 'eq', title: DNES_TEXTS.akoKeby, eq: sky.day.eq },
     ]);
     assert.deepEqual(
@@ -380,23 +376,37 @@ test('pás: ráno Dnes, Veľké veci s plánom, Zo strechy s Ako keby a dvojice 
 });
 
 test('pás: cez deň odpočet okna vo Veľkých veciach, po okne veta o ňom', () => {
-    const { d, karty } = pas(input(at('13:00')));
+    const { sky, d, karty } = pas(input(at('13:00')));
     assert.ok(d?.count);
-    assert.deepEqual(druhy(karty), ['dnes', 'velke|nabehlo', 'strecha|eq', 'predpoved|oblacnost', 'slnko|lepsie']);
-    assert.deepEqual(karty[1][0], { kind: 'velke', title: DNES_TEXTS.velke, value: d.count.value, text: d.count.text });
+    assert.ok(d.nabehlo && sky.day);
+    assert.deepEqual(druhy(karty), ['dnes|velke', 'strecha|eq', 'predpoved|oblacnost', 'slnko|lepsie']);
+    assert.deepEqual(karty[0][1], { kind: 'velke', title: DNES_TEXTS.velke, value: d.count.value, text: d.count.text });
     assert.equal(karty[0][0].title, DNES_TEXTS.dnes);
+    // Zo strechy: číslo celého dňa (k nemu Ako keby), pod ním pásik a koľko z neho už nabehlo.
+    assert.deepEqual(karty[1][0], {
+        kind: 'strecha',
+        title: sky.day.label,
+        value: sky.day.value,
+        text: d.nabehlo.text,
+        pct: d.nabehlo.pct,
+    });
     const po = pas(input(at('18:30')));
-    if (po.d?.faza === 'den') assert.deepEqual(po.karty[1][0], { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: po.d.line });
+    if (po.d?.faza === 'den') assert.deepEqual(po.karty[0][1], { kind: 'velke', title: DNES_TEXTS.velke, value: '', text: po.d.line });
 });
 
 test('pás: večer Ako dopadol dnešok, namerané s predpoveďou a Zajtra', () => {
     const { sky, d, karty } = pas(input(at('21:00')));
     assert.ok(d?.tomorrow && d.grade && sky.day);
-    assert.deepEqual(druhy(karty), ['dnes', 'strecha|eq', 'zajtra', 'predpoved|oblacnost']);
+    assert.deepEqual(druhy(karty), ['dnes|zajtra', 'strecha|eq', 'predpoved|oblacnost'], 'dnešok vedľa zajtrajška');
     assert.equal(karty[0][0].title, DNES_TEXTS.grade);
-    assert.deepEqual(karty[1][0], { kind: 'strecha', title: sky.day.label, value: d.grade, text: d.line });
+    assert.deepEqual(karty[1][0], { kind: 'strecha', title: sky.day.label, value: d.grade, text: d.line, pct: null });
     const t = d.tomorrow;
-    assert.deepEqual(karty[2], [{ kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, word: t.word, text: t.text }]);
+    assert.deepEqual(karty[0][1], { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, word: t.word, text: t.text });
+    // Bez zajtrajška ide k dnešku Kedy lepšie.
+    assert.deepEqual(druhy(dnesKarty(sky, { ...d, tomorrow: null, karty: d.karty.filter((k) => k.kind === 'lepsie') })), [
+        'dnes',
+        'strecha|eq',
+    ]);
 });
 
 test('pás: bez dát len Dnes so slovom a vetou prečo; kým sa načítava a bez slova nič', () => {

@@ -63,8 +63,8 @@ test('vzorka: každý text v slušnom tóne existuje a nie je prázdny, kde drz�
 test('slušný tón: slová a texty Štatistiky podľa návrhu', () => {
     const s = M.voiceTexts('slusny');
     assert.deepEqual(
-        [s.DEN_WORDS.rano.dobry, s.DEN_WORDS.zmena.lepsi, s.DEN_WORDS.vecer.nanic, s.MOZEM_WORDS.offline],
-        ['Dnes bude dobrý deň', 'Deň bude lepší, ako sa čakalo', 'Dnes sme takmer nič nevyrobili', 'Nemám dáta, sme off-line'],
+        [s.DEN_WORDS.iny.dobry, s.DEN_WORDS.zmena.lepsi, s.DEN_WORDS.vecer.nanic, s.MOZEM_WORDS.offline],
+        ['Dobrý deň', 'Deň bude lepší, ako sa čakalo', 'Dnes sme takmer nič nevyrobili', 'Nemám dáta, sme off-line'],
     );
     assert.equal(s.MOZEM_SKY_TEXTS.guessTitle, 'Toto je len odhad');
     assert.equal(s.STATISTIKA_TEXTS.setupTitle, 'Štatistika potrebuje vaše panely');

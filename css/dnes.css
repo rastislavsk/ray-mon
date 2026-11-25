@@ -293,6 +293,28 @@
     letter-spacing: 0;
     text-transform: none;
 }
+/* V nadpise dlaždice je odznak len krúžok s i vo farbe triedy - trieda slovom je pre čítačku a v bubline; v polovici
+   dlaždice by slovo vytlačilo nadpis (docs/navrhy/dnes-vsetky-dvojice.html, O2). Tlačidlo ostáva 44 px na prst. */
+.k-hlava .chip-tap {
+    justify-content: center;
+    min-width: 44px;
+    /* Krúžok stojí 4 px za nadpisom (aj „Zajtra“ sa zmestí pri 320 px); doprava tlačidlo nepresahuje, aby nič netrčalo
+       z polovice. */
+    margin-inline-start: -15px;
+}
+.k-hlava .chip.info {
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    letter-spacing: 0;
+}
+.k-hlava .chip.info::after {
+    width: auto;
+    height: auto;
+    border: 0;
+    font-size: 0.75rem;
+}
 .mozem .chip[data-cls='vyborny'] {
     background: var(--yes);
     border-color: var(--yes);

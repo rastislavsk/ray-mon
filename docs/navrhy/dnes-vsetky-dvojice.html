@@ -1,0 +1,1154 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Dnes – všetky dlaždice na dve</title>
+        <style>
+            /* Návrh (25. 11. 2026): všetky dlaždice pásu karty Dnes rozdelené na dve polovice.
+               Samostatný súbor, nič neimportuje z appky. Čísla a texty sú ilustračné (výborný jasný deň),
+               vety sú z messages-mozem.js / messages-teraz.js. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --sun: #ffd166;
+                --zelena: #8fe36f;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.45;
+            }
+            main {
+                max-width: 1500px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 40px;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(28px, 6vw, 40px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 22px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 15px;
+                font-weight: 800;
+                color: var(--sun);
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 80ch;
+            }
+            ul {
+                padding-left: 0;
+                list-style: none;
+                display: grid;
+                gap: 6px;
+            }
+            code {
+                font-size: 0.875em;
+            }
+            .dim {
+                color: var(--dim);
+            }
+            .plus,
+            .minus,
+            .pozn {
+                display: block;
+                padding-left: 1.1em;
+                text-indent: -1.1em;
+            }
+            .plus::before {
+                content: '+ ';
+                color: var(--zelena);
+                font-weight: 800;
+            }
+            .minus::before {
+                content: '− ';
+                color: #ff9b8a;
+                font-weight: 800;
+            }
+            .pozn::before {
+                content: '→ ';
+                color: var(--sun);
+                font-weight: 800;
+            }
+            section.blok {
+                display: grid;
+                gap: 16px;
+            }
+            .odpor {
+                padding: 14px 16px;
+                border-left: 3px solid var(--sun);
+                background: rgba(255, 255, 255, 0.05);
+                border-radius: 0 12px 12px 0;
+                display: grid;
+                gap: 10px;
+            }
+            table {
+                border-collapse: collapse;
+                font-size: 0.9375rem;
+                max-width: 100%;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 6px 12px 6px 0;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+                vertical-align: top;
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+            }
+            .tabw {
+                overflow-x: auto;
+            }
+
+            /* ===== Fázy: rad dlaždíc na pozadí oblohy ===== */
+            .faza {
+                display: grid;
+                gap: 8px;
+            }
+            .rad {
+                display: flex;
+                gap: 12px;
+                overflow-x: auto;
+                padding: 14px;
+                border-radius: 18px;
+                background: linear-gradient(180deg, #2f6fc4 0%, #4f8fd6 60%, #7eabdd 100%);
+            }
+            .rad.vecer {
+                background: linear-gradient(180deg, #2a2f5e 0%, #5a4a7a 60%, #b0707a 100%);
+            }
+
+            /* ===== Dlaždica (ako .karta.glass v appke, šírka telefónu 360 − 2 × 16) ===== */
+            .karta {
+                flex: none;
+                width: 328px;
+                height: 124px;
+                padding: 12px 14px;
+                border-radius: 18px;
+                background: rgba(255, 255, 255, 0.16);
+                border: 1px solid rgba(255, 255, 255, 0.22);
+                backdrop-filter: blur(6px);
+                display: flex;
+                gap: 12px;
+                position: relative;
+            }
+            .karta[data-sama] {
+                outline: 2px dashed var(--sun);
+                outline-offset: 3px;
+            }
+            .karta[data-nove]::after {
+                content: 'nové';
+                position: absolute;
+                top: -9px;
+                right: 12px;
+                font-size: 10px;
+                font-weight: 800;
+                background: var(--zelena);
+                color: #0b1226;
+                border-radius: 6px;
+                padding: 1px 6px;
+            }
+            .cast {
+                flex: 1 1 0;
+                min-width: 0;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+                container-type: inline-size;
+            }
+            .deli {
+                flex: none;
+                width: 1px;
+                background: rgba(255, 255, 255, 0.35);
+            }
+            .ttl {
+                font-size: 0.8125rem;
+                font-weight: 800;
+                letter-spacing: 0.02em;
+                color: rgba(255, 255, 255, 0.86);
+                white-space: nowrap;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .chip {
+                font-size: 0.6875rem;
+                font-weight: 800;
+                padding: 1px 7px;
+                border-radius: 9px;
+                background: rgba(143, 227, 111, 0.28);
+                border: 1px solid rgba(143, 227, 111, 0.7);
+                white-space: nowrap;
+            }
+            .slovo {
+                font-weight: 900;
+                font-variation-settings: 'wdth' 125;
+                letter-spacing: -0.02em;
+                line-height: 0.95;
+                text-wrap: balance;
+                font-size: 30px;
+            }
+            .cast .slovo {
+                font-size: min(22px, 13cqi);
+            }
+            .karta > .cast:only-child .slovo {
+                font-size: 30px;
+            }
+            .val {
+                font-size: min(1.75rem, 15cqi);
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                line-height: 1;
+                white-space: nowrap;
+            }
+            .val small {
+                font-size: 0.75rem;
+                font-weight: 800;
+            }
+            .txt {
+                font-size: 0.8125rem;
+                line-height: 1.3;
+                color: rgba(255, 255, 255, 0.9);
+            }
+            .bar {
+                height: 6px;
+                border-radius: 3px;
+                background: rgba(255, 255, 255, 0.22);
+                overflow: hidden;
+            }
+            .bar i {
+                display: block;
+                height: 100%;
+                background: var(--zelena);
+            }
+            .bar.sivy i {
+                background: rgba(210, 218, 235, 0.9);
+            }
+            .stlpce {
+                display: flex;
+                align-items: flex-end;
+                gap: 2px;
+                height: 26px;
+            }
+            .stlpce i {
+                flex: 1;
+                background: rgba(255, 255, 255, 0.45);
+                border-radius: 2px 2px 0 0;
+            }
+            .stlpce i.max {
+                background: var(--sun);
+            }
+            .eq {
+                gap: 4px;
+                font-size: 0.9375rem;
+                font-weight: 800;
+                font-variation-settings: 'wdth' 88;
+            }
+            .ikony {
+                display: flex;
+                gap: 8px;
+                font-size: 20px;
+                line-height: 1;
+            }
+            .ikony span {
+                display: grid;
+                justify-items: center;
+                gap: 2px;
+            }
+            .ikony small {
+                font-size: 11px;
+                font-weight: 800;
+            }
+            .ikony .nie {
+                opacity: 0.4;
+            }
+            .legenda {
+                font-size: 0.8125rem;
+                color: var(--dim);
+            }
+            .legenda b {
+                color: var(--sun);
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header style="display: grid; gap: 10px">
+                <h1>Karta Dnes – všetky dlaždice na dve polovice</h1>
+                <p class="dim">
+                    Návrh 25. 11. 2026. Dnes páruje dlaždice <code>DVOJICE</code> v <code>shared/dnes-faza.js</code>: Veľké veci | Nabehlo,
+                    Zo strechy | Ako keby, Predpoveď | Oblačnosť, Najviac slnka | Kedy lepšie. Čísla a vety sú ilustračné (výborný jasný
+                    deň), slová a vety sú tie, ktoré appka naozaj píše.
+                </p>
+                <p class="legenda">
+                    <b>Žltý prerušovaný rám</b> = dlaždica s jednou kartou na celú šírku. Zelený štítok <b>nové</b> = pole, ktoré appka dnes
+                    nemá (treba ho dopočítať).
+                </p>
+            </header>
+
+            <!-- ===================== SÚČASNÝ STAV ===================== -->
+            <section class="blok">
+                <h2>Čo dnes ide na celú dlaždicu</h2>
+                <div class="tabw">
+                    <table>
+                        <tr>
+                            <th>Karta (<code>kind</code>)</th>
+                            <th>Polia</th>
+                            <th>Kedy je sama</th>
+                        </tr>
+                        <tr>
+                            <td><b>Dnes</b> (<code>dnes</code>)</td>
+                            <td>
+                                nadpis <code>kick</code> („Plán na dnes“ ráno, „Dnes“ cez deň, „Ako dopadol dnešok“ večer), odznak
+                                <code>chip</code> (trieda dňa, večer prázdny), veľké slovo <code>word</code> (<code>DEN_WORDS.rano</code> /
+                                <code>zmena</code> / <code>vecer</code>), veta <code>text</code> len keď nie sú dáta
+                            </td>
+                            <td>vždy – nemá dvojicu</td>
+                        </tr>
+                        <tr>
+                            <td><b>Zajtra</b> (<code>zajtra</code>)</td>
+                            <td>
+                                nadpis „Zajtra“, odznak triedy zajtrajška, slovo <code>DEN_WORDS.zajtra</code>, veta „Okolo 14 kWh, veľké
+                                veci 10:00 – 14:00.“
+                            </td>
+                            <td>vždy (len večer)</td>
+                        </tr>
+                        <tr>
+                            <td><b>Veľké veci</b> (<code>velke</code>)</td>
+                            <td>
+                                ráno len veta <code>dnesPlanText</code> „medzi 10:00 – 14:00“; cez deň odpočet „2 h 40 min“ + „do 15:40“
+                            </td>
+                            <td><b>ráno</b> (Nabehlo ešte nie je), cez deň keď predpoveď dneška chýba; večer zmizne</td>
+                        </tr>
+                        <tr>
+                            <td><b>Kedy lepšie</b> (<code>lepsie</code>)</td>
+                            <td>„o 12:30“ / meno dňa / „dnes“ / „nie“ + krátky riadok</td>
+                            <td><b>večer bez zajtrajška</b>, cez deň keď strecha nedá nič (Najviac slnka chýba)</td>
+                        </tr>
+                        <tr>
+                            <td>Nabehlo, Predpoveď</td>
+                            <td>–</td>
+                            <td>len keď chýba ich pár (Veľké veci bez okna, chýba oblačnosť) – zriedka</td>
+                        </tr>
+                    </table>
+                </div>
+                <p class="dim">
+                    Zo strechy | Ako keby je vždy spolu. Teda naozaj celé sú <b>Dnes</b> a <b>Zajtra</b> stále, <b>Veľké veci</b> ráno a
+                    <b>Kedy lepšie</b> večer.
+                </p>
+
+                <div class="faza">
+                    <h3>Ráno – teraz 5 dlaždíc</h3>
+                    <div class="rad">
+                        <div class="karta" data-sama>
+                            <div class="cast">
+                                <div class="ttl">Plán na dnes <span class="chip">výborný deň</span></div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                        </div>
+                        <div class="karta" data-sama>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="txt" style="font-size: 1.25rem; font-weight: 800">medzi 10:00 – 14:00</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11 <small>kWh</small></p>
+                                <p class="txt">za celý deň</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 740×</li>
+                                    <li>🚗 66 km</li>
+                                    <li>🍃 ~3,8 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Predpoveď</div>
+                                <p class="txt" style="font-weight: 800">☀️ Jasno</p>
+                                <p class="txt">2° ─── 9°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 12 %</p>
+                                <div class="bar sivy"><i style="width: 12%"></i></div>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Najviac slnka</div>
+                                <p class="val">12 – 13 h</p>
+                                <div class="stlpce">
+                                    <i style="height: 15%"></i><i style="height: 40%"></i><i style="height: 70%"></i
+                                    ><i style="height: 92%"></i><i class="max" style="height: 100%"></i><i style="height: 90%"></i
+                                    ><i style="height: 65%"></i><i style="height: 35%"></i><i style="height: 10%"></i>
+                                </div>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Kedy lepšie</div>
+                                <p class="val">dnes</p>
+                                <p class="txt">ďalší taký nebude</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="faza">
+                    <h3>Večer – teraz 4 dlaždice</h3>
+                    <div class="rad vecer">
+                        <div class="karta" data-sama>
+                            <div class="cast">
+                                <div class="ttl">Ako dopadol dnešok</div>
+                                <p class="slovo">Oskar to dnes odpálil na plný koule</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11,4 <small>kWh</small></p>
+                                <p class="txt">Predpoveď bola 11 kWh.</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 760×</li>
+                                    <li>🚗 68 km</li>
+                                    <li>🍃 ~3,9 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta" data-sama>
+                            <div class="cast">
+                                <div class="ttl">Zajtra <span class="chip">dobrý deň</span></div>
+                                <p class="slovo">Zajtra not baaad</p>
+                                <p class="txt">Okolo 8 kWh, veľké veci 10:30 – 13:30.</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Na zajtra</div>
+                                <p class="txt" style="font-weight: 800">⛅ Polojasno</p>
+                                <p class="txt">0° ─── 6°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 45 %</p>
+                                <div class="bar sivy"><i style="width: 45%"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ===================== A ===================== -->
+            <section class="blok">
+                <h2>A – nové dvojice podľa významu</h2>
+                <p>
+                    Dnes ide k Veľkým veciam („aký deň“ + „kedy pustiť“), večer Ako dopadol dnešok k Zajtra (dnes vedľa zajtra). Cez deň by
+                    bolo kariet nepárne (9), preto sa Nabehlo zlúči do Zo strechy: tam je aj tak to isté číslo celého dňa.
+                </p>
+                <div class="faza">
+                    <h3>Ráno – 4 dlaždice</h3>
+                    <div class="rad">
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Plán na dnes <span class="chip">výborný</span></div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="val">10 – 14 h</p>
+                                <p class="txt">medzi 10:00 – 14:00</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11 <small>kWh</small></p>
+                                <p class="txt">za celý deň</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 740×</li>
+                                    <li>🚗 66 km</li>
+                                    <li>🍃 ~3,8 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Predpoveď</div>
+                                <p class="txt" style="font-weight: 800">☀️ Jasno</p>
+                                <p class="txt">2° ─── 9°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 12 %</p>
+                                <div class="bar sivy"><i style="width: 12%"></i></div>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Najviac slnka</div>
+                                <p class="val">12 – 13 h</p>
+                                <p class="txt">až ~2,9 kW</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Kedy lepšie</div>
+                                <p class="val">dnes</p>
+                                <p class="txt">ďalší taký nebude</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="faza">
+                    <h3>Cez deň – 4 dlaždice (dnes 5)</h3>
+                    <div class="rad">
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Dnes <span class="chip">výborný</span></div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="val">2 h 40 min</p>
+                                <p class="txt">do 15:40</p>
+                            </div>
+                        </div>
+                        <div class="karta" data-nove>
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">4,2 <small>z ~11 kWh</small></p>
+                                <div class="bar"><i style="width: 38%"></i></div>
+                                <p class="txt">nabehlo 38 %</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 740×</li>
+                                    <li>🚗 66 km</li>
+                                    <li>🍃 ~3,8 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Predpoveď</div>
+                                <p class="txt" style="font-weight: 800">☀️ Jasno</p>
+                                <p class="txt">2° ─── 9°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 12 %</p>
+                                <div class="bar sivy"><i style="width: 12%"></i></div>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Najviac slnka</div>
+                                <p class="val">12 – 13 h</p>
+                                <p class="txt">až ~2,9 kW</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Kedy lepšie</div>
+                                <p class="val">dnes</p>
+                                <p class="txt">ďalší taký nebude</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="faza">
+                    <h3>Večer – 3 dlaždice (dnes 4); bez zajtrajška Ako dopadol dnešok | Kedy lepšie</h3>
+                    <div class="rad vecer">
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Dnešok</div>
+                                <p class="slovo">Oskar to dnes odpálil na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Zajtra <span class="chip">dobrý</span></div>
+                                <p class="slovo">Zajtra not baaad</p>
+                                <p class="txt">~8 kWh · 10:30 – 13:30</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11,4 <small>kWh</small></p>
+                                <p class="txt">Predpoveď bola 11 kWh.</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 760×</li>
+                                    <li>🚗 68 km</li>
+                                    <li>🍃 ~3,9 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Na zajtra</div>
+                                <p class="txt" style="font-weight: 800">⛅ Polojasno</p>
+                                <p class="txt">0° ─── 6°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 45 %</p>
+                                <div class="bar sivy"><i style="width: 45%"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Menej dlaždíc (ráno 4, cez deň 4, večer 3) – menej listovania, posuvník a výška sa nemenia.</li>
+                    <li class="plus">
+                        Dvojice dávajú zmysel; zmizne zdvojené číslo celého dňa (Nabehlo „z ~11 kWh“ a Zo strechy „11 kWh“).
+                    </li>
+                    <li class="plus">Kód: len iné <code>DVOJICE</code> a zlúčenie Nabehlo do Zo strechy cez deň, nové dáta netreba.</li>
+                    <li class="minus">Veľké slovo má polovicu šírky: menšie písmo, 3 riadky („Oskar dnes pujde na plný koule“).</li>
+                    <li class="minus">Večer dve veľké slová vedľa seba – riadok zajtrajška sa musí skrátiť („~8 kWh · 10:30 – 13:30“).</li>
+                    <li class="minus">Odznak triedy sa skráti na „výborný“ / „dobrý“, inak sa s nadpisom do polovice nezmestí.</li>
+                </ul>
+            </section>
+
+            <!-- ===================== B ===================== -->
+            <section class="blok">
+                <h2>B – samostatná karta sa rozdelí sama (poradie ostane)</h2>
+                <p>
+                    Dvojice ostanú, ako sú. Karta, ktorá je sama, dostane do druhej polovice niečo zo svojho: Dnes ktoré veľké veci sa
+                    zmestia na slnko (to už appka vie – <code>denTriedaVeci</code>, dnes len vo vysvetlení odznaku), Veľké veci ráno poradie
+                    z plánu, Zajtra kWh a okno, Kedy lepšie večer najbližší silný deň.
+                </p>
+                <div class="faza">
+                    <h3>Ráno – 5 dlaždíc</h3>
+                    <div class="rad">
+                        <div class="karta" data-nove>
+                            <div class="cast">
+                                <div class="ttl">Plán na dnes <span class="chip">výborný</span></div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Zmestí sa</div>
+                                <div class="ikony">
+                                    <span>🫧<small>✓</small></span
+                                    ><span>🌀<small>✓</small></span
+                                    ><span>🍽️<small>✓</small></span
+                                    ><span>🔥<small>✓</small></span>
+                                </div>
+                                <p class="txt">všetko, aj keď príde mrak</p>
+                            </div>
+                        </div>
+                        <div class="karta" data-nove>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="val">10 – 14 h</p>
+                                <p class="txt">medzi 10:00 – 14:00</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Poradie</div>
+                                <ul class="eq">
+                                    <li>🫧 10:00 práčka</li>
+                                    <li>🌀 11:45 sušička</li>
+                                    <li>🍽️ 13:00 umývačka</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11 <small>kWh</small></p>
+                                <p class="txt">za celý deň</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 740×</li>
+                                    <li>🚗 66 km</li>
+                                    <li>🍃 ~3,8 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Predpoveď</div>
+                                <p class="txt" style="font-weight: 800">☀️ Jasno</p>
+                                <p class="txt">2° ─── 9°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 12 %</p>
+                                <div class="bar sivy"><i style="width: 12%"></i></div>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Najviac slnka</div>
+                                <p class="val">12 – 13 h</p>
+                                <p class="txt">až ~2,9 kW</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Kedy lepšie</div>
+                                <p class="val">dnes</p>
+                                <p class="txt">ďalší taký nebude</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="faza">
+                    <h3>Večer – 4 dlaždice</h3>
+                    <div class="rad vecer">
+                        <div class="karta" data-nove>
+                            <div class="cast">
+                                <div class="ttl">Ako dopadol dnešok</div>
+                                <p class="slovo">Oskar to dnes odpálil na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Na slnku bežalo</div>
+                                <div class="ikony">
+                                    <span>🫧<small>✓</small></span
+                                    ><span>🌀<small>✓</small></span
+                                    ><span class="nie">🍽️<small>–</small></span
+                                    ><span>🔥<small>✓</small></span>
+                                </div>
+                                <p class="txt">podľa „Už beží“ a zásuvky</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11,4 <small>kWh</small></p>
+                                <p class="txt">Predpoveď bola 11 kWh.</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 760×</li>
+                                    <li>🚗 68 km</li>
+                                    <li>🍃 ~3,9 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zajtra <span class="chip">dobrý</span></div>
+                                <p class="slovo">Zajtra not baaad</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Strecha zajtra</div>
+                                <p class="val">~8 <small>kWh</small></p>
+                                <p class="txt">veľké veci 10:30 – 13:30</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Na zajtra</div>
+                                <p class="txt" style="font-weight: 800">⛅ Polojasno</p>
+                                <p class="txt">0° ─── 6°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 45 %</p>
+                                <div class="bar sivy"><i style="width: 45%"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">Poradie a počet dlaždíc ostanú, nič sa nepresúva – len pribudne obsah.</li>
+                    <li class="plus">Na prvej dlaždici hneď vidno, čo slovo dňa znamená (dnes to treba ťuknúť na odznak).</li>
+                    <li class="minus">
+                        Nové polia: veci na slnku (z <code>denTriedaVeci</code>), poradie plánu na Dnes, večer čo naozaj bežalo – viac kódu
+                        a testov.
+                    </li>
+                    <li class="minus">Poradie veľkých vecí už ukazuje karta Teraz (Plán dňa) – je to opakovanie.</li>
+                    <li class="minus">„Na slnku bežalo“ večer je len na slovo („Už beží“), appka to overiť nevie.</li>
+                    <li class="minus">
+                        Kedy lepšie večer bez zajtrajška nemá čím rozumne doplniť – ostal by tam riadok navyše alebo by išiel k Dnešku ako v
+                        A.
+                    </li>
+                    <li class="minus">Rovnaký problém s malým veľkým slovom ako v A.</li>
+                </ul>
+            </section>
+
+            <!-- ===================== C ===================== -->
+            <section class="blok">
+                <h2>C – mechanicky po dvoch v poradí pásu</h2>
+                <p>
+                    <code>DVOJICE</code> zmizne, pás sa len rozreže po dvoch kartách v poradí. Keď je kariet nepárne, posledná ostane sama
+                    (alebo ju vynecháme).
+                </p>
+                <div class="faza">
+                    <h3>Ráno – 4 dlaždice</h3>
+                    <div class="rad">
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Plán na dnes</div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="val">10 – 14 h</p>
+                                <p class="txt">medzi 10:00 – 14:00</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11 <small>kWh</small></p>
+                                <p class="txt">za celý deň</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 740×</li>
+                                    <li>🚗 66 km</li>
+                                    <li>🍃 ~3,8 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Predpoveď</div>
+                                <p class="txt" style="font-weight: 800">☀️ Jasno</p>
+                                <p class="txt">2° ─── 9°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 12 %</p>
+                                <div class="bar sivy"><i style="width: 12%"></i></div>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Najviac slnka</div>
+                                <p class="val">12 – 13 h</p>
+                                <p class="txt">až ~2,9 kW</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Kedy lepšie</div>
+                                <p class="val">dnes</p>
+                                <p class="txt">ďalší taký nebude</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="faza">
+                    <h3>Cez deň – 5 dlaždíc, dvojice sa posunú</h3>
+                    <div class="rad">
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Dnes</div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="val">2 h 40 min</p>
+                                <p class="txt">do 15:40</p>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Zo strechy</div>
+                                <p class="val">11 <small>kWh</small></p>
+                                <p class="txt">za celý deň</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Ako keby</div>
+                                <ul class="eq">
+                                    <li>📱 740×</li>
+                                    <li>🚗 66 km</li>
+                                    <li>🍃 ~3,8 kg CO2</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Predpoveď</div>
+                                <p class="txt" style="font-weight: 800">☀️ Jasno</p>
+                                <p class="txt">2° ─── 9°</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Oblačnosť</div>
+                                <p class="val">☁ 12 %</p>
+                                <div class="bar sivy"><i style="width: 12%"></i></div>
+                            </div>
+                        </div>
+                        <div class="karta">
+                            <div class="cast">
+                                <div class="ttl">Najviac slnka</div>
+                                <p class="val">12 – 13 h</p>
+                                <p class="txt">až ~2,9 kW</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Nabehlo</div>
+                                <p class="val">4,2 <small>kWh</small></p>
+                                <div class="bar"><i style="width: 38%"></i></div>
+                            </div>
+                        </div>
+                        <div class="karta" data-sama>
+                            <div class="cast">
+                                <div class="ttl">Kedy lepšie</div>
+                                <p class="val">dnes</p>
+                                <p class="txt">ďalší taký nebude</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <ul>
+                    <li class="plus">
+                        Najjednoduchší kód – <code>DVOJICE</code> a <code>dvojice()</code> zmiznú, ostane rozrezanie po dvoch.
+                    </li>
+                    <li class="minus">
+                        Dvojice sú náhodné a menia sa podľa časti dňa (Najviac slnka | Nabehlo cez deň, inak | Kedy lepšie).
+                    </li>
+                    <li class="minus">Pri nepárnom počte jedna karta aj tak ostane sama – cieľ „všetky na dve“ nesplní.</li>
+                    <li class="minus">Rovnaký problém s malým veľkým slovom.</li>
+                </ul>
+            </section>
+
+            <section class="odpor">
+                <h2>Odporúčam A</h2>
+                <p>
+                    Jediné, ktoré splní „všetky na dve“ bez nových dát: dvojice dávajú zmysel, ubudne jedna dlaždica a zmizne zdvojené číslo
+                    celého dňa. B pridá obsah, ktorý z väčšej časti už ukazuje Teraz, a jednu kartu (Kedy lepšie večer) aj tak nemá čím
+                    doplniť. C je najmenej kódu, ale dvojice by boli náhodné a cieľ nesplní.
+                </p>
+                <p class="dim">
+                    Pri A aj B treba rozhodnúť veľké slovo v polovici: buď menšie písmo na 3 riadky (ako na obrázkoch), alebo kratšie slová
+                    do dlaždice (napr. <code>DEN_WORDS.iny</code> – „Oskar pujde na plný koule“, „Not baaad“).
+                </p>
+            </section>
+
+            <!-- ===================== Odznak v polovici ===================== -->
+            <style>
+                .uzka {
+                    width: 280px;
+                    height: 150px;
+                    padding: 12px;
+                    gap: 10px;
+                }
+                .uzka .slovo,
+                .uzka .cast .slovo {
+                    font-size: 17px;
+                }
+                .uzka .chip {
+                    font-size: 0.625rem;
+                    letter-spacing: 0.08em;
+                    text-transform: uppercase;
+                }
+                .kruzok {
+                    display: inline-grid;
+                    place-items: center;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    font-size: 10px;
+                    font-weight: 900;
+                    color: #14300c;
+                    background: var(--zelena);
+                }
+                .kruzok.zlty {
+                    background: #ffc94a;
+                    color: #3a2a00;
+                }
+                .sr {
+                    position: absolute;
+                    width: 1px;
+                    height: 1px;
+                    overflow: hidden;
+                    clip-path: inset(50%);
+                }
+            </style>
+            <section class="blok">
+                <h2>Pri implementácii: odznak sa do polovice nezmestí</h2>
+                <p>
+                    V appke pri 360 px (S22) má polovica dlaždice len ~113 px. Odznak „VÝBORNÝ ⓘ“ vytlačí nadpis celý („Zajtra“ zmizne) a
+                    najdlhšie slovo („Zajtra Oskar pujde na plný koule“) s vetou „~49 kWh · 07:30 – 17:00“ pretečie. Pri 390 px sa to
+                    zmestí, pri 360 a 320 nie. Varianty (šírka dlaždice ako v appke pri 360 px, najdlhšie slová):
+                </p>
+                <div class="odpor">
+                    <p>
+                        <b>Rozhodnuté 25. 11. 2026: A + O2 s kratšími slovami.</b> Odznak je krúžok s i vo farbe triedy, veľké slovo ráno,
+                        cez deň aj pri Zajtra je <code>DEN_WORDS.iny</code> (sady <code>rano</code> a <code>zajtra</code> zmizli). Pri
+                        Zajtra ostal riadok „~49 kWh · 07:30 – 17:00“ – s kratším slovom sa zmestí. Ráno je nadpis „Dnes“ ako cez deň: „Plán
+                        na dnes“ sa s krúžkom pri 320 a 360 px nezmestil.
+                    </p>
+                </div>
+
+                <div class="faza">
+                    <h3>O1 – odznak namiesto nadpisu; pri Zajtra len okno, bez kWh</h3>
+                    <div class="rad vecer">
+                        <div class="karta uzka">
+                            <div class="cast">
+                                <div class="ttl"><span class="chip">výborný ⓘ</span><span class="sr">Dnes</span></div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="val">4 h 30 min</p>
+                                <p class="txt">do 17:30</p>
+                            </div>
+                        </div>
+                        <div class="karta uzka">
+                            <div class="cast">
+                                <div class="ttl">Dnešok</div>
+                                <p class="slovo">Oskar to dnes odpálil na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl"><span class="chip">výborný ⓘ</span></div>
+                                <p class="slovo">Zajtra Oskar pujde na plný koule</p>
+                                <p class="txt"><b>07:30 – 17:00</b></p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul>
+                        <li class="plus">Trieda dňa ostane slovom, nadpis „Dnes“ nahradí slovo dňa, Zajtra hovorí samo slovo.</li>
+                        <li class="minus">Ráno zmizne „Plán na dnes“; pri Zajtra zmizne „~49 kWh“.</li>
+                    </ul>
+                </div>
+
+                <div class="faza">
+                    <h3>O2 – nadpis ostane, trieda len farebný krúžok s „i“ (slovom až v bubline)</h3>
+                    <div class="rad vecer">
+                        <div class="karta uzka">
+                            <div class="cast">
+                                <div class="ttl">Plán na dnes <span class="kruzok">i</span></div>
+                                <p class="slovo">Oskar dnes pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="txt">medzi <b>07:15 – 17:30</b></p>
+                            </div>
+                        </div>
+                        <div class="karta uzka">
+                            <div class="cast">
+                                <div class="ttl">Dnešok</div>
+                                <p class="slovo">Oskar to dnes odpálil na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Zajtra <span class="kruzok zlty">i</span></div>
+                                <p class="slovo">Zajtra Oskar pujde na plný koule</p>
+                                <p class="txt">~49 kWh</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul>
+                        <li class="plus">Nadpisy ostanú; krúžok sa dá ťuknúť ako dnes odznak.</li>
+                        <li class="minus">
+                            „výborný / dobrý“ nevidno slovom, len farbou (čítačka ho prečíta); pri Zajtra sa zmestí len kWh, okno nie.
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="faza">
+                    <h3>O3 – kratšie slová v dlaždici (DEN_WORDS.iny, bez „dnes“ / „Zajtra“), odznak pod nadpisom</h3>
+                    <div class="rad vecer">
+                        <div class="karta uzka">
+                            <div class="cast">
+                                <div class="ttl">Dnes</div>
+                                <div class="ttl"><span class="chip">výborný ⓘ</span></div>
+                                <p class="slovo">Oskar pujde na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Veľké veci</div>
+                                <p class="val">4 h 30 min</p>
+                                <p class="txt">do 17:30</p>
+                            </div>
+                        </div>
+                        <div class="karta uzka">
+                            <div class="cast">
+                                <div class="ttl">Dnešok</div>
+                                <p class="slovo">Oskar to dnes odpálil na plný koule</p>
+                            </div>
+                            <i class="deli"></i>
+                            <div class="cast">
+                                <div class="ttl">Zajtra</div>
+                                <div class="ttl"><span class="chip">výborný ⓘ</span></div>
+                                <p class="slovo">Oskar pujde na plný koule</p>
+                            </div>
+                        </div>
+                    </div>
+                    <ul>
+                        <li class="plus">Nadpis aj trieda slovom ostanú.</li>
+                        <li class="minus">
+                            Hlášky iné ako dnes (napr. „zmena“ cez deň: „Dojebabralo sa nám to dneskaj“ by bez úprav nesadla); pri Zajtra
+                            nezostane miesto na kWh ani okno.
+                        </li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+    </body>
+</html>
