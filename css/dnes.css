@@ -293,27 +293,35 @@
     letter-spacing: 0;
     text-transform: none;
 }
-/* V nadpise dlaždice je odznak len krúžok s i vo farbe triedy - trieda slovom je pre čítačku a v bubline; v polovici
-   dlaždice by slovo vytlačilo nadpis (docs/navrhy/dnes-vsetky-dvojice.html, O2). Tlačidlo ostáva 44 px na prst. */
+/* V nadpise dlaždice je odznak len krúžok s i vo farbe triedy, vysoký ako verzálky nadpisu - trieda slovom je pre
+   čítačku a v bubline; v polovici dlaždice by slovo vytlačilo nadpis (docs/navrhy/dnes-vsetky-dvojice.html, O2).
+   Tlačidlo ostáva 44 px na prst, no riadok nadpisu nezvýši - hlavička je rovnako vysoká ako v druhej polovici. */
 .k-hlava .chip-tap {
     justify-content: center;
     min-width: 44px;
+    margin-block: -14px;
     /* Krúžok stojí 4 px za nadpisom (aj „Zajtra“ sa zmestí pri 320 px); doprava tlačidlo nepresahuje, aby nič netrčalo
        z polovice. */
-    margin-inline-start: -15px;
+    margin-inline-start: -21px;
 }
 .k-hlava .chip.info {
     justify-content: center;
-    width: 22px;
-    height: 22px;
+    width: 1cap;
+    height: 1cap;
     padding: 0;
+    border-width: 1px;
     letter-spacing: 0;
 }
 .k-hlava .chip.info::after {
     width: auto;
     height: auto;
     border: 0;
-    font-size: 0.75rem;
+    font-size: 0.4375rem;
+}
+/* Dlaždica s dneškom: hláška začína v tej istej výške ako obsah druhej polovice (Veľké veci, Zajtra), nie v strede
+   svojej polovice - pri rôzne dlhých textoch by inak každá polovica začínala inde. */
+.karta:has(> .cast[data-kind='dnes']) .cast > :nth-child(2) {
+    margin-top: 4px;
 }
 .mozem .chip[data-cls='vyborny'] {
     background: var(--yes);
