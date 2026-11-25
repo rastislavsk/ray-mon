@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Teraz – zapnuté ikonou</title>
+        <style>
+            /* Návrh (25. 11. 2026): karta Teraz – zapnutý spotrebič bez bieleho obrysu, zapnutie povie farba dlaždice.
+               Obrázky sú snímky skutočnej appky (fixtures z testov, 5. 9. 2026 o 13:00 a 21:30) so štýlom variantu
+               vloženým navrch; práčka je označená ako bežiaca a auto ako nabíjané len pre ukážku. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --yes: #b9f28c;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 48px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2 {
+                margin: 0;
+                line-height: 1.15;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 72ch;
+                color: var(--dim);
+            }
+            b {
+                color: #fff;
+            }
+            .rad {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 20px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 8px;
+                align-content: start;
+            }
+            figure img {
+                width: 100%;
+                max-width: 390px;
+                border-radius: 18px;
+                border: 1px solid var(--line);
+            }
+            figcaption {
+                font-size: 14px;
+                color: var(--dim);
+            }
+            figcaption b {
+                display: block;
+                font-size: 16px;
+            }
+            .plus {
+                color: var(--yes);
+            }
+            .minus {
+                color: #ff9b8a;
+            }
+            .karta {
+                padding: 18px;
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                display: grid;
+                gap: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Zapnutý spotrebič len ikonou</h1>
+                <p>
+                    Piate kolo (25. 11. 2026). Zapnutie povie <b>len kruh s ikonou</b>, dlaždica je bez obrysu, deň v páse 4 dní bez zmeny.
+                    Namiesto zelenej a oranžovej je farba, ktorá ladí so živou oblohou: tá istá, akou svieti ikona aktívnej karty v
+                    navigácii (<code>--s4</code>, appka ju počíta zo spodku oblohy). Cez deň je modrastá, v noci sivostrieborná, pri západe
+                    slnka teplejšia. Platí pre všetky spotrebiče aj auto. I4 je navyše stály plný modrý kruh.
+                </p>
+                <p>
+                    Obrázky sú snímky skutočnej appky so štýlom variantu; práčku som označil ako bežiacu a auto ako nabíjané len na ukážku
+                    (v testovacích dátach nebeží nič). Súmrak ani zamračenú oblohu som nesnímal – fixtures majú len jasný deň.
+                </p>
+            </section>
+            <section>
+                <h2>Cez deň</h2>
+                <div class="rad">
+                    <figure>
+                        <img src="img/zapnuty/teraz-den.png" alt="Dnes" />
+                        <figcaption><b>Dnes</b>Biely obrys, zelená / oranžová ikona</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i1-den.png" alt="I1 · Svietiaca ikona" />
+                        <figcaption><b>I1 · Svietiaca ikona</b>Ikona vo farbe oblohy so žiarou</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i2-den.png" alt="I2 · Plný kruh" />
+                        <figcaption><b>I2 · Plný kruh</b>Kruh plný vo farbe oblohy, ikona tmavá</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i3-den.png" alt="I3 · Svietiaci prstenec" />
+                        <figcaption><b>I3 · Svietiaci prstenec</b>Prstenec vo farbe oblohy okolo kruhu</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i4-den.png" alt="I4 · Plný modrý kruh" />
+                        <figcaption><b>I4 · Plný modrý kruh</b>Stále tá istá modrá, ikona biela</figcaption>
+                    </figure>
+                </div>
+            </section>
+            <section>
+                <h2>V noci</h2>
+                <div class="rad">
+                    <figure>
+                        <img src="img/zapnuty/teraz-noc.png" alt="Dnes" />
+                        <figcaption><b>Dnes</b>Biely obrys, zelená / oranžová ikona</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i1-noc.png" alt="I1 · Svietiaca ikona" />
+                        <figcaption><b>I1 · Svietiaca ikona</b>Ikona vo farbe oblohy so žiarou</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i2-noc.png" alt="I2 · Plný kruh" />
+                        <figcaption><b>I2 · Plný kruh</b>Kruh plný vo farbe oblohy, ikona tmavá</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i3-noc.png" alt="I3 · Svietiaci prstenec" />
+                        <figcaption><b>I3 · Svietiaci prstenec</b>Prstenec vo farbe oblohy okolo kruhu</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/i4-noc.png" alt="I4 · Plný modrý kruh" />
+                        <figcaption><b>I4 · Plný modrý kruh</b>Stále tá istá modrá, ikona biela</figcaption>
+                    </figure>
+                </div>
+            </section>
+            <section>
+                <h2>Porovnanie</h2>
+                <div class="rad">
+                    <div class="karta">
+                        <b>I1 · Svietiaca ikona</b>
+                        <ul>
+                            <li class="plus">Najjemnejšie, celkom splynie s oblohou.</li>
+                            <li class="minus">Tenká svetlá čiara sa od bielej vypnutej ikony takmer nelíši – na prvý pohľad slabé.</li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>I2 · Plný kruh vo farbe oblohy</b>
+                        <ul>
+                            <li class="plus">Zreteľné cez deň aj v noci: svetlý plný kruh proti priesvitným kruhom vypnutých.</li>
+                            <li class="plus">Ladí s navigáciou – aktívna karta a zapnutý spotrebič „svietia“ rovnako.</li>
+                            <li class="minus">V noci je farba sivostrieborná, menej „živá“ ako cez deň.</li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>I3 · Svietiaci prstenec</b>
+                        <ul>
+                            <li class="plus">Ako LED krúžok okolo vypínača, ľahké.</li>
+                            <li class="minus">Slabšie ako I2; na kraji kruhu sa bije so značkou ruka / slnko pri bojleri.</li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>I4 · Plný modrý kruh</b>
+                        <ul>
+                            <li class="plus">Najvýraznejšie a vždy rovnaké – cez deň, v noci aj pri západe.</li>
+                            <li class="minus">Modrá v appke znamená lacnú sieť (pásik); modrý kruh nad modrým pásikom môže mýliť.</li>
+                            <li class="minus">S oblohou neladí, pri západe slnka bude jediná studená farba v karte.</li>
+                        </ul>
+                    </div>
+                </div>
+                <p>
+                    Spoločné pre všetky: auto sa už nelíši od spotrebičov (oranžová bola „asi“). Texty v paneli Auto ostávajú s „asi“, takže
+                    odhad je povedaný slovami.
+                </p>
+                <p>
+                    <b>Rozhodnuté 25. 11. 2026: I2 · plný kruh vo farbe oblohy.</b> Je jasný na prvý pohľad a ladí s oblohou aj s
+                    navigáciou.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>

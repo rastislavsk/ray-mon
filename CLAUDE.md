@@ -139,8 +139,10 @@ Rozhodnuté 21. 11. 2026: dlaždice spotrebičov na karte Teraz sú všetky na s
 (bodka + „Teraz zo slnka“) aj jeho panel s vysvetlením sú preč. `data-tone` na dlaždici ostáva ako údaj, štýl ho
 nefarbí; výnimkou je jantárový rám zásuvky bez spojenia (`chyba`). Úsek na osi v detaile a pás dní sú graf, tie farby majú.
 
-Druhá výnimka (22. 11. 2026, `docs/navrhy/teraz-pole-noc-bezi.html`, 3A): zapnutý spotrebič - beží („Už beží“), alebo
-bojleru zásuvka zapla relé - má zelenú ikonu (`--yes`) a biely obrys dlaždice ako zvolený deň v páse dní (`data-zapnuty`). Kto bojler zapína
+Druhá výnimka (25. 11. 2026, `docs/navrhy/teraz-zapnuty-farba.html`, I2): zapnutý spotrebič - beží („Už beží“), bojleru
+zásuvka zapla relé alebo sa auto asi nabíja - má len kruh s ikonou plný vo farbe oblohy (`--s4`, ako ikona aktívnej karty
+v navigácii) s tmavou ikonou (`data-zapnuty`); dlaždica je bez obrysu, deň v páse dní má obrys ďalej. Zelená a oranžová,
+farba celej dlaždice ani svietiace sklo neprešli. Kto bojler zapína
 (ruka / slnko, `.dl-rz`), je na kraji kruhu s ikonou; bodka stavu bojlera pri ikone je preč. V noci (`data-noc` na
 `#tz-co`) sú dlaždice na svetlom skle (2B), tmavé na nočnej oblohe nebolo vidno.
 
@@ -207,8 +209,8 @@ Durable Object `UcetHuawei` z každého nového merania (`krokAuta` v `shared/au
 aspoň `AUTO_SLNKO.minKw` dve merania za sebou = začalo, pod `AUTO_NABIJA.skonciKw` dve merania = skončilo, medzera nad
 `medzeraMin` počíta odznova. Pri zmene pošle push tým, čo si to zapli v paneli Auto (`/auto-oznamenia`, `ao:`, začiatok
 a koniec zvlášť), v noci potichu (`autoTiche`, `silent` v `sw.js`). Appka si stav berie cez `/auto` pri každej obnove
-(`web/auto-nabija.js`). Počas nabíjania je dlaždica o behu s **oranžovou** ikonou (`data-zapnuty="nabija"`, `--nabija`) -
-zelenú majú len spotrebiče, o ktorých appka vie naisto. Dlaždica otvorí panel Auto (`tzVec` 'auto'), kým appka stav od
+(`web/auto-nabija.js`). Počas nabíjania je dlaždica o behu zapnutá ako spotrebič (`data-zapnuty="nabija"`, kruh vo farbe oblohy),
+oranžovú ikonu má len panel Auto (`--nabija`). Dlaždica otvorí panel Auto (`tzVec` 'auto'), kým appka stav od
 Workera má. Dobité a odpojené vyzerá rovnako, preto texty vždy „asi“. Meria sa len, keď sa Workera niekto pýta (zásuvka
 bojlera každú minútu, inak otvorená appka).
 

@@ -1206,10 +1206,14 @@ test.describe('bojler na prebytky', () => {
         await expect(dl).toHaveAttribute('data-tone', t.tone);
         await expect(dl).toContainText(t.meno);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
-        // Značka pri ikone: riadi appka. Bojler hreje, preto má zelenú ikonu a obrys (docs/navrhy/teraz-pole-noc-bezi.html, 3A).
+        // Značka pri ikone: riadi appka. Bojler hreje, preto má plný kruh ikony vo farbe oblohy (docs/navrhy/teraz-zapnuty-farba.html, I2).
         await expect(dl.locator('.dl-ico .dl-rz')).toHaveAttribute('data-rezim', 'appka');
         await expect(dl).toHaveAttribute('data-zapnuty', '');
-        await expect(dl.locator('.dl-ico')).toHaveCSS('color', 'rgb(185, 242, 140)');
+        await expect(dl.locator('.dl-ico')).toHaveCSS(
+            'background-color',
+            await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--s4').trim()),
+        );
+        await expect(dl).toHaveCSS('box-shadow', 'none');
         await expect(page.locator('#tz-co [data-vec="bojler"]'), 'bojler, ktorý riadi zásuvka, appka neradí').toHaveCount(1);
         await dl.click();
         const sheet = page.locator('#tz-bojler-sheet');
@@ -1244,7 +1248,7 @@ test.describe('bojler na prebytky', () => {
         await expect(sheet).toBeHidden();
         expect(errors).toEqual([]);
     });
-    test('auto sa nabíja (docs/navrhy/auto-nabija.html): oranžová ikona, dlaždica o behu a panel Auto; push ho obnoví hneď', async ({
+    test('auto sa nabíja (docs/navrhy/auto-nabija.html): kruh ikony vo farbe oblohy, dlaždica o behu a panel Auto; push ho obnoví hneď', async ({
         page,
     }) => {
         await page.addInitScript(
@@ -1278,7 +1282,10 @@ test.describe('bojler na prebytky', () => {
         const dl = page.locator('#tz-dlazdice [data-vec="auto"]');
         const t2 = autoDlazdicaNabija(beh, SITE.timezone);
         await expect(dl).toHaveAttribute('data-zapnuty', 'nabija');
-        await expect(dl.locator('.dl-ico')).toHaveCSS('color', 'rgb(255, 179, 92)');
+        await expect(dl.locator('.dl-ico')).toHaveCSS(
+            'background-color',
+            await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--s4').trim()),
+        );
         await expect(dl.locator('.velky')).toHaveText(`${t2.velky} ${t2.za}`);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t2.odr);
         expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });

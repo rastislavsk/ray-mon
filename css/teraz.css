@@ -1355,22 +1355,15 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
-/* Zapnutý spotrebič (docs/navrhy/teraz-pole-noc-bezi.html, 3A): beží, alebo bojleru zásuvka zapla relé. Ikona je
-   zelená na zelenom nádychu kruhu a dlaždica má jemný biely obrys - cez deň aj v noci. Farba stavu je len na ikone,
-   dlaždica ostáva na skle ako ostatné (rozhodnutie 21. 11. 2026, CLAUDE.md). */
-/* Obrys má pôsobiť ako pri zvolenom dni v páse dní (.hreben-dni button[aria-pressed='true']). Tam je ten istý 1,5 px
-   obrys na svetlejšej výplni a pri menšom zaoblení, takže na dlaždici s rovnakými číslami vyzeral tenší a tmavší -
-   preto je tu hrubší a svetlejší. */
-.dl[data-zapnuty] {
-    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.75);
-}
+/* Zapnutý spotrebič (docs/navrhy/teraz-zapnuty-farba.html, I2, 25. 11. 2026): beží, bojleru zásuvka zapla relé alebo
+   sa auto asi nabíja. Zapnutie povie len kruh s ikonou - plný vo farbe oblohy (--s4, tá istá ako ikona aktívnej karty
+   v navigácii) s tmavou ikonou a žiarou; dlaždica ostáva na skle ako ostatné, bez obrysu, cez deň aj v noci. Farba je
+   rovnaká pre spotrebiče aj auto, to, že nabíjanie je len odhad, hovoria texty („asi“). Tmavá ikona má na --s4 dosť
+   kontrastu vždy: jas --s4 je aspoň SKY.navJas. */
 .dl[data-zapnuty] .dl-ico {
-    color: var(--yes);
-    background: rgba(185, 242, 140, 0.2);
-}
-.dl[data-zapnuty='nabija'] .dl-ico {
-    color: var(--nabija);
-    background: rgba(255, 179, 92, 0.2);
+    color: var(--ink);
+    background: var(--s4);
+    box-shadow: 0 0 16px color-mix(in srgb, var(--s4) 65%, transparent);
 }
 /* Značka režimu bojlera na kraji kruhu s ikonou, kde bývala bodka stavu: ručne biely kruh s rukou, riadi appka
    slnko na tmavom kruhu. */
@@ -1662,7 +1655,7 @@
 }
 /* Panel Auto (docs/navrhy/auto-nabija.html, P2): os dňa s výrobou (plocha) a behmi nabíjania, posledný beh veľkými km,
    energia podľa zdroja, posledné nabíjania, súčty a dva vypínače oznámení. Pás, osi, zdroje a behy sú tie isté ako
-   v paneli Bojler dnes (.bj-*). Ikona pri nabíjaní oranžová ako na dlaždici. */
+   v paneli Bojler dnes (.bj-*). Ikona pri nabíjaní oranžová. */
 .auto-sheet[data-nabija] .vec-ico {
     color: var(--nabija);
 }
