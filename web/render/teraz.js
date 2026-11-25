@@ -101,8 +101,8 @@ function renderHreben(h, dom) {
  * riadky mriežky, takže číslo aj pásik sú v nich na rovnakej výške, a odrážky majú vždy miesto na dva riadky,
  * takže sú všetky dlaždice rovnako vysoké. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
  * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `rezim` značka pri ikone, kto bojler zapína.
- * Zapnutý spotrebič (beží, alebo bojler, ktorému zásuvka zapla relé) má zelenú ikonu a jemný obrys (`data-zapnuty`,
- * docs/navrhy/teraz-pole-noc-bezi.html, 3A). `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
+ * Zapnutý spotrebič (beží, bojler, ktorému zásuvka zapla relé, auto sa asi nabíja) má plný kruh ikony vo farbe oblohy
+ * (`data-zapnuty`, docs/navrhy/teraz-zapnuty-farba.html, I2). `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
  * (docs/navrhy/teraz-dlazdice-stlpce.html, B): ikona vedľa čísla a jedna odrážka, mriežku riadkov nezdieľa.
  * `oziv` je dlaždica, ktorej ikona po ťuknutí na oznámenie ožije, a ako (`data-oziv`, pohyb robí CSS).
  * @param {Dlazdica} d @param {string} [stlpec] @param {boolean} [pol] @param {Ozivenie | null} [oziv]

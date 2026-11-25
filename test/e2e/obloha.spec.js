@@ -1595,9 +1595,20 @@ test.describe('karta Teraz', () => {
         const posunuty = terazModel(vstupTeraz(time, { bezi: [{ id: 'pracka', d, m: 12 * 60 + 25, k: 14 * 60 + 25 }] }));
         const t = posunuty.co?.bezi[0];
         await expect(dlazdica).toHaveAttribute('data-tone', 'bezi');
-        // Bežiaci spotrebič má zelenú ikonu a obrys (docs/navrhy/teraz-pole-noc-bezi.html, 3A), sušička nie.
+        // Bežiaci spotrebič má plný kruh ikony vo farbe oblohy (docs/navrhy/teraz-zapnuty-farba.html, I2), sušička nie.
         await expect(dlazdica).toHaveAttribute('data-zapnuty', '');
-        await expect(dlazdica.locator('.dl-ico')).toHaveCSS('color', 'rgb(185, 242, 140)');
+        // Kruh vo farbe oblohy; --s4 má prechod, preto sa obe farby čítajú naraz.
+        await expect
+            .poll(() =>
+                dlazdica
+                    .locator('.dl-ico')
+                    .evaluate(
+                        (el) =>
+                            getComputedStyle(el).backgroundColor ===
+                            getComputedStyle(document.documentElement).getPropertyValue('--s4').trim(),
+                    ),
+            )
+            .toBe(true);
         await expect(page.locator('#tz-co [data-vec="susicka"]')).not.toHaveAttribute('data-zapnuty');
         await expect(dlazdica.locator('.velky')).toHaveText(`${t?.pred} ${t?.velky}`);
         // Práčka je polovica dvojice so sušičkou: jedna odrážka.
