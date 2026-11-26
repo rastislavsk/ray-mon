@@ -136,11 +136,11 @@ Rozhodnuté 21. 11. 2026: dlaždice spotrebičov na karte Teraz sú všetky na s
 (bodka + „Teraz zo slnka“) aj jeho panel s vysvetlením sú preč. `data-tone` na dlaždici ostáva ako údaj, štýl ho
 nefarbí; výnimkou je jantárový rám zásuvky bez spojenia (`chyba`). Úsek na osi v detaile a pás dní sú graf, tie farby majú.
 
-Druhá výnimka (25. 11. 2026, `docs/navrhy/teraz-zapnuty-farba.html`, F1 bez žiary): zapnutý spotrebič - beží („Už beží“), bojleru
+Druhá výnimka (26. 11. 2026, `docs/navrhy/teraz-zapnuty-farba.html`, F1 so žiarou): zapnutý spotrebič - beží („Už beží“), bojleru
 zásuvka zapla relé alebo sa auto asi nabíja - má len kruh s ikonou plný biely (`--zapnuty`)
-s tmavou ikonou, bez žiary (`data-zapnuty`); dlaždica je bez obrysu, deň v páse dní má obrys ďalej. Zelená a oranžová,
-farba celej dlaždice ani svietiace sklo neprešli. Kto bojler zapína
-(ruka / slnko, `.dl-rz`), je na kraji kruhu s ikonou; bodka stavu bojlera pri ikone je preč. V noci (`data-noc` na
+s tmavou ikonou a bielou žiarou (`data-zapnuty`); dlaždica je bez obrysu, deň v páse dní má obrys ďalej. Zelená a oranžová,
+farba celej dlaždice, svietiace sklo ani modrý prstenec neprešli. Kto bojler zapína, dlaždica neukazuje (značka ruka / slnko
+pri ikone zrušená 26. 11. 2026), povie to panel Bojler dnes; bodka stavu bojlera pri ikone je preč. V noci (`data-noc` na
 `#tz-co`) sú dlaždice na svetlom skle (2B), tmavé na nočnej oblohe nebolo vidno.
 
 Druh riadku plánu `sun` znamená naozaj „na slnku“. Vec, ktorá ide natvrdo po inej (sušička po práčke) a slnko jej

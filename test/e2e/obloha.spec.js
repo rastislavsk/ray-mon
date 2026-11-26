@@ -1598,7 +1598,7 @@ test.describe('karta Teraz', () => {
         // Bežiaci spotrebič má plný biely kruh ikony (docs/navrhy/teraz-zapnuty-farba.html, F1), sušička nie.
         await expect(dlazdica).toHaveAttribute('data-zapnuty', '');
         await expect(dlazdica.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
-        await expect(dlazdica.locator('.dl-ico')).toHaveCSS('box-shadow', 'none');
+        await expect(dlazdica.locator('.dl-ico')).toHaveCSS('box-shadow', 'rgba(242, 245, 251, 0.65) 0px 0px 16px 0px');
         await expect(page.locator('#tz-co [data-vec="susicka"]')).not.toHaveAttribute('data-zapnuty');
         await expect(dlazdica.locator('.velky')).toHaveText(`${t?.pred} ${t?.velky}`);
         // Práčka je polovica dvojice so sušičkou: jedna odrážka.

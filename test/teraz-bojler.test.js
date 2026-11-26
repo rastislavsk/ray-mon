@@ -108,7 +108,6 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
     assert.deepEqual(bojlerDlazdica(info(), NOW, TZ), {
         tone: 'go',
         riadi: 'bezi',
-        rezim: 'appka',
         velky: '2,2 kW',
         meno: 'Bojler',
         odr: ['hreje zo slnka', 'od 12:30'],
@@ -122,7 +121,6 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
     assert.deepEqual(bojlerDlazdica(info({ rele: false, w: 0, prebytokKw: -0.4 }), NOW, TZ), {
         tone: 'next',
         riadi: 'caka',
-        rezim: 'appka',
         velky: '0 kW',
         meno: 'Bojler',
         odr: ['čaká na slnko', 'zapne pri 2,3 kW'],
@@ -133,11 +131,10 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
     // Záznam zo včera sa nepočíta.
     const vcera = bojlerDlazdica(info({ w: 3, den: { ...DEN, den: '2026-11-14' } }), NOW, TZ);
     assert.deepEqual([vcera.velky, vcera.odr], ['0,0 kWh', ['nahriata', 'dnes zo slnka']]);
-    // Tichá zásuvka: režim nevieme, značka v rohu nie je.
+    // Tichá zásuvka.
     assert.deepEqual(bojlerDlazdica(info({ kontaktAt: NOW.getTime() - 18 * MIN }), NOW, TZ), {
         tone: 'chyba',
         riadi: 'mlci',
-        rezim: null,
         velky: '18 min',
         meno: 'Bojler',
         odr: ['zásuvka mlčí', 'skript alebo Wi-Fi'],
@@ -151,7 +148,6 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
     assert.deepEqual(rucne(), {
         tone: 'tiche',
         riadi: 'bezi',
-        rezim: 'rucne',
         velky: '2,2 kW',
         meno: 'Bojler',
         odr: ['hreje', 'od 12:30'],
@@ -162,7 +158,6 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
     assert.deepEqual(rucne({ w: 3 }), {
         tone: 'tiche',
         riadi: 'caka',
-        rezim: 'rucne',
         velky: '0,0 kW',
         meno: 'Bojler',
         odr: ['nahriata', 'dnes 3,9 kWh'],
@@ -173,7 +168,6 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
     assert.deepEqual(rucne(vyp), {
         tone: 'tiche',
         riadi: 'vyp',
-        rezim: 'rucne',
         velky: '0 kW',
         meno: 'Bojler',
         odr: ['vypnutý', 'od 11:25'],
@@ -181,7 +175,7 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
     });
     assert.deepEqual(rucne({ rele: false, w: 0, den: null }).odr, ['vypnutý']);
     const ticho = rucne({ kontaktAt: NOW.getTime() - 18 * MIN });
-    assert.deepEqual([ticho.rezim, ticho.odr[0]], [null, 'zásuvka mlčí']);
+    assert.equal(ticho.odr[0], 'zásuvka mlčí');
 });
 
 test('Čo riadi bojler? (Shelly / Ray-mon): riadok pod nadpisom a prepínač s popisom', () => {

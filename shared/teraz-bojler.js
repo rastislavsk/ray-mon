@@ -66,8 +66,6 @@ export const TERAZ_BOJLER_TEXTS = {
         nazov: 'Čo riadi bojler?',
         appka: 'Ray-mon',
         rucne: 'Shelly',
-        /** Značka pri ikone dlaždice pre čítačku. */
-        sr: { appka: 'riadi Ray-mon', rucne: 'riadi Shelly' },
         popisRucne: 'Zapína sa ručne alebo časovačom v appke Shelly. Ray-mon len zapisuje, čo bojler robí.',
         popisAppka: (/** @type {string} */ zap, /** @type {string} */ vyp) => `Zapne pri prebytku od ${zap} kW, vypne pod ${vyp} kW.`,
         chyba: 'Režim sa nepodarilo uložiť, ostal pôvodný.',
@@ -278,8 +276,8 @@ const vypnuteOd = (den) => {
 
 /**
  * Dlaždica v ručnom režime (docs/navrhy/teraz-auto-tok.html, ručný režim): na skle, bez rady -
- * hreje (príkon a od kedy), voda nahriata (dnešné kWh spolu) alebo vypnutý (od kedy). Že je to ručne,
- * ukáže značka pri ikone dlaždice (`rezim`), nie text.
+ * hreje (príkon a od kedy), voda nahriata (dnešné kWh spolu) alebo vypnutý (od kedy). Že je to ručne, povie
+ * panel Bojler dnes (Čo riadi bojler?), dlaždica nie (značka pri ikone zrušená 26. 11. 2026).
  * @param {BojlerInfo} b @param {'hreje' | 'hotovo' | 'caka' | 'vypnuty'} stav @param {import('./bojler.js').Den | null} den
  */
 function dlazdicaRucne(b, stav, den) {
@@ -310,10 +308,9 @@ function dlazdicaRucne(b, stav, den) {
  * číslo, meno, pásik (koľko dnes išlo zo slnka, `podiel` v %, kým dnes nehrial null) a najviac dve odrážky. Keď
  * Plán dňa vie, kedy zásuvka bojler zapne (`plan`, docs/navrhy/plan-dna-zive-data.html), čakajúci bojler povie
  * „zapne okolo …“ namiesto prahu.
- * `rezim` je značka pri ikone: kto bojler zapína (pri tichej zásuvke nevieme, null).
  * S teplomerom (docs/navrhy/bojler-teplota.html, T1) je veľké číslo teplota vody, keď ju zásuvka hlási.
  * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./plan-dna.js').BojlerPlan | null} [plan]
- * @returns {{ tone: string, riadi: string, rezim: 'appka' | 'rucne' | null, velky: string, meno: string, odr: string[], podiel: number | null }}
+ * @returns {{ tone: string, riadi: string, velky: string, meno: string, odr: string[], podiel: number | null }}
  */
 export function bojlerDlazdica(b, now, tz, plan = null) {
     const T = TERAZ_BOJLER_TEXTS;
@@ -325,7 +322,6 @@ export function bojlerDlazdica(b, now, tz, plan = null) {
         return {
             tone: 'chyba',
             riadi: 'mlci',
-            rezim: null,
             velky: ticho(now.getTime() - b.kontaktAt),
             meno,
             odr: [T.mlci, T.bezSpojenia],
@@ -334,7 +330,7 @@ export function bojlerDlazdica(b, now, tz, plan = null) {
     const voda = vodaTeraz(b, now.getTime());
     /** @template {{ velky: string }} D @param {D} d @returns {D} */
     const sVodou = (d) => (voda ? { ...d, velky: stupne(voda.t) } : d);
-    if (b.rucne) return { ...sVodou(dlazdicaRucne(b, stav, den)), rezim: 'rucne', meno, podiel };
+    if (b.rucne) return { ...sVodou(dlazdicaRucne(b, stav, den)), meno, podiel };
     const t =
         stav === 'caka'
             ? // Veľké číslo je odber bojlera ako v ostatných stavoch, prebytok, pri ktorom zapne, je v odrážke.
@@ -350,7 +346,7 @@ export function bojlerDlazdica(b, now, tz, plan = null) {
             : stav === 'hotovo'
               ? dlazdicaHotovo(b, den, !!voda)
               : dlazdicaHreje(b, den);
-    return { ...sVodou(t), rezim: 'appka', meno, podiel };
+    return { ...sVodou(t), meno, podiel };
 }
 
 /** Pozícia minúty na páse v % (orezaná na pás). @param {number} m */

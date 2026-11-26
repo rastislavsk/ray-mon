@@ -1355,38 +1355,14 @@
     font-weight: 600;
     font-variant-numeric: tabular-nums;
 }
-/* Zapnutý spotrebič (docs/navrhy/teraz-zapnuty-farba.html, F1 bez žiary, 25. 11. 2026): beží, bojleru zásuvka zapla
-   relé alebo sa auto asi nabíja. Zapnutie povie len kruh s ikonou - plný biely (--zapnuty) s tmavou ikonou, bez žiary,
-   rovnako veľký ako vypnutý; dlaždica ostáva na skle ako ostatné, bez obrysu, cez deň aj v noci. Farba je rovnaká pre
+/* Zapnutý spotrebič (docs/navrhy/teraz-zapnuty-farba.html, F1 so žiarou, 26. 11. 2026): beží, bojleru zásuvka zapla
+   relé alebo sa auto asi nabíja. Zapnutie povie len kruh s ikonou - plný biely (--zapnuty) s tmavou ikonou a bielou
+   žiarou, rovnako veľký ako vypnutý (väčší sa zdá len žiarou); dlaždica ostáva na skle ako ostatné, bez obrysu, cez deň aj v noci. Farba je rovnaká pre
    spotrebiče aj auto, to, že nabíjanie je len odhad, hovoria texty („asi“). */
 .dl[data-zapnuty] .dl-ico {
     color: var(--ink);
     background: var(--zapnuty);
-}
-/* Značka režimu bojlera na kraji kruhu s ikonou, kde bývala bodka stavu: ručne biely kruh s rukou, riadi appka
-   slnko na tmavom kruhu. */
-.dl-ico {
-    position: relative;
-}
-.dl-rz {
-    position: absolute;
-    top: -5px;
-    right: -9px;
-    width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: #1b2748;
-    color: #fff;
-}
-.dl-rz .vi {
-    width: 14px;
-    height: 14px;
-}
-.dl-rz[data-rezim='rucne'] {
-    background: #fff;
-    color: var(--ink);
+    box-shadow: 0 0 16px var(--zapnuty-ziara);
 }
 /* Panel Bojler dnes (docs/navrhy/bojler-panel.html, A): riadok stavu bez veľkých písmen, teplota a pás behov na jednej
    osi, energia podľa zdroja, behy zbalené a dole nastavenie. Farby zdrojov ako pásik dlaždice (.podiel): slnko zlaté,
