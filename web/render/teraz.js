@@ -171,7 +171,7 @@ function prvyVPlane(co) {
 }
 
 /**
- * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri inom dni hláška dňa (docs/navrhy/teraz-hlaska-dna.html), pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
+ * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pod poľom toku (renderTokPole) dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
  * vľavo práčka so sušičkou ako dvojica polovičných dlaždíc a umývačka podľa času, vpravo bojler a pod ním auto.
  * Poradie, z ktorého ľavý stĺpec vychádza: čo beží, čo ide teraz (alebo najbližšia vec), ďalšie spotrebiče
  * zvoleného dňa, čo dobehlo. Každá dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
@@ -182,8 +182,6 @@ function prvyVPlane(co) {
 function renderCo(co, dom, bojler, ciel) {
     show(dom.tzCo, !!co);
     if (!co) return;
-    show(dom.tzDen, !!co.den);
-    setText(dom.tzDenHlaska, co.den ?? '');
     const veci = dlazdiceCo(co, bojler);
     const html = dlazdiceHtml(veci, ozivenie(ciel, co, veci));
     setHtml(dom.tzDlazdice, html);
@@ -455,17 +453,19 @@ function renderScena(state, m, dom) {
 }
 
 /**
- * Pole toku energie pod pásom dní, len pri dnešku (docs/navrhy/teraz-pole-noc-bezi.html, 1A): stojí na mieste
- * hlavičky iného dňa, takže dlaždice sú v každom dni na tej istej výške. Ťuknutie otvorí panel Elektrina teraz,
- * keď je čo ukázať (meranie elektromera hovorí, kam tečie sieť), inak je tlačidlo vypnuté.
+ * Pole toku energie pod pásom dní (docs/navrhy/teraz-pole-noc-bezi.html, 1A): dnes slnko → dom → sieť teraz v kW, iný deň
+ * to isté za celý deň v kWh so stojacími šípkami (docs/navrhy/teraz-pole-ine-dni.html, B). V každom dni je rovnako
+ * vysoké, takže dlaždice stoja na tej istej výške. Ťuknutie otvorí panel Elektrina teraz, keď je čo ukázať (dnes
+ * a meranie elektromera hovorí, kam tečie sieť), inak je tlačidlo vypnuté.
  * @param {ReturnType<typeof scenaModel> | null} s @param {Model['co']} co @param {Dom} dom
  */
 function renderTokPole(s, co, dom) {
-    const ukaz = !!s && !!co && !co.den;
+    const ukaz = !!s && !!co;
     show(dom.tzTok, ukaz);
-    if (!s || !ukaz) return;
-    setHtml(dom.tzTok, tokPoleHtml(s));
-    dom.tzTok.disabled = !s.siet;
+    if (!s || !co) return;
+    setHtml(dom.tzTok, co.den ? tokPoleHtml(co.den, { jednotka: 'kWh', stoji: true }) : tokPoleHtml(s));
+    dom.tzTok.toggleAttribute('data-den', !!co.den);
+    dom.tzTok.disabled = !!co.den || !s.siet;
 }
 
 /**

@@ -123,11 +123,13 @@ Oznámenie o konci (`web/koniec.js`, `POST /koniec`) posiela Durable Object `Bud
 ohrevu (`zmenaOhrevu` v `shared/bojler.js`) telefónom, ktoré si to zaplí v paneli Bojler dnes (`POST /bojler-oznamenia`).
 Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull requestom (`worker/README.md`).
 
-## Hláška iného dňa na karte Teraz
+## Tok iného dňa na karte Teraz
 
-Iný deň v páse nemá nad dlaždicami meno a dátum (to povie zvolený čip), ale hlášku podľa triedy dňa (`denTriedaDna`)
-zo sady `DEN_WORDS.iny` - bez mena dňa, aby sedela na zajtra aj o tri dni (23. 11. 2026). Pravidlá s „novou vecou“
-(najlepší deň, posledné slnko, dážď…) z PR #525 boli zrušené, používateľovi sa nepáčili. Dnešok má pod pásom pole toku.
+Iný deň v páse nemá nad dlaždicami meno, dátum ani hlášku, ale pole toku ako dnešok (`docs/navrhy/teraz-pole-ine-dni.html`, B, 26. 11. 2026): slnko → dom → sieť za celý deň v celých kWh so stojacími šípkami (`tokDnaModel` v `shared/teraz-scena.js`,
+`tokDna` v `shared/teraz.js`, kreslí to isté `tokPoleHtml` do `#tz-tok`, vtedy s `data-den` a vypnuté). Slnko je predpoveď dňa,
+dom naučený profil (bez učenia `HOUSE_BASE_KW`) + bojler podľa `potrebaBojlera` + typický program každého ďalšieho spotrebiča
+Plánu dňa (auto nie), sieť je rozdiel zaokrúhlených čísel - netto za deň. Hláška triedy dňa (`DEN_WORDS.iny`) ostala len
+na karte Dnes; pravidlá s „novou vecou“ z PR #525 boli zrušené už predtým.
 
 ## Dlaždice bez farby stavu
 
@@ -225,10 +227,10 @@ alebo scény, zmeň aj ju. Sneh sú náhodné vločky vo veľkých dlaždiciach 
 semienkom vo `web/pocasie.js`. Elektráreň a vedenie kreslí
 `web/render/teraz-scena.js`, čo kresliť (čísla, lúče, body), počíta `shared/teraz-scena.js`. Panely na kresbe
 hľadia doľava, preto slnko živej oblohy svieti z ľavého horného rohu (`--wx-sx` v `css/zaklad.css`) a krajina je
-zrkadlová. Scéna čísla nemá: sú v poli toku `#tz-tok` pod pásom dní, len pri dnešku (`tokPoleHtml`, 22. 11. 2026,
+zrkadlová. Scéna čísla nemá: sú v poli toku `#tz-tok` pod pásom dní (`tokPoleHtml`, 22. 11. 2026,
 `docs/navrhy/teraz-pole-noc-bezi.html`, 1A) - slnko → dom → sieť, bez slov, biele ako všetok text na holej oblohe,
-medzi nimi vedenie s impulzom smerom toku. Pole je presne také vysoké ako hlavička iného dňa (44 px), aby dlaždice
-stáli v každom dni na tej istej výške. Ťuknutie na pole aj na scénu otvorí panel Elektrina teraz (s elektromerom).
+medzi nimi vedenie s impulzom smerom toku. Iný deň má v tom istom poli tok celého dňa (pozri vyššie), takže dlaždice
+stoja v každom dni na tej istej výške. Ťuknutie na pole aj na scénu otvorí panel Elektrina teraz (s elektromerom).
 Číslo, ktoré appka pozná, je tam vždy, aj nulové („0,0“; `cisla` v modeli scény). Impulzy na vedení scény (výboj s chvostom) sú SMIL, nie CSS -
 pri obmedzenom pohybe ich preto skrýva CSS a ukáže šípku smeru; v poli toku je impulz CSS a pri obmedzenom pohybe
 tiež ustúpi šípke. Bodka stavu merania je v hlavičke za miestom (na stred riadku),

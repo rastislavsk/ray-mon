@@ -293,14 +293,10 @@ test('karta Teraz so zvoleným dňom: plán toho dňa, dnešok ostáva v hornej 
     const i = input(DVA_DNI);
     const utorok = terazModel(i, { den: 3 });
     assert.equal(utorok.hreben?.zvoleny, 3);
-    assert.equal(utorok.co?.den, 'Oskar na plný koule');
     assert.ok(utorok.co?.riadky.every((r) => r.kind === 'later'));
     assert.ok(utorok.veci.every((v) => v.den === 'Utorok'));
     assert.equal(utorok.num, terazModel(i).num, 'číslo je vždy teraz');
     const nedela = terazModel(i, { den: 1 });
-    assert.equal(nedela.co?.den, 'ÚPLNE NAHOVNO');
-    assert.equal(terazModel(i, { den: 1, voice: 'slusny' }).co?.den, 'Takmer nič nevyrobíme');
-    assert.equal(terazModel(i, { den: 3, voice: 'slusny' }).co?.den, 'Dosť slnka aj s rezervou');
     assert.ok(nedela.co?.riadky.every((r) => r.kind === 'nudza'));
     const mimo = terazModel(i, { den: 99 });
     assert.equal(mimo.hreben?.zvoleny, 0);
@@ -309,6 +305,18 @@ test('karta Teraz so zvoleným dňom: plán toho dňa, dnešok ostáva v hornej 
     const poPolnoci = terazModel({ ...input({}), now: new Date('2026-09-06T00:30:00+02:00') }, { den: 2 });
     assert.equal(poPolnoci.hreben, null);
     assert.equal(poPolnoci.co?.den, null);
+});
+
+test('karta Teraz so zvoleným dňom: tok dňa pod pásom dní', () => {
+    const i = input(DVA_DNI);
+    const utorok = terazModel(i, { den: 3 });
+    const nedela = terazModel(i, { den: 1 });
+    // Tok dňa (docs/navrhy/teraz-pole-ine-dni.html, B): dom bez učenia 24 h × HOUSE_BASE_KW a programy práčky, umývačky a sušičky.
+    assert.deepEqual(utorok.co?.den?.cisla, { slnko: '54', dom: '14', siet: { k: 'von', kw: '40' } });
+    assert.equal(utorok.co?.den?.popis, 'Za deň zo slnka asi 54 kWh, dom spotrebuje 14 kWh, do siete pôjde 40 kWh');
+    // Bojler doma pridá svoju potrebu (bez učenia program bojlera, 2 kWh).
+    assert.equal(terazModel(i, { den: 3, devices: [...DEVICES, 'bojler'] }).co?.den?.cisla.dom, '16');
+    assert.deepEqual(nedela.co?.den?.cisla, { slnko: '2', dom: '14', siet: { k: 'dnu', kw: '12' } });
 });
 
 test('texty týždňa: odznak a núdzový čas v oboch tónoch', () => {

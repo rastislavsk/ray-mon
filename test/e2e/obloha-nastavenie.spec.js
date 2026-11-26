@@ -1191,14 +1191,16 @@ test.describe('bojler na prebytky', () => {
         await expect(tokSheet).toBeVisible();
         await page.keyboard.press('Escape');
         await expect(tokSheet).toBeHidden();
-        // Pole stojí na mieste hlavičky iného dňa: dlaždice sú dnes aj zajtra na tej istej výške.
+        // Iný deň má v tom istom poli tok celého dňa (docs/navrhy/teraz-pole-ine-dni.html, B): dlaždice sú dnes aj zajtra na tej istej výške.
         const hore = () => page.locator('#tz-dlazdice').evaluate((el) => Math.round(el.getBoundingClientRect().top + scrollY));
         const dnes = await hore();
         await page.locator('#tz-hreben-dni [data-den="1"]').click();
-        await expect(pole).toBeHidden();
+        await expect(pole).toHaveAttribute('data-den', '');
+        await expect(pole).toBeDisabled();
         expect(await hore()).toBe(dnes);
         await page.locator('#tz-hreben-dni [data-den="0"]').click();
-        await expect(pole).toBeVisible();
+        await expect(pole).not.toHaveAttribute('data-den');
+        await expect(pole).toBeEnabled();
         // Všetky dlaždice v tvare Bojlera (A3): s veľkým číslom.
         await expect(page.locator('#tz-dlazdice .dl .velky')).toHaveCount(await page.locator('#tz-dlazdice .dl').count());
         const t = bojlerDlazdica(info, FIXED_NOW, SITE.timezone);

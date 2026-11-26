@@ -175,21 +175,22 @@ const SVG = `<svg viewBox="0 0 ${SCENA.w} ${SCENA.h}" preserveAspectRatio="xMidY
 
 /**
  * Pole toku energie pod pásom dní (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť, pri každom
- * číslo v kW a medzi nimi vedenie s impulzom smerom toku - zo slnka do domu zlatý, do siete zlatý, zo siete
+ * číslo a medzi nimi vedenie s impulzom smerom toku - zo slnka do domu zlatý, do siete zlatý, zo siete
  * modrobiely. Čísla sú tie isté ako predtým v scéne (`cisla` v modeli), bez slov; čítačka dostane namiesto nich vetu
  * (`popis`) - je to meno tlačidla.
  * Bez elektromera je tam len slnko, bez toku zo siete či do nej vedenie bez impulzu. Impulz je CSS, pri obmedzenom
- * pohybe ho CSS skryje a ukáže šípku smeru.
- * @param {Scena} s
+ * pohybe ho CSS skryje a ukáže šípku smeru. Iný deň (docs/navrhy/teraz-pole-ine-dni.html, B) je za celý deň v kWh
+ * a na vedení stojí šípka (`stoji`) - deň ešte nezačal, nič netečie.
+ * @param {Pick<Scena, 'cisla' | 'luce' | 'popis'>} s @param {{ jednotka?: string, stoji?: boolean }} [o]
  */
-export function tokPoleHtml(s) {
+export function tokPoleHtml(s, { jednotka = 'kW', stoji = false } = {}) {
     const { slnko, dom, siet } = s.cisla;
     /** @param {'slnko' | 'dom' | 'stlp'} id @param {string} v @param {string} k */
-    const uzol = (id, v, k) => `<span class="tp-u" data-k="${k}">${tokIcon(id)}<b>${escapeHtml(v)}</b><small>kW</small></span>`;
+    const uzol = (id, v, k) => `<span class="tp-u" data-k="${k}">${tokIcon(id)}<b>${escapeHtml(v)}</b><small>${jednotka}</small></span>`;
     /** @param {'von' | 'dnu' | null} smer */
     const ved = (smer) =>
         smer
-            ? `<span class="tp-v" data-smer="${smer}"><i class="tp-imp"></i><i class="tp-sipka"></i></span>`
+            ? `<span class="tp-v" data-smer="${smer}"${stoji ? ' data-stoji' : ''}>${stoji ? '' : '<i class="tp-imp"></i>'}<i class="tp-sipka"></i></span>`
             : '<span class="tp-v"></span>';
     let o = slnko ? uzol('slnko', slnko, 'slnko') : '';
     if (dom) o += ved(s.luce ? 'von' : null) + uzol('dom', dom, 'dom');

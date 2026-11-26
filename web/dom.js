@@ -160,8 +160,6 @@ function terazDom() {
         tzHreben: byId('tz-hreben'),
         tzHrebenDni: byId('tz-hreben-dni'),
         tzTok: /** @type {HTMLButtonElement} */ (byId('tz-tok')),
-        tzDen: byId('tz-den'),
-        tzDenHlaska: byId('tz-den-hlaska'),
         tzDlazdice: byId('tz-dlazdice'),
         tzVecSheet: /** @type {HTMLDialogElement} */ (byId('tz-vec-sheet')),
         tzVecIco: byId('tz-vec-ico'),
