@@ -61,6 +61,8 @@
     --zapnuty: #f2f5fb;
     /* Žiara okolo neho: tá istá biela, 65 %. */
     --zapnuty-ziara: rgba(242, 245, 251, 0.65);
+    /* Biely obrys zvoleného dňa v páse dní aj zapnutej dlaždice na karte Teraz - majú vyzerať rovnako. */
+    --obrys-zvoleny: inset 0 0 0 1.5px rgba(255, 255, 255, 0.55);
     --ink: #0b1430;
     /* Čitateľnosť (WCAG, aspoň 4,5 : 1 pri každej oblohe - test/contrast.test.js ich prejde
        všetky). Text priamo na oblohe je vždy biely: stmavený spodok (--s3) je spočítaný práve
