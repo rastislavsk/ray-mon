@@ -167,8 +167,10 @@ Druhá výnimka (26. 11. 2026, `docs/navrhy/teraz-zapnuty-farba.html`, F1 so ži
 zásuvka zapla relé alebo sa auto asi nabíja - má len kruh s ikonou plný biely (`--zapnuty`)
 s tmavou ikonou a bielou žiarou (`data-zapnuty`) a dlaždica má biely obrys ako zvolený deň v páse dní (`--obrys-zvoleny`, 26. 11. 2026). Zelená a oranžová,
 farba celej dlaždice, svietiace sklo ani modrý prstenec neprešli. Kto bojler zapína, dlaždica neukazuje (značka ruka / slnko
-pri ikone zrušená 26. 11. 2026), povie to panel Bojler dnes; bodka stavu bojlera pri ikone je preč. V noci (`data-noc` na
-`#tz-co`) sú dlaždice na svetlom skle (2B), tmavé na nočnej oblohe nebolo vidno.
+pri ikone zrušená 26. 11. 2026), povie to panel Bojler dnes; bodka stavu bojlera pri ikone je preč. Sklo dlaždíc
+počíta render s oblohou (`skySklo` v `shared/sky.js`, `--dl-sklo`, `docs/navrhy/teraz-dlazdice-sklo.html`, 1, 26. 11. 2026):
+tmavé, kým stačí, aby sa dlaždica od oblohy líšila aspoň `SKY.sklo.kontrast`, v tmavej noci svetlé. Pevné svetlé sklo
+po západe slnka (2B) na sivej oblohe súmraku splynulo.
 
 Druh riadku plánu `sun` znamená naozaj „na slnku“. Vec, ktorá ide natvrdo po inej (sušička po práčke) a slnko jej
 nedá ani `PLAN_DNA.zoSiete`, má druh `siet` (`zoSieteNatvrdo` v `shared/plan-dna.js`) - predtým bola `sun` a appka

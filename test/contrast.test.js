@@ -12,7 +12,7 @@ import {
     parseColor,
     textContrast,
 } from '../shared/contrast.js';
-import { skyAt, skyColors, skyNav, skyNow, skyShade } from '../shared/sky.js';
+import { skyAt, skyColors, skyNav, skyNow, skyShade, skySklo } from '../shared/sky.js';
 import { localToUtc } from '../shared/solar.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -155,6 +155,53 @@ test('čitateľnosť: každý text na každej oblohe dňa, v každej výške obr
         ),
     );
     assert.deepEqual(zle.slice(0, 20), []);
+});
+
+test('skySklo: dlaždica sa od každej oblohy dňa v každej výške od SKY.sklo.od líši aspoň SKY.sklo.kontrast a text na nej je čitateľný', () => {
+    const t = cssTokens();
+    // Tmavé sklo s najmenším krytím je --glass - jedno miesto pravdy pre farbu skla.
+    const [r, g, b] = parseColor(SKY.sklo.farba);
+    assert.equal(t['--glass'], `rgba(${r}, ${g}, ${b}, ${SKY.sklo.min})`);
+    // Text na dlaždici je biely (css/teraz.css), farebný má len odznak na vlastnom pozadí.
+    const onGlass = ['#fff'];
+    const heights = Array.from({ length: 51 }, (_, i) => i / 50).filter((h) => h >= SKY.sklo.od);
+    const zle = everySky().flatMap(({ name, sky }) =>
+        heights.flatMap((h) => {
+            const bg = skyAt(sky, h);
+            const dl = over(parseColor(sky.sklo), bg);
+            const tvar = textContrast(parseColor(sky.sklo), bg);
+            return [
+                ...(tvar < SKY.sklo.kontrast ? [`${name}, výška ${h}: dlaždica ${tvar.toFixed(2)} : 1`] : []),
+                ...onGlass
+                    .map((c) => textContrast(parseColor(c), dl))
+                    .filter((x) => x < CONTRAST_TEXT)
+                    .map((x) => `${name}, výška ${h}: text ${x.toFixed(2)} : 1`),
+            ];
+        }),
+    );
+    assert.deepEqual(zle.slice(0, 20), []);
+});
+
+test('skySklo: cez deň takmer obyčajné sklo, sivý súmrak tmavšie, tmavá noc svetlé', () => {
+    const den = skyColors(localToUtc('2026-09-05', 13 * 60, SITE.timezone), SITE, 'jasno');
+    assert.ok(parseColor(den.sklo)[3] <= SKY.sklo.min + 0.05, den.sklo);
+    // Zamračený súmrak 26. 11. 2026 o 16:26 (docs/navrhy/teraz-dlazdice-sklo.html): sivá obloha, tmavšie sklo.
+    const sumrak = skyColors(localToUtc('2026-11-26', 16 * 60 + 26, SITE.timezone), SITE, 'zamracene');
+    const s = parseColor(sumrak.sklo);
+    assert.deepEqual(s.slice(0, 3), parseColor(SKY.sklo.farba).slice(0, 3));
+    assert.ok(s[3] > SKY.sklo.min);
+    // Najmenej, čo stačí: o stotinu menej krytia by tvar dlaždice niekde splynul.
+    const menej = /** @type {import('../shared/contrast.js').Rgba} */ ([s[0], s[1], s[2], s[3] - 0.01]);
+    const heights = Array.from({ length: 51 }, (_, i) => i / 50).filter((h) => h >= SKY.sklo.od);
+    assert.ok(heights.some((h) => textContrast(menej, skyAt(sumrak, h)) < SKY.sklo.kontrast));
+    const noc = skyColors(localToUtc('2026-12-21', 23 * 60, SITE.timezone), SITE, 'jasno');
+    assert.ok(parseColor(noc.sklo)[0] > 50, `v noci svetlé sklo, je ${noc.sklo}`);
+});
+
+test('skySklo: keď nestačí nič, sklo s najväčším rozdielom', () => {
+    // Obloha od čiernej po bielu: tmavé sklo splynie hore, svetlé dole - vyhrá menej zlé.
+    const k = parseColor(skySklo('#000000', '#ffffff', 'rgba(0, 0, 0, 0)'));
+    assert.ok(k[3] > 0);
 });
 
 test('skyNav: svetlý obzor ostane, tmavý sa zosvetlí na SKY.navJas a najmenej, ako treba', () => {

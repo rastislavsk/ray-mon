@@ -29,6 +29,7 @@ function renderSky(state, dom) {
     dom.root.style.setProperty('--s2', sky.bottom);
     dom.root.style.setProperty('--s3', sky.shade);
     dom.root.style.setProperty('--s4', sky.nav);
+    dom.root.style.setProperty('--dl-sklo', sky.sklo);
     // Stavový riadok telefónu má farbu vrchu oblohy - Android pod neho stránku nepustí.
     if (dom.themeColor.content !== sky.top) dom.themeColor.content = sky.top;
     dom.root.dataset.sky = sky.weather ?? 'offline';

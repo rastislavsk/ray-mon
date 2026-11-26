@@ -2557,7 +2557,6 @@ test.describe('počasie v pozadí karty Teraz', () => {
         if (den.dazd) await expect(page.locator('#wx')).toHaveAttribute('data-dazd', den.dazd);
         else await expect(page.locator('#wx')).not.toHaveAttribute('data-dazd');
         await expect(page.locator('#wx')).not.toHaveAttribute('data-noc');
-        await expect(page.locator('#tz-co')).not.toHaveAttribute('data-noc');
         // Kresba je dekorácia: čítačka ju nevidí a dotyk prejde cez ňu.
         await expect(page.locator('#wx')).toHaveAttribute('aria-hidden', 'true');
         expect(await page.locator('#wx').evaluate((el) => getComputedStyle(el).pointerEvents)).toBe('none');
@@ -2589,9 +2588,11 @@ test.describe('počasie v pozadí karty Teraz', () => {
         const errors = await openTeraz(page, { time: vecer });
         expect(terazModel(vstupTeraz(vecer)).pocasie?.mesiac, 'o 22:30 ešte nevyšiel do poľa').toBeNull();
         await expect(page.locator('#wx')).toHaveAttribute('data-noc', '');
-        // Dlaždice v noci na svetlom skle (docs/navrhy/teraz-pole-noc-bezi.html, 2B).
-        await expect(page.locator('#tz-co')).toHaveAttribute('data-noc', '');
-        await expect(page.locator('#tz-dlazdice .dl').first()).toHaveCSS('background-image', /rgba\(255, 255, 255, 0\.1\)/);
+        // Sklo dlaždíc podľa oblohy (docs/navrhy/teraz-dlazdice-sklo.html, 1): na tmavej nočnej oblohe vyjde svetlé.
+        const sklo = await page.evaluate(() => document.documentElement.style.getPropertyValue('--dl-sklo'));
+        expect(sklo).toMatch(/^rgba\(/);
+        await expect(page.locator('#tz-dlazdice .dl').first()).toHaveCSS('background-color', sklo);
+        expect(Number(sklo.slice(5).split(',')[0]), 'svetlé sklo').toBeGreaterThan(50);
         await expect(page.locator('#wx .wx-moon svg')).toHaveCount(0);
         await expect(page.locator('#wx .wx-moonglow svg')).toHaveCount(0);
         await expect(page.locator('#wx .wx-halo')).toBeHidden();
