@@ -91,9 +91,14 @@ function dlazdica(v, w, h, seed) {
         `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'><defs><linearGradient id='g' x2='0' y2='1'>` +
         `<stop offset='0' stop-color='#fff' stop-opacity='0'/><stop offset='.65' stop-color='#fff' stop-opacity='.75'/>` +
         `<stop offset='1' stop-color='#fff'/></linearGradient>${rozmaz}</defs><g fill='url(#g)'${v.blur ? " filter='url(#f)'" : ''}>${cesty}</g></svg>`;
-    // Kódujú sa aj apostrofy: masky stoja v atribúte style ohraničenom apostrofmi.
-    return `url("data:image/svg+xml,${svg.replace(/[#<>%']/g, (c) => '%' + c.charCodeAt(0).toString(16))}")`;
+    return obrazok(svg);
 }
+
+/**
+ * SVG ako obrázok pre CSS. Kódujú sa aj apostrofy: masky stoja v atribúte style ohraničenom apostrofmi.
+ * @param {string} svg
+ */
+const obrazok = (svg) => `url("data:image/svg+xml,${svg.replace(/[#<>%']/g, (c) => '%' + c.charCodeAt(0).toString(16))}")`;
 
 /** Masky kvapiek pre všetky sily ako premenné CSS (--kv<vrstva>-<sila>); počítajú sa raz. */
 let masky = '';
@@ -108,20 +113,99 @@ function maskyKvapiek() {
 }
 
 /**
+ * Sneh (docs/navrhy/pocasie-sneh-slnko-zem.html, A): vločky náhodne rozhodené vo veľkých dlaždiciach, aby nebolo
+ * vidno mriežku, v troch hĺbkach - ďaleko veľa drobných a pomalých, blízko málo väčších, rozmazaných a rýchlejších.
+ * Počet `n`, polomer a jas od-do, rozmazanie a dlaždica w × h px; čas pádu a kývanie určuje css/pocasie.css.
+ */
+const VLOCKY = [
+    { n: 70, r: [0.6, 1.2], al: [0.35, 0.7], blur: 0.3, w: 300, h: 300 },
+    { n: 26, r: [1.3, 2.2], al: [0.55, 0.85], blur: 0.5, w: 340, h: 340 },
+    { n: 7, r: [1.3, 1.9], al: [0.7, 0.95], blur: 0.6, w: 420, h: 420 },
+];
+
+/**
+ * Dlaždica vločiek ako maska; vločka, ktorá presahuje okraj, má kópiu na druhej strane.
+ * @param {(typeof VLOCKY)[number]} v @param {number} seed
+ */
+function dlazdicaVlociek({ n, r: [r0, r1], al: [a0, a1], blur, w, h }, seed) {
+    const r = nahoda(seed);
+    const f = (/** @type {number} */ x) => +x.toFixed(1);
+    let kruhy = '';
+    for (let i = 0; i < n; i++) {
+        const x = r() * w;
+        const y = r() * h;
+        const rr = r0 + (r1 - r0) * r();
+        const al = (a0 + (a1 - a0) * r()).toFixed(2);
+        for (const dx of [-w, 0, w])
+            for (const dy of [-h, 0, h]) {
+                const xx = x + dx;
+                const yy = y + dy;
+                if (xx + 2 * rr < 0 || xx - 2 * rr > w || yy + 2 * rr < 0 || yy - 2 * rr > h) continue;
+                kruhy += `<circle fill-opacity='${al}' cx='${f(xx)}' cy='${f(yy)}' r='${rr.toFixed(2)}'/>`;
+            }
+    }
+    return obrazok(
+        `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'><defs><filter id='f' x='-1' y='-1' width='3' height='3'>` +
+            `<feGaussianBlur stdDeviation='${blur}'/></filter></defs><g fill='#fff' filter='url(#f)'>${kruhy}</g></svg>`,
+    );
+}
+
+/** Masky vločiek ako premenné CSS (--vs<vrstva>); počítajú sa raz. */
+let vlocky = '';
+function maskyVlociek() {
+    if (!vlocky) vlocky = VLOCKY.map((v, i) => `--vs${i}:${dlazdicaVlociek(v, 11 + 37 * i)}`).join(';');
+    return vlocky;
+}
+
+/**
+ * Lúče slnka (docs/navrhy/pocasie-sneh-slnko-zem.html, A): kužeľový prechod, v ktorom má každý lúč náhodný
+ * uhol, šírku aj silu - pevné semienko, takže je kresba vždy rovnaká. Medzera a šírka v stupňoch, sila od-do.
+ * Prvá vrstva sú úzke jasné lúče, druhá široké slabé; točia sa proti sebe (css/pocasie.css).
+ */
+const LUCE = [
+    { seed: 3, medzera: [3, 16], sirka: [0.5, 2.2], al: [0.18, 0.55] },
+    { seed: 9, medzera: [8, 30], sirka: [2, 5], al: [0.1, 0.28] },
+];
+
+/** @param {(typeof LUCE)[number]} v @returns {string} */
+function kuzelLucov({ seed, medzera: [m0, m1], sirka: [s0, s1], al: [a0, a1] }) {
+    const r = nahoda(seed);
+    const f = (/** @type {number} */ x) => x.toFixed(2);
+    const stopy = [];
+    let u = r() * 10;
+    while (u < 360) {
+        const z = Math.min(360, u + s0 + (s1 - s0) * r());
+        const a = (a0 + (a1 - a0) * r()).toFixed(2);
+        stopy.push(`transparent ${f(u)}deg`, `rgba(var(--wx-ray),${a}) ${f((u + z) / 2)}deg`, `transparent ${f(z)}deg`);
+        u = z + m0 + (m1 - m0) * r();
+    }
+    return `conic-gradient(${stopy.join(',')})`;
+}
+
+/** Lúče oboch vrstiev; počítajú sa raz. */
+let luce = /** @type {string[]} */ ([]);
+function kuzeleLucov() {
+    if (!luce.length) luce = LUCE.map(kuzelLucov);
+    return luce;
+}
+
+/**
  * Vrstvy kresby: rozptýlené svetlo, mesiac a hviezdy, slnko s lúčmi, oblaky, stmavenie pri daždi
- * a zrážky (tie v obale, ktorý končí nad vetou pod číslom). Kvapky dostanú masky všetkých síl
+ * a zrážky (tie v obale, ktorý končí pri zemi - na Teraz za kopcom scény, na Dnes nad čiarou posuvníka). Kvapky dostanú masky všetkých síl
  * dažďa naraz a silu vyberie CSS podľa data-dazd, takže zmena sily HTML nemení. Hviezdy a Mesiac do
  * ich vrstiev zapisuje render zvlášť (hviezdySvg, mesiacSvg), aby ich posun nereštartoval pohyb oblakov.
  */
 export function pocasieHtml() {
     return (
         '<i class="wx-diffuse"></i><i class="wx-moonglow"></i><i class="wx-stars"></i><i class="wx-stars2"></i><i class="wx-moon"></i>' +
-        '<i class="wx-halo"></i><i class="wx-rays wx-r2"></i><i class="wx-rays wx-r1"></i><i class="wx-flare"></i>' +
+        `<i class="wx-halo"></i><i class="wx-rays wx-r2" style="--luce:${kuzeleLucov()[1]}"></i>` +
+        `<i class="wx-rays wx-r1" style="--luce:${kuzeleLucov()[0]}"></i><i class="wx-flare"></i>` +
         '<i class="wx-deck"></i><i class="wx-cloud wx-c2"></i><i class="wx-cloud wx-c1"></i><i class="wx-cloud wx-c3"></i>' +
         '<i class="wx-sero"></i>' +
         `<div class="wx-prec"><i class="wx-zavoj"></i><div class="wx-dazd" style='${maskyKvapiek()}'>` +
         '<i class="wx-kv wx-kv0"></i><i class="wx-kv wx-kv1"></i><i class="wx-kv wx-kv2"></i></div>' +
-        '<i class="wx-snow wx-snow1"></i><i class="wx-snow wx-snow2"></i></div>'
+        `<div class="wx-sneh" style='${maskyVlociek()}'>` +
+        '<i class="wx-vs wx-vs0"><i></i></i><i class="wx-vs wx-vs1"><i></i></i><i class="wx-vs wx-vs2"><i></i></i></div></div>'
     );
 }
 

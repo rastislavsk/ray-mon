@@ -157,7 +157,7 @@ button:focus-visible {
     font-variation-settings: 'wdth' 100;
 }
 /* Počasie v pozadí karty Teraz: tóny a polohy tejto appky. Na oblohe je slnko aj oblak biely,
-   obzor oblohy je pri čiare pod číslom, zrážky končia nad vetou pod číslom. Slnko svieti z ľavého horného
+   obzor oblohy je pri čiare pod číslom, zrážky končia za kopcom scény. Slnko svieti z ľavého horného
    rohu: v scéne toku energie je tam elektráreň a panely domu hľadia doľava (docs/navrhy/teraz-tok-energie.html). */
 .wx {
     --wx-sx: -14px;
@@ -170,7 +170,11 @@ button:focus-visible {
     --wx-cl-dark: 70, 88, 115;
     --wx-drop: 235, 242, 255;
     --wx-obzor: calc(max(16px, env(safe-area-inset-top)) + 203px);
-    --wx-prec-h: calc(env(safe-area-inset-top) + 177px);
+    /* Dážď a sneh padajú až za kopec scény (docs/navrhy/pocasie-sneh-slnko-zem.html, A): hlavička so scénou je
+       max(16px, safe-area) + 63px + --scena-h (zaklad.css), zrážky končia 26 px nad spodkom scény, kde ich už kryje
+       plná zem, a strácajú sa len posledných 40 px. */
+    --wx-prec-h: calc(max(16px, env(safe-area-inset-top)) + 63px + var(--scena-h) - 26px);
+    --wx-prec-zmiz: 40px;
 }
 .wx[data-noc] {
     --wx-cl: 170, 180, 210;

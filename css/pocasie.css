@@ -73,20 +73,16 @@
         transparent 520px
     );
 }
+.wx-rays {
+    background: var(--luce);
+}
+/* Lúče sú nepravidelné (každý iný uhol, šírka a sila, web/pocasie.js) a dve vrstvy sa točia proti sebe, takže sa
+   pomaly prelínajú (docs/navrhy/pocasie-sneh-slnko-zem.html, A). */
 .wx-r1 {
-    background: repeating-conic-gradient(
-        from 3deg,
-        transparent 0deg,
-        rgba(var(--wx-ray), 0.5) 0.9deg,
-        transparent 2.6deg 9deg,
-        rgba(var(--wx-ray), 0.28) 10deg,
-        transparent 11.2deg 17deg
-    );
-    animation: wx-spin 240s steps(3600) infinite;
+    animation: wx-spin 300s steps(4500) infinite;
 }
 .wx-r2 {
-    background: repeating-conic-gradient(from 0deg, transparent 0deg, rgba(var(--wx-ray), 0.24) 3deg, transparent 7deg 23deg);
-    animation: wx-spin 360s steps(5400) infinite reverse;
+    animation: wx-spin 420s steps(6300) infinite reverse;
 }
 .wx-flare {
     width: 46px;
@@ -236,7 +232,7 @@
         linear-gradient(180deg, rgba(var(--wx-sivo, 0, 0, 0), calc(var(--wx-sivo-sila, 0) * var(--dz-sivo))), transparent 70%);
 }
 
-/* ---- zrážky: končia nad vetou pod číslom (--wx-prec-h nastaví appka) ---- */
+/* ---- zrážky: končia pri zemi (--wx-prec-h nastaví appka), posledných --wx-prec-zmiz sa strácajú ---- */
 .wx > .wx-prec {
     display: block;
     left: 0;
@@ -244,8 +240,8 @@
     top: 0;
     height: var(--wx-prec-h);
     overflow: hidden;
-    -webkit-mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
-    mask-image: linear-gradient(180deg, #000 0, #000 60%, transparent 100%);
+    -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - var(--wx-prec-zmiz, 40%)), transparent 100%);
+    mask-image: linear-gradient(180deg, #000 calc(100% - var(--wx-prec-zmiz, 40%)), transparent 100%);
 }
 /* Dážď v štyroch silách (docs/navrhy/dazd-sily.html, sila v data-dazd z jadra): tri hĺbky kvapiek.
    Ďaleko veľa krátkych, tenkých a rozmazaných, ktoré padajú pomaly, blízko málo dlhých, jasných
@@ -383,26 +379,59 @@
 .wx[data-noc] .wx-zavoj {
     opacity: calc(0.6 * var(--dz-zavoj));
 }
-/* Sneh: vločky rôznej veľkosti v dlaždiciach nesúdeliteľných rozmerov, aby nebolo vidno mriežku. */
-.wx-snow {
-    left: -50px;
-    right: -50px;
-    top: -300px;
-    height: 1000px;
+/* Sneh (docs/navrhy/pocasie-sneh-slnko-zem.html, A): tri hĺbky vločiek v maskách z web/pocasie.js (--vs<vrstva>),
+   náhodne rozhodené vo veľkých dlaždiciach, aby nebolo vidno mriežku. Vnútorná vrstva padá (o dve výšky dlaždice
+   vyššia, posunie sa presne o jednu), obal sa pomaly kýve do strán - každá hĺbka inou rýchlosťou a rozkmitom.
+   Ďaleko drobné a pomalé, blízko väčšie a rýchlejšie. */
+.wx-prec > .wx-sneh {
+    inset: 0;
 }
-.wx-snow1 {
-    background:
-        radial-gradient(circle at 20% 30%, rgba(var(--wx-flake), 0.85) 0 1.4px, transparent 2.2px) 0 0 / 53px 61px,
-        radial-gradient(circle at 70% 75%, rgba(var(--wx-flake), 0.6) 0 1px, transparent 1.8px) 11px 23px / 79px 67px,
-        radial-gradient(circle at 45% 10%, rgba(var(--wx-flake), 0.7) 0 1.2px, transparent 2px) 31px 7px / 97px 89px;
-    animation: wx-snow1 7.2s linear infinite;
+.wx-vs {
+    position: absolute;
+    display: block;
+    left: -60px;
+    right: -60px;
+    top: 0;
+    bottom: 0;
+    animation: wx-kyv var(--kyv-t) ease-in-out infinite alternate;
 }
-.wx-snow2 {
-    background:
-        radial-gradient(circle at 50% 50%, rgba(var(--wx-flake), 0.8) 0 2.6px, transparent 3.8px) 0 0 / 131px 113px,
-        radial-gradient(circle at 20% 80%, rgba(var(--wx-flake), 0.6) 0 2px, transparent 3px) 47px 61px / 157px 139px;
-    filter: blur(0.8px);
-    animation: wx-snow2 11.2s linear infinite;
+.wx-vs > i {
+    position: absolute;
+    display: block;
+    left: 0;
+    right: 0;
+    top: calc(-2 * var(--vs-h));
+    height: calc(100% + 3 * var(--vs-h));
+    background: rgb(var(--wx-flake));
+    -webkit-mask-image: var(--vs);
+    mask-image: var(--vs);
+    -webkit-mask-size: var(--vs-w) var(--vs-h);
+    mask-size: var(--vs-w) var(--vs-h);
+    animation: wx-pad var(--pad-t) linear infinite;
+}
+.wx-vs0 {
+    --vs: var(--vs0);
+    --vs-w: 300px;
+    --vs-h: 300px;
+    --pad-t: 17s;
+    --kyv: 10px;
+    --kyv-t: 3.7s;
+}
+.wx-vs1 {
+    --vs: var(--vs1);
+    --vs-w: 340px;
+    --vs-h: 340px;
+    --pad-t: 11s;
+    --kyv: 16px;
+    --kyv-t: 5.3s;
+}
+.wx-vs2 {
+    --vs: var(--vs2);
+    --vs-w: 420px;
+    --vs-h: 420px;
+    --pad-t: 6.5s;
+    --kyv: 22px;
+    --kyv-t: 4.1s;
 }
 
 /* ---- noc: mesiac podľa fázy a hviezdy ---- */
@@ -481,7 +510,7 @@
 .wx[data-wx='zamracene']:not([data-noc]) :is(.wx-diffuse, .wx-deck),
 .wx[data-wx='dazd'] :is(.wx-deck, .wx-sero, .wx-zavoj, .wx-dazd, .wx-kv0, .wx-kv1),
 .wx[data-wx='dazd']:not([data-dazd='mrholenie']) .wx-kv2,
-.wx[data-wx='sneh'] :is(.wx-deck, .wx-snow1, .wx-snow2),
+.wx[data-wx='sneh'] :is(.wx-deck, .wx-sneh),
 .wx[data-noc][data-wx='jasno'] :is(.wx-moonglow, .wx-moon, .wx-stars, .wx-stars2),
 .wx[data-noc][data-wx='polojasno'] :is(.wx-moonglow, .wx-moon, .wx-stars, .wx-stars2, .wx-c1, .wx-c2, .wx-c3),
 .wx[data-noc][data-wx='zamracene'] :is(.wx-deck, .wx-moonglow) {
@@ -563,19 +592,16 @@
         transform: translateY(340px);
     }
 }
-@keyframes wx-snow1 {
-    from {
-        transform: translate(0, 0);
-    }
+@keyframes wx-pad {
     to {
-        transform: translate(17px, 200px);
+        transform: translateY(var(--vs-h));
     }
 }
-@keyframes wx-snow2 {
+@keyframes wx-kyv {
     from {
-        transform: translate(0, 0);
+        transform: translateX(var(--kyv));
     }
     to {
-        transform: translate(-30px, 200px);
+        transform: translateX(calc(-1 * var(--kyv)));
     }
 }

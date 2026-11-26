@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <base href="../../" />
+        <title>Varianty počasia</title>
+        <!-- Návrh 26. 11. 2026. Stĺpce „Dnes“ kreslí aktuálny kód appky, varianty sú len v tejto stránke. -->
+        <link rel="stylesheet" href="css/pocasie.css" />
+        <link rel="stylesheet" href="css/zaklad.css" />
+        <link rel="stylesheet" href="css/teraz.css" />
+        <link rel="stylesheet" href="css/dnes.css" />
+        <style>
+            body {
+                background: #1b1f27;
+                color: #fff;
+                padding: 16px;
+                font-family: var(--font);
+            }
+            h1 {
+                font-size: 1.25rem;
+                margin: 0 0 4px;
+            }
+            h2 {
+                font-size: 1.1rem;
+                margin: 32px 0 4px;
+            }
+            p.pozn {
+                margin: 0 0 12px;
+                opacity: 0.78;
+                font-size: 0.86rem;
+                max-width: 80ch;
+                line-height: 1.45;
+            }
+            .riadok {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 14px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                width: 360px;
+            }
+            figcaption {
+                font-size: 0.85rem;
+                margin-top: 6px;
+                line-height: 1.4;
+            }
+            figcaption b {
+                display: block;
+                font-size: 0.95rem;
+            }
+            figcaption span {
+                opacity: 0.72;
+            }
+            .dl {
+                position: relative;
+                width: 360px;
+                height: 560px;
+                border-radius: 18px;
+                overflow: hidden;
+                isolation: isolate;
+            }
+            .dl.krat {
+                height: 440px;
+            }
+            .dl .wx {
+                position: absolute;
+                z-index: 0;
+            }
+            .dl .hl {
+                position: absolute;
+                z-index: 2;
+                left: 20px;
+                top: 16px;
+                line-height: 1.25;
+            }
+            .dl .hl b {
+                font-weight: 800;
+                letter-spacing: 0.06em;
+                font-size: 1.0625rem;
+                display: block;
+            }
+            .dl .hl i {
+                font-style: normal;
+                font-size: 0.875rem;
+                opacity: 0.85;
+            }
+            .dl .scena {
+                position: absolute;
+                z-index: 1;
+                top: 79px;
+                left: 0;
+                margin: 0;
+                height: 217px;
+            }
+            .dl .sklo {
+                position: absolute;
+                z-index: 1;
+                left: 12px;
+                right: 12px;
+                border-radius: 14px;
+                background: rgba(255, 255, 255, 0.14);
+                backdrop-filter: blur(6px);
+                font-size: 0.75rem;
+                padding: 6px 10px;
+                opacity: 0.9;
+            }
+            .dl .obzor {
+                position: absolute;
+                left: 0;
+                right: 0;
+                top: 219px;
+                border-top: 1px dashed rgba(255, 255, 255, 0.35);
+                z-index: 1;
+            }
+            label {
+                font-size: 0.9rem;
+                display: inline-flex;
+                gap: 6px;
+                align-items: center;
+                margin-right: 14px;
+            }
+            .stoj .wx,
+            .stoj .wx * {
+                animation-play-state: paused !important;
+            }
+
+            /* ===== SNEH A: náhodné vločky v dlaždiciach, tri hĺbky, každá sa kýve ===== */
+            .wx .vsa,
+            .wx .vsb {
+                position: absolute;
+                display: block !important;
+                inset: 0;
+            }
+            .v-sneh-a .wx-snow,
+            .v-sneh-b .wx-snow {
+                display: none !important;
+            }
+            .vsa > i {
+                position: absolute;
+                display: block;
+                left: -60px;
+                right: -60px;
+                animation: vs-kyv ease-in-out infinite alternate;
+            }
+            .vsa > i > i {
+                position: absolute;
+                display: block;
+                left: 0;
+                right: 0;
+                background-repeat: repeat;
+                animation: vs-pad linear infinite;
+            }
+            @keyframes vs-kyv {
+                from {
+                    transform: translateX(var(--kyv));
+                }
+                to {
+                    transform: translateX(calc(-1 * var(--kyv)));
+                }
+            }
+            @keyframes vs-pad {
+                to {
+                    transform: translateY(var(--h));
+                }
+            }
+            @keyframes vs-pad-b {
+                from {
+                    translate: 0 -12px;
+                }
+                to {
+                    translate: var(--vietor) var(--dno);
+                }
+            }
+            @keyframes vs-kyv-b {
+                from {
+                    transform: translateX(calc(-1 * var(--kyv)));
+                }
+                to {
+                    transform: translateX(var(--kyv));
+                }
+            }
+            /* ===== SNEH B: každá vločka sama, vlastná rýchlosť, kývanie a vietor ===== */
+            .vsb > i {
+                position: absolute;
+                display: block;
+                top: 0;
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(255, 255, 255, var(--a)) 0 35%, rgba(255, 255, 255, 0) 70%);
+                animation:
+                    vs-pad-b var(--t) linear var(--d) infinite,
+                    vs-kyv-b var(--tk) ease-in-out var(--dk) infinite alternate;
+            }
+
+            /* ===== ZRÁŽKY po zem ===== */
+            .v-zem-a > .wx-prec {
+                height: calc(max(16px, env(safe-area-inset-top)) + 55px + 8px + var(--scena-h) - 26px) !important;
+                -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 40px), transparent) !important;
+                mask-image: linear-gradient(180deg, #000 calc(100% - 40px), transparent) !important;
+            }
+            .v-zem-b > .wx-prec {
+                height: 100% !important;
+                -webkit-mask-image: linear-gradient(180deg, #000 70%, transparent) !important;
+                mask-image: linear-gradient(180deg, #000 70%, transparent) !important;
+            }
+            .v-zem-b {
+                -webkit-mask-image: none !important;
+                mask-image: none !important;
+                height: 560px !important;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Varianty: sneh, slnko, zrážky po zem</h1>
+        <p class="pozn" style="border-left: 3px solid #8fd18f; padding-left: 10px">
+            <b>Rozhodnuté 26. 11. 2026:</b> sneh A (najväčšie, blízke vločky o polovicu menšie: polomer 1,3 – 1,9 px), slnko A, zrážky A.
+            Pozor: stĺpec „Dnes“ kreslí aktuálny kód appky, po zavedení teda už ukazuje zvolené varianty, nie pôvodný stav.
+        </p>
+        <p class="pozn">
+            Dlaždice sú vrch karty Teraz pri 360 × 740 px (S22): hlavička, skutočná scéna zo <code>scenaSvg</code>, pod ňou len naznačené
+            sklo pásu dní a dlaždíc. Prvý stĺpec je vždy dnešný stav appky. Varianty sú len v tomto náhľade, v appke nie je nič zmenené.
+        </p>
+        <label><input type="checkbox" id="stoj" /> zastaviť pohyb</label>
+
+        <h2>1. Sneh</h2>
+        <p class="pozn">
+            <b>Dnes:</b> dve vrstvy bodiek v malých dlaždiciach (53 – 157 px), padajú jedným smerom - preto mriežka.<br />
+            <b>A</b> - vločky náhodne rozhodené vo veľkých dlaždiciach (300 – 420 px) ako kvapky dažďa, tri hĺbky (ďaleko drobné a pomalé,
+            blízko veľké, rozmazané a rýchlejšie), každá vrstva sa pomaly kýve do strán. Čisté CSS, rovnako lacné ako dnes.<br />
+            <b>B</b> - každá vločka je samostatná (70 kusov): vlastná rýchlosť, kývanie aj fáza, vietor ich ťahá doprava. Najprirodzenejšie,
+            no 70 animovaných prvkov je na slabom telefóne citeľne drahších.
+        </p>
+        <div class="riadok" id="sneh"></div>
+
+        <h2>2. Slnko - lúče</h2>
+        <p class="pozn">
+            <b>Dnes:</b> opakovaný kužeľový prechod - lúče každých 9° a 23°, rovnako dlhé, rovnako silné.<br />
+            <b>A</b> - ten istý princíp, no každý lúč má náhodný uhol, šírku aj silu (pevné semienko, vždy rovnaké). Dve vrstvy sa točia
+            proti sebe, takže sa lúče pomaly prelínajú. Rovnaká cena ako dnes.<br />
+            <b>B</b> - lúče ako kresba: okrem uhla a sily má každý aj inú dĺžku a mäkký koniec, jemne rozmazané, jedna vrstva pomaly „dýcha“
+            (jas 70 – 100 %). Najbližšie skutočnému slnku cez objektív; otáča sa len obrázok, cena podobná.
+        </p>
+        <div class="riadok" id="slnko"></div>
+
+        <h2>3. Karta Teraz - dážď a sneh až po zem</h2>
+        <p class="pozn">
+            <b>Dnes:</b> zrážky končia 177 px od vrchu a slabnú už od 106 px - nad kopcom ostáva pás bez dažďa.<br />
+            <b>A</b> - zrážky padajú až za kopec (spodok scény − 26 px), slabnú len posledných 40 px, už za plnou zemou. Výška sa ráta z
+            výšky scény (<code>--scena-h</code>), takže sedí na každom telefóne.<br />
+            <b>B</b> - zrážky cez celú obrazovku, aj za sklom pásu dní a dlaždíc. Najviac „vonku“, no padajú za textom dlaždíc.
+        </p>
+        <div class="riadok" id="zem"></div>
+
+        <script type="module">
+            import { pocasie } from './shared/pocasie.js';
+            import { skyColors } from './shared/sky.js';
+            import { HVIEZDY } from './shared/config.js';
+            import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from './web/pocasie.js';
+            import { scenaModel } from './shared/teraz-scena.js';
+            import { scenaSvg } from './web/render/teraz-scena.js';
+
+            const site = { name: 'náhľad', lat: 48.7, lon: 19.1, elevationM: 300, timezone: 'Europe/Bratislava' };
+            const DEN = new Date(Date.UTC(2026, 10, 26, 10, 30));
+            const NOC = new Date(Date.UTC(2026, 10, 26, 20, 0));
+
+            /** Pseudonáhoda so semienkom (ako vo web/pocasie.js). */
+            function nahoda(seed) {
+                let a = seed >>> 0;
+                return () => {
+                    a = (a + 0x6d2b79f5) >>> 0;
+                    let t = a;
+                    t = Math.imul(t ^ (t >>> 15), t | 1);
+                    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+                };
+            }
+            const url = (svg) => `url("data:image/svg+xml,${svg.replace(/[#<>%'"]/g, (c) => '%' + c.charCodeAt(0).toString(16))}")`;
+
+            /** Kópia kresliPocasie z web/render/teraz.js. */
+            function kresli(el, p) {
+                el.innerHTML = pocasieHtml();
+                el.dataset.wx = pocasieStav(p);
+                if (p.dazd) el.dataset.dazd = p.dazd;
+                el.toggleAttribute('data-noc', p.noc);
+                const ma = Array.isArray(p.hviezdy);
+                el.toggleAttribute('data-hviezdy', ma);
+                const pole = p.pole ?? HVIEZDY;
+                const [a, b] = ma ? hviezdySvg(p.hviezdy, pole) : ['', ''];
+                const v = el.querySelectorAll('.wx-stars, .wx-stars2');
+                v[0].innerHTML = a;
+                v[1].innerHTML = b;
+                const [s, m] = p.mesiac ? mesiacSvg(p.mesiac, pole) : ['', ''];
+                const l = el.querySelectorAll('.wx-moonglow, .wx-moon');
+                l[0].innerHTML = s;
+                l[1].innerHTML = m;
+            }
+
+            /* ---------- SNEH A ---------- */
+            function vlockyDlazdica(n, r, al, blur, w, h, seed) {
+                const rnd = nahoda(seed);
+                let o = '';
+                for (let i = 0; i < n; i++) {
+                    const x = rnd() * w,
+                        y = rnd() * h,
+                        rr = r[0] + (r[1] - r[0]) * rnd(),
+                        a = (al[0] + (al[1] - al[0]) * rnd()).toFixed(2);
+                    for (const dx of [-w, 0, w])
+                        for (const dy of [-h, 0, h]) {
+                            const xx = x + dx,
+                                yy = y + dy;
+                            if (xx + rr * 2 < 0 || xx - rr * 2 > w || yy + rr * 2 < 0 || yy - rr * 2 > h) continue;
+                            o += `<circle cx='${xx.toFixed(1)}' cy='${yy.toFixed(1)}' r='${rr.toFixed(2)}' fill-opacity='${a}'/>`;
+                        }
+                }
+                const f = blur ? `<filter id='f' x='-1' y='-1' width='3' height='3'><feGaussianBlur stdDeviation='${blur}'/></filter>` : '';
+                return url(
+                    `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'><defs>${f}</defs><g fill='#fff'${blur ? " filter='url(#f)'" : ''}>${o}</g></svg>`,
+                );
+            }
+            const SNEH_A = [
+                // n, polomer, jas, rozmazanie, dlaždica, čas pádu dlaždice, kývanie, čas kývania
+                { n: 70, r: [0.6, 1.2], al: [0.35, 0.7], blur: 0.3, w: 300, h: 300, t: 17, kyv: 10, tk: 3.7 },
+                { n: 26, r: [1.3, 2.2], al: [0.55, 0.85], blur: 0.5, w: 340, h: 340, t: 11, kyv: 16, tk: 5.3 },
+                { n: 7, r: [2.6, 3.8], al: [0.7, 0.95], blur: 1.2, w: 420, h: 420, t: 6.5, kyv: 22, tk: 4.1 },
+            ];
+            function snehA(prec) {
+                const d = document.createElement('div');
+                d.className = 'vsa';
+                d.innerHTML = SNEH_A.map((v, i) => {
+                    const bg = vlockyDlazdica(v.n, v.r, v.al, v.blur, v.w, v.h, 11 + 37 * i);
+                    return (
+                        `<i style="--kyv:${v.kyv}px;animation-duration:${v.tk}s;top:0;bottom:0"><i style="--h:${v.h}px;top:-${2 * v.h}px;height:calc(100% + ${3 * v.h}px);` +
+                        `background-image:${bg.replace(/"/g, "'")};background-size:${v.w}px ${v.h}px;animation-duration:${v.t}s"></i></i>`
+                    );
+                }).join('');
+                prec.append(d);
+            }
+            /* ---------- SNEH B ---------- */
+            function snehB(prec) {
+                const rnd = nahoda(5);
+                const d = document.createElement('div');
+                d.className = 'vsb';
+                let o = '';
+                for (let i = 0; i < 70; i++) {
+                    const hlbka = rnd(); // 0 ďaleko, 1 blízko
+                    const r = 1 + hlbka * hlbka * 6;
+                    const t = 16 - hlbka * 10 + rnd() * 3;
+                    const tk = 2.5 + rnd() * 3;
+                    o +=
+                        `<i style="left:${(rnd() * 110 - 5).toFixed(1)}%;width:${(2 * r).toFixed(1)}px;height:${(2 * r).toFixed(1)}px;` +
+                        `--a:${(0.45 + hlbka * 0.5).toFixed(2)};--t:${t.toFixed(1)}s;--d:${(-rnd() * t).toFixed(1)}s;--tk:${tk.toFixed(1)}s;--dk:${(-rnd() * tk).toFixed(1)}s;` +
+                        `--kyv:${(6 + rnd() * 14).toFixed(0)}px;--vietor:${(10 + hlbka * 40).toFixed(0)}px;--dno:300px;` +
+                        `${hlbka > 0.75 ? 'filter:blur(1px);' : ''}"></i>`;
+                }
+                d.innerHTML = o;
+                prec.append(d);
+            }
+
+            /* ---------- SLNKO A: nepravidelný kužeľ ---------- */
+            function kuzel(seed, gap, sirka, al) {
+                const rnd = nahoda(seed);
+                let u = rnd() * 10,
+                    s = [];
+                while (u < 360) {
+                    const w = sirka[0] + (sirka[1] - sirka[0]) * rnd();
+                    const a = (al[0] + (al[1] - al[0]) * rnd()).toFixed(2);
+                    const z = Math.min(360, u + w);
+                    s.push(
+                        `transparent ${u.toFixed(2)}deg`,
+                        `rgba(var(--wx-ray),${a}) ${((u + z) / 2).toFixed(2)}deg`,
+                        `transparent ${z.toFixed(2)}deg`,
+                    );
+                    u = z + gap[0] + (gap[1] - gap[0]) * rnd();
+                }
+                return `conic-gradient(from 0deg, ${s.join(',')})`;
+            }
+            /* ---------- SLNKO B: lúče rôznej dĺžky ako kresba ---------- */
+            function luceSvg(seed, gap, sirka, al, dlzka, blur) {
+                const rnd = nahoda(seed);
+                const C = 520;
+                let u = rnd() * 10,
+                    defs = '',
+                    o = '',
+                    i = 0;
+                while (u < 360) {
+                    const w = sirka[0] + (sirka[1] - sirka[0]) * rnd();
+                    const a = (al[0] + (al[1] - al[0]) * rnd()).toFixed(2);
+                    const L = dlzka[0] + (dlzka[1] - dlzka[0]) * rnd();
+                    const st = ((u + w / 2) * Math.PI) / 180;
+                    const p = (uh, l) => `${(C + l * Math.cos(uh)).toFixed(1)} ${(C + l * Math.sin(uh)).toFixed(1)}`;
+                    const hw = (w * Math.PI) / 360;
+                    defs +=
+                        `<linearGradient id='g${i}' gradientUnits='userSpaceOnUse' x1='${C}' y1='${C}' x2='${p(st, L).replace(' ', "' y2='")}'>` +
+                        `<stop offset='0' stop-color='#fff' stop-opacity='${a}'/><stop offset='.55' stop-color='#fff' stop-opacity='${(a * 0.45).toFixed(2)}'/>` +
+                        `<stop offset='1' stop-color='#fff' stop-opacity='0'/></linearGradient>`;
+                    o += `<path fill='url(#g${i})' d='M${C} ${C}L${p(st - hw, L)}L${p(st + hw, L)}Z'/>`;
+                    u += w + gap[0] + (gap[1] - gap[0]) * rnd();
+                    i++;
+                }
+                return url(
+                    `<svg xmlns='http://www.w3.org/2000/svg' width='1040' height='1040'><defs>${defs}<filter id='f'><feGaussianBlur stdDeviation='${blur}'/></filter></defs><g filter='url(#f)'>${o}</g></svg>`,
+                );
+            }
+            const SLNKO_A = [kuzel(3, [3, 16], [0.5, 2.2], [0.18, 0.55]), kuzel(9, [8, 30], [2, 5], [0.1, 0.28])];
+            const SLNKO_B = [
+                luceSvg(3, [3, 14], [0.6, 2.4], [0.35, 0.85], [110, 520], 1.2),
+                luceSvg(9, [7, 26], [2, 5.5], [0.14, 0.34], [90, 460], 2.5),
+            ];
+            const sl = document.createElement('style');
+            sl.textContent =
+                `.v-slnko-a .wx-r1{background:${SLNKO_A[0]};animation-duration:300s}` +
+                `.v-slnko-a .wx-r2{background:${SLNKO_A[1]};animation-duration:420s}` +
+                `.v-slnko-b .wx-r1{background:${SLNKO_B[0]} center/1040px 1040px;animation-duration:300s}` +
+                `.v-slnko-b .wx-r2{background:${SLNKO_B[1]} center/1040px 1040px;animation:wx-spin 420s steps(6300) infinite reverse, sl-dych 7s ease-in-out infinite alternate}` +
+                // Lúče B slabnú samy (každý inak dlhý), maska oblohy je preto miernejšia, inak by dĺžky zjednotila.
+                `.v-slnko-b .wx-rays{-webkit-mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.8) 120px,rgba(0,0,0,.4) 300px,transparent 520px);mask-image:radial-gradient(circle,#000 0,rgba(0,0,0,.8) 120px,rgba(0,0,0,.4) 300px,transparent 520px)}` +
+                `@keyframes sl-dych{from{opacity:.7}to{opacity:1}}`;
+            document.head.append(sl);
+
+            /* ---------- dlaždica ---------- */
+            function dlazdica(ciel, { nazov, popis, bod, noc = false, trieda = '', doplnok, dnes = false }) {
+                const chvila = noc ? NOC : DEN;
+                const pole = dnes ? HVIEZDY.dnes : HVIEZDY;
+                const p = pocasie({ point: { hour: 0, kw: 0, ...bod }, noc, chvila, site, merane: null, pole });
+                const sky = skyColors(chvila, site, p.jas, p.zamracenost);
+                const fig = document.createElement('figure');
+                const scena = dnes
+                    ? '<div class="obzor"></div>'
+                    : `<div class="hl"><b>RAY-MON</b><i>Teraz</i></div>` +
+                      `<div class="scena"><span>${scenaSvg(scenaModel({ vyrobaKw: noc ? 0 : 2.4, odhad: false, sietKw: noc ? -0.4 : 1.2 }), noc, noc)}</span></div>` +
+                      `<div class="sklo" style="top:304px;height:44px">pás dní</div><div class="sklo" style="top:356px;height:30px">pole toku</div>` +
+                      `<div class="sklo" style="top:400px;height:150px">dlaždice spotrebičov</div>`;
+                fig.innerHTML =
+                    `<div class="dl${dnes ? ' krat' : ''}" style="--s1:${sky.top};--s2:${sky.bottom};background:linear-gradient(180deg,${sky.top},${sky.bottom})">` +
+                    `<div class="wx ${trieda}" aria-hidden="true"></div>${scena}</div><figcaption><b>${nazov}</b><span>${popis}</span></figcaption>`;
+                const wx = fig.querySelector('.wx');
+                if (dnes) {
+                    wx.toggleAttribute('data-dnes', true);
+                    wx.style.setProperty('--mz-f', '0.5');
+                    wx.style.setProperty('--mz-h', '1');
+                }
+                kresli(wx, p);
+                if (doplnok) doplnok(wx.querySelector('.wx-prec'));
+                document.getElementById(ciel).append(fig);
+            }
+
+            const SNEH = { cloud: 100, precip: 'sneh', mm: 1 };
+            const DAZD = { cloud: 95, precip: 'dazd', mm: 3 };
+            const JASNO = { cloud: 5 };
+
+            for (const noc of [false, true]) {
+                const k = noc ? ' · noc' : ' · deň';
+                dlazdica('sneh', { nazov: 'Dnes' + k, popis: 'dve vrstvy, malé dlaždice', bod: SNEH, noc });
+                dlazdica('sneh', {
+                    nazov: 'A' + k,
+                    popis: 'veľké náhodné dlaždice, 3 hĺbky, kývanie',
+                    bod: SNEH,
+                    noc,
+                    trieda: 'v-sneh-a',
+                    doplnok: snehA,
+                });
+                dlazdica('sneh', {
+                    nazov: 'B' + k,
+                    popis: 'každá vločka sama, vietor',
+                    bod: SNEH,
+                    noc,
+                    trieda: 'v-sneh-b',
+                    doplnok: snehB,
+                });
+            }
+            for (const dnes of [false, true]) {
+                const k = dnes ? ' · Dnes na poludnie' : ' · Teraz';
+                dlazdica('slnko', { nazov: 'Dnes' + k, popis: 'pravidelné lúče', bod: JASNO, dnes });
+                dlazdica('slnko', { nazov: 'A' + k, popis: 'náhodný uhol, šírka, sila', bod: JASNO, dnes, trieda: 'v-slnko-a' });
+                dlazdica('slnko', {
+                    nazov: 'B' + k,
+                    popis: 'aj rôzna dĺžka, mäkké konce, dýchanie',
+                    bod: JASNO,
+                    dnes,
+                    trieda: 'v-slnko-b',
+                });
+            }
+            for (const [bod, n] of [
+                [DAZD, 'dážď'],
+                [SNEH, 'sneh'],
+            ]) {
+                dlazdica('zem', { nazov: 'Dnes · ' + n, popis: 'končí 177 px od vrchu', bod });
+                dlazdica('zem', { nazov: 'A · ' + n, popis: 'až za kopec', bod, trieda: 'v-zem-a' });
+                dlazdica('zem', { nazov: 'B · ' + n, popis: 'cez celú obrazovku', bod, trieda: 'v-zem-b' });
+            }
+
+            document.getElementById('stoj').onchange = (e) => document.body.classList.toggle('stoj', e.target.checked);
+        </script>
+    </body>
+</html>

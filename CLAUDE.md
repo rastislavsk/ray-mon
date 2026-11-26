@@ -219,7 +219,10 @@ je čiarová kresba `img/dom.png` (biele čiary na priehľadnom pozadí) s výpl
 `img/dom-okna.png`: tabuľky dvoch okien na štíte pod panelmi, ktoré v tme svietia, akoby bol niekto doma, okrem
 `TERAZ_OKNA_SPANOK` (0:00–5:00 miestneho času; rozhoduje `oknaSvietia` v `shared/teraz-scena.js`). Dom stojí na kopci a zem, dom aj
 elektráreň sú plné, aby za nimi nebolo vidno dážď, sneh ani oblaky (`docs/navrhy/teraz-scena-zem.html`, počasie B);
-farbu zeme berie z oblohy (`--s2`). Elektráreň a vedenie kreslí
+farbu zeme berie z oblohy (`--s2`). Dážď a sneh preto padajú až za kopec - výška zrážok `--wx-prec-h` sa ráta
+z `--scena-h` (`css/zaklad.css`, `docs/navrhy/pocasie-sneh-slnko-zem.html`, 26. 11. 2026); keď sa zmení výška hlavičky
+alebo scény, zmeň aj ju. Sneh sú náhodné vločky vo veľkých dlaždiciach a lúče slnka nepravidelný kužeľ, oboje so
+semienkom vo `web/pocasie.js`. Elektráreň a vedenie kreslí
 `web/render/teraz-scena.js`, čo kresliť (čísla, lúče, body), počíta `shared/teraz-scena.js`. Panely na kresbe
 hľadia doľava, preto slnko živej oblohy svieti z ľavého horného rohu (`--wx-sx` v `css/zaklad.css`) a krajina je
 zrkadlová. Scéna čísla nemá: sú v poli toku `#tz-tok` pod pásom dní, len pri dnešku (`tokPoleHtml`, 22. 11. 2026,
