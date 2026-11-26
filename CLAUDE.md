@@ -165,7 +165,7 @@ nefarbí; výnimkou je jantárový rám zásuvky bez spojenia (`chyba`). Úsek n
 
 Druhá výnimka (26. 11. 2026, `docs/navrhy/teraz-zapnuty-farba.html`, F1 so žiarou): zapnutý spotrebič - beží („Už beží“), bojleru
 zásuvka zapla relé alebo sa auto asi nabíja - má len kruh s ikonou plný biely (`--zapnuty`)
-s tmavou ikonou a bielou žiarou (`data-zapnuty`); dlaždica je bez obrysu, deň v páse dní má obrys ďalej. Zelená a oranžová,
+s tmavou ikonou a bielou žiarou (`data-zapnuty`) a dlaždica má biely obrys ako zvolený deň v páse dní (`--obrys-zvoleny`, 26. 11. 2026). Zelená a oranžová,
 farba celej dlaždice, svietiace sklo ani modrý prstenec neprešli. Kto bojler zapína, dlaždica neukazuje (značka ruka / slnko
 pri ikone zrušená 26. 11. 2026), povie to panel Bojler dnes; bodka stavu bojlera pri ikone je preč. V noci (`data-noc` na
 `#tz-co`) sú dlaždice na svetlom skle (2B), tmavé na nočnej oblohe nebolo vidno.

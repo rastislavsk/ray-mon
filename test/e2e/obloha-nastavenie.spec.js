@@ -1224,7 +1224,10 @@ test.describe('bojler na prebytky', () => {
         await expect(dl).toHaveAttribute('data-zapnuty', '');
         await expect(dl.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
         await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'rgba(242, 245, 251, 0.65) 0px 0px 16px 0px');
-        await expect(dl).toHaveCSS('box-shadow', 'none');
+        // Zapnutá dlaždica má ten istý biely obrys ako zvolený deň v páse dní.
+        const obrysDna = await page.locator('.hreben-dni button[aria-pressed="true"]').evaluate((el) => getComputedStyle(el).boxShadow);
+        expect(obrysDna).toContain('inset');
+        await expect(dl).toHaveCSS('box-shadow', obrysDna);
         await expect(page.locator('#tz-co [data-vec="bojler"]'), 'bojler, ktorý riadi zásuvka, appka neradí').toHaveCount(1);
         await dl.click();
         const sheet = page.locator('#tz-bojler-sheet');
