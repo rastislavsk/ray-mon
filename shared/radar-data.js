@@ -147,8 +147,12 @@ export function dbzNaBajt(dbz) {
 /** dBZ z bajtu. @param {number} b */
 export const bajtNaDbz = (b) => RADAR.dbz.od + ((b - 1) / 254) * (RADAR.dbz.do - RADAR.dbz.od);
 
-/** Zrážky v mm/h ako ozvena (Marshall-Palmer). @param {number} mm */
-export const mmNaDbz = (mm) => (mm < 0.08 ? 0 : 10 * Math.log10(200 * mm ** 1.6));
+/**
+ * Zrážky v mm/h vody ako ozvena: dážď Marshall-Palmer, sneh podľa `RADAR.sneh`, zmiešané v pomere podielu snehu.
+ * @param {number} mm @param {number} [podiel] snehu 0–1
+ */
+export const mmNaDbz = (mm, podiel = 0) =>
+    mm < 0.08 ? 0 : 10 * Math.log10((1 - podiel) * 200 * mm ** 1.6 + podiel * RADAR.sneh.zsA * mm ** RADAR.sneh.zsB);
 
 /**
  * Index blokov prvej dátovej množiny v hlavičke súboru HDF5 (B-tree v1 nad 2D dátami).
@@ -480,13 +484,33 @@ export function zjemni(v, nx, ny, k) {
     return o;
 }
 
+/** Teplota, keď model hodnotu nemá: dážď, nič nezasneží omylom. */
+const tPrazdna = 10;
+
 /** @param {unknown} at @param {number} nowMs */
 const cerstvy = (at, nowMs) => typeof at === 'number' && at <= nowMs && nowMs - at < RADAR.modelObnovaMs;
 
 /**
+ * Model po hodinách: zrážky v mm, oblačnosť v % a podiel snehu 0–1, každé [hodina][bod].
+ * @typedef {{ casy: number[], dazd: number[][], oblaky: number[][], sneh: number[][] }} RadarModel
+ */
+
+/**
+ * Podiel snehu v zrážkach modelu (docs/navrhy/radar-sneh.html, D1). Bez zrážok v modeli rozhodne teplota pri zemi,
+ * lebo radar môže namerať zrážky aj tam, kde ich model nemá.
+ * @param {number} mm zrážky @param {number} cm sneh @param {number} t teplota pri zemi v °C @returns {number} 0–1
+ */
+export function podielSnehu(mm, cm, t) {
+    const { cmNaMm, minMm, tSneh, tDazd } = RADAR.sneh;
+    const p = mm >= minMm ? cm / cmNaMm / mm : (tDazd - t) / (tDazd - tSneh);
+    return Number.isFinite(p) ? Math.round(Math.max(0, Math.min(1, p)) * 100) / 100 : 0;
+}
+
+/**
  * Model uložený v prehliadači, keď ešte platí: ten istý výrez, nie starší ako obnova a z toho istého dňa.
+ * Uložený bez podielu snehu (staršia appka) neplatí, stiahne sa znova.
  * @param {unknown} raw @param {number} nowMs @param {string} kluc výrez
- * @returns {{ at: number, model: { casy: number[], dazd: number[][], oblaky: number[][] } } | null}
+ * @returns {{ at: number, model: RadarModel } | null}
  */
 export function parseUlozenyModel(raw, nowMs, kluc) {
     const r = /** @type {any} */ (raw);
@@ -496,13 +520,13 @@ export function parseUlozenyModel(raw, nowMs, kluc) {
     const bodov = RADAR.modelBodyX * RADAR.modelBodyY;
     /** @param {unknown} v */
     const dobre = (v) => Array.isArray(v) && v.length === m.casy.length && v.every((h) => Array.isArray(h) && h.length === bodov);
-    return dobre(m.dazd) && dobre(m.oblaky) ? { at: r.at, model: m } : null;
+    return dobre(m.dazd) && dobre(m.oblaky) && dobre(m.sneh) ? { at: r.at, model: m } : null;
 }
 
 /**
  * Odpovede Open-Meteo (pole bodov po riadkoch) ako snímky po hodinách, rovnako dlhé. Cudzia odpoveď je null.
  * @param {unknown} data
- * @returns {{ casy: number[], dazd: number[][], oblaky: number[][] } | null} časy v ms, hodnoty [hodina][bod]
+ * @returns {RadarModel | null} časy v ms
  */
 export function modelSnimky(data) {
     const { modelBodyX: nx, modelBodyY: ny } = RADAR;
@@ -510,11 +534,15 @@ export function modelSnimky(data) {
     const prvy = data[0]?.hourly;
     if (!Array.isArray(prvy?.time) || !prvy.time.length) return null;
     const n = prvy.time.length;
-    if (!data.every((b) => b?.hourly?.precipitation?.length === n && b?.hourly?.cloud_cover?.length === n)) return null;
+    const dlzka = ['precipitation', 'cloud_cover', 'snowfall', 'temperature_2m'];
+    if (!data.every((b) => dlzka.every((k) => b?.hourly?.[k]?.length === n))) return null;
     const hodiny = Array.from({ length: n }, (_, i) => i);
     return {
         casy: prvy.time.map((/** @type {number} */ t) => t * 1000),
         dazd: hodiny.map((t) => data.map((b) => b.hourly.precipitation[t] ?? 0)),
         oblaky: hodiny.map((t) => data.map((b) => b.hourly.cloud_cover[t] ?? 0)),
+        sneh: hodiny.map((t) =>
+            data.map(({ hourly: h }) => podielSnehu(h.precipitation[t] ?? 0, h.snowfall[t] ?? 0, h.temperature_2m[t] ?? tPrazdna)),
+        ),
     };
 }

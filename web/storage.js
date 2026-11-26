@@ -101,7 +101,7 @@ export function loadRadarModel(nowMs, kluc) {
     }
 }
 
-/** @param {number} at @param {string} kluc @param {{ casy: number[], dazd: number[][], oblaky: number[][] }} model */
+/** @param {number} at @param {string} kluc @param {import('../shared/radar-data.js').RadarModel} model */
 export function saveRadarModel(at, kluc, model) {
     write(RADAR_MODEL_STORAGE_KEY, JSON.stringify({ at, kluc, model }));
 }

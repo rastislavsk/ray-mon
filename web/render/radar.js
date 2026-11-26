@@ -10,6 +10,14 @@ const HLASKY = {
     bezpolohy: 'Radar ukáže tvoje okolie, keď v Nastavení zadáš polohu.',
 };
 
+/** Prechody legendy: dážď, dážď so snehom, sneh (`data-typ`). @param {HTMLElement} el */
+function farbyLegendy(el) {
+    for (const b of el.querySelectorAll('b')) {
+        const legenda = legendaPrechod(/** @type {import('../../shared/radar.js').TypZrazok} */ (Number(b.dataset.typ)));
+        if (b.style.background !== legenda) b.style.background = legenda;
+    }
+}
+
 /** @param {import('../state.js').AppState} state @param {import('../dom.js').Dom} dom */
 export function renderRadar(state, dom) {
     if (state.panel !== 'radar') return;
@@ -21,8 +29,7 @@ export function renderRadar(state, dom) {
     dom.rdRychlost.setAttribute('aria-label', `Rýchlosť ${state.radarRychlost}×`);
     for (const b of dom.rdRozsahy.querySelectorAll('button'))
         b.setAttribute('aria-pressed', String(b.dataset.rozsah === state.radarRozsah));
-    const legenda = legendaPrechod();
-    if (dom.rdLegenda.style.background !== legenda) dom.rdLegenda.style.background = legenda;
+    farbyLegendy(dom.rdIntenzita);
     // Kým nie je načítané všetko, obiehajú slnko a mesiac a prehrávanie čaká: najnovšia snímka je už na mape,
     // no os by preskakovala po snímkach, ktoré ešte len prídu.
     const caka = state.radarStav === 'nacitavam' || (state.radarStav === 'ok' && !state.radarHotovo);

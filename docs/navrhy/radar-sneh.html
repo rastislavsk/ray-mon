@@ -1,0 +1,660 @@
+<title>Sneh na radare</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+    /* Rozloženie: jeden stĺpec ako appka v telefóne; náhľady v skutočnej šírke karty (360 px), tmavé ako karta Radar. */
+    :root {
+        color-scheme: dark;
+        --bg: #0b1222;
+        --plocha: #131c31;
+        --ciara: rgba(255, 255, 255, 0.12);
+        --text: #e8edf6;
+        --tlmene: #9fadc4;
+        --akcent: #8fb8ff;
+        --plus: #6fdcaa;
+        --minus: #ffa07a;
+        --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --font-nadpis: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+    }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.55 var(--font);
+    }
+    .obal {
+        max-width: 760px;
+        margin: 0 auto;
+        padding-block: 28px 64px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 28px;
+    }
+    h1,
+    h2,
+    h3 {
+        font-family: var(--font-nadpis);
+        text-wrap: balance;
+        margin: 0;
+        line-height: 1.2;
+    }
+    h1 {
+        font-size: 1.8rem;
+    }
+    h2 {
+        font-size: 1.3rem;
+    }
+    h3 {
+        font-size: 1.05rem;
+    }
+    p {
+        margin: 0;
+        max-width: 65ch;
+    }
+    .oko {
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tlmene);
+    }
+    .sekcia {
+        display: grid;
+        gap: 14px;
+    }
+    .karta {
+        background: var(--plocha);
+        border: 1px solid var(--ciara);
+        border-radius: 12px;
+        padding: 16px;
+        display: grid;
+        gap: 10px;
+        min-width: 0;
+    }
+    .karta.odporucane {
+        border-color: var(--akcent);
+    }
+    .znacka {
+        display: inline-block;
+        font: 600 0.8rem var(--font-nadpis);
+        background: rgba(143, 184, 255, 0.16);
+        color: var(--akcent);
+        padding: 2px 8px;
+        border-radius: 6px;
+        margin-right: 6px;
+    }
+    .odp {
+        font-size: 0.75rem;
+        color: var(--akcent);
+        margin-left: 6px;
+    }
+    ul {
+        margin: 0;
+        padding-left: 1.1em;
+        display: grid;
+        gap: 4px;
+    }
+    li.plus::marker {
+        content: '+  ';
+        color: var(--plus);
+    }
+    li.minus::marker {
+        content: '−  ';
+        color: var(--minus);
+    }
+    .mriezka {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 360px), 1fr));
+    }
+    .nahlad {
+        width: 100%;
+        max-width: 360px;
+        aspect-ratio: 360 / 300;
+        display: block;
+        border-radius: 10px;
+    }
+    .legenda {
+        display: grid;
+        gap: 4px;
+        max-width: 360px;
+        font-size: 0.75rem;
+        color: var(--tlmene);
+    }
+    .legenda div {
+        display: grid;
+        grid-template-columns: 4.5em 1fr;
+        align-items: center;
+        gap: 8px;
+    }
+    .legenda span.pas {
+        height: 8px;
+        border-radius: 4px;
+    }
+    .poznamka {
+        font-size: 0.85rem;
+        color: var(--tlmene);
+    }
+    .overene {
+        border-left: 3px solid var(--plus);
+        padding-left: 12px;
+    }
+    .neoverene {
+        border-left: 3px solid var(--minus);
+        padding-left: 12px;
+    }
+    code {
+        font-size: 0.88em;
+        background: rgba(255, 255, 255, 0.07);
+        padding: 1px 5px;
+        border-radius: 4px;
+    }
+</style>
+
+<div class="obal">
+    <header class="sekcia">
+        <span class="oko">Karta Radar · návrh 26. 11. 2026</span>
+        <h1>Sneh na radare</h1>
+        <p class="overene">
+            <b>Rozhodnuté 26. 11. 2026: D1 + V1</b>, zmiešané ružovou, legenda s ikonami (kvapka, kvapka s vločkou, vločka) bez slov „slabý
+            / silný“. D4b ostáva ako možné neskoršie spresnenie.
+        </p>
+        <p>
+            Radar OPERA meria len odrazivosť (dBZ), nie či padá dážď alebo sneh. Treba preto vyriešiť dve veci zvlášť:
+            <b>odkiaľ appka vezme, že je to sneh</b> (D1 – D4) a <b>ako ho nakreslí</b> (V1 – V4). Vyber jedno z každej skupiny, napr. „D1 +
+            V1“.
+        </p>
+    </header>
+
+    <section class="sekcia">
+        <h2>Čo som overil a čo nie</h2>
+        <p class="overene">
+            Overené jedným dopytom na Open-Meteo (26. 11. 2026, stred Slovenska, 881 m): model ICON-EU vracia aj <code>snowfall</code>,
+            <code>rain</code> a <code>snowfall_height</code>. Dnes tam hlási sneh, snežnú čiaru 600 – 900 m.
+        </p>
+        <p class="overene">
+            Overené výpisom úložiska OPERA (26. 11. 2026): kompozit má len <code>DBZH</code>, <code>RATE</code> a <code>ACRR</code>,
+            slovenské, české, maďarské a poľské radary tam posielajú len odrazivosť a rýchlosť (<code>DBZH</code>, <code>TH</code>,
+            <code>VRAD</code>). Typ zrážok ani polarimetria v OPERA nie sú.
+        </p>
+        <p class="neoverene">
+            Neoverené: že Open-Meteo neráta dopyt drahšie pri 3 – 4 premenných namiesto 2 (podľa toho, ako si pamätám ich dokumentáciu, váha
+            rastie až nad 10 premenných). Kvôli limitu 429 by som to pred zlúčením zmeral.
+        </p>
+    </section>
+
+    <section class="sekcia">
+        <span class="oko">Krok 1</span>
+        <h2>Odkiaľ vziať, že je to sneh</h2>
+
+        <div class="karta odporucane">
+            <h3><span class="znacka">D1</span>Podiel snehu z modelu ICON-EU<span class="odp">odporúčam</span></h3>
+            <p>
+                Do dopytu, ktorý appka už posiela pre oblaky (<code>precipitation,cloud_cover</code>), pribudne <code>snowfall</code> a
+                <code>temperature_2m</code>. Podiel snehu = sneh / zrážky v každom bode mriežky 16 × 14, zjemnený na pixel tak ako oblaky.
+                Keď model v bode nemá zrážky, ale radar áno, rozhodne teplota (pod 0 °C sneh, nad 2 °C dážď, medzi tým zmiešané).
+            </p>
+            <ul>
+                <li class="plus">Žiadny nový dopyt ani zdroj, len dve premenné navyše; výpočet je v tom istom Web Workeri ako model.</li>
+                <li class="plus">Funguje pre merané snímky aj pre Dnes / Zajtra z modelu.</li>
+                <li class="minus">Mriežka je hrubá (bod zhruba každých 30 km), dolinu s dažďom a hrebeň so snehom nerozlíši.</li>
+                <li class="minus">Keď model posunie front o hodinu, hranica sneh / dážď je o kus vedľa.</li>
+            </ul>
+        </div>
+
+        <div class="karta">
+            <h3><span class="znacka">D2</span>Snežná čiara z modelu + výška terénu</h3>
+            <p>
+                Model povie, v akej výške sa sneh mení na dážď (<code>snowfall_height</code>), a pixel je sneh, keď terén leží vyššie. Pásmo
+                ±150 m okolo čiary je zmiešané. Výšky terénu by boli malá mapa výšok výrezu (SRTM, voľná licencia), vyrobená skriptom a
+                uložená v repozitári, alebo dlaždice výšok z verejného zdroja.
+            </p>
+            <ul>
+                <li class="plus">Najpresnejšie bez platených dát: Tatry snežia, Považie prší, a to aj v jednej snímke.</li>
+                <li class="plus">Snežná čiara sa mení pomaly, hrubá mriežka modelu jej stačí.</li>
+                <li class="minus">Nový súbor s výškami (rádovo stovky kB až MB podľa rozlíšenia) alebo nová adresa v CSP.</li>
+                <li class="minus">Výrez je okolo polohy, mapa výšok by musela pokryť celú oblasť, kde môže niekto bývať.</li>
+                <li class="minus">Najviac práce a testov z možností.</li>
+            </ul>
+        </div>
+
+        <div class="karta">
+            <h3><span class="znacka">D3</span>Len teplota pri zemi</h3>
+            <p>Z modelu len <code>temperature_2m</code>: pod 0 °C sneh, 0 – 2 °C zmiešané, nad 2 °C dážď.</p>
+            <ul>
+                <li class="plus">Najjednoduchšie, jedna premenná.</li>
+                <li class="minus">
+                    Pravidlo z učebnice často zlyhá: pri 1 – 3 °C sneží bežne, keď je suchý vzduch alebo silné zrážky. D1 má túto teplotu
+                    ako zálohu, model už rátal aj ostatné.
+                </li>
+            </ul>
+        </div>
+
+        <div class="karta">
+            <h3><span class="znacka">D4</span>Klasifikácia z polarimetrického radaru</h3>
+            <p>
+                Radary s dvoma polarizáciami vedia z tvaru a skupenstva častíc rozoznať sneh, dážď, topiaci sa sneh aj krúpy. Preverené 26.
+                11. 2026:
+            </p>
+            <ul>
+                <li class="plus">
+                    <b>SHMÚ má otvorené dáta zadarmo</b> (<code>opendata.shmu.sk</code>, CC BY 4.0, bez registrácie): objemy zo všetkých
+                    štyroch radarov (Malý Javorník, Kojšovská hoľa, Kubínska hoľa, Španí laz) každých 5 minút s <code>ZDR</code>,
+                    <code>RhoHV</code>, <code>KDP</code>, <code>PhiDP</code> a <code>dBZ</code>, formát ODIM HDF5 ako pri OPERA. Server
+                    dovolí čítať len časť súboru (Range), takže by sa dala stiahnuť len najnižšia elevácia.
+                </li>
+                <li class="plus">ČHMÚ to isté pre Brdy a Skalky (<code>opendata.chmi.cz</code>), Skalky dovidia aj na západ Slovenska.</li>
+                <li class="minus">
+                    <b>Hotovú mapu typu zrážok nedáva nikto.</b> SHMÚ zverejňuje len kompozity ZMAX, CAPPI 2 km, ECHO TOP a úhrn za hodinu.
+                    Klasifikáciu (fuzzy logika z ZDR, RhoHV, KDP a dBZ) by musel počítať prehliadač sám a odladiť ju na skutočných
+                    sneženiach.
+                </li>
+                <li class="minus">
+                    <b>Radar vidí sneh vo výške, nie pri zemi.</b> Radary stoja na kopcoch a lúč je už 60 km od nich nad 1,5 km. V zime je
+                    pásmo topenia často nižšie, takže radar „vidí sneh“ aj tam, kde dole prší. Či padá sneh až na zem, musí aj tak povedať
+                    model (výška nulovej izotermy, snežná čiara). Polarimetria pomôže najmä nájsť pásmo topenia (prepad RhoHV) a zmiešané
+                    zrážky.
+                </li>
+                <li class="minus">
+                    Server SHMÚ nepovoľuje CORS, sťahovanie by išlo cez Worker ako pri OPERA (len preposlanie, procesor to nezaťaží). Dát je
+                    však oveľa viac: 4 radary × 3 – 4 veličiny × 24 snímok za dve hodiny namiesto jedného kompozitu. Funguje len nad
+                    Slovenskom a Českom, za hranicou výrezu by sneh chýbal.
+                </li>
+                <li class="minus">
+                    Ostatné zdroje som zavrhol: RainViewer má od 1. 1. 2026 na bezplatnom pásme len jednu farebnú schému a či ešte ukazuje
+                    sneh, som nezistil (podľa opisu tretej strany ho aj tak berie z teploty modelu, nie z polarimetrie). GeoSphere Austria
+                    pokrýva Rakúsko a parameter typu zrážok som nepotvrdil.
+                </li>
+            </ul>
+            <p class="poznamka">
+                Dá sa to teda dvoma spôsobmi: <b>D4a</b> plná klasifikácia zo SHMÚ + model pre zem (najviac práce z celého návrhu), alebo
+                <b>D4b</b> len pásmo topenia z RhoHV ako spresnenie D1 či D2 – jedna veličina navyše, posunie hranicu sneh / dážď tam, kde
+                ju radar naozaj vidí.
+            </p>
+        </div>
+
+        <p class="poznamka">
+            Pre každú možnosť platí: sneh sa vníma v centimetroch. 30 dBZ je v snehu okolo 1 cm za hodinu, husté sneženie, v daždi len
+            mierny dážď. Paleta snehu preto silnie pri nižších dBZ. (Pôvodne tu stálo, že sneh odráža slabšie ako dážď – to platí len pre
+            veľkosť častíc vody, z tej istej vody v mm odráža sneh viac: Z = 2000·S² oproti 200·R^1,6 pri daždi. Opravené pri programovaní.)
+            A pásmo topenia (vločky obalené vodou) radar vidí silnejšie, než je; zmiešané zrážky preto môžu na mape vyzerať prudšie.
+        </p>
+    </section>
+
+    <section class="sekcia">
+        <span class="oko">Krok 2</span>
+        <h2>Ako sneh nakresliť</h2>
+        <p>
+            Náhľady sú v šírke karty Radar v telefóne (360 px) na tmavej mape. Front ide od juhozápadu, na severe sneží, v pásme medzi tým
+            je dážď so snehom. Pole zrážok je vymyslené, farby dažďa sú skutočné z appky (<code>RADAR.farby</code>).
+        </p>
+
+        <div class="mriezka">
+            <div class="karta odporucane">
+                <h3><span class="znacka">V1</span>Vlastná paleta snehu<span class="odp">odporúčam</span></h3>
+                <canvas class="nahlad" id="v1" width="360" height="300"></canvas>
+                <div class="legenda" id="l1"></div>
+                <ul>
+                    <li class="plus">
+                        Na prvý pohľad jasné: biela až fialová je sneh, modrá až červená dážď. Takto to robí väčšina appiek s počasím.
+                    </li>
+                    <li class="plus">
+                        V kreslení len druhá a tretia tabuľka farieb (<code>dazdLut</code> × 3) a podľa typu sa vyberie riadok.
+                    </li>
+                    <li class="minus">Legenda má tri riadky namiesto jedného; pás na osi treba farbiť tiež podľa typu.</li>
+                    <li class="minus">Bledý slabý sneh je na svetlej oblohe cez deň menej výrazný (závoj karty pomáha).</li>
+                </ul>
+            </div>
+
+            <div class="karta">
+                <h3><span class="znacka">V2</span>Farby dažďa + bodky snehu</h3>
+                <canvas class="nahlad" id="v2" width="360" height="300"></canvas>
+                <div class="legenda" id="l2"></div>
+                <ul>
+                    <li class="plus">Jedna stupnica sily pre všetko, legenda ostáva; rozlíšia to aj ľudia so slabším farebným videním.</li>
+                    <li class="minus">Bodky pri oddialení mapy splývajú a pri zväčšení musia ostať rovnako veľké (vzor v shaderi).</li>
+                    <li class="minus">Sila snehu by sa ukazovala farbou dažďa, teda o stupeň slabšie, než je.</li>
+                </ul>
+            </div>
+
+            <div class="karta">
+                <h3><span class="znacka">V3</span>Paleta snehu + padajúce vločky</h3>
+                <canvas class="nahlad" id="v3" width="360" height="300"></canvas>
+                <div class="legenda" id="l3"></div>
+                <ul>
+                    <li class="plus">Ladí s počasím na kartách Teraz a Dnes, sneh na mape „žije“.</li>
+                    <li class="minus">Ďalšia animácia popri prehrávaní snímok, na S22 by som meral plynulosť.</li>
+                    <li class="minus">Pri obmedzenom pohybe musí zastať; počas prehrávania môže pôsobiť rušivo.</li>
+                </ul>
+            </div>
+
+            <div class="karta">
+                <h3><span class="znacka">V4</span>Len snežná čiara na mape</h3>
+                <canvas class="nahlad" id="v4" width="360" height="300"></canvas>
+                <div class="legenda" id="l4"></div>
+                <ul>
+                    <li class="plus">Najmenší zásah, farby ani legenda sa nemenia.</li>
+                    <li class="minus">Kde presne sneží, musí človek domyslieť; zmiešané pásmo nevidno.</li>
+                    <li class="minus">Pri D1 je čiara len taká presná ako mriežka modelu, a tá je hrubá.</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <section class="sekcia">
+        <h2>Zhrnutie</h2>
+        <p>
+            <b>Odporúčam D1 + V1.</b> D1 nestojí nič nové (ten istý dopyt na model, ten istý Web Worker) a V1 je najčitateľnejšie. Ak sa
+            ukáže, že hrubá mriežka kreslí sneh v dolinách, D2 alebo D4b (pásmo topenia z radarov SHMÚ) sa dá pridať neskôr bez zmeny
+            vzhľadu: zmení sa len to, ako sa počíta podiel snehu, farby ostanú. Rozhoduješ ty, kým si nevyberieš, nič nekódujem.
+        </p>
+        <p class="poznamka">
+            Ostáva aj otázka zmiešaných zrážok: samostatná ružová farba (ako v náhľadoch V1 a V3), alebo len sneh / dážď s hranicou v
+            polovici.
+        </p>
+    </section>
+</div>
+
+<script>
+    (() => {
+        const W = 360,
+            H = 300,
+            S = 2; // výpočet v polovičnom rozlíšení, potom zväčšenie s vyhladením
+        const w = W / S,
+            h = H / S;
+
+        // Farby dažďa sú RADAR.farby z shared/config.js.
+        const DAZD = [
+            [8, '#2b6cff', 0],
+            [11, '#2f7bff', 0.5],
+            [20, '#2b8cf5', 0.78],
+            [26, '#22b8f0', 0.86],
+            [32, '#34e0a1', 0.92],
+            [39, '#ffe14d', 0.96],
+            [46, '#ff7a2f', 1],
+            [52, '#ff2d6b', 1],
+            [60, '#ffd0f5', 1],
+        ];
+        // Návrh: sneh má prahy o ~8 dBZ nižšie, slabý bledomodrý, stredný biely, silný fialový.
+        const SNEH = [
+            [4, '#bcd4ff', 0],
+            [7, '#c7dcff', 0.5],
+            [13, '#dde9ff', 0.74],
+            [19, '#ffffff', 0.88],
+            [25, '#e6cfff', 0.94],
+            [31, '#c492ff', 1],
+            [38, '#9a5cff', 1],
+            [52, '#7a3cff', 1],
+        ];
+        const ZMES = [
+            [6, '#f4b6e6', 0],
+            [9, '#f2a8e3', 0.5],
+            [17, '#ee93dc', 0.78],
+            [25, '#e57bd6', 0.9],
+            [33, '#d35fcb', 0.96],
+            [42, '#bb45bd', 1],
+            [56, '#9c2fa8', 1],
+        ];
+
+        const rgb = (x) => [1, 3, 5].map((k) => parseInt(x.slice(k, k + 2), 16));
+        const pal = (p, d) => {
+            let i = 0;
+            while (i < p.length - 2 && d > p[i + 1][0]) i++;
+            const a = p[i],
+                b = p[i + 1];
+            const t = Math.max(0, Math.min(1, (d - a[0]) / (b[0] - a[0])));
+            const ca = rgb(a[1]),
+                cb = rgb(b[1]);
+            return [ca[0] + (cb[0] - ca[0]) * t, ca[1] + (cb[1] - ca[1]) * t, ca[2] + (cb[2] - ca[2]) * t, a[2] + (b[2] - a[2]) * t];
+        };
+
+        // Vymyslené, ale opakovateľné pole: semienko, hladký šum, škvrny pozdĺž frontu.
+        let sem = 7;
+        const nah = () => (sem = (sem * 16807) % 2147483647) / 2147483647;
+        const mriez = Array.from({ length: 13 * 11 }, nah);
+        const sum = (x, y) => {
+            const gx = x * 12,
+                gy = y * 10,
+                ix = Math.floor(gx),
+                iy = Math.floor(gy),
+                fx = gx - ix,
+                fy = gy - iy;
+            const g = (a, b) => mriez[Math.min(10, b) * 13 + Math.min(12, a)];
+            const sx = fx * fx * (3 - 2 * fx),
+                sy = fy * fy * (3 - 2 * fy);
+            return (g(ix, iy) * (1 - sx) + g(ix + 1, iy) * sx) * (1 - sy) + (g(ix, iy + 1) * (1 - sx) + g(ix + 1, iy + 1) * sx) * sy;
+        };
+        const skvrny = Array.from({ length: 16 }, (_, i) => {
+            const t = i / 15;
+            return {
+                x: 0.05 + t * 0.95 + (nah() - 0.5) * 0.12,
+                y: 0.95 - t * 0.85 + (nah() - 0.5) * 0.2,
+                r: 0.07 + nah() * 0.09,
+                a: 22 + nah() * 26,
+            };
+        });
+
+        const dbz = new Float32Array(w * h),
+            podiel = new Float32Array(w * h);
+        for (let j = 0; j < h; j++)
+            for (let i = 0; i < w; i++) {
+                const x = i / w,
+                    y = j / h;
+                let d = 0;
+                for (const s of skvrny) {
+                    const q = ((x - s.x) ** 2 + (y - s.y) ** 2) / (s.r * s.r);
+                    d = Math.max(d, s.a * Math.exp(-q));
+                }
+                d += (sum(x, y) - 0.5) * 18;
+                // Podiel snehu: na severe sneh, pásmo prechodu s „horami“ zo šumu.
+                const p = Math.max(0, Math.min(1, (0.52 - y + (sum(y, x) - 0.5) * 0.3) / 0.16 + 0.5));
+                podiel[j * w + i] = p;
+                // Sneh odráža slabšie.
+                dbz[j * w + i] = d - 8 * p;
+            }
+        const typ = (p) => (p > 0.65 ? 2 : p > 0.35 ? 1 : 0);
+        const PRAH = { 0: 9, 1: 7, 2: 5 };
+
+        function pozadie(c) {
+            const g = c.createLinearGradient(0, 0, 0, H);
+            g.addColorStop(0, '#16213d');
+            g.addColorStop(1, '#0d1428');
+            c.fillStyle = g;
+            c.fillRect(0, 0, W, H);
+            // voda a hranice, ako RADAR.mapa
+            c.fillStyle = 'rgba(5, 10, 30, 0.32)';
+            c.beginPath();
+            c.ellipse(310, 270, 70, 40, -0.3, 0, Math.PI * 2);
+            c.fill();
+            c.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+            c.lineWidth = 1;
+            for (const [y0, k] of [
+                [120, 1],
+                [215, 2],
+            ]) {
+                c.beginPath();
+                for (let x = 0; x <= W; x += 6) c.lineTo(x, y0 + Math.sin(x / 37 + k) * 14 + Math.sin(x / 13 + k * 2) * 4);
+                c.stroke();
+            }
+            c.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            c.beginPath();
+            c.moveTo(0, 260);
+            c.bezierCurveTo(90, 210, 200, 190, 360, 80);
+            c.stroke();
+        }
+
+        function vrstva(farba) {
+            const off = document.createElement('canvas');
+            off.width = w;
+            off.height = h;
+            const oc = off.getContext('2d');
+            const img = oc.createImageData(w, h);
+            for (let k = 0; k < w * h; k++) {
+                const f = farba(dbz[k], podiel[k]);
+                if (!f) continue;
+                img.data.set([f[0], f[1], f[2], f[3] * 255], k * 4);
+            }
+            oc.putImageData(img, 0, 0);
+            return off;
+        }
+        const farbaV1 = (d, p) => {
+            const t = typ(p);
+            if (d < PRAH[t]) return null;
+            return pal([DAZD, ZMES, SNEH][t], d);
+        };
+        const farbaDazd = (d, p) => (d + 8 * p < 9 ? null : pal(DAZD, d + 8 * p));
+
+        function domov(c) {
+            c.fillStyle = '#fff';
+            c.beginPath();
+            c.arc(170, 170, 4, 0, Math.PI * 2);
+            c.fill();
+            c.strokeStyle = 'rgba(255,255,255,0.6)';
+            c.lineWidth = 1.5;
+            c.beginPath();
+            c.arc(170, 170, 9, 0, Math.PI * 2);
+            c.stroke();
+        }
+
+        function platno(id) {
+            const cv = document.getElementById(id);
+            const r = window.devicePixelRatio || 1;
+            cv.width = W * r;
+            cv.height = H * r;
+            const c = cv.getContext('2d');
+            c.scale(r, r);
+            return c;
+        }
+        function nakresli(c, off) {
+            c.imageSmoothingEnabled = true;
+            c.imageSmoothingQuality = 'high';
+            c.drawImage(off, 0, 0, W, H);
+        }
+
+        const pasy = (riadky, id) => {
+            document.getElementById(id).innerHTML = riadky
+                .map(
+                    ([n, p]) =>
+                        `<div><span>${n}</span><span class="pas" style="background: linear-gradient(90deg, ${p
+                            .slice(1, -1)
+                            .map((x) => x[1])
+                            .join(', ')})"></span></div>`,
+                )
+                .join('');
+        };
+
+        const v1 = vrstva(farbaV1),
+            vd = vrstva(farbaDazd);
+        const sneh = vrstva((d, p) =>
+            typ(p) === 0 || d < PRAH[typ(p)] ? null : pal(typ(p) === 2 ? SNEH : ZMES, d).map((x, i) => (i === 3 ? x * 0.75 : x)),
+        );
+        const vd3 = vrstva((d, p) => (typ(p) !== 0 || d < 9 ? null : pal(DAZD, d)));
+
+        // V1
+        let c = platno('v1');
+        pozadie(c);
+        nakresli(c, v1);
+        domov(c);
+        pasy(
+            [
+                ['Dážď', DAZD],
+                ['Zmiešané', ZMES],
+                ['Sneh', SNEH],
+            ],
+            'l1',
+        );
+
+        // V2: farby dažďa, bodky tam, kde sneží
+        c = platno('v2');
+        pozadie(c);
+        nakresli(c, vd);
+        for (let y = 3, r = 0; y < H; y += 6, r++)
+            for (let x = (r % 2) * 3 + 1; x < W; x += 6) {
+                const k = Math.floor(y / S) * w + Math.floor(x / S);
+                const t = typ(podiel[k]);
+                if (t === 0 || dbz[k] < PRAH[t]) continue;
+                if (t === 1 && (r + Math.floor(x / 6)) % 2) continue;
+                c.fillStyle = 'rgba(255,255,255,0.9)';
+                c.beginPath();
+                c.arc(x, y, 1.15, 0, Math.PI * 2);
+                c.fill();
+            }
+        domov(c);
+        pasy([['Sila', DAZD]], 'l2');
+        document
+            .getElementById('l2')
+            .insertAdjacentHTML('beforeend', '<div><span>Sneh</span><span>biele bodky, zmiešané redšie</span></div>');
+
+        // V3: paleta snehu tlmenejšie + padajúce vločky
+        const c3 = platno('v3');
+        const tlmit = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const vlocky = [];
+        while (vlocky.length < 140) {
+            const x = nah() * W,
+                y = nah() * H;
+            const k = Math.floor(y / S) * w + Math.floor(x / S);
+            if (typ(podiel[k]) === 2 && dbz[k] > 8) vlocky.push({ x, y, v: 0.25 + nah() * 0.35, r: 0.9 + nah() * 0.9, f: nah() * 6 });
+        }
+        function krok() {
+            pozadie(c3);
+            nakresli(c3, vd3);
+            nakresli(c3, sneh);
+            c3.fillStyle = 'rgba(255,255,255,0.95)';
+            for (const f of vlocky) {
+                if (!tlmit) {
+                    f.y += f.v;
+                    f.f += 0.03;
+                    const k = Math.floor(f.y / S) * w + Math.floor(f.x / S);
+                    if (f.y > H || typ(podiel[k] ?? 0) !== 2 || dbz[k] < 6) {
+                        // znova hore v snežiacej oblasti
+                        for (let n = 0; n < 30; n++) {
+                            const x = nah() * W,
+                                y = nah() * H * 0.6;
+                            const kk = Math.floor(y / S) * w + Math.floor(x / S);
+                            if (typ(podiel[kk]) === 2 && dbz[kk] > 8) {
+                                f.x = x;
+                                f.y = y;
+                                break;
+                            }
+                        }
+                    }
+                }
+                c3.beginPath();
+                c3.arc(f.x + Math.sin(f.f) * 1.5, f.y, f.r, 0, Math.PI * 2);
+                c3.fill();
+            }
+            domov(c3);
+            if (!tlmit) requestAnimationFrame(krok);
+        }
+        krok();
+        pasy(
+            [
+                ['Dážď', DAZD],
+                ['Zmiešané', ZMES],
+                ['Sneh', SNEH],
+            ],
+            'l3',
+        );
+
+        // V4: farby dažďa + prerušovaná snežná čiara
+        c = platno('v4');
+        pozadie(c);
+        nakresli(c, vd);
+        c.strokeStyle = 'rgba(255,255,255,0.95)';
+        c.lineWidth = 2;
+        c.setLineDash([6, 5]);
+        c.beginPath();
+        for (let i = 0; i < w; i += 2) {
+            let jj = 0;
+            for (let j = 0; j < h; j++) if (podiel[j * w + i] >= 0.5) jj = j;
+            i === 0 ? c.moveTo(i * S, jj * S) : c.lineTo(i * S, jj * S);
+        }
+        c.stroke();
+        c.setLineDash([]);
+        c.font = '600 12px Inter, system-ui, sans-serif';
+        c.fillStyle = '#fff';
+        c.fillText('sneh', 300, 40);
+        c.fillText('dážď', 300, 280);
+        domov(c);
+        pasy([['Sila', DAZD]], 'l4');
+        document.getElementById('l4').insertAdjacentHTML('beforeend', '<div><span>- - -</span><span>snežná čiara</span></div>');
+    })();
+</script>

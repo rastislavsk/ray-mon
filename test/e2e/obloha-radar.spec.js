@@ -108,6 +108,19 @@ test('Radar: načíta sa, ukáže čas a dá sa ovládať', async ({ page }) => 
     expect(errors).toEqual([]);
 });
 
+test('Radar: legenda má dážď, dážď so snehom a sneh, každý vlastným prechodom', async ({ page }) => {
+    const errors = await otvor(page);
+    await pripraveny(page);
+    const pasy = page.locator('#rd-intenzita b');
+    await expect(pasy).toHaveCount(3);
+    await expect(page.locator('#rd-intenzita svg')).toHaveCount(3);
+    const pozadia = await pasy.evaluateAll((el) => el.map((b) => getComputedStyle(b).backgroundImage));
+    for (const p of pozadia) expect(p).toMatch(/^linear-gradient/);
+    expect(new Set(pozadia).size).toBe(3);
+    await expect(page.locator('#rd-intenzita')).toHaveAttribute('aria-label', /sneh/);
+    expect(errors).toEqual([]);
+});
+
 test('Radar: kým sa nenačíta všetko, obiehajú slnko a mesiac a prehrávanie čaká', async ({ page }) => {
     /** @type {() => void} */
     let pust = () => {};

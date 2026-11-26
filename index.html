@@ -231,9 +231,22 @@
                     </div>
                     <div class="rd-stlpec vpravo">
                         <button type="button" id="rd-oblaky" class="rd-prepinac" aria-pressed="true"><span>Oblaky</span><i></i></button>
-                        <div id="rd-intenzita" class="rd-legenda">
-                            <b id="rd-legenda"></b>
-                            <div><span>slabý</span><span>silný</span></div>
+                        <!-- Legenda: dážď, dážď so snehom, sneh, od slabého po silný (docs/navrhy/radar-sneh.html, C bez slov).
+                             Prechody farieb dopĺňa render/radar.js z RADAR v shared/config.js. -->
+                        <div id="rd-intenzita" class="rd-legenda" role="img" aria-label="Dážď, dážď so snehom a sneh, od slabých po silné">
+                            <svg viewBox="0 0 12 14" aria-hidden="true">
+                                <path d="M6 1C6 1 1.5 6.5 1.5 9.2A4.5 4.5 0 0 0 10.5 9.2C10.5 6.5 6 1 6 1Z" />
+                            </svg>
+                            <b data-typ="0"></b>
+                            <svg viewBox="0 0 18 14" aria-hidden="true">
+                                <path d="M5 2C5 2 1.5 6.3 1.5 8.6A3.5 3.5 0 0 0 8.5 8.6C8.5 6.3 5 2 5 2Z" />
+                                <path class="vlocka" d="M13.5 3V13M9.7 5.5L17.3 10.5M9.7 10.5L17.3 5.5" />
+                            </svg>
+                            <b data-typ="1"></b>
+                            <svg viewBox="0 0 14 14" aria-hidden="true">
+                                <path class="vlocka" d="M7 1V13M1.8 4L12.2 10M1.8 10L12.2 4" />
+                            </svg>
+                            <b data-typ="2"></b>
                         </div>
                         <p id="rd-bez-modelu" class="rd-poznamka hidden">Oblaky a predpoveď na Dnes a Zajtra sa nenačítali.</p>
                     </div>
