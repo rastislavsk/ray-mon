@@ -3,7 +3,7 @@
 
 import { RADAR } from '../shared/config.js';
 import { dazdVBode, mercX, mercY, oblastBlokov, radarBloky } from '../shared/radar-data.js';
-import { farbaBajtu, krokovMinulost, osRadaru, pasOsi, popisChvile } from '../shared/radar.js';
+import { farbaBajtu, krokovMinulost, osRadaru, pasOsi, popisChvile, typZrazok } from '../shared/radar.js';
 import { indexKroku, RadarData } from './radar-data.js';
 import { RadarVrstva } from './radar-gl.js';
 import { vytvorMapu } from './radar-mapa.js';
@@ -31,11 +31,11 @@ function polnoc(ms) {
 
 /**
  * Model po hodinách s textúrami.
- * @typedef {{ casy: number[], w: number, h: number, dazd: Uint8Array[], oblaky: Uint8Array[],
- *   tDazd: Array<WebGLTexture | null>, tOblaky: Array<WebGLTexture | null> }} Model
+ * @typedef {{ casy: number[], w: number, h: number, dazd: Uint8Array[], oblaky: Uint8Array[], sneh: Uint8Array[],
+ *   tDazd: Array<WebGLTexture | null>, tOblaky: Array<WebGLTexture | null>, tSneh: Array<WebGLTexture | null> }} Model
  * Dáta z obnovy, ktoré čakajú bokom, kým nepríde všetko a os nestojí: prehrávanie tak nikdy nemieša staré s novými.
  * @typedef {{ terazMs: number, hotove: boolean, snimky: Map<number, Uint8Array>,
- *   pole: { gx: number, gy: number, g: number, bajty: Uint8Array } | null, model: Omit<Model, 'tDazd' | 'tOblaky'> | null }} Nove
+ *   pole: { gx: number, gy: number, g: number, bajty: Uint8Array } | null, model: Omit<Model, 'tDazd' | 'tOblaky' | 'tSneh'> | null }} Nove
  */
 
 export class RadarHrac {
@@ -99,7 +99,7 @@ export class RadarHrac {
         return polnoc(this.terazMs) + ((this.rozsah === 'dnes' ? 0 : 24) + this.poz) * HODINA_MS;
     }
 
-    /** @param {'tDazd' | 'tOblaky'} druh */
+    /** @param {'tDazd' | 'tOblaky' | 'tSneh'} druh */
     textury(druh) {
         const h = this.hodina(this.casPolohy());
         const t = this.model?.[druh];
@@ -122,7 +122,8 @@ export class RadarHrac {
     /** @returns {import('./radar-gl.js').Obraz} */
     obraz() {
         const c = this.textury('tOblaky');
-        const oblaky = { ca: c.a, cb: c.b, cf: c.f, oblaky: this.store.get().radarOblaky };
+        const s = this.textury('tSneh');
+        const oblaky = { ca: c.a, cb: c.b, cf: c.f, sa: s.a, sb: s.b, sf: s.f, oblaky: this.store.get().radarOblaky };
         return {
             ...oblaky,
             ...(this.rozsah === '2h' ? this.obrazMerania() : { ...this.textury('tDazd'), pohyb: false, doba: 0, slabne: 1 }),
@@ -175,12 +176,34 @@ export class RadarHrac {
         });
     }
 
+    /** Časy stĺpcov pásu: kroky merania a predpovede, alebo hodiny dňa. @param {number} n */
+    casyPasu(n) {
+        if (this.rozsah === '2h') return Array.from({ length: n }, (_, i) => this.terazMs + (i - krokovMinulost) * KROK_MS);
+        return Array.from({ length: n }, (_, i) => polnoc(this.terazMs) + ((this.rozsah === 'dnes' ? 0 : 24) + i) * HODINA_MS);
+    }
+
+    /**
+     * Typ zrážok pri dome v daných časoch z podielu snehu modelu; bez modelu dážď.
+     * @param {NonNullable<RadarHrac['oblast']>} o @param {number[]} casy @returns {import('../shared/radar.js').TypZrazok[]}
+     */
+    typyPasu(o, casy) {
+        const m = this.model;
+        if (!m) return [];
+        const px = Math.round((this.bod[0] / o.w) * (m.w - 1));
+        const py = Math.round((this.bod[1] / o.h) * (m.h - 1));
+        return casy.map((ms) => {
+            const h = this.hodina(ms);
+            return typZrazok(h ? m.sneh[h.a][py * m.w + px] / 255 : 0);
+        });
+    }
+
     /** Stĺpce pásu a čiary osi. @param {ReturnType<typeof osRadaru>} o @param {number} w @param {number} zaklad */
     pasOsi(o, w, zaklad) {
         const { oblast, model } = this;
         const hodnoty = !oblast ? [] : this.rozsah === '2h' ? this.pasMerania(oblast) : model ? this.pasModelu(oblast, model) : [];
+        const typy = oblast ? this.typyPasu(oblast, this.casyPasu(hodnoty.length)) : [];
         const sirka = Math.max(1.5, w / Math.max(1, hodnoty.length) - 1);
-        const deti = pasOsi(hodnoty).map((s) => {
+        const deti = pasOsi(hodnoty, typy).map((s) => {
             const v = s.vyska * (zaklad - 4);
             return svg('rect', {
                 x: (s.poz * (w - sirka)).toFixed(1),
@@ -188,7 +211,7 @@ export class RadarHrac {
                 width: sirka.toFixed(1),
                 height: v.toFixed(1),
                 rx: 1,
-                fill: farbaBajtu(s.bajt),
+                fill: farbaBajtu(s.bajt, s.typ),
                 opacity: o.teraz === null || s.poz * o.pocet > o.teraz ? 0.55 : 1,
             });
         });
@@ -270,14 +293,16 @@ export class RadarHrac {
         this.krasli();
     }
 
-    /** @param {Omit<Model, 'tDazd' | 'tOblaky'>} m */
+    /** @param {Omit<Model, 'tDazd' | 'tOblaky' | 'tSneh'>} m */
     naModel(m) {
         if (this.nove) return void (this.nove.model = m);
         const g = this.gl;
         // Mapa ešte nie je hotová, textúry počkajú na ňu.
         if (!g?.gl) return void (this.cakaModel = m);
-        for (const t of [...(this.model?.tDazd ?? []), ...(this.model?.tOblaky ?? [])]) g.zmaz(t);
-        this.model = { ...m, tDazd: m.dazd.map((d) => g.textura(m.w, m.h, d)), tOblaky: m.oblaky.map((d) => g.textura(m.w, m.h, d)) };
+        for (const t of [...(this.model?.tDazd ?? []), ...(this.model?.tOblaky ?? []), ...(this.model?.tSneh ?? [])]) g.zmaz(t);
+        /** @param {Uint8Array[]} v */
+        const textury = (v) => v.map((d) => g.textura(m.w, m.h, d));
+        this.model = { ...m, tDazd: textury(m.dazd), tOblaky: textury(m.oblaky), tSneh: textury(m.sneh) };
         this.pasNeskor();
         this.krasli();
     }

@@ -1031,6 +1031,33 @@ export const RADAR = {
         { dbz: 52, farba: '#ff2d6b', krytie: 1 },
         { dbz: 60, farba: '#ffd0f5', krytie: 1 },
     ],
+    // Sneh a dážď so snehom (docs/navrhy/radar-sneh.html, D1 + V1, 26. 11. 2026). Sneh sa vníma v centimetroch: 30 dBZ
+    // je v snehu okolo 1 cm za hodinu, husté sneženie, v daždi len mierny dážď. Paleta snehu preto silnie pri nižších dBZ:
+    // slabý bledomodrý, stredný biely, silný fialový.
+    farbySneh: [
+        { dbz: 8, farba: '#bcd4ff', krytie: 0 },
+        { dbz: 10, farba: '#c7dcff', krytie: 0.55 },
+        { dbz: 15, farba: '#dde9ff', krytie: 0.76 },
+        { dbz: 21, farba: '#ffffff', krytie: 0.88 },
+        { dbz: 27, farba: '#e6cfff', krytie: 0.94 },
+        { dbz: 33, farba: '#c492ff', krytie: 1 },
+        { dbz: 40, farba: '#9a5cff', krytie: 1 },
+        { dbz: 52, farba: '#7a3cff', krytie: 1 },
+    ],
+    farbyZmiesane: [
+        { dbz: 8, farba: '#f4b6e6', krytie: 0 },
+        { dbz: 11, farba: '#f2a8e3', krytie: 0.5 },
+        { dbz: 19, farba: '#ee93dc', krytie: 0.78 },
+        { dbz: 27, farba: '#e57bd6', krytie: 0.9 },
+        { dbz: 35, farba: '#d35fcb', krytie: 0.96 },
+        { dbz: 44, farba: '#bb45bd', krytie: 1 },
+        { dbz: 56, farba: '#9c2fa8', krytie: 1 },
+    ],
+    // Podiel snehu v zrážkach z modelu ICON-EU: Open-Meteo dáva sneh v cm, 1 mm vody = 0,7 cm (overené 26. 11. 2026,
+    // zrážky 1,2 mm = sneh 0,84 cm). Kde model zrážky nemá a radar áno, rozhodne teplota pri zemi. Od `zmiesaneOd` je to
+    // dážď so snehom, od `snehOd` sneh, na hranici sa farby prelínajú v pásme `prechod`. Zrážky modelu (voda v mm) idú
+    // na dBZ pri snehu vzťahom Z = zsA · S^zsB (Sekhon a Srivastava), pri daždi Z = 200 · R^1,6.
+    sneh: { cmNaMm: 0.7, minMm: 0.05, tSneh: 0, tDazd: 2, zmiesaneOd: 0.35, snehOd: 0.65, prechod: 0.03, zsA: 2000, zsB: 2 },
     // Mapa nemá vlastné pozadie, pod ňou je obloha appky so závojom (css/radar.css, rozhodnuté 14. 11. 2026).
     // Voda a čiary sú preto priesvitné, aby ladili s každou farbou oblohy.
     mapa: {
@@ -1058,7 +1085,7 @@ export function radarModelUrl(body) {
     return (
         'https://api.open-meteo.com/v1/forecast' +
         `?latitude=${zoznam('lat')}&longitude=${zoznam('lon')}` +
-        '&hourly=precipitation,cloud_cover&models=icon_eu&forecast_days=2&timeformat=unixtime&timezone=auto'
+        '&hourly=precipitation,cloud_cover,snowfall,temperature_2m&models=icon_eu&forecast_days=2&timeformat=unixtime&timezone=auto'
     );
 }
 

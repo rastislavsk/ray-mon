@@ -18,8 +18,9 @@ const FS = `#version 300 es
 precision highp float;
 in vec2 uv;
 out vec4 o;
-uniform sampler2D A, B, CA, CB, F, L;
-uniform float f, cf, oblaky, pohyb, doba, slabne, mierka;
+uniform sampler2D A, B, CA, CB, F, L, SA, SB;
+uniform float f, cf, sf, oblaky, pohyb, doba, slabne, mierka;
+uniform vec3 sneh;
 uniform vec2 sz;
 uniform vec3 g;
 void main() {
@@ -29,7 +30,13 @@ void main() {
     float v = doba > 0.
         ? textureLod(A, uv - fl * doba, doba / 16.).r * slabne
         : mix(texture(A, uv - fl * f).r, texture(B, uv + fl * (1. - f)).r, f);
-    vec4 r = texture(L, vec2((v * 255. + .5) / 256., .5));
+    // Riadok farieb podľa podielu snehu z modelu: dážď, dážď so snehom, sneh (docs/navrhy/radar-sneh.html).
+    float s = mix(texture(SA, uv).r, texture(SB, uv).r, sf);
+    float x = (v * 255. + .5) / 256.;
+    vec4 r = mix(
+        mix(texture(L, vec2(x, .5 / 3.)), texture(L, vec2(x, 1.5 / 3.)), smoothstep(sneh.x - sneh.z, sneh.x + sneh.z, s)),
+        texture(L, vec2(x, 2.5 / 3.)),
+        smoothstep(sneh.y - sneh.z, sneh.y + sneh.z, s));
     float c = mix(texture(CA, uv).r, texture(CB, uv).r, cf);
     float ca = smoothstep(.2, 1., c) * .56 * oblaky;
     vec3 cc = mix(vec3(.62, .68, .78), vec3(.9, .93, .98), smoothstep(.45, 1., c));
@@ -40,14 +47,15 @@ void main() {
     o *= k.x * k.y;
 }`;
 
-const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L']);
-const CISLA = /** @type {const} */ (['mapa', 'rohy', 'f', 'cf', 'oblaky', 'pohyb', 'doba', 'slabne', 'mierka', 'sz', 'g']);
+const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L', 'SA', 'SB']);
+const CISLA = /** @type {const} */ (['mapa', 'rohy', 'f', 'cf', 'sf', 'sneh', 'oblaky', 'pohyb', 'doba', 'slabne', 'mierka', 'sz', 'g']);
 
 /**
- * Čo kresliť v tejto chvíli: dve snímky a podiel medzi nimi, dve hodiny oblakov a ich podiel.
- * `doba` je pri predpovedi počet krokov od poslednej snímky.
+ * Čo kresliť v tejto chvíli: dve snímky a podiel medzi nimi, dve hodiny oblakov a podielu snehu a ich podiel.
+ * `doba` je pri predpovedi počet krokov od poslednej snímky. Bez modelu je podiel snehu nula, všetko je dážď.
  * @typedef {{ a: WebGLTexture | null, b: WebGLTexture | null, f: number, ca: WebGLTexture | null, cb: WebGLTexture | null,
- *   cf: number, pohyb: boolean, doba: number, slabne: number, oblaky: boolean }} Obraz
+ *   cf: number, sa: WebGLTexture | null, sb: WebGLTexture | null, sf: number, pohyb: boolean, doba: number, slabne: number,
+ *   oblaky: boolean }} Obraz
  */
 
 /**
@@ -114,7 +122,7 @@ export class RadarVrstva {
         for (const n of [...JEDNOTKY, ...CISLA]) this.u[n] = gl.getUniformLocation(pr, n);
         this.vao = gl.createVertexArray();
         this.tLut = novaTextura(gl);
-        nahraj(gl, this.tLut, { w: 256, h: 1, format: gl.RGBA8, typ: gl.RGBA, data: dazdLut() });
+        nahraj(gl, this.tLut, { w: 256, h: 3, format: gl.RGBA8, typ: gl.RGBA, data: dazdLut() });
         this.tNic = novaTextura(gl);
         nahraj(gl, this.tNic, { w: 1, h: 1, format: gl.R8, typ: gl.RED, data: new Uint8Array(1) });
         this.tPohyb = novaTextura(gl);
@@ -133,13 +141,15 @@ export class RadarVrstva {
         gl.uniform2f(u.sz, w, h);
         gl.uniform3f(u.g, this.g[0], this.g[1], this.g[2]);
         gl.uniform1f(u.mierka, RADAR.pohyb.mierka);
-        [o.a, o.b ?? o.a, o.ca, o.cb, this.tPohyb, this.tLut].forEach((t, i) => {
+        [o.a, o.b ?? o.a, o.ca, o.cb, this.tPohyb, this.tLut, o.sa, o.sb].forEach((t, i) => {
             gl.activeTexture(gl.TEXTURE0 + i);
             gl.bindTexture(gl.TEXTURE_2D, t ?? this.tNic);
             gl.uniform1i(u[JEDNOTKY[i]], i);
         });
         gl.uniform1f(u.f, o.f);
         gl.uniform1f(u.cf, o.cf);
+        gl.uniform1f(u.sf, o.sf);
+        gl.uniform3f(u.sneh, RADAR.sneh.zmiesaneOd, RADAR.sneh.snehOd, RADAR.sneh.prechod);
         gl.uniform1f(u.oblaky, o.oblaky ? 1 : 0);
         gl.uniform1f(u.pohyb, o.pohyb ? 1 : 0);
         gl.uniform1f(u.doba, o.doba);

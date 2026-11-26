@@ -15,6 +15,7 @@ import {
     mmNaDbz,
     modelBody,
     modelSnimky,
+    podielSnehu,
     oblastBlokov,
     ocisti,
     parseUlozenyModel,
@@ -36,6 +37,7 @@ import {
     legendaPrechod,
     osRadaru,
     pasOsi,
+    typZrazok,
     popisChvile,
     radarKrok,
     radarTag,
@@ -192,11 +194,17 @@ test('modelBody a adresa modelu', () => {
 
 test('modelSnimky: poskladá hodiny a cudziu odpoveď odmietne', () => {
     const n = RADAR.modelBodyX * RADAR.modelBodyY;
-    const bod = { hourly: { time: [100, 3700], precipitation: [1, null], cloud_cover: [50, 60] } };
+    const bod = {
+        hourly: { time: [100, 3700], precipitation: [1, null], cloud_cover: [50, 60], snowfall: [0.7, 0], temperature_2m: [-1, null] },
+    };
     const m = modelSnimky(Array.from({ length: n }, () => bod));
     assert.deepEqual(m?.casy, [100000, 3700000]);
     assert.equal(m?.dazd[1][0], 0);
     assert.equal(m?.oblaky[1][0], 60);
+    assert.equal(m?.sneh[0][0], 1, '1 mm vody = 0,7 cm snehu');
+    assert.equal(m?.sneh[1][0], 0, 'bez zrážok a bez teploty dážď');
+    const bezSnehu = { hourly: { ...bod.hourly, snowfall: undefined } };
+    assert.equal(modelSnimky(Array.from({ length: n }, () => bezSnehu)), null, 'odpoveď bez snehu je cudzia');
     assert.equal(modelSnimky({ hourly: {} }), null);
     assert.equal(modelSnimky(Array.from({ length: n }, () => ({}))), null);
     assert.equal(modelSnimky(Array.from({ length: n }, (_, i) => (i ? { hourly: { time: [1] } } : bod))), null);
@@ -205,7 +213,7 @@ test('modelSnimky: poskladá hodiny a cudziu odpoveď odmietne', () => {
 test('parseUlozenyModel: platí pre ten istý výrez, deň a čas obnovy', () => {
     const bodov = RADAR.modelBodyX * RADAR.modelBodyY;
     const riadok = Array.from({ length: bodov }, () => 1);
-    const model = { casy: [1000, 3601000], dazd: [riadok, riadok], oblaky: [riadok, riadok] };
+    const model = { casy: [1000, 3601000], dazd: [riadok, riadok], oblaky: [riadok, riadok], sneh: [riadok, riadok] };
     const at = 2000;
     const ok = { at, kluc: 'x', model };
     assert.deepEqual(parseUlozenyModel(ok, at + 1000, 'x'), { at, model });
@@ -216,7 +224,29 @@ test('parseUlozenyModel: platí pre ten istý výrez, deň a čas obnovy', () =>
     assert.equal(parseUlozenyModel({ ...ok, model: { ...model, dazd: [riadok] } }, at + 1000, 'x'), null);
     assert.equal(parseUlozenyModel({ ...ok, model: { ...model, oblaky: [riadok, [1]] } }, at + 1000, 'x'), null);
     assert.equal(parseUlozenyModel({ ...ok, model: { ...model, casy: [] } }, at + 1000, 'x'), null);
+    assert.equal(parseUlozenyModel({ ...ok, model: { ...model, sneh: undefined } }, at + 1000, 'x'), null, 'uložený staršou appkou');
     assert.equal(parseUlozenyModel(null, at, 'x'), null);
+});
+
+test('podielSnehu a typZrazok: zo snehu modelu, bez zrážok z teploty', () => {
+    assert.equal(podielSnehu(1, 0.7, 5), 1);
+    assert.equal(podielSnehu(1, 0.35, 5), 0.5);
+    assert.equal(podielSnehu(1, 0, -5), 0, 'model povie dážď, teplota nerozhoduje');
+    assert.equal(podielSnehu(1, 2, 0), 1, 'nad 1 sa neide');
+    assert.equal(podielSnehu(0, 0, -3), 1);
+    assert.equal(podielSnehu(0, 0, 1), 0.5);
+    assert.equal(podielSnehu(0, 0, 4), 0);
+    assert.equal(podielSnehu(0, 0, NaN), 0);
+    assert.equal(typZrazok(0.2), 0);
+    assert.equal(typZrazok(RADAR.sneh.zmiesaneOd), 1);
+    assert.equal(typZrazok(RADAR.sneh.snehOd), 2);
+});
+
+test('mmNaDbz: sneh z tej istej vody odráža viac ako dážď', () => {
+    assert.equal(mmNaDbz(0.05, 1), 0);
+    assert.ok(mmNaDbz(1, 1) > mmNaDbz(1));
+    assert.ok(Math.abs(mmNaDbz(1, 1) - 33) < 0.1);
+    assert.ok(mmNaDbz(1, 0.5) > mmNaDbz(1) && mmNaDbz(1, 0.5) < mmNaDbz(1, 1));
 });
 
 test('zjemni: zachová rozsah a roztiahne mriežku', () => {
@@ -263,11 +293,17 @@ test('farby: rastú s dažďom, bez dažďa priehľadné', () => {
     assert.equal(farbaDbz(8)[3], 0);
     assert.equal(farbaDbz(70)[3], 1);
     const lut = dazdLut();
-    assert.equal(lut.length, 1024);
-    assert.equal(lut[3], 0);
-    assert.ok(lut[255 * 4 + 3] === 255);
+    assert.equal(lut.length, 256 * 4 * 3, 'riadok na dážď, zmiešané a sneh');
+    for (const typ of [0, 1, 2]) {
+        assert.equal(lut[typ * 1024 + 3], 0, 'bez zrážok priehľadné');
+        assert.equal(lut[typ * 1024 + 255 * 4 + 3], 255);
+    }
     assert.match(farbaBajtu(0), /^rgb\(/);
-    assert.match(legendaPrechod(), /^linear-gradient\(90deg, #/);
+    assert.notEqual(farbaBajtu(120, 2), farbaBajtu(120, 0), 'sneh má inú farbu ako dážď');
+    assert.match(legendaPrechod(0), /^linear-gradient\(90deg, #/);
+    assert.notEqual(legendaPrechod(2), legendaPrechod(0));
+    // Sneh silnie skôr: pri 25 dBZ je už výraznejší ako dážď.
+    assert.ok(farbaDbz(25, 2)[3] > farbaDbz(25, 0)[3]);
 });
 
 test('upravStyl: drobnosti preč, mená po slovensky, farby appky', () => {
@@ -304,5 +340,6 @@ test('upravStyl: drobnosti preč, mená po slovensky, farby appky', () => {
 test('pasOsi: bez dažďa nič, sila ide do výšky', () => {
     assert.deepEqual(pasOsi([0, 0]), []);
     const p = pasOsi([0, 255]);
-    assert.deepEqual(p, [{ poz: 1, vyska: 1, bajt: 255 }]);
+    assert.deepEqual(p, [{ poz: 1, vyska: 1, bajt: 255, typ: 0 }]);
+    assert.equal(pasOsi([10, 20], [0, 2])[1].typ, 2);
 });

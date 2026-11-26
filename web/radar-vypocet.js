@@ -40,14 +40,28 @@ function pohybZ(indexy) {
     return dvojice.length ? pohyb(dvojice, oblast.w, oblast.h, krokov) : null;
 }
 
-/** @param {{ casy: number[], dazd: number[][], oblaky: number[][] }} m */
+/**
+ * Model ako obrázky v bajtoch. Zrážky v mm idú na dBZ podľa podielu snehu (docs/navrhy/radar-sneh.html),
+ * podiel snehu 0–1 je 0–255.
+ * @param {import('../shared/radar-data.js').RadarModel} m
+ */
 function model(m) {
     const { modelBodyX: nx, modelBodyY: ny, modelZjemnenie: k } = RADAR;
     /** @param {number[]} v */
-    const dazd = (v) => Uint8Array.from(zjemni(v, nx, ny, k), (mm) => dbzNaBajt(mmNaDbz(Math.max(0, mm))));
+    const jemne = (v) => zjemni(v, nx, ny, k);
+    const sneh = m.sneh.map((v) => jemne(v).map((p) => Math.max(0, Math.min(1, p))));
+    /** @param {number[]} v @param {number} h */
+    const dazd = (v, h) => Uint8Array.from(jemne(v), (mm, i) => dbzNaBajt(mmNaDbz(Math.max(0, mm), sneh[h][i])));
     /** @param {number[]} v */
-    const oblaky = (v) => Uint8Array.from(zjemni(v, nx, ny, k), (p) => Math.max(0, Math.min(255, p * 2.55)));
-    return { casy: m.casy, w: nx * k, h: ny * k, dazd: m.dazd.map(dazd), oblaky: m.oblaky.map(oblaky) };
+    const oblaky = (v) => Uint8Array.from(jemne(v), (p) => Math.max(0, Math.min(255, p * 2.55)));
+    return {
+        casy: m.casy,
+        w: nx * k,
+        h: ny * k,
+        dazd: m.dazd.map(dazd),
+        oblaky: m.oblaky.map(oblaky),
+        sneh: sneh.map((v) => Uint8Array.from(v, (p) => Math.round(p * 255))),
+    };
 }
 
 /** @param {any} m */

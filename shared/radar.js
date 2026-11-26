@@ -84,12 +84,20 @@ export function popisChvile(rozsah, poz, terazMs, polnocMs, posunMin) {
     return { cas: hhmm(ms, posunMin), druh: `${rozsah === 'dnes' ? 'Dnes' : 'Zajtra'} · predpoveď modelu`, predpoved: true };
 }
 
+/** @typedef {0 | 1 | 2} TypZrazok dážď, dážď so snehom, sneh */
+
+/** Palety podľa typu zrážok, v poradí `TypZrazok`. */
+const PALETY = [RADAR.farby, RADAR.farbyZmiesane, RADAR.farbySneh];
+
+/** Typ zrážok z podielu snehu 0–1 (docs/navrhy/radar-sneh.html). @param {number} podiel @returns {TypZrazok} */
+export const typZrazok = (podiel) => (podiel >= RADAR.sneh.snehOd ? 2 : podiel >= RADAR.sneh.zmiesaneOd ? 1 : 0);
+
 /**
  * Farba a krytie sily zrážok pre daný dBZ.
- * @param {number} dbz @returns {[number, number, number, number]} RGB 0–255, krytie 0–1
+ * @param {number} dbz @param {TypZrazok} [typ] @returns {[number, number, number, number]} RGB 0–255, krytie 0–1
  */
-export function farbaDbz(dbz) {
-    const s = RADAR.farby;
+export function farbaDbz(dbz, typ = 0) {
+    const s = PALETY[typ];
     let i = 0;
     while (i < s.length - 2 && dbz > s[i + 1].dbz) i++;
     const a = s[i];
@@ -101,25 +109,29 @@ export function farbaDbz(dbz) {
     return [ca[0] + (cb[0] - ca[0]) * t, ca[1] + (cb[1] - ca[1]) * t, ca[2] + (cb[2] - ca[2]) * t, a.krytie + (b.krytie - a.krytie) * t];
 }
 
-/** Farba pásu osi: bajt 0 je bez dažďa. @param {number} b */
-export function farbaBajtu(b) {
-    const [r, g, bl] = farbaDbz(bajtNaDbz(Math.max(1, b)));
+/** Farba pásu osi: bajt 0 je bez zrážok. @param {number} b @param {TypZrazok} [typ] */
+export function farbaBajtu(b, typ = 0) {
+    const [r, g, bl] = farbaDbz(bajtNaDbz(Math.max(1, b)), typ);
     return `rgb(${Math.round(r)}, ${Math.round(g)}, ${Math.round(bl)})`;
 }
 
-/** Farby podľa bajtu ako textúra 256 × 1 (RGBA). Prvý bod je priehľadný. @returns {Uint8Array} */
+/**
+ * Farby podľa bajtu ako textúra 256 × 3 (RGBA): riadok na každý typ zrážok, prvý bod je priehľadný.
+ * @returns {Uint8Array}
+ */
 export function dazdLut() {
-    const out = new Uint8Array(256 * 4);
-    for (let i = 1; i < 256; i++) {
-        const [r, g, b, a] = farbaDbz(bajtNaDbz(i));
-        out.set([Math.round(r), Math.round(g), Math.round(b), Math.round(a * 255)], i * 4);
-    }
+    const out = new Uint8Array(256 * 4 * PALETY.length);
+    for (const typ of /** @type {TypZrazok[]} */ ([0, 1, 2]))
+        for (let i = 1; i < 256; i++) {
+            const [r, g, b, a] = farbaDbz(bajtNaDbz(i), typ);
+            out.set([Math.round(r), Math.round(g), Math.round(b), Math.round(a * 255)], (typ * 256 + i) * 4);
+        }
     return out;
 }
 
-/** Legenda ako prechod CSS. */
-export const legendaPrechod = () =>
-    `linear-gradient(90deg, ${RADAR.farby
+/** Legenda typu zrážok ako prechod CSS. @param {TypZrazok} typ */
+export const legendaPrechod = (typ) =>
+    `linear-gradient(90deg, ${PALETY[typ]
         .slice(1, -1)
         .map((f) => f.farba)
         .join(', ')})`;
@@ -163,11 +175,12 @@ export function upravStyl(styl) {
 }
 
 /**
- * Pás osi: stĺpce z hodnôt v bajtoch, výška odmocninová, aby bol vidieť aj slabý dážď.
- * @param {number[]} hodnoty @returns {Array<{ poz: number, vyska: number, bajt: number }>} poz a výška 0–1
+ * Pás osi: stĺpce z hodnôt v bajtoch, výška odmocninová, aby bol vidieť aj slabý dážď. Typ zrážok farbí stĺpec.
+ * @param {number[]} hodnoty @param {TypZrazok[]} [typy]
+ * @returns {Array<{ poz: number, vyska: number, bajt: number, typ: TypZrazok }>} poz a výška 0–1
  */
-export function pasOsi(hodnoty) {
+export function pasOsi(hodnoty, typy = []) {
     return hodnoty.flatMap((bajt, i) =>
-        bajt > 0 ? [{ poz: i / Math.max(1, hodnoty.length - 1), vyska: Math.sqrt(bajt / 255), bajt }] : [],
+        bajt > 0 ? [{ poz: i / Math.max(1, hodnoty.length - 1), vyska: Math.sqrt(bajt / 255), bajt, typ: typy[i] ?? 0 }] : [],
     );
 }

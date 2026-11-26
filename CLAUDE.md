@@ -36,6 +36,11 @@ Pri načítaní je najnovšia snímka hneď na mape, no kým neprídu všetky sn
 prehrávanie potom nič nedoťahuje. Obnova po `obnovaMs` sťahuje bokom (`nove` v `web/radar-hrac.js`) a vymení všetko
 naraz, keď os stojí.
 
+Sneh (`docs/navrhy/radar-sneh.html`, D1 + V1 + legenda C, 26. 11. 2026): radar typ zrážok nevie (OPERA ani kompozity SHMÚ ho
+nemajú), podiel snehu dáva model z toho istého dopytu (`snowfall`, `temperature_2m`, `podielSnehu` v `shared/radar-data.js`).
+Shader vyberie riadok farieb dážď / dážď so snehom / sneh (`RADAR.farbySneh`, `farbyZmiesane`, `RADAR.sneh`), aj pre merané
+snímky - podľa hodiny modelu. Legenda sú tri ikony s pásmi bez slov. Model kreslí sneh vzťahom Z = 2000·S², nie ako dážď.
+
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
 sa preto vždy píše „predpoveď“, nikdy nie „radar“.
 

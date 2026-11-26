@@ -211,20 +211,26 @@ body:has(.radar:not(.hidden)) .st {
     min-height: 44px;
     padding: 0 4px;
     display: grid;
+    grid-template-columns: 16px 1fr;
     align-content: center;
-    gap: 3px;
+    align-items: center;
+    gap: 5px 6px;
+}
+.rd-legenda svg {
+    justify-self: center;
+    height: 12px;
+    width: auto;
+    fill: #dfe6f1;
+}
+.rd-legenda .vlocka {
+    fill: none;
+    stroke: #dfe6f1;
+    stroke-width: 1.5;
+    stroke-linecap: round;
 }
 .rd-legenda b {
     height: 6px;
     border-radius: 3px;
-}
-.rd-legenda div {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    line-height: 1.2;
-    font-weight: 600;
-    color: #dfe6f1;
 }
 .rd-kruh {
     flex: none;
