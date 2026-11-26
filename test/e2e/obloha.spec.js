@@ -32,7 +32,7 @@ import { denVysvetlenie, dnesFaza, dnesKarty } from '../../shared/dnes-faza.js';
 import { dnesNeboModel } from '../../shared/dnes-nebo.js';
 import { pocasieTeraz, terazModel } from '../../shared/teraz.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
-import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
+import { stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { sedemDayModel, sedemModel, sedemWeekModel } from '../../shared/sedem-dni.js';
 import { lookToStored, toUser, typicalSettings } from '../../shared/settings.js';
 import { skyNow } from '../../shared/sky.js';
@@ -1367,7 +1367,7 @@ const coVStranke = (page) =>
     });
 
 /**
- * Rozmery dlaždíc Čo zapnúť: rôzne výšky dlaždíc (dvojica práčka + sušička ako jedna) a koľko dlaždíc nemá číslo,
+ * Rozmery dlaždíc Čo zapnúť: rôzne výšky dlaždíc a koľko dlaždíc nemá číslo,
  * pásik a odrážky na rovnakej výške ako dlaždica vedľa nej (docs/navrhy/teraz-pasik-zdroje.html,
  * teraz-dlazdice-stlpce.html - všetky rovnako veľké, rady zarovnané).
  * @param {import('@playwright/test').Page} page
@@ -1433,15 +1433,14 @@ const riadokZModelu = (r) => ({
 });
 
 /**
- * Poradie v stránke: dva stĺpce (shared/teraz-stlpce.js) striedavo po blokoch, v dvojici polovičné dlaždice.
+ * Poradie v stránke: dva stĺpce (shared/teraz-stlpce.js) striedavo po dlaždiciach.
  * @param {DlazdicaModelu[]} veci
  */
 const vStlpcoch = (veci) => {
     const { lavy, pravy } = stlpceDlazdic(veci);
-    /** @param {DlazdicaModelu[] | undefined} b */
-    const blok = (b) => (!b ? [] : b.length === 1 ? b : b.map(polovicaDlazdice));
-    return Array.from({ length: Math.max(lavy.length, pravy.length) }, (_, i) => [...blok(lavy[i]), ...blok(pravy[i])])
+    return Array.from({ length: Math.max(lavy.length, pravy.length) }, (_, i) => [lavy[i], pravy[i]])
         .flat()
+        .filter((d) => d !== undefined)
         .map(dlazdicaVStranke);
 };
 
@@ -1605,9 +1604,8 @@ test.describe('karta Teraz', () => {
         await expect(dlazdica.locator('.dl-ico')).toHaveCSS('box-shadow', 'rgba(242, 245, 251, 0.65) 0px 0px 16px 0px');
         await expect(page.locator('#tz-co [data-vec="susicka"]')).not.toHaveAttribute('data-zapnuty');
         await expect(dlazdica.locator('.velky')).toHaveText(`${t?.pred} ${t?.velky}`);
-        // Práčka je polovica dvojice so sušičkou: jedna odrážka.
-        await expect(dlazdica).toContainClass('dl-pol');
-        await expect(dlazdica.locator('.odr > span:not(.sr)')).toHaveText(t ? polovicaDlazdice(t).odr : []);
+        // Práčka je celá dlaždica: všetky odrážky.
+        await expect(dlazdica.locator('.odr > span:not(.sr)')).toHaveText(t?.odr ?? []);
         expect(await rozmeryDlazdic(page)).toEqual({ vysky: 1, nezarovnane: 0 });
         // Zápis je v telefóne: po obnovení stránky práčka stále beží a detail ukáže jej zvyšok.
         await page.reload();
@@ -1667,7 +1665,7 @@ test.describe('karta Teraz', () => {
         expect(await page.evaluate(() => JSON.parse(localStorage.getItem('auto-den-v1') ?? 'null')?.vecer)).toBe(true);
         await expect.poll(() => coVStranke(page)).toEqual(coZModelu(m));
         // Čo sa dnes na slnko už nezmestí, má núdzový čas a povie, kedy pôjde celé zo slnka.
-        await expect(page.locator('#tz-dlazdice .dl:not(.dl-pol)[data-kind="nudza"] small').first()).toHaveText(/, celá zajtra$/);
+        await expect(page.locator('#tz-dlazdice .dl[data-kind="nudza"] small').first()).toHaveText(/, celá zajtra$/);
         // Zajtrajšok: ťuknutie na deň v hrebeni ukáže jeho plán s tokom dňa, dnešné dlaždice zmiznú.
         await page.locator('#tz-hreben-dni [data-den="1"]').click();
         const zajtra = terazModel(vstupTeraz(time), { den: 1 });
@@ -1707,7 +1705,7 @@ test.describe('karta Teraz', () => {
         await expect(dni.nth(1)).toHaveAccessibleName('Ne – Zajtra, slnko na veľké spotrebiče nestačí');
         await expect(page.locator('#tz-hreben-dni .wi')).toHaveCount(h.dni.filter((d) => d.pocasie).length);
         await expect(page.locator('#tz-hreben-dni .pd-okna i')).toHaveCount(h.dni.reduce((n, d) => n + d.okna.length, 0));
-        await expect(page.locator('#tz-dlazdice .dl:not(.dl-pol)[data-kind="nudza"] small').first()).toHaveText(/, celá v utorok$/);
+        await expect(page.locator('#tz-dlazdice .dl[data-kind="nudza"] small').first()).toHaveText(/, celá v utorok$/);
         expect(await vazneNalezy(page)).toEqual([]);
         expect(errors).toEqual([]);
     });
