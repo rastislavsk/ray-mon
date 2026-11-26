@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <style>
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+        </style>
+        <title>Pole pod pásom dní</title>
+        <meta name="claude:viewport-fit-sides" content="cover" />
+        <style>
+            /* Návrh (26. 11. 2026): karta Teraz – čo bude v poli pod pásom 4 dní pri zajtrajšku a ďalších dňoch namiesto hlášky.
+       Snímky sú zo skutočnej appky (fixtures z testov, sobota 5. 9. 2026 13:00) s HTML variantu vloženým do #tz-den. */
+            /* Rozloženie: jeden stĺpec textu, pod každým variantom tri dni vedľa seba (na mobile pod sebou). */
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --fg: #ffffff;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --plus: #b9f28c;
+                --minus: #ff9b8a;
+                --zlata: #ffd166;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                background: var(--bg);
+                color: var(--fg);
+                font-family: var(--font);
+                font-size: 16px;
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1240px;
+                margin: 0 auto;
+                padding-block: 40px 80px;
+                padding-left: max(16px, env(safe-area-inset-left, 0px));
+                padding-right: max(16px, env(safe-area-inset-right, 0px));
+                display: grid;
+                gap: 48px;
+            }
+            section {
+                display: grid;
+                gap: 14px;
+                min-width: 0;
+            }
+            h1,
+            h2,
+            h3 {
+                margin: 0;
+                line-height: 1.15;
+                text-wrap: balance;
+            }
+            h1 {
+                font-size: clamp(30px, 6vw, 42px);
+                font-weight: 900;
+            }
+            h2 {
+                font-size: 24px;
+                font-weight: 800;
+            }
+            h3 {
+                font-size: 18px;
+            }
+            p,
+            ul {
+                margin: 0;
+                max-width: 72ch;
+                color: var(--dim);
+            }
+            b,
+            strong {
+                color: var(--fg);
+            }
+            code {
+                font-size: 0.9em;
+            }
+            .rad {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 16px;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 6px;
+                align-content: start;
+            }
+            figure img {
+                width: 100%;
+                max-width: 390px;
+                border-radius: 14px;
+                border: 1px solid var(--line);
+            }
+            figcaption {
+                font-size: 14px;
+                color: var(--dim);
+            }
+            .karta {
+                padding: 18px;
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                display: grid;
+                gap: 10px;
+            }
+            .plus {
+                color: var(--plus);
+            }
+            .minus {
+                color: var(--minus);
+            }
+            .znak {
+                display: inline-block;
+                min-width: 2ch;
+                padding: 0 6px;
+                border-radius: 6px;
+                background: var(--zlata);
+                color: var(--bg);
+                font-weight: 900;
+                text-align: center;
+            }
+            .odpor {
+                padding: 18px;
+                border-radius: 18px;
+                background: rgba(255, 209, 102, 0.1);
+                border: 1px solid rgba(255, 209, 102, 0.4);
+                display: grid;
+                gap: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <section>
+                <h1>Pole pod pásom dní pri ďalších dňoch</h1>
+                <p>
+                    Pri dnešku je pod pásom 4 dní pole toku (slnko → dom → sieť). Pri zajtrajšku a ďalších dňoch je tam teraz hláška triedy
+                    dňa („Oskar na plný koule“). Hlášku nahradí riadok, ktorý vyzerá ako pole toku: ikony, veľké biele čísla s jednotkou a
+                    tenká čiara medzi nimi. Pole ostáva vysoké 44 px, takže dlaždice stoja v každom dni na tom istom mieste.
+                </p>
+                <p>
+                    <b>Ako vznikli obrázky:</b> sú to snímky skutočnej appky v rozmeroch telefónu (390 px, písmo appky) s dátami z testov
+                    (sobota 5. 9. 2026 o 13:00). Do poľa som vložil HTML každého variantu a zmeral, že má 44 px a nepretečie. kWh dní sú z
+                    predpovede appky, časy okna som prečítal z pásu dňa a zaokrúhlil na 15 minút.
+                    <b>Spotrebu domu (14 kWh) vo variante B som si vymyslel</b> – testovacie dáta nemajú naučený model, appka by ju brala z
+                    neho. V appke zatiaľ nič nemením.
+                </p>
+            </section>
+
+            <section>
+                <h2>Teraz v appke</h2>
+                <div class="rad">
+                    <figure>
+                        <img src="img/pole-ine-dni/d1-0.png" alt="Nedeľa, dnešná hláška" />
+                        <figcaption>Ne · polojasno</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d2-0.png" alt="Pondelok, dnešná hláška" />
+                        <figcaption>Po · zamračené</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d3-0.png" alt="Utorok, dnešná hláška" />
+                        <figcaption>Ut · polojasno</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2><span class="znak">A</span> Počasie · kWh · okno (tvoj návrh)</h2>
+                <p>
+                    Vľavo ikona počasia a predpoveď výroby za deň, vpravo ikona práčky a okno, keď slnko stačí na veľké spotrebiče. Čiara
+                    medzi nimi je prerušovaná: je to budúcnosť, nič po nej netečie.
+                </p>
+                <div class="rad">
+                    <figure>
+                        <img src="img/pole-ine-dni/d1-a.png" alt="Variant A, nedeľa" />
+                        <figcaption>Ne · 49 kWh · 7:30–17:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d2-a.png" alt="Variant A, pondelok" />
+                        <figcaption>Po · 27 kWh · 8:30–16:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d3-a.png" alt="Variant A, utorok" />
+                        <figcaption>Ut · 54 kWh · 7:15–17:15</figcaption>
+                    </figure>
+                </div>
+                <div class="karta">
+                    <ul>
+                        <li class="plus">Najužitočnejšie čísla dňa naraz: koľko vyrobí a odkedy dokedy zapínať.</li>
+                        <li class="plus">Najjednoduchšie na výpočet, appka obe čísla už má (predpoveď dňa a okná pásu dní).</li>
+                        <li class="minus">
+                            Ikona počasia a okno sú už v čipe dňa hneď nad poľom (okno ako žltý pásik), takže pole ich opakuje, len presne.
+                        </li>
+                        <li class="minus">
+                            Deň s viacerými oknami (prestávka cez obed) sa do jedného „od–do“ nezmestí, musel by ukázať najdlhšie okno alebo
+                            prvý začiatok a posledný koniec.
+                        </li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2><span class="znak">B</span> Tok celého dňa</h2>
+                <p>
+                    Ten istý riadok ako pri dnešku, len za celý deň v kWh: koľko vyrobí slnko, koľko z toho zje dom a koľko pôjde do siete
+                    (pri slabom dni naopak, koľko sa zo siete dokúpi, šípka modrá a otočená). Šípky stoja, nebežia – deň ešte nezačal.
+                </p>
+                <div class="rad">
+                    <figure>
+                        <img src="img/pole-ine-dni/d1-b.png" alt="Variant B, nedeľa" />
+                        <figcaption>Ne · 49 → 14 → 35 kWh</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d2-b.png" alt="Variant B, pondelok" />
+                        <figcaption>Po · 27 → 14 → 13 kWh</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d3-b.png" alt="Variant B, utorok" />
+                        <figcaption>Ut · 54 → 14 → 40 kWh</figcaption>
+                    </figure>
+                </div>
+                <div class="karta">
+                    <ul>
+                        <li class="plus">
+                            Vizuálne úplne to isté ako dnešok, prepínanie dní nič „nepreskočí“, zmenia sa len čísla a jednotka.
+                        </li>
+                        <li class="plus">Nová informácia, ktorú čip nemá: koľko ostane navyše (alebo bude chýbať).</li>
+                        <li class="minus">
+                            Dom a sieť sú odhad z naučenej spotreby (<code>ctx.dom</code>) a plánu spotrebičov. Bez naučeného modelu by bolo
+                            len slnko. Pri zdroji bez elektromera dom ani sieť appka nepozná ani dnes.
+                        </li>
+                        <li class="minus">Nehovorí, kedy zapnúť – to ostáva na dlaždiciach pod poľom.</li>
+                        <li class="minus">Ráta to cez deň „netto“: 35 kWh do siete neznamená, že večer netreba nič zo siete.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section>
+                <h2><span class="znak">C</span> Os dňa s oknom a spotrebičmi</h2>
+                <p>
+                    Vľavo počasie a kWh, vpravo os dňa (tá istá ako v čipe, od 5:00 do 21:00): zlaté okno s časmi pod koncami a nad ním malé
+                    ikony spotrebičov v čase, keď ich plán zapne. Ikony, ktoré by sa prekrývali, sa odsunú vedľa seba.
+                </p>
+                <div class="rad">
+                    <figure>
+                        <img src="img/pole-ine-dni/d1-c.png" alt="Variant C, nedeľa" />
+                        <figcaption>Ne · okno 7:30–17:00, umývačka, práčka, sušička</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d2-c.png" alt="Variant C, pondelok" />
+                        <figcaption>Po · okno 8:30–16:00</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/pole-ine-dni/d3-c.png" alt="Variant C, utorok" />
+                        <figcaption>Ut · okno 7:15–17:15</figcaption>
+                    </figure>
+                </div>
+                <div class="karta">
+                    <ul>
+                        <li class="plus">Najviac obraz, najmenej textu: na prvý pohľad vidno, kde v dni je slnko a čo naň pripadne.</li>
+                        <li class="plus">Viac okien za deň zvládne prirodzene (viac zlatých úsekov).</li>
+                        <li class="minus">
+                            Ikony spotrebičov opakujú dlaždice hneď pod poľom; pri troch spotrebičoch ráno sa tlačia k sebe.
+                        </li>
+                        <li class="minus">Časy pod oknom sú malé (11 px), na slnku sa horšie čítajú.</li>
+                        <li class="minus">Najviac kódu: os, odsúvanie ikon, viac okien.</li>
+                    </ul>
+                </div>
+            </section>
+
+            <section class="odpor">
+                <h2>Rozhodnuté 26. 11. 2026: B, tok dňa</h2>
+                <p>
+                    Dom je naučený profil domu (kým sa appka nenaučí, 0,4 kW celý deň) + bojler podľa naučenej potreby pri teplote dňa +
+                    typický program každého ďalšieho spotrebiča Plánu dňa; auto nie. Sieť je rozdiel zaokrúhlených čísel. Na rozdiel od
+                    textu vyššie sa dom a sieť ukážu aj bez naučeného modelu (s predvolenou spotrebou, tak ako to robí dlaždica auta a Plán
+                    dňa), inak by pole bez učenia ostalo s jediným číslom.
+                </p>
+            </section>
+
+            <section class="odpor">
+                <h2>Odporúčanie (pred rozhodnutím)</h2>
+                <p>
+                    <b>A</b>, lebo jediné hovorí obe veci, pre ktoré sa na budúci deň pozeráš: koľko vyrobí a odkedy dokedy zapínať, a dá sa
+                    spočítať z toho, čo appka už má. Opakovanie ikony počasia z čipu by som riešil tak, že ju z poľa vynechám a vľavo bude
+                    len slnko ako pri dnešku. <b>B</b> je najbližšie dnešnému poľu vzhľadom, ale čísla domu a siete sú odhad, ktorý ti v
+                    skutočnosti nič nepovie o tom, kedy zapnúť. Rozhodneš ty – kým si nevyberieš, v appke nič nemením.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>

@@ -14,6 +14,13 @@ export const TERAZ_SCENA_TEXTS = {
     von: 'do siete ide',
     dnu: 'zo siete ide',
     nic: 'Panely teraz nevyrábajú',
+    den: {
+        zoSlnka: 'Za deň zo slnka asi',
+        dom: 'dom spotrebuje',
+        von: 'do siete pôjde',
+        dnu: 'zo siete treba',
+        nula: 'so sieťou vyjde na nulu',
+    },
 };
 
 /** Najviac lúčov do panelov a bodov na vedení naraz. */
@@ -76,6 +83,27 @@ function popisOf(vyroba, odhad, dom, siet) {
     if (dom) casti.push(`${T.dom} ${dom} kW`);
     if (siet) casti.push(`${T[siet.smer]} ${siet.kw} kW`);
     return casti.join(', ');
+}
+
+/**
+ * Pole toku iného dňa (docs/navrhy/teraz-pole-ine-dni.html, B): to isté slnko → dom → sieť ako pri dnešku, len za celý
+ * deň v celých kWh - výroba z predpovede, spotreba domu so spotrebičmi a bojlerom a sieť ako rozdiel (cez deň netto:
+ * „do siete“ neznamená, že večer netreba nič zo siete). Čísla sa zaokrúhlia pred rozdielom, aby sedeli aj na pohľad.
+ * Sieť je vždy aj nulová (`nula`). `luce` hovorí, či slnko do domu niečo dá.
+ * @param {number} slnkoKwh @param {number} domKwh
+ */
+export function tokDnaModel(slnkoKwh, domKwh) {
+    const T = TERAZ_SCENA_TEXTS.den;
+    const slnko = Math.max(0, Math.round(slnkoKwh));
+    const dom = Math.max(0, Math.round(domKwh));
+    const rozdiel = slnko - dom;
+    const k = /** @type {'von' | 'dnu' | 'nula'} */ (rozdiel > 0 ? 'von' : rozdiel < 0 ? 'dnu' : 'nula');
+    const siet = String(Math.abs(rozdiel));
+    return {
+        cisla: { slnko: String(slnko), dom: String(dom), siet: { k, kw: siet } },
+        luce: slnko > 0 ? 1 : 0,
+        popis: `${T.zoSlnka} ${slnko} kWh, ${T.dom} ${dom} kWh, ${k === 'nula' ? T.nula : `${T[k]} ${siet} kWh`}`,
+    };
 }
 
 /**

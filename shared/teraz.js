@@ -9,7 +9,6 @@ import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
 import { interpolate } from './chart-model.js';
 import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
 import { dayPlan } from './day-plan.js';
-import { denTriedaDna } from './den-trieda.js';
 import { heroModel } from './hero-model.js';
 import {
     terazAutoText,
@@ -32,12 +31,15 @@ import {
 } from './messages-core.js';
 import { dayCtx, planWindows } from './mozem-jadro.js';
 import { mozemModel } from './mozem.js';
+import { chosen } from './plan-dna.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
 import { daylightSpan, localDateKey, localMinutes, localToUtc } from './solar.js';
+import { bojlerRiadeny } from './teraz-bojler.js';
+import { tokDnaModel } from './teraz-scena.js';
 import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzaRiadok, nudzoveCasy } from './tyzden.js';
-import { domProfil } from './ucenie.js';
+import { domProfil, potrebaBojlera } from './ucenie.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
@@ -88,7 +90,7 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
 
 /**
  * Hrebeň týždňa a plán zvoleného dňa: dnes čo zapnúť, iný deň (`den`, poradie od dneška) jeho plán
- * s hláškou podľa triedy dňa namiesto mena a dátumu (`co.den`, DEN_WORDS.iny); detaily spotrebičov patria zvolenému dňu. Deň mimo predpovede je dnešok.
+ * s tokom dňa namiesto mena a dátumu (`co.den`, tokDna); detaily spotrebičov patria zvolenému dňu. Deň mimo predpovede je dnešok.
  * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {Parameters<typeof coZapnutModel>[1]} teraz
  * @param {{ span: { from: number, to: number }, devices: readonly string[], den: number, voice: import('./messages.js').Voice }} o
  */
@@ -98,20 +100,31 @@ function tyzdenOf(input, rows, teraz, { span, devices, den, voice }) {
     const zvoleny = hreben && dni[den] ? den : 0;
     const dnes = dnesOf(input, rows, { ...teraz, tyzden: dni }, span, voice);
     const iny = hreben && zvoleny > 0 ? denInyModel(dni[zvoleny], devices, voice) : null;
-    const hlaska =
-        iny && input.forecast
-            ? voiceTexts(voice).DEN_WORDS.iny[denTriedaDna({ ...input, forecast: input.forecast }, zvoleny, devices)]
-            : null;
     return {
         co: {
             ...dnes.co,
-            den: hlaska,
+            den: iny ? tokDna(input, dni[zvoleny].day, devices) : null,
             riadky: iny ? iny.riadky : dnes.co.riadky,
             auto: devices.includes('auto') ? autoDlazdica(input, iny ? zvoleny : 0) : null,
         },
         veci: iny ? iny.veci : dnes.veci,
         hreben: hreben && { ...hreben, zvoleny },
     };
+}
+
+/**
+ * Tok iného dňa pod pásom dní (docs/navrhy/teraz-pole-ine-dni.html, B): výroba dňa z predpovede (s učením, ak ho
+ * volajúci pridal) a spotreba domu za deň - naučený profil domu (domProfil, bez učenia HOUSE_BASE_KW), bojler podľa
+ * naučenej potreby pri teplote dňa (keď je doma alebo ho riadi zásuvka) a typický program každého ďalšieho spotrebiča
+ * Plánu dňa, lebo plán iného dňa ich rozvrhne všetky (zo slnka alebo núdzovo). Auto v pláne nie je, nie je ani tu.
+ * @param {TerazInput} input @param {import('./solar.js').ForecastDay} day @param {readonly string[]} devices
+ */
+function tokDna(input, day, devices) {
+    const teplota = day.tempMinC !== null && day.tempMaxC !== null ? (day.tempMinC + day.tempMaxC) / 2 : null;
+    const bojler = devices.includes('bojler') || (!!input.bojler && bojlerRiadeny(input.bojler, input.now));
+    const veci = chosen(devices).reduce((sum, { item }) => (item.id === 'bojler' ? sum : sum + (item.runKwh ?? 0)), 0);
+    const dom = domProfil(input.ucenie, day.date).reduce((a, b) => a + b, 0);
+    return tokDnaModel(day.kwhTotal, dom + veci + (bojler ? potrebaBojlera(input.ucenie, teplota) / 1000 : 0));
 }
 
 /**
@@ -321,7 +334,9 @@ function empty(kind, estimate) {
         note: /** @type {ReturnType<typeof noteOf>} */ (null),
         retry: false,
         guess: false,
-        co: /** @type {(ReturnType<typeof coZapnutModel> & { den: string | null, auto: ReturnType<typeof autoDlazdica> }) | null} */ (null),
+        co: /** @type {(ReturnType<typeof coZapnutModel> & { den: ReturnType<typeof tokDnaModel> | null, auto: ReturnType<typeof autoDlazdica> }) | null} */ (
+            null
+        ),
         veci: /** @type {Array<VecDetail>} */ ([]),
         hreben: /** @type {(NonNullable<ReturnType<typeof hrebenModel>> & { zvoleny: number }) | null} */ (null),
         os: /** @type {ReturnType<typeof denOs> | null} */ (null),

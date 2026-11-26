@@ -91,25 +91,10 @@
     background: #fff;
     box-shadow: 0 0 0 1px rgba(10, 20, 50, 0.6);
 }
-/* Hláška iného dňa namiesto mena a dátumu (docs/navrhy/teraz-hlaska-dna.html): jeden riadok, vysoký ako pole toku dneška. */
-.den-h {
-    display: flex;
-    align-items: center;
-    min-height: 44px;
-    /* O 8 px nižšie ako 44 px vysoké pole toku dneška (odstup dotykových plôch) - dlaždice stoja v každom dni rovnako. */
-    margin-bottom: 8px;
-    padding: 0 6px;
-    text-shadow: 0 1px 10px rgba(0, 0, 0, 0.3);
-}
-.den-h h2 {
-    font-size: 1rem;
-    font-weight: 800;
-    line-height: 1.2;
-}
-/* Pole toku energie pri dnešku (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť s číslami a vedením
-   medzi nimi. Je presne také vysoké ako hlavička iného dňa (.den-h), aby dlaždice stáli v každom dni na tej istej
-   výške. Na holej oblohe, preto biele čísla s tieňom. Impulz beží po vedení smerom toku: zo slnka a do siete
-   zlatý, zo siete modrobiely; pri obmedzenom pohybe namiesto neho stojí šípka. */
+/* Pole toku energie (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť s číslami a vedením medzi nimi,
+   iný deň za celý deň v kWh (docs/navrhy/teraz-pole-ine-dni.html, B). V každom dni je rovnako vysoké, aby dlaždice
+   stáli na tej istej výške. Na holej oblohe, preto biele čísla s tieňom. Impulz beží po vedení smerom toku: zo slnka
+   a do siete zlatý, zo siete modrobiely; pri obmedzenom pohybe a pri inom dni (`data-stoji`) namiesto neho stojí šípka. */
 .tok-pole {
     display: block;
     width: 100%;
@@ -196,6 +181,9 @@
 .tp-v[data-smer='dnu'] .tp-sipka {
     border-left: 0;
     border-right: 8px solid #a8dcff;
+}
+.tp-v[data-stoji] .tp-sipka {
+    display: block;
 }
 @keyframes tp-imp {
     from {

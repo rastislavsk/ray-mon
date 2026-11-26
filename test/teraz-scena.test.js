@@ -1,7 +1,7 @@
 // Scéna toku energie na karte Teraz (shared/teraz-scena.js).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { oknaSvietia, scenaModel, TERAZ_SCENA_TEXTS } from '../shared/teraz-scena.js';
+import { oknaSvietia, scenaModel, TERAZ_SCENA_TEXTS, tokDnaModel } from '../shared/teraz-scena.js';
 
 test('scéna: prebytok do siete - výroba, dom, sieť von, lúče a body podľa kW', () => {
     const m = scenaModel({ vyrobaKw: 6.4, odhad: false, sietKw: 4.6 });
@@ -78,4 +78,18 @@ test('scéna: okná svietia v tme, od polnoci do piatej nie (miestny čas)', () 
     assert.equal(o('2026-11-18T13:00:00+01:00', false), false);
     // Polnoc je miestna, nie UTC: 23:30 UTC je v Bratislave už spánok.
     assert.equal(o('2026-11-18T23:30:00Z'), false);
+});
+
+test('tok iného dňa: celé kWh, sieť ako rozdiel už zaokrúhlených čísel, aj nulová; bez slnka nič netečie do domu', () => {
+    assert.deepEqual(tokDnaModel(48.6, 13.9), {
+        cisla: { slnko: '49', dom: '14', siet: { k: 'von', kw: '35' } },
+        luce: 1,
+        popis: 'Za deň zo slnka asi 49 kWh, dom spotrebuje 14 kWh, do siete pôjde 35 kWh',
+    });
+    assert.deepEqual(tokDnaModel(8.4, 12.2).cisla.siet, { k: 'dnu', kw: '4' });
+    const nula = tokDnaModel(14.4, 13.6);
+    assert.deepEqual(nula.cisla.siet, { k: 'nula', kw: '0' });
+    assert.ok(nula.popis.endsWith(TERAZ_SCENA_TEXTS.den.nula));
+    assert.equal(tokDnaModel(0.2, 10).luce, 0);
+    assert.equal(tokDnaModel(-1, -1).cisla.slnko, '0');
 });

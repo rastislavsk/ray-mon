@@ -196,21 +196,17 @@
                     <button type="button" id="tz-ask-btn" class="pbtn"></button>
                 </div>
                 <!-- Čo zapnúť: pás dní (počasie a kedy slnko stačí na veľké spotrebiče; ťuknutie
-                     na deň ukáže jeho plán), pri inom dni jeho hlavička, pri dnešku pole toku energie
-                     (koľko vyrábajú panely, berie dom a ide do siete či zo siete) a pod tým jedna mriežka dlaždíc: čo ide
+                     na deň ukáže jeho plán), pole toku energie (koľko vyrábajú panely, berie dom a ide do siete
+                     či zo siete; pri inom dni za celý deň) a pod tým jedna mriežka dlaždíc: čo ide
                      teraz (alebo najbližšia vec), Bojler a ďalšie spotrebiče zvoleného dňa. Dlaždica otvorí
                      detail spotrebiča. -->
                 <div id="tz-co" class="co hidden">
                     <div id="tz-hreben" class="hreben hidden">
                         <div id="tz-hreben-dni" class="hreben-dni" role="group"></div>
                     </div>
-                    <!-- Pri dnešku pole toku energie (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť s číslami
-                         a impulzmi, rovnako vysoké ako hlavička iného dňa, aby dlaždice stáli vždy na tom istom mieste. -->
+                    <!-- Pole toku energie (docs/navrhy/teraz-pole-noc-bezi.html, 1A): slnko → dom → sieť, dnes v kW s impulzmi,
+                         iný deň za celý deň v kWh (docs/navrhy/teraz-pole-ine-dni.html, B), aby dlaždice stáli vždy na tom istom mieste. -->
                     <button type="button" id="tz-tok" class="tok-pole hidden"></button>
-                    <!-- Pri inom dni namiesto mena a dátumu krátka hláška o dni (docs/navrhy/teraz-hlaska-dna.html, shared/den-hlaska.js). -->
-                    <div id="tz-den" class="den-h hidden">
-                        <h2 id="tz-den-hlaska"></h2>
-                    </div>
                     <div id="tz-dlazdice" class="mriezka"></div>
                 </div>
             </section>
