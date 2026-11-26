@@ -1206,11 +1206,11 @@ test.describe('bojler na prebytky', () => {
         await expect(dl).toHaveAttribute('data-tone', t.tone);
         await expect(dl).toContainText(t.meno);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
-        // Značka pri ikone: riadi appka. Bojler hreje, preto má plný biely kruh ikony (docs/navrhy/teraz-zapnuty-farba.html, F1).
-        await expect(dl.locator('.dl-ico .dl-rz')).toHaveAttribute('data-rezim', 'appka');
+        // Bojler hreje, preto má plný biely kruh ikony so žiarou (docs/navrhy/teraz-zapnuty-farba.html, F1); značka, kto ho riadi, pri ikone nie je.
+        await expect(dl.locator('.dl-ico > :not(.vi)')).toHaveCount(0);
         await expect(dl).toHaveAttribute('data-zapnuty', '');
         await expect(dl.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
-        await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'none');
+        await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'rgba(242, 245, 251, 0.65) 0px 0px 16px 0px');
         await expect(dl).toHaveCSS('box-shadow', 'none');
         await expect(page.locator('#tz-co [data-vec="bojler"]'), 'bojler, ktorý riadi zásuvka, appka neradí').toHaveCount(1);
         await dl.click();
@@ -1281,7 +1281,7 @@ test.describe('bojler na prebytky', () => {
         const t2 = autoDlazdicaNabija(beh, SITE.timezone);
         await expect(dl).toHaveAttribute('data-zapnuty', 'nabija');
         await expect(dl.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
-        await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'none');
+        await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'rgba(242, 245, 251, 0.65) 0px 0px 16px 0px');
         await expect(dl.locator('.velky')).toHaveText(`${t2.velky} ${t2.za}`);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t2.odr);
         expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });
@@ -1502,10 +1502,9 @@ test.describe('bojler na prebytky', () => {
         await expect(dl).toHaveAttribute('data-tone', 'tiche');
         await expect(dl).toContainText(t.meno);
         await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
-        // Ručný režim ukáže značka s rukou, nie slovo v texte; čítačka ho počuje v mene dlaždice.
-        await expect(dl.locator('.dl-rz')).toHaveAttribute('data-rezim', 'rucne');
+        // Ručný režim dlaždica nehovorí (značka pri ikone zrušená 26. 11. 2026), povie ho panel Bojler dnes.
+        await expect(dl.locator('.dl-ico > :not(.vi)')).toHaveCount(0);
         await expect(dl).not.toContainText('ručne');
-        await expect(dl).toHaveAccessibleName(new RegExp(R.rucne));
         expect(errors).toEqual([]);
     });
 });

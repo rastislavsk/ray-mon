@@ -97,6 +97,16 @@
             .minus {
                 color: #ff9b8a;
             }
+            .stlpce {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 16px;
+            }
+            .stlpec {
+                display: grid;
+                gap: 10px;
+                align-content: start;
+            }
             .trio {
                 display: grid;
                 grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -138,6 +148,177 @@
                     (v testovacích dátach nebeží nič). Súmrak ani zamračenú oblohu som nesnímal – fixtures majú len jasný deň.
                 </p>
             </section>
+            <section>
+                <h2>F1 so žiarou a bez (26. 11. 2026)</h2>
+                <p>
+                    Biely kruh s tmavou ikonou, ako je teraz v appke – hore bez žiary, pod ním so žiarou (biela, 16 px). Snímky zo skutočnej
+                    appky; práčka beží a auto sa nabíja len na ukážku. Zamračené som nasimuloval: oblačnosť 100 % a výroba asi na pätine,
+                    preto má práčka iný čas a auto 0 km.
+                </p>
+                <div class="stlpce">
+                    <div class="stlpec">
+                        <h3>Deň 13:00</h3>
+                        <figure>
+                            <img src="img/zapnuty/f1-bez-den.png" alt="F1 bez žiary, Deň 13:00" />
+                            <figcaption>bez žiary (dnes v appke)</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="img/zapnuty/f1-so-den.png" alt="F1 so žiarou, Deň 13:00" />
+                            <figcaption>so žiarou</figcaption>
+                        </figure>
+                    </div>
+                    <div class="stlpec">
+                        <h3>Súmrak 19:35</h3>
+                        <figure>
+                            <img src="img/zapnuty/f1-bez-sumrak.png" alt="F1 bez žiary, Súmrak 19:35" />
+                            <figcaption>bez žiary (dnes v appke)</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="img/zapnuty/f1-so-sumrak.png" alt="F1 so žiarou, Súmrak 19:35" />
+                            <figcaption>so žiarou</figcaption>
+                        </figure>
+                    </div>
+                    <div class="stlpec">
+                        <h3>Noc 21:30</h3>
+                        <figure>
+                            <img src="img/zapnuty/f1-bez-noc.png" alt="F1 bez žiary, Noc 21:30" />
+                            <figcaption>bez žiary (dnes v appke)</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="img/zapnuty/f1-so-noc.png" alt="F1 so žiarou, Noc 21:30" />
+                            <figcaption>so žiarou</figcaption>
+                        </figure>
+                    </div>
+                    <div class="stlpec">
+                        <h3>Zamračené 13:00</h3>
+                        <figure>
+                            <img src="img/zapnuty/f1-bez-zamracene.png" alt="F1 bez žiary, Zamračené 13:00" />
+                            <figcaption>bez žiary (dnes v appke)</figcaption>
+                        </figure>
+                        <figure>
+                            <img src="img/zapnuty/f1-so-zamracene.png" alt="F1 so žiarou, Zamračené 13:00" />
+                            <figcaption>so žiarou</figcaption>
+                        </figure>
+                    </div>
+                </div>
+                <p><b>Rozhodnuté 26. 11. 2026: F1 so žiarou</b>, pri bojleri bez značky, kto ho riadi.</p>
+                <ul>
+                    <li class="plus">
+                        So žiarou kruh „svieti“ – najviac to vidno v noci a pri súmraku, na sivej oblohe je rozdiel najmenší.
+                    </li>
+                    <li class="minus">Žiara kruh opticky zväčší, cez deň na modrej oblohe pôsobí trochu rozmazane.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Ôsme kolo: modrý prstenec na bielom kruhu (26. 11. 2026)</h2>
+                <p>
+                    Výplň kruhu je biela ako dnes, okolo nej modrý prstenec <code>#7cc4ff</code>; každý variant bez žiary a so žiarou. V N1
+                    je modrá aj ikona – svetlá modrá appky by na bielej zanikla, preto je ikona v tmavšej modrej <code>#2f8ee0</code>. V N2
+                    ostáva ikona tmavá ako dnes. Značka, kto riadi bojler, chýba vo všetkých. Snímky zo skutočnej appky o 13:00, bojler
+                    hreje, práčka je označená ako bežiaca len na ukážku.
+                </p>
+                <div class="rad">
+                    <figure>
+                        <img src="img/zapnuty/b0-bojler.png" alt="Teraz v appke" />
+                        <figcaption><b>Teraz v appke</b>Biely kruh, tmavá ikona, značka pri bojleri</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/n1-bojler.png" alt="N1 · modrá ikona, bez žiary" />
+                        <figcaption><b>N1 · modrá ikona, bez žiary</b></figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/n1z-bojler.png" alt="N1 · modrá ikona, so žiarou" />
+                        <figcaption><b>N1 · modrá ikona, so žiarou</b></figcaption>
+                    </figure>
+                </div>
+                <div class="rad">
+                    <figure>
+                        <img src="img/zapnuty/n2-bojler.png" alt="N2 · tmavá ikona, bez žiary" />
+                        <figcaption><b>N2 · tmavá ikona, bez žiary</b></figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/n2z-bojler.png" alt="N2 · tmavá ikona, so žiarou" />
+                        <figcaption><b>N2 · tmavá ikona, so žiarou</b></figcaption>
+                    </figure>
+                </div>
+                <div class="rad">
+                    <div class="karta">
+                        <b>N1 · modrá ikona</b>
+                        <ul>
+                            <li class="plus">Celý kruh hovorí jednou farbou: modrý obrys aj ikona.</li>
+                            <li class="minus">
+                                Modrá ikona na bielej je menej kontrastná ako tmavá, pri malom kruhu v dvojici je jemnejšia.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>N2 · tmavá ikona</b>
+                        <ul>
+                            <li class="plus">Najčitateľnejšia ikona, oproti dnešku pribudne len modrý okraj.</li>
+                            <li class="minus">Modrá je len tenký prstenec, zapnutie nesie hlavne biela výplň.</li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>Žiara</b>
+                        <ul>
+                            <li class="plus">Kruh pôsobí rozsvietený, na tmavom skle v noci ešte viac.</li>
+                            <li class="minus">Kruh opticky zväčší (to ti predtým prekážalo) a modrá sa v žiare rozleje.</li>
+                        </ul>
+                    </div>
+                </div>
+                <p>
+                    <b>Neprešlo (vybrané F1 so žiarou).</b> Odporúčal som N2 bez žiary – najčitateľnejšia ikona, kruh rovnako veľký ako
+                    vypnutý a modrý okraj zapnutie spresní.
+                </p>
+            </section>
+
+            <section>
+                <h2>Siedme kolo: modrý prstenec (26. 11. 2026)</h2>
+                <p>
+                    Kruh ostane priesvitný ako pri vypnutom, zapnutie povie modrý prstenec okolo neho (modrá appky <code>#7cc4ff</code>). V
+                    M1 je modrá aj ikona, v M2 ostane biela. Pri bojleri chýba značka, kto ho riadi (ruka / slnko na kraji kruhu) – podľa
+                    tvojho zadania ju odstránim v každom variante. Snímky sú zo skutočnej appky o 13:00, bojler hreje a práčku som označil
+                    ako bežiacu len na ukážku. Noc som nesnímal – v testovacích dátach s bojlerom je len deň.
+                </p>
+                <div class="rad">
+                    <figure>
+                        <img src="img/zapnuty/b0-bojler.png" alt="Teraz v appke" />
+                        <figcaption><b>Teraz v appke</b>Biely plný kruh, značka riadi appka pri bojleri</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/m1-bojler.png" alt="M1 · Modrý prstenec a modrá ikona" />
+                        <figcaption><b>M1 · Modrý prstenec a modrá ikona</b>Kruh priesvitný, prstenec aj ikona modré</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/zapnuty/m2-bojler.png" alt="M2 · Len modrý prstenec" />
+                        <figcaption><b>M2 · Len modrý prstenec</b>Kruh priesvitný, prstenec modrý, ikona biela</figcaption>
+                    </figure>
+                </div>
+                <div class="rad">
+                    <div class="karta">
+                        <b>M1 · prstenec + modrá ikona</b>
+                        <ul>
+                            <li class="plus">Zapnutie je čitateľné dvakrát (obrys aj ikona), vidno ho aj na malom kruhu v dvojici.</li>
+                            <li class="minus">
+                                Modrá je v appke farba lacnej siete (pásik, pole toku) – modrá ikona nad modrým pásikom môže mýliť.
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="karta">
+                        <b>M2 · len prstenec</b>
+                        <ul>
+                            <li class="plus">Najtichšie, ikona ostáva biela ako všetok text na skle.</li>
+                            <li class="minus">Rozdiel je len tenká čiara – na prvý pohľad slabší ako M1 aj ako dnešný biely kruh.</li>
+                        </ul>
+                    </div>
+                </div>
+                <p>
+                    <b>Neprešlo.</b> Odporúčal som M1, ak má byť modrá – zapnutie je jasné aj v dvojici. Rozhodneš ty – kým si nevyberieš, v
+                    appke nič nemením.
+                </p>
+            </section>
+
             <section>
                 <h2>Šieste kolo: stále farby</h2>
                 <p>

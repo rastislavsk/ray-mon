@@ -16,7 +16,7 @@ import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
-import { rezimIcon, tokIcon, vecIcon, weatherIcon } from './icons.js';
+import { tokIcon, vecIcon, weatherIcon } from './icons.js';
 import { scenaSvg, tokPoleHtml } from './teraz-scena.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
@@ -24,7 +24,7 @@ import { dialog, setHtml, setText, show } from './write.js';
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 /**
- * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, rezim?: 'appka' | 'rucne' | null, pred?: string, velky: string,
+ * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, pred?: string, velky: string,
  *   meno: string, podiel: number | null, draha?: number, odr: string[], potom?: { text: string, dlho: boolean } | null,
  *   bezDetailu?: boolean, za?: string, zapnuty?: 'nabija' }} Dlazdica
  * `bezDetailu`: dlaždica bez detailu (auto zo slnka) nie je tlačidlo - ťuknutie na ňu nič neotvorí. `zapnuty: 'nabija'`:
@@ -100,7 +100,7 @@ function renderHreben(h, dom) {
  * idú vždy v tomto poradí a pásik je aj tam, kde nie je čo ukázať (prázdny, drží miesto): dlaždice v rade zdieľajú
  * riadky mriežky, takže číslo aj pásik sú v nich na rovnakej výške, a odrážky majú vždy miesto na dva riadky,
  * takže sú všetky dlaždice rovnako vysoké. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
- * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas), `rezim` značka pri ikone, kto bojler zapína.
+ * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas).
  * Zapnutý spotrebič (beží, bojler, ktorému zásuvka zapla relé, auto sa asi nabíja) má plný biely kruh ikony
  * (`data-zapnuty`, docs/navrhy/teraz-zapnuty-farba.html, F1). `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
  * (docs/navrhy/teraz-dlazdice-stlpce.html, B): ikona vedľa čísla a jedna odrážka, mriežku riadkov nezdieľa.
@@ -109,8 +109,8 @@ function renderHreben(h, dom) {
  */
 const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
     `<${znacka(d)} class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''}${stavDlazdice(d, oziv)}>` +
-    `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${rezimHtml(d.rezim)}</span>` +
-    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}${zaHtml(d.za)}</span><b>${escapeHtml(d.meno)}</b>${rezimSr(d.rezim)}` +
+    `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}</span>` +
+    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}${zaHtml(d.za)}</span><b>${escapeHtml(d.meno)}</b>` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%;--n:${100 - (d.draha ?? 0)}%"`}></i>` +
     `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
     `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></${znacka(d).split(' ')[0]}>`;
@@ -169,15 +169,6 @@ function prvyVPlane(co) {
     const id = co.hore.dlazdice[0]?.id ?? co.hore.dalsi?.id ?? co.riadky[0]?.id;
     return id ? { id, druh: 'plan' } : null;
 }
-
-/**
- * Značka režimu bojlera na kraji kruhu s ikonou (docs/navrhy/teraz-pole-noc-bezi.html): ruka (ručne), slnko (riadi appka).
- * @param {'appka' | 'rucne' | null | undefined} rezim
- */
-const rezimHtml = (rezim) => (rezim ? `<i class="dl-rz" data-rezim="${rezim}">${rezimIcon(rezim)}</i>` : '');
-
-/** Režim bojlera pre čítačku slovom - kruh s ikonou čítačka nečíta. @param {'appka' | 'rucne' | null | undefined} rezim */
-const rezimSr = (rezim) => (rezim ? `<span class="sr">, ${escapeHtml(TERAZ_BOJLER_TEXTS.rezim.sr[rezim])}</span>` : '');
 
 /**
  * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pri inom dni hláška dňa (docs/navrhy/teraz-hlaska-dna.html), pod tým dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
