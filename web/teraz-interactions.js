@@ -11,6 +11,7 @@ import { rytmusSBojlerom } from '../shared/zdroje.js';
 import { zladBehy } from './bezi-spolocne.js';
 import { ulozRezimBojlera } from './data.js';
 import { zmenOznamBojlera } from './bojler-oznam.js';
+import { zmenOznamZasuvky } from './zasuvka-oznam.js';
 import { zmenOznamAuta } from './auto-nabija.js';
 import { objednajKoniec } from './koniec.js';
 import { stepBack } from './nav-back.js';
@@ -49,6 +50,7 @@ export function initTeraz(store, dom, refresh) {
         if (btn instanceof HTMLElement) zmenRezim(store, btn.dataset.bojlerRezim === 'rucne');
     });
     dom.tzBojlerOznam.addEventListener('click', () => zmenOznamBojlera(store, !store.get().bojlerOznam));
+    dom.tzVecOznam.addEventListener('click', () => zmenOznamZasuvky(store, !store.get().zasuvkaOznam));
     // Panel Auto (docs/navrhy/auto-nabija.html): ten istý krok ako detail spotrebiča, oznámenia o začiatku a konci zvlášť.
     initSheet(dom.tzAutoSheet, () => stepBack(store, { tzVec: null }));
     // Panel Klíma (docs/navrhy/klima-daikin.html) - ten istý krok tzVec ako detail spotrebiča.

@@ -20,6 +20,7 @@ const min = (/** @type {number} */ m) => T0 + m * 60000;
 
 test('domBezBojlera: výroba mínus dodávka, bez bojlera, ktorý práve hreje a ozval sa nedávno', () => {
     assert.equal(domBezBojlera(3, 1.2, null, T0), 1.8);
+    assert.equal(domBezBojlera(3, 1.2, null, T0, 0.5), 1.3, 'bez spotrebičov na zásuvkách');
     assert.equal(domBezBojlera(0.5, -1, undefined, T0), 1.5, 'odber zo siete patrí domu');
     assert.equal(domBezBojlera(4, 0.2, { kontaktAt: T0, rele: true, w: 2000 }, T0), 1.8);
     assert.equal(domBezBojlera(4, 0.2, { kontaktAt: T0, rele: false, w: 2000 }, T0), 3.8, 'relé vypnuté');

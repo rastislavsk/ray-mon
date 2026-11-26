@@ -13,6 +13,7 @@ import {
     loadDoma,
     loadBezi,
     loadBojlerOznam,
+    loadZasuvkaOznam,
     loadAutoOznam,
     loadRanna,
     loadTrasy,
@@ -29,6 +30,7 @@ import { initOznamZosulad, initOznamZrkadlo, oznamStav } from './web/oznamenia.j
 import { initOznamKlik } from './web/oznamenia-klik.js';
 import { obnovOznamBojlera } from './web/bojler-oznam.js';
 import { obnovOznamAuta } from './web/auto-nabija.js';
+import { obnovOznamZasuvky } from './web/zasuvka-oznam.js';
 import { collectDom } from './web/dom.js';
 import { initInteractions } from './web/interactions.js';
 import { initParts, preloadParts } from './web/parts.js';
@@ -78,6 +80,7 @@ const store = createStore(
         autoOznam: loadAutoOznam(),
         teplomer: loadTeplomer(),
         klimaNast: loadKlimaNast(),
+        zasuvkaOznam: loadZasuvkaOznam(),
     }),
 );
 
@@ -88,6 +91,7 @@ initOznamZrkadlo(store, './');
 initOznamZosulad(store);
 obnovOznamBojlera(store);
 obnovOznamAuta(store);
+obnovOznamZasuvky(store);
 // Poslucháči (aj zápis krokov do histórie) sa prihlásia pred prekreslením: nový krok sa tak zapíše
 // skôr, než render posunie stránku (detail karty 7 dní začína hore). Prehliadač si pri zápise
 // pamätá posun opúšťanej položky a po Späť ho obnoví - musí to byť posun prehľadu, nie nula.

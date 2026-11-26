@@ -26,6 +26,8 @@
 // POST /auto-oznamenia: telefón si zapne či vypne oznámenia o začiatku a konci nabíjania auta (worker/src/ucet.js).
 // POST /klima: skript na Shelly posiela odpovede lokálneho API klimatizácie Daikin (docs/navrhy/klima-daikin.html).
 // POST /klima-stav: pečať telefónu -> stav klimatizácie s dnešnými bodmi a zdrojmi hodín (worker/src/ucet.js).
+// POST /spotrebic: skript v zásuvke Shelly so spotrebičom posiela príkon a energiu (docs/navrhy/pracka-zasuvka.html).
+// POST /spotrebic-oznamenia: telefón si zapne či vypne oznámenie o konci behu zo zásuvky (worker/src/ucet.js).
 //
 // Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
 // navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
@@ -49,6 +51,8 @@ import {
     WORKER_PRIPOMEN_PATH,
     WORKER_PV_PATH,
     WORKER_RADAR_PATH,
+    WORKER_SPOTREBIC_OZNAM_PATH,
+    WORKER_SPOTREBIC_PATH,
     WORKER_TRASY_PATH,
     WORKER_UCENIE_PATH,
     WORKER_ZDIELAJ_PATH,
@@ -423,6 +427,45 @@ export async function handleKlima(request, env, now) {
 }
 
 /**
+ * POST /spotrebic: `{ pecat, id, vec, w, e }` od skriptu v zásuvke so spotrebičom (docs/navrhy/pracka-zasuvka.html) ->
+ * `{ ok }`. Beh z hlásení rozozná Durable Object účtu (shared/zasuvka.js). Zlé hlásenie -> 400, iná zásuvka toho istého
+ * spotrebiča, kým sa prvá ozýva -> 409.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleSpotrebic(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    if (!obsah) return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/spotrebic', now, { vec: req.vec, id: req.id, w: req.w, e: req.e });
+        if (r.odmietnute) return json(409, { chyba: 'zariadenie' });
+        return r.ok ? json(200, { ok: true }) : json(400, { chyba: 'udaje' });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
+ * POST /spotrebic-oznamenia: `{ pecat, endpoint, keys, on }` od appky (pečať telefónu) -> `{ ok }`. Zapne (`on`) či
+ * vypne tomuto telefónu oznámenie o konci behu spotrebiča na zásuvke (docs/navrhy/pracka-zasuvka.html).
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleSpotrebicOznam(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    const keys = klucOdberu(req?.keys);
+    if (!obsah || !platnyOdber(req.endpoint) || typeof req.on !== 'boolean' || (req.on && !keys)) return json(400, { chyba: 'udaje' });
+    try {
+        await ucet(env.UCTY, obsah.pristup, '/spotrebic-oznam', now, { endpoint: req.endpoint, keys, on: req.on });
+        return json(200, { ok: true });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
  * POST /klima-stav: `{ pecat }` od appky (pečať telefónu) -> `{ klima }`, posledné hlásenie klimatizácie s dnešnými
  * bodmi a zdrojmi hodín (null, kým sa skript neozval). Appka sa pýta pri každej obnove dát, na Huawei nejde nič.
  * @param {Request} request @param {Env} env @param {Date} now
@@ -516,8 +559,8 @@ export async function handleHistoria(request, env, now) {
 const DATUM = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * POST /bezi: `{ pecat, d, zmeny }` od appky (pečať telefónu) -> `{ bezi }`, dnešné behy „Už beží“ všetkých telefónov
- * domácnosti (docs/navrhy/bezi-spolocne.html). `d` je dnešok telefónu, `zmeny` behy spotrebičov, ktoré sa na ňom zmenili
+ * POST /bezi: `{ pecat, d, zmeny }` od appky (pečať telefónu) -> `{ bezi, zasuvky }`, dnešné behy „Už beží“ všetkých
+ * telefónov domácnosti (docs/navrhy/bezi-spolocne.html) a stav zásuviek spotrebičov (docs/navrhy/pracka-zasuvka.html). `d` je dnešok telefónu, `zmeny` behy spotrebičov, ktoré sa na ňom zmenili
  * (shared/bezi.js). Len Huawei Northbound - iné zdroje Durable Object nemajú.
  * @param {Request} request @param {Env} env @param {Date} now
  */
@@ -528,7 +571,7 @@ export async function handleBezi(request, env, now) {
     if (!obsah || typeof req.d !== 'string' || !DATUM.test(req.d)) return json(400, { chyba: 'udaje' });
     try {
         const r = await ucet(env.UCTY, obsah.pristup, '/bezi', now, { d: req.d, zmeny: req.zmeny ?? [] });
-        return json(200, { bezi: r.bezi });
+        return json(200, { bezi: r.bezi, zasuvky: r.zasuvky ?? {} });
     } catch (err) {
         return chyba(err);
     }
@@ -592,6 +635,8 @@ const CESTY = {
     // Skript na Shelly hlási každú minútu, appka sa pýta pri každej obnove; bez platnej pečate nič nespraví.
     [WORKER_KLIMA_PATH]: { limit: false, run: handleKlima },
     [WORKER_KLIMA_STAV_PATH]: { limit: false, run: handleKlimaStav },
+    [WORKER_SPOTREBIC_PATH]: { limit: false, run: handleSpotrebic },
+    [WORKER_SPOTREBIC_OZNAM_PATH]: { limit: false, run: handleSpotrebicOznam },
     [WORKER_HISTORIA_PATH]: { limit: true, run: handleHistoria },
     // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
     [WORKER_BEZI_PATH]: { limit: false, run: handleBezi },

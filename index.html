@@ -550,6 +550,29 @@
                                     ></textarea>
                                     <ol id="ns-klima-kroky" class="ns-kroky"></ol>
                                 </div>
+                                <!-- Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html, A + S2): ktorý spotrebič, kedy sa zásuvka
+                                     ozvala a skript do nej. Len pri meraní Huawei Northbound. -->
+                                <div id="ns-zasuvka" class="ns-bojler hidden" role="group" aria-labelledby="ns-zasuvka-title">
+                                    <h4 id="ns-zasuvka-title" class="ns-sub"></h4>
+                                    <p id="ns-zasuvka-intro" class="oznam-note"></p>
+                                    <div class="it ns-zasuvka-vec">
+                                        <span><b id="ns-zasuvka-vec-l"></b></span>
+                                        <span id="ns-zasuvka-vec" class="minis" role="group" aria-labelledby="ns-zasuvka-vec-l"></span>
+                                    </div>
+                                    <div class="it">
+                                        <span><b id="ns-zasuvka-stav-l"></b><small id="ns-zasuvka-stav"></small></span>
+                                    </div>
+                                    <div class="btns"><button type="button" id="ns-zasuvka-skript" class="pbtn"></button></div>
+                                    <p id="ns-zasuvka-sprava" class="wz-msg hidden" role="status"></p>
+                                    <textarea
+                                        id="ns-zasuvka-text"
+                                        class="ns-bojler-text hidden"
+                                        readonly
+                                        rows="6"
+                                        aria-labelledby="ns-zasuvka-sprava"
+                                    ></textarea>
+                                    <ol id="ns-zasuvka-kroky" class="ns-kroky"></ol>
+                                </div>
                                 <!-- Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): z koľkých dní, čo sa appka naučila
                                      a začať odznova. -->
                                 <div id="ns-ucenie" class="ns-bojler hidden" role="group" aria-labelledby="ns-ucenie-title">
@@ -1089,6 +1112,14 @@
                     <button type="button" id="tz-vec-ok" class="pbtn"></button>
                     <button type="button" id="tz-vec-zrus" class="pbtn ghost"></button>
                 </div>
+                <!-- Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html, U1): namiesto „Už beží“ zmeraný príkon a oznámenie
+                     o konci behu pre tento telefón. -->
+                <p id="tz-vec-meria" class="vec-meria hidden"></p>
+                <button type="button" id="tz-vec-oznam" class="bj-oznam hidden" role="switch" aria-checked="false">
+                    <span id="tz-vec-oznam-t"></span>
+                    <i class="tg" aria-hidden="true"></i>
+                </button>
+                <p id="tz-vec-oznam-chyba" class="wz-msg hidden" role="status"></p>
                 <p id="tz-vec-why"></p>
                 <p id="tz-vec-note" class="dim"></p>
             </div>

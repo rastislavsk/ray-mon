@@ -732,6 +732,33 @@ export const BEZI = {
     bublinaMs: 6000,
 };
 export const BEZI_STORAGE_KEY = 'bezi-v1';
+/**
+ * Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html, A + U1 + K2 + S2): skript v zásuvke každú minútu pošle
+ * príkon a energiu (shared/zasuvka-skript.js), Durable Object účtu z toho rozozná beh (shared/zasuvka.js) a zapíše ho
+ * do spoločných behov ako „Už beží“. Zásuvka nikdy neprepína relé. `veci`: čo môže na zásuvke byť.
+ * Beh začne, keď je príkon aspoň `zapW` W v `potvrdenie` hláseniach za sebou (od prvého z nich). Skončí (K2), keď je
+ * príkon pod `zapW` aspoň `pauzaMin` minút a beh trval aspoň `podielTyp` typickej dĺžky, alebo vždy po `dlhaPauzaMin`
+ * minútach pod prahom; koniec je prvá chvíľa pod prahom. Typická dĺžka je medián posledných `typBehov` behov, od
+ * `typMinBehov` behov, dovtedy `runMin` z MOZEM_ITEMS. Beh kratší než `minBehMin` sa zahodí. Zásuvka bez hlásenia
+ * `tichoMin` minút uzavrie beh poslednou chvíľou s príkonom. Kým sa ozvala pred najviac `ozyvaMin` minútami, appka pri
+ * spotrebiči „Už beží“ nemá (U1) a jej príkon sa nepočíta do domu.
+ */
+export const ZASUVKA = {
+    veci: ['pracka', 'susicka', 'umyvacka'],
+    zapW: 10,
+    potvrdenie: 2,
+    pauzaMin: 5,
+    dlhaPauzaMin: 30,
+    podielTyp: 0.7,
+    typBehov: 10,
+    typMinBehov: 3,
+    minBehMin: 5,
+    tichoMin: 30,
+    ozyvaMin: 10,
+};
+/** Oznámenie o konci behu zo zásuvky (docs/navrhy/pracka-zasuvka.html): či ho tento telefón chce. Patrí telefónu. */
+export const ZASUVKA_OZNAM_STORAGE_KEY = 'zasuvka-oznam-v1';
+
 export const BEZI_CAKA_STORAGE_KEY = 'bezi-caka-v1';
 
 /**
@@ -923,6 +950,12 @@ export const WORKER_KLIMA_PATH = '/klima';
 export const WORKER_KLIMA_URL = new URL(WORKER_KLIMA_PATH, WORKER_URL).href;
 export const WORKER_KLIMA_STAV_PATH = '/klima-stav';
 export const WORKER_KLIMA_STAV_URL = new URL(WORKER_KLIMA_STAV_PATH, WORKER_URL).href;
+// Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html): skript v zásuvke posiela `/spotrebic` (s pečaťou
+// z `/bojler-pecat`), telefón si oznámenie o konci zapne cez `/spotrebic-oznamenia`. Stav zásuviek chodí s `/bezi`.
+export const WORKER_SPOTREBIC_PATH = '/spotrebic';
+export const WORKER_SPOTREBIC_URL = new URL(WORKER_SPOTREBIC_PATH, WORKER_URL).href;
+export const WORKER_SPOTREBIC_OZNAM_PATH = '/spotrebic-oznamenia';
+export const WORKER_SPOTREBIC_OZNAM_URL = new URL(WORKER_SPOTREBIC_OZNAM_PATH, WORKER_URL).href;
 /**
  * História elektrárne z Durable Objectu účtu Huawei (docs/navrhy/plan-dna-ucenie.html). Model učenia z nej počíta Worker
  * (WORKER_UCENIE_PATH); appka si ju stiahne raz za deň po západe slnka - dnešné hodiny domu na večerný prepis auta zo

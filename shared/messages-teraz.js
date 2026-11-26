@@ -123,6 +123,18 @@ export const TERAZ_BEZI = {
     h: 'h',
     min: 'min',
     vratit: 'Vrátiť',
+    /**
+     * Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html, U1): namiesto „Už beží“ riadok so zmeraným príkonom
+     * a vypínač oznámenia o konci behu pre tento telefón.
+     */
+    zasuvka: {
+        meria: (/** @type {number} */ w) => (w >= 10 ? `Meria zásuvka · teraz ${fmt1(w / 1000)} kW` : 'Meria zásuvka · teraz nebeží'),
+        oznam: 'Oznámiť, keď dobehne',
+        /** Bežiaci beh zo zásuvky: koniec je odhad, kým zásuvka nezmeria skutočný. */
+        why: 'Začiatok zmerala zásuvka. Koniec je odhad podľa predošlých behov, skutočný zmeria tiež.',
+        zakazane: 'Oznámenia appka nemá povolené.',
+        chyba: 'Nepodarilo sa to uložiť, skús znova.',
+    },
     /** Či príde oznámenie o konci (web/koniec.js): objednané, zakázané v prehliadači, nepodarilo sa. */
     oznam: {
         ok: 'dám vedieť',

@@ -4,11 +4,12 @@
 // prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Čo máš doma, Oznámenia,
 // Vzhľad a Appka: spotrebiče, ranný plán dňa, tón hlášok, živá obloha, Zdieľať appku a Vymazať údaje.
 
-import { VOICES, WORKER_BOJLER_URL, WORKER_KLIMA_URL } from '../shared/config.js';
+import { VOICES, WORKER_BOJLER_URL, WORKER_KLIMA_URL, WORKER_SPOTREBIC_URL } from '../shared/config.js';
 import { posunPrahy } from '../shared/bojler.js';
 import { posunHranicu } from '../shared/bojler-voda.js';
 import { ADRESA_V_SIETI, adresaTeplomera, skriptBojlera } from '../shared/bojler-skript.js';
 import { skriptKlimy } from '../shared/klima-skript.js';
+import { skriptZasuvky } from '../shared/zasuvka-skript.js';
 import { backAction } from '../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
 import { prepniSpotrebic } from '../shared/doma.js';
@@ -52,6 +53,7 @@ export function initNastavenie(store, dom, refresh) {
     initDoma(store, dom);
     initBojler(store, dom);
     initKlima(store, dom);
+    initZasuvka(store, dom);
     initLook(store, dom);
     initOznam(store, dom);
     initAppSheets(store, dom);
@@ -197,6 +199,38 @@ function initKlima(store, dom) {
             () => false,
         );
         store.setState({ klimaSkript: { stav: 'hotovo', text, schranka: schranka === true } });
+    });
+}
+
+/**
+ * Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html): voľba spotrebiča (len do skriptu, neukladá sa), „Skopíruj
+ * skript“ si od Workera vypýta pečať (tá istá ako pre zásuvku bojlera), poskladá skript a dá ho do schránky. Kde schránka
+ * nie je, skript ukáže v poli na ručné skopírovanie.
+ * @param {Store} store @param {Dom} dom
+ */
+function initZasuvka(store, dom) {
+    const nic = /** @type {const} */ ({ stav: 'nic', text: '', schranka: false });
+    dom.nsZasuvkaVec.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-zasuvka]') : null;
+        const vec = btn instanceof HTMLElement ? btn.dataset.zasuvka : undefined;
+        // Starý skript je pre iný spotrebič - pole s ním zmizne.
+        if (vec && vec !== store.get().zasuvkaVec) store.setState({ zasuvkaVec: vec, zasuvkaSkript: nic });
+    });
+    dom.nsZasuvkaSkript.addEventListener('click', async () => {
+        const { zdroj, zasuvkaVec } = store.get();
+        if (!zdroj) return;
+        store.setState({ zasuvkaSkript: { stav: 'robim', text: '', schranka: false } });
+        const pecat = await bojlerPecat(zdroj.pecat);
+        const text = pecat && skriptZasuvky({ url: WORKER_SPOTREBIC_URL, pecat, vec: zasuvkaVec });
+        if (!text) {
+            store.setState({ zasuvkaSkript: { stav: 'chyba', text: '', schranka: false } });
+            return;
+        }
+        const schranka = await navigator.clipboard?.writeText(text).then(
+            () => true,
+            () => false,
+        );
+        store.setState({ zasuvkaSkript: { stav: 'hotovo', text, schranka: schranka === true } });
     });
 }
 

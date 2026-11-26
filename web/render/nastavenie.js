@@ -103,6 +103,32 @@ function renderDoma(m, dom) {
     renderUcenie(m.doma.ucenie, dom);
     renderBojler(m.doma.bojler, dom);
     renderKlima(m.doma.klima, dom);
+    // `?? null`: model zo starého shared/nastavenie.js z cache po nasadení sekciu nemá.
+    renderZasuvka(m.doma.zasuvka ?? null, dom);
+}
+
+/**
+ * Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html): ktorý spotrebič, kedy sa zásuvka ozvala, skript a kroky.
+ * Tlačidlá obsluhuje web/nastavenie-interactions.js.
+ * @param {Model['doma']['zasuvka'] | null} z @param {Dom} dom
+ */
+function renderZasuvka(z, dom) {
+    show(dom.nsZasuvka, !!z);
+    if (!z) return;
+    setText(dom.nsZasuvkaTitle, z.title);
+    setText(dom.nsZasuvkaIntro, z.intro);
+    setText(dom.nsZasuvkaVecL, z.vecLabel);
+    setHtml(dom.nsZasuvkaVec, minisHtml(z.veci.map((x) => ({ attr: `data-zasuvka="${x.id}"`, label: x.label, on: x.on }))));
+    setText(dom.nsZasuvkaStavL, z.stavLabel);
+    setHtml(dom.nsZasuvkaStav, `<span data-tone="${z.stav.tone}">${escapeHtml(z.stav.text)}</span>`);
+    setText(dom.nsZasuvkaSkript, z.tlacidlo);
+    dom.nsZasuvkaSkript.disabled = z.robim;
+    show(dom.nsZasuvkaSprava, !!z.sprava);
+    setText(dom.nsZasuvkaSprava, z.sprava?.text ?? '');
+    dom.nsZasuvkaSprava.classList.toggle('err', !!z.sprava?.chyba);
+    show(dom.nsZasuvkaText, !!z.skript);
+    if (dom.nsZasuvkaText.value !== z.skript) dom.nsZasuvkaText.value = z.skript;
+    setHtml(dom.nsZasuvkaKroky, z.kroky.map((x) => `<li>${escapeHtml(x)}</li>`).join(''));
 }
 
 /**

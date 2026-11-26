@@ -1225,6 +1225,11 @@
 .vec-zapis .pbtn {
     justify-self: stretch;
 }
+/* Spotrebič na zásuvke (docs/navrhy/pracka-zasuvka.html, U1): namiesto „Už beží“ zmeraný príkon. */
+.vec-meria {
+    margin: 14px 0 0;
+    font-weight: 700;
+}
 /* Nastavenie času: nad ním „Zostáva“ či „Zapnutá o“, pod ním kedy skončí. */
 .vec-nastav {
     display: grid;

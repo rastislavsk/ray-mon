@@ -24,6 +24,7 @@ import {
 } from '../shared/config.js';
 import { autoInfoZ } from '../shared/auto-nabija.js';
 import { klimaStavZ } from '../shared/klima.js';
+import { zasuvkyZ } from '../shared/zasuvka.js';
 import { bojlerInfoZ } from '../shared/bojler.js';
 import { nauceneZ, parseHistoria } from '../shared/ucenie.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
@@ -141,15 +142,17 @@ export async function ucenieZWorkera(pecat, telo, fetchImpl = fetch) {
 
 /**
  * Spoločné behy „Už beží“ domácnosti (Worker `/bezi`, docs/navrhy/bezi-spolocne.html): pošle zmeny tohto telefónu
- * a vráti dnešné behy všetkých telefónov (nedôveryhodné, prečistí shared/bezi.js), alebo null, keď to nevyšlo.
+ * a vráti dnešné behy všetkých telefónov (nedôveryhodné, prečistí shared/bezi.js) so stavom zásuviek spotrebičov
+ * (docs/navrhy/pracka-zasuvka.html; starší Worker ho nemá - prázdny), alebo null, keď to nevyšlo.
  * @param {string} pecat zapečatený prístup tejto appky @param {string} d dnešok @param {import('../shared/bezi.js').Zmena[]} zmeny
- * @param {typeof fetch} [fetchImpl] @returns {Promise<unknown[] | null>}
+ * @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ bezi: unknown[], zasuvky: Record<string, import('../shared/zasuvka.js').ZasuvkaInfo> } | null>}
  */
 export async function spolocneBehy(pecat, d, zmeny, fetchImpl = fetch) {
     try {
         const res = await postWorker(WORKER_BEZI_URL, JSON.stringify({ pecat, d, zmeny }), fetchImpl);
         const body = res.ok ? await res.json() : null;
-        return isObj(body) && Array.isArray(body.bezi) ? body.bezi : null;
+        return isObj(body) && Array.isArray(body.bezi) ? { bezi: body.bezi, zasuvky: zasuvkyZ(body.zasuvky) } : null;
     } catch {
         return null;
     }

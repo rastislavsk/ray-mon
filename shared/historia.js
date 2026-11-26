@@ -42,14 +42,15 @@ function median(a) {
 
 /**
  * Spotreba domu bez bojlera v kW: výroba mínus dodávka do siete (záporná je odber), bez toho, čo práve berie bojler.
- * Bojler sa odpočíta, len keď sa zásuvka ozvala za posledných BOJLER.tichoMin. Bez výroby či elektromera null.
+ * Bojler sa odpočíta, len keď sa zásuvka ozvala za posledných BOJLER.tichoMin. `ineKw` je príkon spotrebičov na zásuvkách
+ * (docs/navrhy/pracka-zasuvka.html, prikonZasuviekKw v shared/zasuvka.js), tiež nie je dom. Bez výroby či elektromera null.
  * @param {number | null | undefined} vyrobaKw @param {number | null | undefined} sietKw
- * @param {{ kontaktAt: number, rele: boolean, w: number } | null | undefined} bojler @param {number} now ms
+ * @param {{ kontaktAt: number, rele: boolean, w: number } | null | undefined} bojler @param {number} now ms @param {number} [ineKw]
  */
-export function domBezBojlera(vyrobaKw, sietKw, bojler, now) {
+export function domBezBojlera(vyrobaKw, sietKw, bojler, now, ineKw = 0) {
     if (!cislo(vyrobaKw) || !cislo(sietKw)) return null;
     const hreje = bojler && bojler.rele && now - bojler.kontaktAt <= BOJLER.tichoMin * MIN ? Math.max(0, bojler.w) / 1000 : 0;
-    return r3(Math.max(0, vyrobaKw - sietKw - hreje));
+    return r3(Math.max(0, vyrobaKw - sietKw - hreje - ineKw));
 }
 
 /** Najnovších HISTORIA.dni záznamov podľa dátumu. @template {{ d: string }} T @param {T[]} a @returns {T[]} */
