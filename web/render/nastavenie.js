@@ -102,6 +102,32 @@ function renderDoma(m, dom) {
     setText(dom.nsDomaNote, m.doma.note);
     renderUcenie(m.doma.ucenie, dom);
     renderBojler(m.doma.bojler, dom);
+    renderKlima(m.doma.klima, dom);
+}
+
+/**
+ * Klimatizácia Daikin (docs/navrhy/klima-daikin.html): adresa v domácej sieti, kedy sa ozvala, skript na Shelly a kroky.
+ * Tlačidlo a pole obsluhuje web/nastavenie-interactions.js.
+ * @param {Model['doma']['klima']} k @param {Dom} dom
+ */
+function renderKlima(k, dom) {
+    show(dom.nsKlima, !!k);
+    if (!k) return;
+    setText(dom.nsKlimaTitle, k.title);
+    setText(dom.nsKlimaIntro, k.intro);
+    setText(dom.nsKlimaIpL, k.ipLabel);
+    // Kým človek píše, pole neprepisovať - adresa sa uloží až pri opustení poľa.
+    if (document.activeElement !== dom.nsKlimaIp && dom.nsKlimaIp.value !== k.ip) dom.nsKlimaIp.value = k.ip;
+    setText(dom.nsKlimaStavL, k.stavLabel);
+    setHtml(dom.nsKlimaStav, `<span data-tone="${k.stav.tone}">${escapeHtml(k.stav.text)}</span>`);
+    setText(dom.nsKlimaSkript, k.tlacidlo);
+    dom.nsKlimaSkript.disabled = k.robim;
+    show(dom.nsKlimaSprava, !!k.sprava);
+    setText(dom.nsKlimaSprava, k.sprava?.text ?? '');
+    dom.nsKlimaSprava.classList.toggle('err', !!k.sprava?.chyba);
+    show(dom.nsKlimaText, !!k.skript);
+    if (dom.nsKlimaText.value !== k.skript) dom.nsKlimaText.value = k.skript;
+    setHtml(dom.nsKlimaKroky, k.kroky.map((x) => `<li>${escapeHtml(x)}</li>`).join(''));
 }
 
 /**

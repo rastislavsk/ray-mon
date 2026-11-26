@@ -17,6 +17,8 @@
 // /ucenie: snímky predpovede od telefónov (`hs:`), od kedy sa učí (`uo:`) a model počítaný raz za deň (`um:`).
 // Nabíjanie auta (docs/navrhy/auto-nabija.html, shared/auto-nabija.js): z každého nového merania stav a behy (`an:`),
 // pri začiatku a konci push telefónom, ktoré si to zapli (`ao:`). Appka si stav vezme cez /auto.
+// Klimatizácia Daikin (docs/navrhy/klima-daikin.html, shared/klima.js): skript na Shelly hlási cez /klima, objekt drží
+// posledný stav (`kl:`) a body za KLIMA.bodyDni dní (`kt:`); appka si stav vezme cez /klima-stav.
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
@@ -28,6 +30,7 @@ import { zapisZmeny } from '../../shared/bezi.js';
 import { hranicaZ, pridajTeplotu, strazVodu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
 import { domBezBojlera, sBojlerom, zapisMeranie, zlucBehy, zlucSnimky } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
+import { bodyDna, pridajBod, slnkoKlimy, zHlasenia } from '../../shared/klima.js';
 import { localDateKey } from '../../shared/solar.js';
 import { naucene, spolocneOd } from '../../shared/ucenie.js';
 import { autoZmenaText, bojlerZmenaText } from '../../shared/messages-oznamenia.js';
@@ -90,6 +93,8 @@ export class UcetHuawei {
                 '/ucenie': () => this.ucenie(req, now),
                 '/auto': () => this.auto(req),
                 '/auto-oznam': () => this.autoOznam(req),
+                '/klima': () => this.klima(req, now),
+                '/klima-stav': () => this.klimaStav(req, now),
             };
             const body = await (Object.hasOwn(cesty, path) ? cesty[path]() : this.pv(req.pristup, now));
             return Response.json(body);
@@ -519,6 +524,49 @@ export class UcetHuawei {
         if (!bojler) return null;
         const body = /** @type {import('../../shared/bojler-voda.js').BodyVody | undefined} */ (await this.storage.get(`bt:${plant}`));
         return body?.length ? { ...bojler, teploty: teplotyDna(body, now, NB.pasmo) } : bojler;
+    }
+
+    /**
+     * Hlásenie klimatizácie od skriptu na Shelly (docs/navrhy/klima-daikin.html): nový stav (`kl:`) a bod (`kt:`).
+     * `ok` false, keď v hlásení chýba stav či teploty.
+     * @param {{ pristup: Record<string, unknown>, odpovede: Record<string, string> }} req @param {Date} now
+     */
+    async klima(req, now) {
+        const plant = String(req.pristup.plant ?? '');
+        const stary = /** @type {import('../../shared/klima.js').KlimaInfo | undefined} */ (await this.storage.get(`kl:${plant}`));
+        const k = zHlasenia(req.odpovede, stary, now.getTime(), NB.pasmo);
+        if (!k) return { ok: false };
+        const body = /** @type {import('../../shared/klima.js').BodyKlimy | undefined} */ (await this.storage.get(`kt:${plant}`)) ?? [];
+        const nove = pridajBod(body, k, now.getTime());
+        await this.storage.put({ [`kl:${plant}`]: k, ...(nove === body ? {} : { [`kt:${plant}`]: nove }) });
+        return { ok: true };
+    }
+
+    /**
+     * Stav klimatizácie pre appku: posledné hlásenie, dnešné body a koľko z dnešných hodín bolo zo slnka (z histórie
+     * elektrárne `hd:`, shared/klima.js slnkoKlimy). Null, kým sa skript neozval.
+     * @param {{ pristup: Record<string, unknown> }} req @param {Date} now
+     */
+    async klimaStav(req, now) {
+        const plant = String(req.pristup.plant ?? '');
+        const k = /** @type {import('../../shared/klima.js').KlimaInfo | undefined} */ (await this.storage.get(`kl:${plant}`));
+        if (!k) return { klima: null };
+        const body = /** @type {import('../../shared/klima.js').BodyKlimy | undefined} */ (await this.storage.get(`kt:${plant}`)) ?? [];
+        const dnes = localDateKey(now, NB.pasmo);
+        const hod = k.hod?.d === dnes ? k.hod : null;
+        return { klima: { ...k, hod, body: bodyDna(body, now, NB.pasmo), zdroje: hod ? await this.zdrojeKlimy(plant, hod.k, dnes) : [] } };
+    }
+
+    /**
+     * Koľko z dnešných hodín klimatizácie bolo zo slnka, z dnešného dňa histórie elektrárne (`hd:`).
+     * @param {string} plant @param {number[]} hodK @param {string} dnes
+     */
+    async zdrojeKlimy(plant, hodK, dnes) {
+        const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`));
+        return slnkoKlimy(
+            hodK,
+            dni?.find((d) => d.d === dnes),
+        );
     }
 
     /**

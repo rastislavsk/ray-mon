@@ -19,6 +19,7 @@ import { GUESS_MARK, kwText, plantHero, TARIFF_TABS, zdrojText } from './setup-t
 import { tariffHint, tariffKind, tariffPricesText } from './tariff.js';
 import { menoZnacky } from './zdroje.js';
 import { bojlerSekcia } from './nastavenie-bojler.js';
+import { klimaSekcia } from './nastavenie-klima.js';
 import { ucenieSekcia } from './nastavenie-ucenie.js';
 
 /** @typedef {import('./setup-flow.js').SetupState} SetupState */
@@ -31,7 +32,8 @@ import { ucenieSekcia } from './nastavenie-ucenie.js';
  *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean, shareKioskFail: boolean,
  *   bojler: import('./bojler.js').BojlerInfo | null, bojlerPrahy: import('./bojler.js').Prahy,
  *   bojlerSkript: import('./nastavenie-bojler.js').BojlerSkript, teplomer?: import('./nastavenie-bojler.js').Teplomer,
- *   bojlerHranica?: 'uklada' | 'chyba' | null,
+ *   bojlerHranica?: 'uklada' | 'chyba' | null, klima?: { at: number } | null, klimaNast?: { ip: string },
+ *   klimaSkript?: import('./nastavenie-klima.js').KlimaSkript,
  *   ucenie: import('./ucenie.js').Naucene | null }} NastavenieState
  */
 /**
@@ -283,6 +285,7 @@ export function nastavenieModel(state) {
             devices: DOMA_DEVICES.map((id) => ({ id, name: domaName(id), on: state.doma.includes(id) })),
             note: inVoice(T.domaNote, voice),
             bojler: bojlerSekcia({ ...state, voice }),
+            klima: klimaSekcia({ ...state, voice }),
             ucenie: ucenieSekcia(state),
         },
         oznamenia: oznameniaSekcia(state),

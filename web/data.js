@@ -9,6 +9,7 @@ import {
     WEATHER_CACHE_MS,
     WEATHER_KEEP_MS,
     WORKER_AUTO_URL,
+    WORKER_KLIMA_STAV_URL,
     WORKER_BEZI_URL,
     WORKER_BOJLER_PECAT_URL,
     WORKER_BOJLER_REZIM_URL,
@@ -22,6 +23,7 @@ import {
     WORKER_ZDIELAJ_URL,
 } from '../shared/config.js';
 import { autoInfoZ } from '../shared/auto-nabija.js';
+import { klimaStavZ } from '../shared/klima.js';
 import { bojlerInfoZ } from '../shared/bojler.js';
 import { nauceneZ, parseHistoria } from '../shared/ucenie.js';
 import { validateForecast, validatePv } from '../shared/schema.js';
@@ -196,6 +198,22 @@ export async function stavAuta(pecat, fetchImpl = fetch) {
         const res = await postWorker(WORKER_AUTO_URL, JSON.stringify({ pecat }), fetchImpl);
         const body = res.ok ? await res.json() : null;
         return isObj(body) && 'auto' in body ? { auto: autoInfoZ(body.auto) } : null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Klimatizácia Daikin (Worker `/klima-stav`, docs/navrhy/klima-daikin.html): `{ klima }` - posledné hlásenie s dnešnými
+ * bodmi a zdrojmi hodín (null, kým sa skript na Shelly neozval), alebo null, keď ho Worker nedá.
+ * @param {string} pecat zapečatený prístup tejto appky @param {typeof fetch} [fetchImpl]
+ * @returns {Promise<{ klima: import('../shared/klima.js').KlimaStav | null } | null>}
+ */
+export async function stavKlimy(pecat, fetchImpl = fetch) {
+    try {
+        const res = await postWorker(WORKER_KLIMA_STAV_URL, JSON.stringify({ pecat }), fetchImpl);
+        const body = res.ok ? await res.json() : null;
+        return isObj(body) && 'klima' in body ? { klima: klimaStavZ(body.klima) } : null;
     } catch {
         return null;
     }

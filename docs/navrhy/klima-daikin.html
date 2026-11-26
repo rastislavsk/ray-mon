@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Klimatizácia na karte Teraz</title>
+        <style>
+            /* Návrh (26. 11. 2026): dlaždica a panel klimatizácie Daikin Sensira na karte Teraz, údaje z lokálneho API
+               adaptéra BRP069B4X cez skript na Shelly 1 Gen3 (cesta A). Obrázky sú snímky skutočnej appky (fixtures z testov,
+               360 px ako S22) s ručne vloženou dlaždicou a panelom; čísla klimatizácie sú skutočné z 26. 11. 2026 o 11:17
+               okrem toho, čo je pri obrázku označené ako vymyslené. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --card: #131c36;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --yes: #b9f28c;
+                --warn: #ffcf7a;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1 {
+                margin: 0;
+                font-size: clamp(1.8rem, 5vw, 2.6rem);
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            h2 {
+                margin: 0 0 12px;
+                font-size: 1.35rem;
+                font-weight: 900;
+            }
+            h3 {
+                margin: 0 0 6px;
+                font-size: 1.05rem;
+                font-weight: 800;
+            }
+            p,
+            li {
+                color: var(--dim);
+                max-width: 72ch;
+            }
+            b,
+            strong {
+                color: #fff;
+            }
+            code {
+                font-size: 0.9em;
+                background: rgba(255, 255, 255, 0.08);
+                padding: 1px 5px;
+                border-radius: 4px;
+                color: #fff;
+            }
+            td code {
+                overflow-wrap: anywhere;
+            }
+            table {
+                table-layout: fixed;
+                border-collapse: collapse;
+                width: 100%;
+                max-width: 760px;
+                font-size: 0.92rem;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 7px 10px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+            }
+            .varianty {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 24px;
+                align-items: start;
+            }
+            .var {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 16px;
+            }
+            .var img {
+                display: block;
+                width: 100%;
+                max-width: 360px;
+                margin: 0 auto 12px;
+                border-radius: 12px;
+            }
+            .var .male {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+                margin-bottom: 12px;
+            }
+            .var .male img {
+                width: 46%;
+                margin: 0;
+            }
+            .znacka {
+                display: inline-block;
+                font-size: 0.75rem;
+                font-weight: 900;
+                letter-spacing: 0.06em;
+                padding: 2px 8px;
+                border-radius: 99px;
+                background: rgba(255, 255, 255, 0.12);
+                margin-right: 6px;
+            }
+            .odpor {
+                background: var(--yes);
+                color: #0b1226;
+            }
+            .plus {
+                color: var(--yes);
+            }
+            .minus {
+                color: var(--warn);
+            }
+            .tok {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.9rem;
+            }
+            .tok span {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 10px;
+                padding: 8px 10px;
+            }
+            .tok i {
+                color: var(--dim);
+                font-style: normal;
+            }
+            .pozn {
+                border-left: 3px solid var(--warn);
+                padding: 2px 0 2px 12px;
+            }
+            .otazky li {
+                margin-bottom: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <p style="margin: 0 0 6px">Návrh · 26. 11. 2026</p>
+                <h1>Klimatizácia na karte Teraz</h1>
+                <p>
+                    Daikin Sensira (FTXF50D + RXF50D) s adaptérom <b>BRP069B4X</b> má v domácej sieti lokálne HTTP API bez hesla
+                    (<code>10.10.10.148</code>, firmvér 4.2.303). Zvolená cesta <b>A</b>: údaje číta skript na Shelly 1 Gen3 s teplomerom a
+                    posiela ich Workerovi. Zatiaľ len sledovanie, riadenie je v <code>docs/to do later.md</code>.
+                </p>
+            </header>
+
+            <section>
+                <h2>Čo klimatizácia povie</h2>
+                <p>Prečítané z adaptéra 26. 11. 2026 o 11:17, len čítanie, nič sa nenastavovalo.</p>
+                <table>
+                    <tr>
+                        <th>Údaj</th>
+                        <th>Hodnota</th>
+                        <th>Odkiaľ</th>
+                    </tr>
+                    <tr>
+                        <td>Zapnutá, režim, nastavená teplota</td>
+                        <td>áno, kúrenie, 23,5 °C</td>
+                        <td><code>aircon/get_control_info</code></td>
+                    </tr>
+                    <tr>
+                        <td>Teplota doma / vonku</td>
+                        <td>22,0 °C / 2,0 °C</td>
+                        <td><code>aircon/get_sensor_info</code></td>
+                    </tr>
+                    <tr>
+                        <td>Kompresor</td>
+                        <td>68 Hz</td>
+                        <td><code>cmpfreq</code></td>
+                    </tr>
+                    <tr>
+                        <td>Príkon teraz</td>
+                        <td>12 → <b>1,2 kW</b> (jednotka 100 W odvodená, viď riziká)</td>
+                        <td><code>mompow</code></td>
+                    </tr>
+                    <tr>
+                        <td>Energia po hodinách (dnes, včera)</td>
+                        <td>1,0 – 1,5 kWh za hodinu, kúrenie a chladenie zvlášť</td>
+                        <td><code>aircon/get_day_power_ex</code></td>
+                    </tr>
+                    <tr>
+                        <td>14 dní, mesiac, rok a minulý rok</td>
+                        <td>dnes 12,9 kWh, včera 26,7, január 851 kWh, rok 2026 2 580 kWh kúrenia</td>
+                        <td><code>get_week_power_ex</code>, <code>get_month_power_ex</code>, <code>get_year_power_ex</code></td>
+                    </tr>
+                    <tr>
+                        <td>Ako dlho dnes beží</td>
+                        <td>677 min</td>
+                        <td><code>get_week_power</code></td>
+                    </tr>
+                    <tr>
+                        <td>Ventilátor, lamely, chyba, Wi-Fi</td>
+                        <td>automaticky, stoja, žiadna, −56 dBm</td>
+                        <td><code>get_control_info</code>, <code>basic_info</code></td>
+                    </tr>
+                    <tr>
+                        <td>Výmenník vo vnútri (asi)</td>
+                        <td>37,5 °C</td>
+                        <td><code>get_monitordata</code> (<code>hetmp</code>, význam odhadnutý)</td>
+                    </tr>
+                    <tr>
+                        <td>Vlhkosť</td>
+                        <td>Sensira ju nemeria</td>
+                        <td><code>hhum=-</code></td>
+                    </tr>
+                </table>
+            </section>
+
+            <section>
+                <h2>Cesta údajov (A)</h2>
+                <div class="tok">
+                    <span>Daikin <code>10.10.10.148</code></span
+                    ><i>← HTTP.GET</i> <span>Shelly 1 Gen3 (skript)</span><i>→ POST <code>/klima</code> s pečaťou</i>
+                    <span>Worker → objekt <code>UcetHuawei</code> (<code>kl:</code>)</span><i>→</i>
+                    <span>appka (s obnovou dát)</span>
+                </div>
+                <ul>
+                    <li>
+                        Skript poskladá appka v Nastavení z adresy klimatizácie a pečate, rovnako ako skript bojlera. Človek ho vloží do
+                        Shelly 1 Gen3 (Skripty → Nový). Skript zásuvky bojlera ostane bajtovo rovnaký.
+                    </li>
+                    <li>
+                        Každú minútu stav a teploty (<code>get_sensor_info</code> + <code>get_control_info</code>), každých 15 minút hodiny
+                        a 14 dní, raz za hodinu mesiace a rok. Ukladajú sa len čísla, ktoré appka ukáže.
+                    </li>
+                    <li>
+                        Worker drží posledný stav a bod každých 5 minút za 7 dní (teplota doma a vonku, príkon) pre graf dňa, ako teplotu
+                        vody bojlera. Energiu po hodinách neráta, berie ju hotovú z klimatizácie.
+                    </li>
+                    <li>
+                        Bezplatné limity: +1 440 požiadaviek na Workera a objekt za deň (zásuvka bojlera má toľko isto), limit je 100 000.
+                        Výpočet nie je žiadny, 10 ms procesora stačí.
+                    </li>
+                    <li>Keď skript 5 minút nič nepošle, dlaždica povie „bez spojenia“ (jantárový rám ako zásuvka bez spojenia).</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Dlaždica – zvolené B (26. 11. 2026)</h2>
+                <p>
+                    Príkon veľkým číslom, prvý riadok len hodnoty <b>vonku / nastavená</b>, druhý riadok dnešné kWh ako pri bojleri. Teplota
+                    doma je v paneli (graf a nadpis).
+                </p>
+                <div class="varianty">
+                    <div class="var">
+                        <img src="img/klima/dl-b2.png" alt="Karta Teraz s dlaždicou Klíma: 1,2 kW, 2° / 23,5°, dnes 12,9 kWh" />
+                        <h3><span class="znacka odpor">B</span>„2° / 23,5°“ a „dnes 12,9 kWh“</h3>
+                    </div>
+                    <div class="var">
+                        <div class="male">
+                            <img src="img/klima/dl-b2-zima.png" alt="Dlaždica s najhoršími hodnotami" />
+                            <img src="img/klima/dl-b2-doma.png" alt="Dlaždica s teplotou doma namiesto vonku" />
+                        </div>
+                        <p>
+                            Vľavo najhoršie hodnoty (−12,5° / 30,0°, dnes 128,4 kWh): 103 zo 133 px, nič nepretečie. Vpravo pre porovnanie
+                            <b>doma / nastavená</b> (22,0° / 23,5°), keby si tým „vonku“ myslel teplotu v izbe.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Dlaždica – pôvodné varianty</h2>
+                <p>
+                    Pravý stĺpec pod autom: bojler, auto a klimatizácia sú vpravo zariadenia so stavom, vľavo to, čo sa plánuje. Pri 360 px
+                    má dlaždica na odrážku 133 px, teda asi 17 znakov. Päť údajov sa so slovami nezmestí, pri −12 °C by „vonku“ pretieklo.
+                    Preto dva varianty:
+                </p>
+                <div class="varianty">
+                    <div class="var">
+                        <img src="img/klima/dl-a.png" alt="Karta Teraz s dlaždicou Klíma, variant A" />
+                        <h3><span class="znacka odpor">A</span>Teplota doma veľkým číslom</h3>
+                        <p>
+                            <b>22,0°</b> doma, odrážky „na 23,5° · 1,2 kW“ a „[jedlička] 2° · 12,9 kWh“. Vonku povie malá ikona jedličky
+                            (čítačka „vonku“), všetkých päť údajov je na dlaždici.
+                        </p>
+                        <div class="male">
+                            <img src="img/klima/dl-a-zima.png" alt="Variant A s najhoršími hodnotami" />
+                            <img src="img/klima/dl-a-stoji.png" alt="Variant A, keď kompresor stojí" />
+                        </div>
+                        <p>
+                            Vľavo najhoršie hodnoty (na 30,0°, 1,9 kW, −12°, 28,4 kWh): 118 zo 133 px, nič nepretečie. Vpravo kompresor
+                            stojí, bez bieleho kruhu.
+                        </p>
+                        <p><span class="plus">+</span> všetko, čo si chcel · <span class="minus">−</span> nová ikonka v texte odrážky</p>
+                    </div>
+                    <div class="var">
+                        <img src="img/klima/dl-b.png" alt="Karta Teraz s dlaždicou Klíma, variant B" />
+                        <h3><span class="znacka">B</span>Príkon veľkým číslom</h3>
+                        <p><b>1,2 kW</b>, odrážky „doma 22,0° / 23,5°“ a „vonku 2°“. Len slová, ako na ostatných dlaždiciach.</p>
+                        <p>
+                            <span class="plus">+</span> príkon je hneď vidieť, vedľa „52°“ bojlera a „~200 km“ auta ·
+                            <span class="minus">−</span>
+                            dnešné kWh sa nezmestia, sú až v paneli
+                        </p>
+                    </div>
+                </div>
+                <h3 style="margin-top: 24px">Pre oba varianty</h3>
+                <ul>
+                    <li><b>Meno „Klíma“.</b> „Klimatizácia“ sa pri 360 px zalomí na dva riadky.</li>
+                    <li>
+                        <b>Pásik (P1):</b> koľko z dnešnej energie klimatizácie bolo zo slnka (zlatá) a zo siete (modrá). Hodinu po hodine z
+                        kWh klimatizácie a z hodinových súhrnov výroby a domu, ktoré Worker už zbiera. <b>P0:</b> pásik prázdny.
+                    </li>
+                    <li>
+                        <b>Biely kruh (Z1):</b> kým kompresor beží, ako zapnutý spotrebič. V zime bude biely skoro stále.
+                        <b>Z2:</b> klimatizácia biely kruh nemá nikdy.
+                    </li>
+                    <li>Ťuknutie otvorí panel Klíma (krok <code>tzVec</code> 'klima' ako bojler a auto).</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Panel Klíma</h2>
+                <div class="varianty">
+                    <div class="var">
+                        <img src="img/klima/panel-cely.png" alt="Panel Klíma celý" />
+                    </div>
+                    <div>
+                        <ol>
+                            <li><b>Nadpis:</b> čo robí a príkon teraz („Kúri na 23,5 °C · 1,2 kW teraz“).</li>
+                            <li>
+                                <b>Graf dňa 0 – 24 h:</b> teplota doma (biela), vonku (modrá), nastavená (čiarkovaná) a pod nimi stĺpce kWh
+                                za každú hodinu (kúrenie oranžové, chladenie svetlomodré), čiarka teraz.
+                            </li>
+                            <li><b>Energia dneška</b> slnko / sieť ako v paneli Bojler dnes, ako dlho dnes beží a včerajšok.</li>
+                            <li><b>Posledných 14 dní</b> stĺpcami, dnešok svetlejší (ešte nie je celý).</li>
+                            <li><b>Tento rok a minulý</b> po mesiacoch, súčet kúrenia a chladenia za rok.</li>
+                            <li>
+                                <b>Podrobnosti</b> zbalené: režim, kompresor, ventilátor, lamely, výmenník, chyba, Wi-Fi, adaptér a firmvér,
+                                vek údajov.
+                            </li>
+                        </ol>
+                        <p class="pozn">
+                            <b>Vymyslené v náhľade:</b> krivky teplôt do 11:17 (Worker ich zatiaľ nezbiera, hodnoty teraz sú skutočné),
+                            rozdelenie slnko 1,8 / sieť 11,1 kWh a obsah dlaždice bojlera. Ostatné dlaždice sú z testovacích fixtures.
+                            Hodinové kWh, 14 dní, mesiace, rok a podrobnosti sú skutočné.
+                        </p>
+                        <p>
+                            Hodinu zapíše klimatizácia až po jej skončení (o 11:17 bola hodina 11 ešte prázdna), preto stĺpec bežiacej
+                            hodiny chýba.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>Riziká</h2>
+                <ul>
+                    <li>
+                        <b>Firmvér cez Onecta.</b> Daikin pri novších adaptéroch (BRP069C4x) lokálne API firmvérom zrušil. Či Onecta
+                        adaptéru BRP069B4X aktualizácie posiela, som neoveril. Keby appka Onecta ponúkla aktualizáciu adaptéra, radšej ju
+                        nepotvrdzuj. Keby API zmizlo, ostáva cloud Onecta (200 volaní za deň) alebo ESP32 Faikin.
+                    </li>
+                    <li>
+                        <b>Jednotka príkonu</b> (<code>mompow</code> × 100 W) je odvodená z toho, že sedí s hodinovými kWh. Pred nakódovaním
+                        ju overím súčtom minútových hodnôt za hodinu proti <code>get_day_power_ex</code>.
+                    </li>
+                    <li>
+                        <b>Súbeh s appkou Onecta:</b> dotaz každú minútu robí Home Assistant bežne, na tvojom adaptéri to ešte nebeží
+                        dlhšie. Overím pár dní, či Onecta neprestane odpovedať.
+                    </li>
+                    <li>
+                        <b>Odhad nabíjania auta</b> (dom bez bojlera ≥ 4,1 kW) dnes klimatizáciu nevidí: pri plnom kúrení s varením môže
+                        ohlásiť nabíjanie, ktoré nie je. S meraním klimatizácie ju Worker vie od domu odčítať (S1) - to už nie je len
+                        sledovanie, preto sa pýtam.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Rozhodnuté 26. 11. 2026</h2>
+                <ol class="otazky">
+                    <li><b>Cesta A:</b> skript na Shelly 1 Gen3 s teplomerom.</li>
+                    <li><b>Dlaždica B:</b> príkon veľkým číslom, prvý riadok „vonku / nastavená“ len hodnotami, druhý „dnes … kWh“.</li>
+                    <li>
+                        <b>Pásik ako pri ostatných spotrebičoch:</b> slnko, lacná sieť a drahé pásmo (drahé len pri tarife s drahým pásmom).
+                        Energia dneška v paneli je v tých istých troch farbách.
+                    </li>
+                    <li><b>Z1:</b> biely kruh, kým beží kompresor.</li>
+                    <li><b>Panel</b> takto.</li>
+                    <li><b>S1 neskôr:</b> odčítanie klimatizácie z odhadu nabíjania auta je v <code>docs/to do later.md</code>.</li>
+                </ol>
+            </section>
+        </main>
+    </body>
+</html>

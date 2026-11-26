@@ -15,6 +15,7 @@ import {
     HISTORIA_STORAGE_KEY,
     BOJLER_STORAGE_KEY,
     TEPLOMER_STORAGE_KEY,
+    KLIMA_STORAGE_KEY,
     LOOK_STORAGE_KEY,
     MERANIE_STORAGE_KEY,
     OLD_STORAGE_KEYS,
@@ -46,6 +47,7 @@ import { parseHistoria, nauceneZ } from '../shared/ucenie.js';
 import { DATE_RE, isObj } from '../shared/valid.js';
 import { domaToStored, domaZOznameni, parseDoma } from '../shared/doma.js';
 import { teplomerZ } from '../shared/nastavenie-bojler.js';
+import { klimaNastZ } from '../shared/nastavenie-klima.js';
 import { parseRanna } from '../shared/den-trieda.js';
 import { parseOznamenia } from '../shared/oznamenia.js';
 import { parseUlozenyModel } from '../shared/radar-data.js';
@@ -469,4 +471,14 @@ export function loadTeplomer() {
 /** @param {import('../shared/nastavenie-bojler.js').Teplomer} t @returns {boolean} podarilo sa? */
 export function saveTeplomer(t) {
     return write(TEPLOMER_STORAGE_KEY, JSON.stringify(t));
+}
+
+/** Adresa klimatizácie v domácej sieti (KLIMA_STORAGE_KEY, docs/navrhy/klima-daikin.html); bez úložiska prázdna. */
+export function loadKlimaNast() {
+    return readJson(KLIMA_STORAGE_KEY, klimaNastZ, klimaNastZ(null));
+}
+
+/** @param {{ ip: string }} k @returns {boolean} podarilo sa? */
+export function saveKlimaNast(k) {
+    return write(KLIMA_STORAGE_KEY, JSON.stringify(k));
 }

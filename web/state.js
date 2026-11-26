@@ -93,6 +93,9 @@ import { setupInit } from '../shared/setup-flow.js';
  *   autoNabija: import('../shared/auto-nabija.js').AutoInfo | null,
  *   autoOznam: { z: boolean, k: boolean },
  *   autoOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
+ *   klima: import('../shared/klima.js').KlimaStav | null,
+ *   klimaNast: { ip: string },
+ *   klimaSkript: import('../shared/nastavenie-klima.js').KlimaSkript,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
  */
@@ -124,7 +127,7 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
  * bojlera na prebytky (do skriptu zásuvky) a čo človek zapol („Už beží“ v detaile spotrebiča, shared/bezi.js).
  * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[],
  *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean,
- *   teplomer?: import('../shared/nastavenie-bojler.js').Teplomer, autoOznam?: { z: boolean, k: boolean } }} o
+ *   teplomer?: import('../shared/nastavenie-bojler.js').Teplomer, autoOznam?: { z: boolean, k: boolean }, klimaNast?: { ip: string } }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
@@ -135,6 +138,7 @@ const telefon = ({
     bojlerOznam = false,
     teplomer = { on: false, ip: '' },
     autoOznam = { z: false, k: false },
+    klimaNast = { ip: '' },
 }) => ({
     oznamenia,
     oznamStav,
@@ -169,6 +173,11 @@ const telefon = ({
     // Teplomer v bojleri (Nastavenie, docs/navrhy/bojler-teplota.html, N2): či ho človek má a jeho adresa. Heslo nie.
     teplomer,
     bojlerOznamStav: /** @type {'uklada' | 'zakazane' | 'chyba' | null} */ (null),
+    // Klimatizácia Daikin (docs/navrhy/klima-daikin.html): stav z Durable Objectu účtu (web/klima.js), jej adresa v domácej sieti
+    // (Nastavenie) a príprava skriptu na Shelly.
+    klima: /** @type {import('../shared/klima.js').KlimaStav | null} */ (null),
+    klimaNast,
+    klimaSkript: /** @type {import('../shared/nastavenie-klima.js').KlimaSkript} */ ({ stav: 'nic', text: '', schranka: false }),
 });
 
 /**
@@ -197,7 +206,7 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy,
  *   bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean, teplomer?: import('../shared/nastavenie-bojler.js').Teplomer,
- *   autoOznam?: { z: boolean, k: boolean } }} start
+ *   autoOznam?: { z: boolean, k: boolean }, klimaNast?: { ip: string } }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)

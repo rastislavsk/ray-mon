@@ -1774,3 +1774,160 @@
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
 }
+
+/* Panel Klíma (docs/navrhy/klima-daikin.html): graf dňa s teplotami doma a vonku, čiarou nastavenej teploty a stĺpcami
+   kWh za hodinu, potom 14 dní a rok. Kúrenie oranžové, chladenie svetlomodré (graf, farby smie mať), vonku modrá. */
+.klima-sheet {
+    --kl-kurenie: #ff9a5c;
+    --kl-chladenie: #8fd3ff;
+}
+.kl-tep {
+    position: relative;
+    height: 96px;
+}
+.kl-tep svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.kl-c {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+}
+.kl-c[data-k='vonku'] {
+    stroke: var(--kl-chladenie);
+    stroke-width: 2;
+}
+.kl-nast,
+.kl-nula {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1px dashed rgba(255, 255, 255, 0.55);
+}
+.kl-nula {
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+.kl-nast-t {
+    position: absolute;
+    left: 0;
+    transform: translateY(-120%);
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--dim);
+}
+.kl-t {
+    position: absolute;
+    margin-left: 6px;
+    transform: translateY(-50%);
+    font-size: 0.8rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.kl-t[data-vlavo] {
+    margin-left: -6px;
+    transform: translate(-100%, -50%);
+}
+.kl-t[data-k='vonku'] {
+    color: var(--kl-chladenie);
+}
+.kl-hod,
+.kl-dni,
+.kl-rok {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 40px;
+    margin-top: 10px;
+}
+.kl-hod span,
+.kl-rok span span {
+    display: flex;
+    flex: 1;
+    flex-direction: column-reverse;
+    height: 100%;
+}
+.kl-hod i,
+.kl-rok i {
+    display: block;
+    border-radius: 2px 2px 0 0;
+}
+.klima-sheet [data-k='k'] {
+    background: var(--kl-kurenie);
+}
+.klima-sheet [data-k='c'] {
+    background: var(--kl-chladenie);
+}
+.kl-leg {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+.kl-leg i {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    background: var(--kl-kurenie);
+}
+.kl-blok {
+    margin-top: 20px;
+}
+.kl-dni {
+    gap: 4px;
+    height: 64px;
+    margin-top: 0;
+}
+.kl-dni i {
+    flex: 1;
+    border-radius: 3px 3px 0 0;
+    background: var(--kl-kurenie);
+}
+.kl-dni i[data-dnes] {
+    opacity: 0.55;
+}
+.kl-rok {
+    gap: 6px;
+    height: 72px;
+    margin-top: 0;
+}
+.kl-rok > span {
+    display: flex;
+    flex: 1;
+    gap: 1px;
+    height: 100%;
+}
+.kl-rok span[data-minuly] i {
+    opacity: 0.4;
+    filter: grayscale(1) brightness(1.6);
+}
+.kl-os {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+}
+.kl-os span {
+    flex: 1;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-align: center;
+    color: var(--dim);
+}
+.kl-rok + .kl-os {
+    gap: 6px;
+}
+.klima-sheet .bj-zdroje small i[data-k] {
+    background: var(--kl-kurenie);
+}
+.klima-sheet .bj-zdroje small i[data-k='chladenie'] {
+    background: var(--kl-chladenie);
+}
+.kl-podr p {
+    grid-template-columns: 1fr auto;
+}

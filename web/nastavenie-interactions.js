@@ -4,17 +4,18 @@
 // prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Čo máš doma, Oznámenia,
 // Vzhľad a Appka: spotrebiče, ranný plán dňa, tón hlášok, živá obloha, Zdieľať appku a Vymazať údaje.
 
-import { VOICES, WORKER_BOJLER_URL } from '../shared/config.js';
+import { VOICES, WORKER_BOJLER_URL, WORKER_KLIMA_URL } from '../shared/config.js';
 import { posunPrahy } from '../shared/bojler.js';
 import { posunHranicu } from '../shared/bojler-voda.js';
-import { adresaTeplomera, skriptBojlera } from '../shared/bojler-skript.js';
+import { ADRESA_V_SIETI, adresaTeplomera, skriptBojlera } from '../shared/bojler-skript.js';
+import { skriptKlimy } from '../shared/klima-skript.js';
 import { backAction } from '../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
 import { prepniSpotrebic } from '../shared/doma.js';
 import { bojlerPecat, ulozHranicuBojlera, zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
 import { zacniOdznova } from './ucenie.js';
-import { clearStored, saveBojlerPrahy, saveDoma, saveLook, saveTeplomer } from './storage.js';
+import { clearStored, saveBojlerPrahy, saveDoma, saveKlimaNast, saveLook, saveTeplomer } from './storage.js';
 import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 import { NS_FOLDS, panelChange } from './state.js';
@@ -50,6 +51,7 @@ export function initNastavenie(store, dom, refresh) {
     initFolds(store, dom);
     initDoma(store, dom);
     initBojler(store, dom);
+    initKlima(store, dom);
     initLook(store, dom);
     initOznam(store, dom);
     initAppSheets(store, dom);
@@ -154,6 +156,47 @@ function initBojler(store, dom) {
             () => false,
         );
         store.setState({ bojlerSkript: { stav: 'hotovo', text, schranka: schranka === true } });
+    });
+}
+
+/**
+ * Klimatizácia Daikin (docs/navrhy/klima-daikin.html): adresa sa uloží pri opustení poľa (klima-v1), „Skopíruj skript“
+ * si od Workera vypýta pečať (tá istá ako pre zásuvku bojlera), poskladá skript na Shelly a dá ho do schránky. Kde
+ * schránka nie je, skript ukáže v poli na ručné skopírovanie.
+ * @param {Store} store @param {Dom} dom
+ */
+function initKlima(store, dom) {
+    dom.nsKlimaIp.addEventListener('change', () => {
+        const ip = dom.nsKlimaIp.value.trim();
+        if (ip === store.get().klimaNast.ip) return;
+        saveKlimaNast({ ip });
+        // Starý skript má starú adresu - pole s ním zmizne.
+        store.setState({ klimaNast: { ip }, klimaSkript: { stav: 'nic', text: '', schranka: false } });
+    });
+    dom.nsKlimaSkript.addEventListener('click', async () => {
+        const { zdroj } = store.get();
+        if (!zdroj) return;
+        const ip = dom.nsKlimaIp.value.trim();
+        if (!ADRESA_V_SIETI.test(ip)) {
+            store.setState({ klimaSkript: { stav: 'adresa', text: '', schranka: false } });
+            return;
+        }
+        if (ip !== store.get().klimaNast.ip) {
+            saveKlimaNast({ ip });
+            store.setState({ klimaNast: { ip } });
+        }
+        store.setState({ klimaSkript: { stav: 'robim', text: '', schranka: false } });
+        const pecat = await bojlerPecat(zdroj.pecat);
+        const text = pecat && skriptKlimy({ url: WORKER_KLIMA_URL, pecat, ip });
+        if (!text) {
+            store.setState({ klimaSkript: { stav: 'chyba', text: '', schranka: false } });
+            return;
+        }
+        const schranka = await navigator.clipboard?.writeText(text).then(
+            () => true,
+            () => false,
+        );
+        store.setState({ klimaSkript: { stav: 'hotovo', text, schranka: schranka === true } });
     });
 }
 

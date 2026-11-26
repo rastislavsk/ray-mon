@@ -48,6 +48,10 @@ const VECI = {
     bojler:
         '<rect x="6" y="2.5" width="12" height="19" rx="6"/>' +
         '<path class="vi-kvapka" d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
+    // Vnútorná jednotka klimatizácie s prúdom vzduchu (docs/navrhy/klima-daikin.html).
+    klima:
+        '<rect x="2.5" y="4.5" width="19" height="8.5" rx="2"/><path d="M6 10h12"/>' +
+        '<path d="M8 15.5c.7 1.1-.7 2.2 0 3.3M12 15.5c.7 1.1-.7 2.2 0 3.3M16 15.5c.7 1.1-.7 2.2 0 3.3"/>',
 };
 
 /** Ikona spotrebiča podľa id veci (MOZEM_ITEMS); neznámy spotrebič ikonu nemá. @param {string} id */

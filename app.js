@@ -9,6 +9,7 @@ import {
     loadDayLog,
     loadBojlerPrahy,
     loadTeplomer,
+    loadKlimaNast,
     loadDoma,
     loadBezi,
     loadBojlerOznam,
@@ -76,6 +77,7 @@ const store = createStore(
         bojlerOznam: loadBojlerOznam(),
         autoOznam: loadAutoOznam(),
         teplomer: loadTeplomer(),
+        klimaNast: loadKlimaNast(),
     }),
 );
 

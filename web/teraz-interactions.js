@@ -51,6 +51,8 @@ export function initTeraz(store, dom, refresh) {
     dom.tzBojlerOznam.addEventListener('click', () => zmenOznamBojlera(store, !store.get().bojlerOznam));
     // Panel Auto (docs/navrhy/auto-nabija.html): ten istý krok ako detail spotrebiča, oznámenia o začiatku a konci zvlášť.
     initSheet(dom.tzAutoSheet, () => stepBack(store, { tzVec: null }));
+    // Panel Klíma (docs/navrhy/klima-daikin.html) - ten istý krok tzVec ako detail spotrebiča.
+    initSheet(dom.tzKlimaSheet, () => stepBack(store, { tzVec: null }));
     dom.tzAutoOznamZ.addEventListener('click', () => zmenOznamAuta(store, 'z', !store.get().autoOznam.z));
     dom.tzAutoOznamK.addEventListener('click', () => zmenOznamAuta(store, 'k', !store.get().autoOznam.k));
     initSheet(dom.tzTokSheet, () => stepBack(store, { tzChip: null }));

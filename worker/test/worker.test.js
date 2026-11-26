@@ -6,6 +6,8 @@ import { BOJLER, ZDIELANIE } from '../../shared/config.js';
 import {
     handleAuto,
     handleAutoOznam,
+    handleKlima,
+    handleKlimaStav,
     handleBezi,
     handleBojler,
     handleBojlerOznam,
@@ -1319,6 +1321,49 @@ test('nabíjanie auta: objekt ho spozná z meraní, pošle push o začiatku a ko
     assert.equal((await handleAutoOznam(post('/auto-oznamenia', JSON.stringify({ pecat: telefon })), ENV, NOW)).status, 503);
     const cez = await handleRequest(post('/auto', JSON.stringify({ pecat: telefon })), env, po(40));
     assert.equal(cez.status, 200);
+});
+
+test('klimatizácia: skript na Shelly hlási odpovede adaptéra, telefón dostane stav s bodmi a zdrojmi hodín', async () => {
+    const { env, telefon, zasuvka } = await sBojlerom();
+    const hod = Array.from({ length: 24 }, (_, i) => (i < 3 ? 12 : 0)).join('/');
+    const nuly = Array.from({ length: 24 }, () => 0).join('/');
+    const hlasenie = {
+        pecat: zasuvka,
+        id: 'shelly1g3-abc',
+        s: 'ret=OK,htemp=22.0,hhum=-,otemp=2.0,err=0,cmpfreq=68,mompow=12',
+        c: 'ret=OK,pow=1,mode=4,stemp=23.5,f_rate=A,f_dir=0',
+        d: `ret=OK,curr_day_heat=${hod},prev_1day_heat=${hod},curr_day_cool=${nuly},prev_1day_cool=${nuly}`,
+        x: 'neznáme pole sa zahodí',
+    };
+    const stavKlimy = async (/** @type {number} */ min) =>
+        (await (await handleKlimaStav(post('/klima-stav', JSON.stringify({ pecat: telefon })), env, po(min))).json()).klima;
+    assert.equal(await stavKlimy(0), null, 'kým sa skript neozval');
+    const r = await handleKlima(post('/klima', JSON.stringify(hlasenie)), env, po(1));
+    assert.deepEqual(await r.json(), { ok: true });
+    await handleKlima(
+        post('/klima', JSON.stringify({ ...hlasenie, s: hlasenie.s.replace('mompow=12', 'mompow=15'), d: undefined })),
+        env,
+        po(2),
+    );
+    const k = await stavKlimy(3);
+    assert.equal(k.w, 1500);
+    assert.equal(k.domaC, 22);
+    assert.equal(k.at, po(2).getTime());
+    assert.equal(k.body.length, 1, 'bod najviac každých 5 minút');
+    assert.equal(k.hod.k[0], 1200, 'hodiny ostanú z prvého hlásenia');
+    assert.equal(k.zdroje.length, 24);
+    // Zlé dopyty a bez objektov.
+    assert.equal((await handleKlima(post('/klima', JSON.stringify({ pecat: zasuvka, s: hlasenie.s })), env, po(4))).status, 400);
+    assert.equal((await handleKlima(post('/klima', JSON.stringify({ ...hlasenie, pecat: 'x' })), env, po(4))).status, 400);
+    assert.equal((await handleKlima(post('/klima', JSON.stringify(hlasenie)), ENV, po(4))).status, 503);
+    assert.equal((await handleKlimaStav(post('/klima-stav', JSON.stringify({ pecat: 'x' })), env, po(4))).status, 400);
+    assert.equal((await handleKlimaStav(post('/klima-stav', JSON.stringify({ pecat: telefon })), ENV, po(4))).status, 503);
+    assert.equal((await handleRequest(post('/klima', JSON.stringify(hlasenie)), env, po(5))).status, 200);
+    assert.equal((await handleRequest(post('/klima-stav', JSON.stringify({ pecat: telefon })), env, po(5))).status, 200);
+    // Po polnoci dnešné hodiny nie sú.
+    const zajtra = await (await handleKlimaStav(post('/klima-stav', JSON.stringify({ pecat: telefon })), env, po(24 * 60))).json();
+    assert.equal(zajtra.klima.hod, null);
+    assert.deepEqual(zajtra.klima.zdroje, []);
 });
 
 test('pečať zásuvky: len Huawei Northbound, bez relácie a krivky, krátka; zlé dopyty 400, bez objektov 503', async () => {
