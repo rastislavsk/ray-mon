@@ -1138,13 +1138,11 @@ export const BOJLER_ULOZENE_MS = 2500;
 export const TERAZ_OKNA_SPANOK = { od: 0, do: 5 * 60 };
 
 /**
- * Dlaždice spotrebičov na karte Teraz v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html, B): každý blok
- * je jedna dlaždica, blok s dvoma vecami je dvojica polovičných pod sebou. Ľavý stĺpec ide podľa času spustenia,
- * pravý v tomto pevnom poradí. Spotrebič, ktorý tu nie je, ide na koniec ľavého stĺpca.
+ * Dlaždice spotrebičov na karte Teraz v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html): pravý stĺpec v tomto
+ * pevnom poradí, všetko ostatné (práčka, sušička, umývačka) v ľavom podľa času spustenia. Všetky dlaždice sú celé.
  */
 export const TERAZ_STLPCE = {
-    lavy: [['pracka', 'susicka'], ['umyvacka']],
-    pravy: [['bojler'], ['auto'], ['klima']],
+    pravy: ['bojler', 'auto', 'klima'],
 };
 
 // Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.

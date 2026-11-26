@@ -15,7 +15,7 @@ import { bojlerDetail, bojlerDlazdica, bojlerDrahaDnes, bojlerRiadeny, TERAZ_BOJ
 import { klimaDetail, klimaDlazdica, TERAZ_KLIMA_TEXTS } from '../../shared/teraz-klima.js';
 import { localDateKey, localMinutes } from '../../shared/solar.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
-import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
+import { stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
 import { tokIcon, vecIcon, weatherIcon } from './icons.js';
@@ -104,13 +104,12 @@ function renderHreben(h, dom) {
  * takže sú všetky dlaždice rovnako vysoké. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
  * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas).
  * Zapnutý spotrebič (beží, bojler, ktorému zásuvka zapla relé, auto sa asi nabíja) má plný biely kruh ikony
- * (`data-zapnuty`, docs/navrhy/teraz-zapnuty-farba.html, F1). `stlpec` (l, p) je stĺpec samostatnej dlaždice; `pol` je polovica dvojice
- * (docs/navrhy/teraz-dlazdice-stlpce.html, B): ikona vedľa čísla a jedna odrážka, mriežku riadkov nezdieľa.
+ * (`data-zapnuty`, docs/navrhy/teraz-zapnuty-farba.html, F1). `stlpec` (l, p) je stĺpec dlaždice.
  * `oziv` je dlaždica, ktorej ikona po ťuknutí na oznámenie ožije, a ako (`data-oziv`, pohyb robí CSS).
- * @param {Dlazdica} d @param {string} [stlpec] @param {boolean} [pol] @param {Ozivenie | null} [oziv]
+ * @param {Dlazdica} d @param {string} stlpec @param {Ozivenie | null} oziv
  */
-const dlazdicaHtml = (d, stlpec = '', pol = false, oziv = null) =>
-    `<${znacka(d)} class="dl${pol ? ' dl-pol' : ''}"${stlpec ? ` data-stlpec="${stlpec}"` : ''}${stavDlazdice(d, oziv)}>` +
+const dlazdicaHtml = (d, stlpec, oziv) =>
+    `<${znacka(d)} class="dl" data-stlpec="${stlpec}"${stavDlazdice(d, oziv)}>` +
     `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}</span>` +
     `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}${zaHtml(d.za)}</span><b>${escapeHtml(d.meno)}</b>` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%;--n:${100 - (d.draha ?? 0)}%"`}></i>` +
@@ -174,7 +173,7 @@ function prvyVPlane(co) {
 
 /**
  * Čo zapnúť (docs/navrhy/teraz-dlazdice.html): pod poľom toku (renderTokPole) dlaždice v dvoch stĺpcoch (docs/navrhy/teraz-dlazdice-stlpce.html):
- * vľavo práčka so sušičkou ako dvojica polovičných dlaždíc a umývačka podľa času, vpravo bojler a pod ním auto.
+ * vľavo práčka, sušička a umývačka podľa času, vpravo bojler, pod ním auto a klimatizácia.
  * Poradie, z ktorého ľavý stĺpec vychádza: čo beží, čo ide teraz (alebo najbližšia vec), ďalšie spotrebiče
  * zvoleného dňa, čo dobehlo. Každá dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
  * (bez predpovede, nič doma) nie je. `bojler` je dlaždica bojlera, ktorý riadi zásuvka (pri dnešku, inak null).
@@ -233,21 +232,15 @@ function autoCo(co) {
 }
 
 /**
- * Dva stĺpce dlaždíc (shared/teraz-stlpce.js) v jednej mriežke: bloky idú striedavo ľavý a pravý, každý má svoj
- * stĺpec (`data-stlpec`), takže sa rad zarovná, aj keď jednému stĺpcu blok chýba. Dvojica je jeden blok s dvoma
- * polovičnými dlaždicami pod sebou.
+ * Dva stĺpce dlaždíc (shared/teraz-stlpce.js) v jednej mriežke: dlaždice idú striedavo ľavý a pravý, každá má svoj
+ * stĺpec (`data-stlpec`), takže sa rad zarovná, aj keď jednému stĺpcu dlaždica chýba.
  * @param {Dlazdica[]} veci @param {Ozivenie | null} oziv
  */
 function dlazdiceHtml(veci, oziv) {
     const { lavy, pravy } = stlpceDlazdic(veci);
-    /** @param {Dlazdica[]} b @param {string} s */
-    const blok = (b, s) =>
-        b.length === 1
-            ? dlazdicaHtml(b[0], s, false, oziv)
-            : `<div class="dl-par" data-stlpec="${s}">${b.map((d) => dlazdicaHtml(polovicaDlazdice(d), '', true, oziv)).join('')}</div>`;
     let html = '';
     for (let i = 0; i < Math.max(lavy.length, pravy.length); i++)
-        html += (lavy[i] ? blok(lavy[i], 'l') : '') + (pravy[i] ? blok(pravy[i], 'p') : '');
+        html += (lavy[i] ? dlazdicaHtml(lavy[i], 'l', oziv) : '') + (pravy[i] ? dlazdicaHtml(pravy[i], 'p', oziv) : '');
     return html;
 }
 
