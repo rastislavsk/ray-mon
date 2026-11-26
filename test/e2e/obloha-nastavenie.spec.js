@@ -10,6 +10,9 @@ import {
     SITE,
     SITE_STORAGE_KEY,
     TARIFF,
+    KLIMA_STORAGE_KEY,
+    WORKER_KLIMA_STAV_URL,
+    WORKER_KLIMA_URL,
     BOJLER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     TEPLOMER_STORAGE_KEY,
@@ -36,6 +39,10 @@ import {
 import { pripojenieText } from '../../shared/messages-core.js';
 import { autoDetail, autoDlazdicaNabija } from '../../shared/auto-nabija.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
+import { klimaStavZ, zHlasenia } from '../../shared/klima.js';
+import { skriptKlimy } from '../../shared/klima-skript.js';
+import { KLIMA_NAST_TEXTS } from '../../shared/nastavenie-klima.js';
+import { klimaDetail, klimaDlazdica, TERAZ_KLIMA_TEXTS } from '../../shared/teraz-klima.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
 import { UCENIE_TEXTS } from '../../shared/nastavenie-ucenie.js';
@@ -1507,6 +1514,112 @@ test.describe('bojler na prebytky', () => {
         // Ručný režim dlaždica nehovorí (značka pri ikone zrušená 26. 11. 2026), povie ho panel Bojler dnes.
         await expect(dl.locator('.dl-ico > :not(.vi)')).toHaveCount(0);
         await expect(dl).not.toContainText('ručne');
+        expect(errors).toEqual([]);
+    });
+});
+
+test.describe('klimatizácia Daikin (docs/navrhy/klima-daikin.html)', () => {
+    const NB_ZDROJ = { sposob: 'huawei-northbound', pecat: 'v1.TestPecat0123456789abcdefgh', nazov: 'Dvorany' };
+    const PECAT_SHELLY = 'v1.Shelly0123456789abcdefgh';
+    const t = FIXED_NOW.getTime();
+    const hod = (/** @type {number} */ n) => Array.from({ length: 24 }, (_, i) => (i < n ? 12 : 0)).join('/');
+    const nuly = Array.from({ length: 24 }, () => 0).join('/');
+    const teraz = localMinutes(FIXED_NOW, SITE.timezone);
+    /** Stav, ako ho dá Worker: skutočné odpovede adaptéra, body za posledné 3 hodiny, pred minútou. */
+    const KLIMA = {
+        ...zHlasenia(
+            {
+                s: 'ret=OK,htemp=22.0,hhum=-,otemp=2.0,err=0,cmpfreq=68,mompow=12',
+                c: 'ret=OK,pow=1,mode=4,stemp=23.5,f_rate=A,f_dir=0',
+                d: `ret=OK,curr_day_heat=${hod(Math.floor(teraz / 60))},prev_1day_heat=${hod(24)},curr_day_cool=${nuly},prev_1day_cool=${nuly}`,
+                w: 'ret=OK,week_heat=129/267/198/174/153/96/86/97/107/136/155/167/174/153,week_cool=0/0/0/0/0/0/0/0/0/0/0/0/0/0',
+                t: 'ret=OK,today_runtime=677',
+                r:
+                    'ret=OK,curr_year_heat=8513/6343/3448/1976/415/0/0/0/30/1330/3748/0,prev_year_heat=8447/7887/4258/1839/1033/0/0/0/77/1808/4410/6824,' +
+                    'curr_year_cool=0/0/0/3/9/229/121/690/6/0/0/0,prev_year_cool=0/0/0/5/7/12/12/20/8/1/0/0',
+                b: 'ret=OK,ver=4_2_303,radio1=-56',
+            },
+            null,
+            t - 60000,
+            SITE.timezone,
+        ),
+        body: Array.from({ length: 37 }, (_, i) => [teraz - (36 - i) * 5, 21.6 + (i % 4) * 0.1, 1 + i / 36, 1200]),
+        zdroje: Array.from({ length: 24 }, (_, i) => (i >= 9 && i < 12 ? [600, 600] : null)),
+    };
+
+    test('dlaždica Klíma pod autom, biely kruh, panel s grafom, 14 dňami, rokom a podrobnosťami', async ({ page }) => {
+        /** @type {string[]} */
+        const dopyty = [];
+        await page.route(WORKER_KLIMA_STAV_URL, (route) => {
+            dopyty.push(route.request().postData() ?? '');
+            return route.fulfill({ json: { klima: KLIMA } });
+        });
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ } });
+        const k = /** @type {import('../../shared/klima.js').KlimaStav} */ (klimaStavZ(KLIMA));
+        const m = klimaDlazdica(k, FIXED_NOW, SITE.timezone, TARIFF);
+        const dl = page.locator('#tz-dlazdice [data-vec="klima"]');
+        await expect(dl).toHaveAttribute('data-stlpec', 'p');
+        await expect(dl).toHaveAttribute('data-zapnuty', '');
+        await expect(dl.locator('.velky')).toHaveText(`${m.velky} ${m.za}`);
+        await expect(dl.locator('b')).toHaveText(TERAZ_KLIMA_TEXTS.meno);
+        await expect(dl.locator('small > span:not(.sr)')).toHaveText(m.odr);
+        expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });
+        // Nič nepretečie: riadky dlaždice sú užšie ako ona.
+        const pretek = await dl.evaluate(
+            (el) => [...el.querySelectorAll('.velky, b, small > span:not(.sr)')].filter((x) => x.scrollWidth > x.clientWidth + 0.5).length,
+        );
+        expect(pretek).toBe(0);
+        await dl.click();
+        const sheet = page.locator('#tz-klima-sheet');
+        await expect(sheet).toBeVisible();
+        const d = klimaDetail(k, FIXED_NOW, SITE.timezone, TARIFF);
+        await expect(page.locator('#tz-klima-ttl')).toHaveText(d.nadpis);
+        await expect(page.locator('#tz-klima-pod')).toHaveText(d.pod);
+        await expect(page.locator('#tz-klima-graf .kl-c')).toHaveCount(2);
+        await expect(page.locator('#tz-klima-graf .kl-hod span')).toHaveCount(24);
+        await expect(page.locator('#tz-klima-graf .kl-t')).toHaveText((d.graf?.popisky ?? []).map((p) => p.text));
+        await expect(page.locator('#tz-klima-energia .bj-zdroje b')).toHaveText(d.energia.map((c) => c.v));
+        await expect(page.locator('#tz-klima-beh')).toHaveText(d.beh);
+        await expect(page.locator('#tz-klima-dni .kl-dni i')).toHaveCount(14);
+        await expect(page.locator('#tz-klima-rok .bj-zdroje b')).toHaveText((d.rok?.sucty ?? []).map((s) => s.v));
+        await sheet.evaluate((el) => [el, ...el.querySelectorAll('.sheet-in')].forEach((x) => x.scrollTo(0, 0)));
+        await page.locator('#tz-klima-sheet').screenshot({ path: test.info().outputPath('klima-panel.png') });
+        await page.locator('#tz-klima-podr-d summary').click();
+        await expect(page.locator('#tz-klima-podr p b')).toHaveText(d.podrobnosti.map((r) => r[1]));
+        expect((await new AxeBuilder({ page }).include('#tz-klima-sheet').analyze()).violations).toEqual([]);
+        await page.keyboard.press('Escape');
+        await expect(sheet).toBeHidden();
+        await expect(dl).toBeFocused();
+        expect(errors).toEqual([]);
+    });
+
+    test('Nastavenie: adresa klimatizácie a skript na Shelly do schránky', async ({ page }) => {
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'clipboard', {
+                value: { writeText: (/** @type {string} */ x) => /** @type {any} */ ((window.__schranka = x), Promise.resolve()) },
+            });
+        });
+        await page.route(WORKER_BOJLER_PECAT_URL, (route) => route.fulfill({ json: { pecat: PECAT_SHELLY } }));
+        await page.route(WORKER_KLIMA_STAV_URL, (route) => route.fulfill({ json: { klima: KLIMA } }));
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ } });
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-doma').click();
+        const sekcia = page.locator('#ns-klima');
+        await expect(sekcia).toBeVisible();
+        await expect(page.locator('#ns-klima-title')).toHaveText(KLIMA_NAST_TEXTS.title);
+        await expect(page.locator('#ns-klima-stav')).toHaveText(/^ozvala sa o \d\d:\d\d$/);
+        // Bez adresy skript nebude.
+        await page.locator('#ns-klima-skript').click();
+        await expect(page.locator('#ns-klima-sprava')).toHaveText(KLIMA_NAST_TEXTS.adresa[0]);
+        await page.locator('#ns-klima-ip').fill('10.10.10.148');
+        await page.locator('#ns-klima-skript').click();
+        await expect(page.locator('#ns-klima-sprava')).toHaveText(KLIMA_NAST_TEXTS.hotovo[0]);
+        expect(await page.evaluate(() => /** @type {any} */ (window).__schranka)).toBe(
+            skriptKlimy({ url: WORKER_KLIMA_URL, pecat: PECAT_SHELLY, ip: '10.10.10.148' }),
+        );
+        expect(await page.evaluate((x) => localStorage.getItem(x), KLIMA_STORAGE_KEY)).toBe(JSON.stringify({ ip: '10.10.10.148' }));
+        await expect(page.locator('#ns-klima-kroky li')).toHaveCount(KLIMA_NAST_TEXTS.kroky.length);
+        expect((await new AxeBuilder({ page }).include('#ns-klima').analyze()).violations).toEqual([]);
         expect(errors).toEqual([]);
     });
 });

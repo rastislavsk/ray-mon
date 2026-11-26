@@ -8,9 +8,11 @@ import { BEZI, HVIEZDY } from '../../shared/config.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
+import { klimaUkaz } from '../../shared/klima.js';
 import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerDrahaDnes, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
+import { klimaDetail, klimaDlazdica, TERAZ_KLIMA_TEXTS } from '../../shared/teraz-klima.js';
 import { localDateKey, localMinutes } from '../../shared/solar.js';
 import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { polovicaDlazdice, stlpceDlazdic } from '../../shared/teraz-stlpce.js';
@@ -177,12 +179,14 @@ function prvyVPlane(co) {
  * zvoleného dňa, čo dobehlo. Každá dlaždica nesie `data-vec`, ťuknutie otvorí detail spotrebiča. Bez Plánu dňa
  * (bez predpovede, nič doma) nie je. `bojler` je dlaždica bojlera, ktorý riadi zásuvka (pri dnešku, inak null).
  * `ciel` je ťuknutie na oznámenie, ktoré ešte čaká (ožije ikona jednej dlaždice).
+ * `klima` je dlaždica klimatizácie (docs/navrhy/klima-daikin.html, pri dnešku, inak null).
  * @param {Model['co']} co @param {Dom} dom @param {Dlazdica | null} bojler @param {import('../state.js').AppState['tzOziv']} ciel
+ * @param {Dlazdica | null} [klima]
  */
-function renderCo(co, dom, bojler, ciel) {
+function renderCo(co, dom, bojler, ciel, klima = null) {
     show(dom.tzCo, !!co);
     if (!co) return;
-    const veci = dlazdiceCo(co, bojler);
+    const veci = dlazdiceCo(co, bojler, klima);
     const html = dlazdiceHtml(veci, ozivenie(ciel, co, veci));
     setHtml(dom.tzDlazdice, html);
     show(dom.tzDlazdice, html !== '');
@@ -191,9 +195,9 @@ function renderCo(co, dom, bojler, ciel) {
 /**
  * Dlaždice Čo zapnúť v poradí karty: čo beží, čo ide teraz (alebo najbližšia vec), bojler riadený zásuvkou,
  * ďalšie spotrebiče zvoleného dňa, čo dobehlo. Iný deň má len svoje spotrebiče.
- * @param {NonNullable<Model['co']>} co @param {Dlazdica | null} bojler @returns {Dlazdica[]}
+ * @param {NonNullable<Model['co']>} co @param {Dlazdica | null} bojler @param {Dlazdica | null} klima @returns {Dlazdica[]}
  */
-function dlazdiceCo(co, bojler) {
+function dlazdiceCo(co, bojler, klima) {
     const h = co.hore;
     const dnes = !co.den;
     const p = h.dalsi;
@@ -214,7 +218,7 @@ function dlazdiceCo(co, bojler) {
         draha: r.draha,
         odr: r.odr,
     }));
-    return [...bezia(co, dnes), ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie, ...autoCo(co)];
+    return [...bezia(co, dnes), ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie, ...autoCo(co), ...(dnes && klima ? [klima] : [])];
 }
 
 /**
@@ -669,6 +673,7 @@ export function renderTeraz(state, dom) {
         renderVecSheet(state, null, dom);
         dialog(dom.tzBojlerSheet, false, () => null);
         dialog(dom.tzAutoSheet, false, () => null);
+        dialog(dom.tzKlimaSheet, false, () => null);
         dialog(dom.tzTokSheet, false, () => null);
         return;
     }
@@ -700,13 +705,14 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskBtn, T.askBtn);
     renderHreben(m.co ? m.hreben : null, dom);
     // Starý web/state.js z cache po nasadení `tzOziv` nemá - undefined je ako null (CLAUDE.md, Nasadenie a cache).
-    renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler), state.tzOziv);
+    renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler), state.tzOziv, klimaTeraz(state));
     renderTokPole(s, m.co, dom);
     // Dlaždice v noci na svetlom skle (docs/navrhy/teraz-pole-noc-bezi.html, 2B): tmavé sklo by na nočnej oblohe zmizlo.
     dom.tzCo.toggleAttribute('data-noc', m.pocasie?.noc === true);
     renderVecSheet(state, m, dom);
     renderBojlerSheet(state, dom, m.bojler);
     renderAutoSheet(state, dom);
+    renderKlimaSheet(state, dom);
     renderTokSheet(state, dom);
 }
 
@@ -775,6 +781,111 @@ function renderAutoSheet(state, dom) {
         setText(dom.tzAutoPozn, d.poznamka);
     }
     dialog(dom.tzAutoSheet, !!info, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="auto"]') : null));
+}
+
+/**
+ * Dlaždica klimatizácie (docs/navrhy/klima-daikin.html, B): kým sa skript na Shelly ozval za posledných KLIMA.ukazHod hodín.
+ * `?? null`: starý web/state.js z cache po nasadení pole klima nemá.
+ * @param {import('../state.js').AppState} state @returns {Dlazdica | null}
+ */
+function klimaTeraz(state) {
+    const k = state.klima ?? null;
+    if (!k || !klimaUkaz(k, state.now.getTime())) return null;
+    return { id: 'klima', ...klimaDlazdica(k, state.now, state.site.timezone, state.tariff) };
+}
+
+/**
+ * Panel Klíma (docs/navrhy/klima-daikin.html): otvorený, kým je v stave tzVec 'klima' a appka má stav klimatizácie.
+ * @param {import('../state.js').AppState} state @param {Dom} dom
+ */
+function renderKlimaSheet(state, dom) {
+    const k = state.tzVec === 'klima' && klimaUkaz(state.klima ?? null, state.now.getTime()) ? state.klima : null;
+    if (k) {
+        const d = klimaDetail(k, state.now, state.site.timezone, state.tariff);
+        setHtml(dom.tzKlimaIco, vecIcon('klima'));
+        setText(dom.tzKlimaTtl, d.nadpis);
+        setText(dom.tzKlimaPod, d.pod);
+        renderKlimaGraf(d.graf, dom.tzKlimaGraf);
+        setHtml(
+            dom.tzKlimaEnergia,
+            stoh(d.energia) +
+                `<div class="bj-zdroje">${d.energia
+                    .map((c) => `<div><b>${escapeHtml(c.v)}</b><small><i data-tone="${c.tone}"></i>${escapeHtml(c.l)}</small></div>`)
+                    .join('')}</div>`,
+        );
+        setText(dom.tzKlimaBeh, d.beh);
+        renderKlimaDni(d.dni, dom.tzKlimaDni);
+        renderKlimaRok(d.rok, dom.tzKlimaRok);
+        setText(dom.tzKlimaPodrN, TERAZ_KLIMA_TEXTS.podrobnosti);
+        setHtml(dom.tzKlimaPodr, d.podrobnosti.map(([l, v]) => `<p><span>${escapeHtml(l)}</span><b>${escapeHtml(v)}</b></p>`).join(''));
+    }
+    dialog(dom.tzKlimaSheet, !!k, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="klima"]') : null));
+}
+
+/**
+ * Graf dňa v paneli Klíma: krivky teplôt v SVG natiahnutom na šírku, čiara nastavenej teploty a popisky v HTML (písmo sa
+ * nenaťahuje), pod nimi stĺpce kWh za hodinu, čiarka teraz a os hodín. Popisky pri teraz idú vľavo od čiarky, keď je
+ * teraz v pravej tretine dňa.
+ * @param {ReturnType<typeof klimaDetail>['graf']} g @param {HTMLElement} el
+ */
+function renderKlimaGraf(g, el) {
+    show(el, !!g);
+    if (!g) return;
+    el.setAttribute('aria-label', g.popis);
+    const vlavo = g.teraz > 66 ? ' data-vlavo' : '';
+    setHtml(
+        el,
+        `<div class="kl-tep"><svg viewBox="0 0 ${g.w} ${g.h}" preserveAspectRatio="none" aria-hidden="true">` +
+            `<path class="kl-c" data-k="vonku" d="${g.vonku}" vector-effect="non-scaling-stroke"/>` +
+            `<path class="kl-c" data-k="doma" d="${g.doma}" vector-effect="non-scaling-stroke"/></svg>` +
+            (g.nula === null ? '' : `<i class="kl-nula" style="top:${g.nula}%"></i>`) +
+            (g.nastavena
+                ? `<i class="kl-nast" style="top:${g.nastavena.y}%"></i><span class="kl-nast-t" style="top:${g.nastavena.y}%">${escapeHtml(g.nastavena.text)}</span>`
+                : '') +
+            g.popisky
+                .map((p) => `<b class="kl-t" data-k="${p.id}"${vlavo} style="left:${g.teraz}%;top:${p.y}%">${escapeHtml(p.text)}</b>`)
+                .join('') +
+            `</div><div class="kl-hod" aria-hidden="true">${g.stlpce
+                .map((s) => `<span><i data-k="c" style="height:${s.c}%"></i><i data-k="k" style="height:${s.k}%"></i></span>`)
+                .join('')}</div>` +
+            `<i class="bj-teraz" style="left:${g.teraz}%"></i>` +
+            `<div class="bj-osi">${[0, 6, 12, 18, 24].map((h) => `<span style="left:${(h / 24) * 100}%">${h}</span>`).join('')}</div>` +
+            `<p class="kl-leg"><i></i>${escapeHtml(TERAZ_KLIMA_TEXTS.kwhHodina)}</p>`,
+    );
+}
+
+/** 14 dní stĺpcami so skratkami dní a dňom s najväčšou spotrebou. @param {ReturnType<typeof klimaDetail>['dni']} d @param {HTMLElement} el */
+function renderKlimaDni(d, el) {
+    show(el, !!d);
+    if (!d) return;
+    setHtml(
+        el,
+        `<p class="bj-nast-n">${escapeHtml(TERAZ_KLIMA_TEXTS.dni14)}</p>` +
+            `<div class="kl-dni" aria-hidden="true">${d.stlpce.map((s) => `<i style="height:${s.h}%"${s.dnes ? ' data-dnes' : ''}></i>`).join('')}</div>` +
+            `<div class="kl-os" aria-hidden="true">${d.popisky.map((p) => `<span>${escapeHtml(p)}</span>`).join('')}</div>` +
+            (d.najviac ? `<p class="bj-hrial">${escapeHtml(d.najviac)}</p>` : ''),
+    );
+}
+
+/** Tento rok a minulý po mesiacoch, súčty a veta o tomto mesiaci. @param {ReturnType<typeof klimaDetail>['rok']} r @param {HTMLElement} el */
+function renderKlimaRok(r, el) {
+    show(el, !!r);
+    if (!r) return;
+    /** @param {{ k: number, c: number }} s @param {boolean} minuly */
+    const stlpec = (s, minuly) =>
+        `<span${minuly ? ' data-minuly' : ''}><i data-k="c" style="height:${s.c}%"></i><i data-k="k" style="height:${s.k}%"></i></span>`;
+    setHtml(
+        el,
+        `<p class="bj-nast-n">${escapeHtml(TERAZ_KLIMA_TEXTS.rok)}</p>` +
+            `<div class="kl-rok" aria-hidden="true">${r.mesiace
+                .map((m) => `<span>${stlpec(m.minuly, true)}${m.tento ? stlpec(m.tento, false) : '<span></span>'}</span>`)
+                .join('')}</div>` +
+            `<div class="kl-os" aria-hidden="true">${r.mesiace.map((m) => `<span>${escapeHtml(m.m)}</span>`).join('')}</div>` +
+            `<div class="bj-zdroje">${r.sucty
+                .map((s) => `<div><b>${escapeHtml(s.v)}</b><small><i data-k="${s.tone}"></i>${escapeHtml(s.l)}</small></div>`)
+                .join('')}</div>` +
+            `<p class="bj-hrial">${escapeHtml(r.pozn)}</p>`,
+    );
 }
 
 /**

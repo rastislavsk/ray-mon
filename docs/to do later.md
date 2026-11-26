@@ -56,6 +56,14 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
   domácnosti zdieľa cez objekt účtu Huawei (`UcetHuawei`, možnosť A). Pri inom zdroji merania (kiosk FusionSolar,
   iné meniče) taký objekt nie je a každý telefón si behy drží sám. Doplniť, napr. samostatnú „domácnosť“
   s kódom na spárovanie (možnosť B: vlastný Durable Object, párovanie cez QR).
+- **Riadenie klimatizácie a celého domu** (26. 11. 2026): klimatizácia Daikin Sensira (BRP069B4X, lokálne API) sa
+  zatiaľ len sleduje. Neskôr ju riadiť podľa prebytku (napr. pri slnku zvýšiť nastavenú teplotu o 1 – 2 °C a „nabiť“
+  dom teplom) a zarátať do Plánu dňa a učenia. Počkať, kým bude doma viac Shelly zariadení, aby učenie a riadenie
+  celého domu stálo na meraní jednotlivých spotrebičov, nie na odhade zo zvyšku domu.
+- **Odhad nabíjania auta bez klimatizácie** (26. 11. 2026, `docs/navrhy/klima-daikin.html`, S1): `krokAuta`
+  (`shared/auto-nabija.js`) berie dom bez bojlera, v ktorom je aj klimatizácia (pri plnom kúrení 1,2 – 2 kW). Spolu
+  s varením môže prekročiť `AUTO_SLNKO.minKw` a ohlásiť nabíjanie, ktoré nie je. Keď Worker bude mať príkon
+  klimatizácie (`/klima`), odčítať ho od domu rovnako ako bojler. Urobiť v ďalšej session po nasadení dlaždice Klíma.
 - **Zmazať `historia-v1`** (24. 11. 2026): model učenia počíta Worker (`docs/navrhy/ucenie-vo-workeri.html`),
   `historia-v1` už len číta telefón bez modelu od Workera. Po pár týždňoch zmazať `HISTORIA_STORAGE_KEY` a jeho čítanie.
   `/historia` ostáva - appka si ňou večer berie dnešné hodiny domu pre auto zo slnka (`docs/navrhy/auto-mimo-planu.html`).

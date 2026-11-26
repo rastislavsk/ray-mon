@@ -568,6 +568,27 @@ export const BOJLER = {
 };
 
 /**
+ * Klimatizácia Daikin s lokálnym API (docs/navrhy/klima-daikin.html, adaptér BRP069B4X a podobné). Skript na Shelly sa
+ * jej pýta každú minútu na stav a teploty, každých `hodinyMin` minút aj na energiu po hodinách a dňoch, každých `rokMin`
+ * na mesiace roka; na jeden dopyt čaká `getS` sekúnd. Daikin hlási príkon (`mompow`) a energiu po `jednotkaWh` Wh.
+ * Worker drží bod (teplota doma, vonku, príkon) každých `bodKrokMin` minút za `bodyDni` dní. Hlásenie staršie ako
+ * `tichoMin` minút je bez spojenia; po `ukazHod` hodinách ticha dlaždica zmizne. Údaj, ktorý klimatizácia hlási ako
+ * nezmysel (`-`), sa nepoužije; teploty mimo `minC` až `maxC` tiež nie.
+ */
+export const KLIMA = {
+    hodinyMin: 15,
+    rokMin: 60,
+    getS: 5,
+    jednotkaWh: 100,
+    bodKrokMin: 5,
+    bodyDni: 7,
+    tichoMin: 5,
+    ukazHod: 24,
+    minC: -40,
+    maxC: 60,
+};
+
+/**
  * Skupiny vecí: každá je jedna dlaždica s jednou odpoveďou. `size` je jej miesto
  * (`wide` cez celú šírku s pásom dňa, `half` polovica). Mená sú v messages.
  * @type {Array<{ id: string, items: string[], size: 'wide' | 'half' }>}
@@ -687,6 +708,12 @@ export const BOJLER_STORAGE_KEY = 'bojler-v1';
 export const TEPLOMER_STORAGE_KEY = 'teplomer-v1';
 
 /**
+ * Klimatizácia Daikin (docs/navrhy/klima-daikin.html): adresa jej adaptéra v domácej sieti, do skriptu na Shelly. Patrí
+ * telefónu. Formát: { ip }.
+ */
+export const KLIMA_STORAGE_KEY = 'klima-v1';
+
+/**
  * Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, A + 1; docs/navrhy/spotrebic-koniec-opakovanie.html):
  * „Už beží“ v detaile spotrebiča na karte Teraz zapíše beh a Plán dňa s ním ráta (shared/bezi.js). Len `veci` -
  * bojler riadi zásuvka a auto zatiaľ nie. Pri `zvysok` (práčka, sušička - ukazujú ho na displeji) sa appka pýta, koľko
@@ -779,6 +806,7 @@ export const STORAGE_KEYS = [
     TRASY_STORAGE_KEY,
     AUTO_DEN_STORAGE_KEY,
     AUTO_OZNAM_STORAGE_KEY,
+    KLIMA_STORAGE_KEY,
 ];
 
 /** Prepočty do jednotiek, ktoré pozná každý: jedno nabitie mobilu (kWh) a dojazd auta na kWh. */
@@ -889,6 +917,12 @@ export const WORKER_AUTO_PATH = '/auto';
 export const WORKER_AUTO_URL = new URL(WORKER_AUTO_PATH, WORKER_URL).href;
 export const WORKER_AUTO_OZNAM_PATH = '/auto-oznamenia';
 export const WORKER_AUTO_OZNAM_URL = new URL(WORKER_AUTO_OZNAM_PATH, WORKER_URL).href;
+// Klimatizácia Daikin (docs/navrhy/klima-daikin.html): skript na Shelly v domácej sieti posiela `/klima` odpovede lokálneho
+// API klimatizácie (s pečaťou z `/bojler-pecat`), appka si stav berie cez `/klima-stav` pri každej obnove dát.
+export const WORKER_KLIMA_PATH = '/klima';
+export const WORKER_KLIMA_URL = new URL(WORKER_KLIMA_PATH, WORKER_URL).href;
+export const WORKER_KLIMA_STAV_PATH = '/klima-stav';
+export const WORKER_KLIMA_STAV_URL = new URL(WORKER_KLIMA_STAV_PATH, WORKER_URL).href;
 /**
  * História elektrárne z Durable Objectu účtu Huawei (docs/navrhy/plan-dna-ucenie.html). Model učenia z nej počíta Worker
  * (WORKER_UCENIE_PATH); appka si ju stiahne raz za deň po západe slnka - dnešné hodiny domu na večerný prepis auta zo
@@ -1110,7 +1144,7 @@ export const TERAZ_OKNA_SPANOK = { od: 0, do: 5 * 60 };
  */
 export const TERAZ_STLPCE = {
     lavy: [['pracka', 'susicka'], ['umyvacka']],
-    pravy: [['bojler'], ['auto']],
+    pravy: [['bojler'], ['auto'], ['klima']],
 };
 
 // Nad touto výškou slnka (stupne) menič vyrába, takže mlčiaca krivka znamená výpadok.

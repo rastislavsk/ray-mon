@@ -12,8 +12,11 @@ import { BOJLER } from './config.js';
 /** Pečať smie obsahovať len znaky base64url a bodky - nič, čo by vyskočilo z reťazca v skripte. */
 const PECAT = /^[A-Za-z0-9._-]+$/;
 
-/** Adresa teplomera v domácej sieti: IP alebo meno, nič iné (žiadna cesta, úvodzovky ani zavináč). */
-const ADRESA_TEPLOMERA = /^[A-Za-z0-9][A-Za-z0-9.-]{0,62}$/;
+/**
+ * Adresa zariadenia v domácej sieti (teplomer, klimatizácia - shared/klima-skript.js): IP alebo meno, nič iné (žiadna
+ * cesta, úvodzovky ani zavináč), aby nevyskočila z reťazca v skripte.
+ */
+export const ADRESA_V_SIETI = /^[A-Za-z0-9][A-Za-z0-9.-]{0,62}$/;
 
 /**
  * Adresa, na ktorej zásuvka prečíta teplotu, alebo null, keď adresa či heslo nesedí. Meno je vždy `admin` (Shelly Gen2+),
@@ -22,7 +25,7 @@ const ADRESA_TEPLOMERA = /^[A-Za-z0-9][A-Za-z0-9.-]{0,62}$/;
  */
 export function adresaTeplomera(t) {
     const ip = t.ip.trim();
-    if (!ADRESA_TEPLOMERA.test(ip) || !t.heslo) return null;
+    if (!ADRESA_V_SIETI.test(ip) || !t.heslo) return null;
     const heslo = encodeURIComponent(t.heslo).replace(/'/g, '%27');
     return `http://admin:${heslo}@${ip}/rpc/Temperature.GetStatus?id=${BOJLER.teplomerId}`;
 }

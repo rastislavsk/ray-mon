@@ -541,12 +541,40 @@ function wizardTariffDom() {
     };
 }
 
+/** Klimatizácia Daikin (docs/navrhy/klima-daikin.html): panel Klíma na karte Teraz a jej blok v Nastavení. */
+function klimaDom() {
+    return {
+        tzKlimaSheet: /** @type {HTMLDialogElement} */ (byId('tz-klima-sheet')),
+        tzKlimaIco: byId('tz-klima-ico'),
+        tzKlimaTtl: byId('tz-klima-ttl'),
+        tzKlimaPod: byId('tz-klima-pod'),
+        tzKlimaGraf: byId('tz-klima-graf'),
+        tzKlimaEnergia: byId('tz-klima-energia'),
+        tzKlimaBeh: byId('tz-klima-beh'),
+        tzKlimaDni: byId('tz-klima-dni'),
+        tzKlimaRok: byId('tz-klima-rok'),
+        tzKlimaPodrN: byId('tz-klima-podr-n'),
+        tzKlimaPodr: byId('tz-klima-podr'),
+        nsKlima: byId('ns-klima'),
+        nsKlimaTitle: byId('ns-klima-title'),
+        nsKlimaIntro: byId('ns-klima-intro'),
+        nsKlimaIpL: byId('ns-klima-ip-l'),
+        nsKlimaIp: /** @type {HTMLInputElement} */ (byId('ns-klima-ip')),
+        nsKlimaStavL: byId('ns-klima-stav-l'),
+        nsKlimaStav: byId('ns-klima-stav'),
+        nsKlimaSkript: /** @type {HTMLButtonElement} */ (byId('ns-klima-skript')),
+        nsKlimaSprava: byId('ns-klima-sprava'),
+        nsKlimaText: /** @type {HTMLTextAreaElement} */ (byId('ns-klima-text')),
+        nsKlimaKroky: byId('ns-klima-kroky'),
+    };
+}
 export function collectDom() {
     return {
         ...radarDom(),
         ...mozemDom(),
         ...terazDom(),
         ...terazBojlerDom(),
+        ...klimaDom(),
         ...terazZapisDom(),
         ...sedemDom(),
         ...statistikaDom(),

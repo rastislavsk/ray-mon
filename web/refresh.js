@@ -29,6 +29,7 @@ import { obnovAutoDen } from './auto-den.js';
 import { obnovUcenie } from './ucenie.js';
 import { zladBehy } from './bezi-spolocne.js';
 import { obnovAuto } from './auto-nabija.js';
+import { obnovKlimu } from './klima.js';
 
 /**
  * Polia stavu, ktoré obnova číta a zapisuje.
@@ -52,6 +53,7 @@ import { obnovAuto } from './auto-nabija.js';
  *   bezi: import('../shared/bezi.js').Zapis[],
  *   autoDen: import('../shared/auto-slnko.js').AutoDen | null,
  *   autoNabija?: import('../shared/auto-nabija.js').AutoInfo | null,
+ *   klima?: import('../shared/klima.js').KlimaStav | null,
  * }} RefreshState
  * @typedef {{ get: () => RefreshState, setState: (patch: Partial<RefreshState>) => void }} RefreshStore
  */
@@ -254,6 +256,8 @@ export function createRefresh(store) {
         void zladBehy(store);
         // Nabíjanie auta z Durable Objectu účtu (web/auto-nabija.js, docs/navrhy/auto-nabija.html).
         void obnovAuto(store);
+        // Klimatizácia Daikin zo skriptu na Shelly (web/klima.js, docs/navrhy/klima-daikin.html).
+        void obnovKlimu(store);
     };
     return ({ skus = false } = {}) => {
         // Kým appka nepozná polohu, nie je pre čo sťahovať.

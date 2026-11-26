@@ -24,6 +24,8 @@
 // POST /ucenie: pečať telefónu, snímky predpovede a „Začať odznova“ -> model učenia Plánu dňa (worker/src/ucet.js).
 // POST /auto: pečať telefónu -> stav a behy nabíjania auta, bez merania (docs/navrhy/auto-nabija.html, worker/src/ucet.js).
 // POST /auto-oznamenia: telefón si zapne či vypne oznámenia o začiatku a konci nabíjania auta (worker/src/ucet.js).
+// POST /klima: skript na Shelly posiela odpovede lokálneho API klimatizácie Daikin (docs/navrhy/klima-daikin.html).
+// POST /klima-stav: pečať telefónu -> stav klimatizácie s dnešnými bodmi a zdrojmi hodín (worker/src/ucet.js).
 //
 // Huawei Northbound meria cez Durable Object účtu (worker/src/ucet.js): telefón a zásuvka by sa inak
 // navzájom odhlasovali. Ten si pamätá aj reláciu a stav bojlera; heslo nie.
@@ -39,6 +41,8 @@ import {
     WORKER_BEZI_PATH,
     WORKER_BOJLER_STAV_PATH,
     WORKER_HISTORIA_PATH,
+    WORKER_KLIMA_PATH,
+    WORKER_KLIMA_STAV_PATH,
     WORKER_KONIEC_PATH,
     WORKER_OZNAMENIA_PATH,
     WORKER_PRIPOJ_PATH,
@@ -397,6 +401,46 @@ export async function handleAuto(request, env, now) {
 }
 
 /**
+ * POST /klima: `{ pecat, id, s, c, d?, w?, t?, r?, b? }` od skriptu na Shelly (docs/navrhy/klima-daikin.html): surové
+ * odpovede lokálneho API klimatizácie Daikin -> `{ ok }`. Stav z nich skladá Durable Object účtu (shared/klima.js).
+ * Hlásenie bez stavu či teplôt -> 400.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleKlima(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { req, obsah } = await dopytBojlera(request, key, now);
+    if (!obsah) return json(400, { chyba: 'udaje' });
+    try {
+        const odpovede = Object.fromEntries(
+            ['s', 'c', 'd', 'w', 't', 'r', 'b'].filter((k) => typeof req[k] === 'string').map((k) => [k, req[k]]),
+        );
+        const r = await ucet(env.UCTY, obsah.pristup, '/klima', now, { odpovede });
+        return r.ok ? json(200, { ok: true }) : json(400, { chyba: 'udaje' });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
+ * POST /klima-stav: `{ pecat }` od appky (pečať telefónu) -> `{ klima }`, posledné hlásenie klimatizácie s dnešnými
+ * bodmi a zdrojmi hodín (null, kým sa skript neozval). Appka sa pýta pri každej obnove dát, na Huawei nejde nič.
+ * @param {Request} request @param {Env} env @param {Date} now
+ */
+export async function handleKlimaStav(request, env, now) {
+    const key = pecatKey(env.PECAT_KLUC);
+    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+    const { obsah } = await dopytBojlera(request, key, now);
+    if (!obsah) return json(400, { chyba: 'udaje' });
+    try {
+        const r = await ucet(env.UCTY, obsah.pristup, '/klima-stav', now);
+        return json(200, { klima: r.klima ?? null });
+    } catch (err) {
+        return chyba(err);
+    }
+}
+
+/**
  * POST /bojler-rezim: `{ pecat, rucne }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ ok, bojler }`.
  * V ručnom režime skript v zásuvke relé neprepína, len hlási (docs/navrhy/teraz-auto-tok.html).
  * @param {Request} request @param {Env} env @param {Date} now
@@ -545,6 +589,9 @@ const CESTY = {
     // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
     [WORKER_AUTO_PATH]: { limit: false, run: handleAuto },
     [WORKER_AUTO_OZNAM_PATH]: { limit: true, run: handleAutoOznam },
+    // Skript na Shelly hlási každú minútu, appka sa pýta pri každej obnove; bez platnej pečate nič nespraví.
+    [WORKER_KLIMA_PATH]: { limit: false, run: handleKlima },
+    [WORKER_KLIMA_STAV_PATH]: { limit: false, run: handleKlimaStav },
     [WORKER_HISTORIA_PATH]: { limit: true, run: handleHistoria },
     // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
     [WORKER_BEZI_PATH]: { limit: false, run: handleBezi },

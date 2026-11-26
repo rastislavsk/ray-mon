@@ -101,6 +101,19 @@ Bojler riadi jedno zariadenie (`docs/navrhy/bojler-jedno-zariadenie.html`, C + D
 `Shelly.getDeviceInfo().id`, Worker pripne prvú zásuvku s meraním príkonu (`bd:`, `zariadenieBojlera` v `shared/bojler.js`)
 a ostatným vráti 409; hlásenie bez `w` (Shelly 1 Gen3 s teplomerom) neprejde nikdy. Skript patrí len do zásuvky.
 
+## Klimatizácia Daikin
+
+Návrh a rozhodnutia: `docs/navrhy/klima-daikin.html` (cesta A, dlaždica B, pásik ako pri spotrebičoch, Z1, 26. 11. 2026).
+Klimatizácia (Sensira s adaptérom BRP069B4X) má v domácej sieti lokálne HTTP API bez hesla. Worker na domácu sieť nevidí,
+preto ju číta skript na Shelly s teplomerom (`shared/klima-skript.js`, nie zásuvka bojlera): každú minútu stav a teploty,
+každých `KLIMA.hodinyMin` energiu, každých `KLIMA.rokMin` rok a Wi-Fi, a surové odpovede pošle na `/klima` s pečaťou
+z `/bojler-pecat`. Čítať ich vie `shared/klima.js` (`zHlasenia`); objekt `UcetHuawei` drží stav (`kl:`) a body (`kt:`)
+a appka si cez `/klima-stav` berie stav s dnešnými bodmi a zdrojmi hodín (`slnkoKlimy` z `hd:` - klimatizácia ide pred
+bojlerom). Dlaždica (`shared/teraz-klima.js`) je v pravom stĺpci pod autom: príkon, „vonku / nastavená“ len hodnotami
+a dnešné kWh; panel Klíma má graf dňa, energiu, 14 dní, rok a podrobnosti. Klimatizáciu appka len sleduje, riadenie
+a odčítanie z odhadu nabíjania auta sú v `docs/to do later.md`. Aktualizácia firmvéru adaptéra (appka Onecta) môže lokálne
+API zrušiť - potom ostáva cloud Onecta (200 volaní za deň) alebo ESP32 Faikin.
+
 ## Spotrebič beží
 
 Návrh a rozhodnutie: `docs/navrhy/teraz-bezi-spotrebic.html` (A + 1, 18. 11. 2026), koniec programu a opakovanie

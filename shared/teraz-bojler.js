@@ -172,14 +172,15 @@ function podielDnes(den) {
 /** Je minúta `m` v drahom pásme tarify? @typedef {(m: number) => boolean} JeDraha */
 
 /** Drahé pásmo tarify v deň `den` (bez tarify nikdy). @param {Tariff | null} tariff @param {string} den @returns {JeDraha} */
-function drahaDna(tariff, den) {
+export function drahaDna(tariff, den) {
     if (!tariff) return () => false;
     const schedule = scheduleFor(tariff, den);
     return (m) => bandAt(tariff, schedule, Math.min(m, 24 * 60 - 1)).level === 'draha';
 }
 
 /** Má tarifa v deň `den` drahé pásmo? Pri jednosadzbovej panel VT neukáže. @param {Tariff | null} tariff @param {string} den */
-const maDrahu = (tariff, den) => !!tariff && scheduleFor(tariff, den).changes.some((c) => bandById(tariff, c.band).level === 'draha');
+export const maDrahu = (tariff, den) =>
+    !!tariff && scheduleFor(tariff, den).changes.some((c) => bandById(tariff, c.band).level === 'draha');
 
 /**
  * Koľko Wh behu išlo zo siete a koľko z toho v drahom pásme tarify (docs/navrhy/bojler-panel.html, D2). Beh so štvrťhodinami
@@ -472,7 +473,7 @@ function koniecBehu(b, den, x, now, tz) {
  * v tarife (`sVt` false) je sieť jedna časť.
  * @param {{ slnko: number, siet: number, vt: number }} e @param {boolean} sVt
  */
-function casti(e, sVt) {
+export function casti(e, sVt) {
     const T = TERAZ_BOJLER_TEXTS;
     const tony = /** @type {Array<'slnko' | 'siet' | 'vt'>} */ (sVt ? ['slnko', 'siet', 'vt'] : ['slnko', 'siet']);
     return tony.map((tone) => {
