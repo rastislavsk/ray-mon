@@ -726,8 +726,6 @@ export function renderTeraz(state, dom) {
     // Starý web/state.js z cache po nasadení `tzOziv` nemá - undefined je ako null (CLAUDE.md, Nasadenie a cache).
     renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler), state.tzOziv, klimaTeraz(state));
     renderTokPole(s, m.co, dom);
-    // Dlaždice v noci na svetlom skle (docs/navrhy/teraz-pole-noc-bezi.html, 2B): tmavé sklo by na nočnej oblohe zmizlo.
-    dom.tzCo.toggleAttribute('data-noc', m.pocasie?.noc === true);
     renderVecSheet(state, m, dom);
     renderBojlerSheet(state, dom, m.bojler);
     renderAutoSheet(state, dom);

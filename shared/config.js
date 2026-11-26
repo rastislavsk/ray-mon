@@ -1288,6 +1288,13 @@ export const SKY = {
     // ikony sú tlmené (--icon-dim v css/zaklad.css), takže aktívna je pri tomto jase vždy najsvetlejšia
     // a odtieň oblohy jej ostane (docs/navrhy/navigacia-farba-oblohy.html).
     navJas: 0.45,
+    // Sklo dlaždíc na karte Teraz podľa oblohy (skySklo v shared/sky.js, docs/navrhy/teraz-dlazdice-sklo.html,
+    // možnosť 1, 26. 11. 2026): dlaždica sa od oblohy v každej výške obrazovky líši jasom aspoň `kontrast`.
+    // Prednosť má tmavé sklo (`farba` od `min` do `max` krytia - `min` je --glass v css/zaklad.css), svetlé
+    // (biela najviac `svetlo` na tmavom skle s krytím `min`) príde, až keď tmavé nestačí - v tmavej noci.
+    // Meria sa od výšky `od` obrazovky nadol: vyššie stojí hlavička so scénou a jedno sklo by pri tmavom vrchu
+    // a svetlom spodku nevyhovelo oboma smermi. Pevné svetlé sklo po západe slnka na sivej oblohe súmraku splynulo.
+    sklo: { farba: '#081028', min: 0.3, max: 0.65, svetlo: 0.3, kontrast: 1.5, od: 0.4 },
 };
 
 /**

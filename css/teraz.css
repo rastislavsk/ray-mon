@@ -232,17 +232,15 @@
     padding: 14px;
     border: 0;
     border-radius: 24px;
-    background: var(--glass);
+    /* Sklo podľa oblohy (docs/navrhy/teraz-dlazdice-sklo.html, 1): render ho počíta s oblohou (skySklo v shared/sky.js),
+       aby dlaždica nesplynula ani so sivou oblohou súmraku; v tmavej noci vyjde svetlé. Bez neho (starý render
+       z cache) obyčajné sklo. */
+    background: var(--dl-sklo, var(--glass));
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     color: #fff;
     text-align: left;
     cursor: pointer;
-}
-/* V noci svetlé sklo (docs/navrhy/teraz-pole-noc-bezi.html, 2B): tmavé by na nočnej oblohe zmizlo. Biela vrstva ide
-   na tmavé sklo, nie priamo na oblohu - za súmraku je obloha ešte svetlá a biely text by nemal dosť kontrastu. */
-#tz-co[data-noc] .dl {
-    background: linear-gradient(rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.1)), var(--glass);
 }
 .dl > span:not(.dl-ico) {
     display: contents;

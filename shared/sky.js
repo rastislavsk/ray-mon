@@ -8,8 +8,8 @@ import { localDateKey, localMinutes, localToUtc, solarPosition, sunTimes, SUNRIS
 /**
  * Počasie na oblohe. Dážď zatiaľ nie je - appka zrážky nesťahuje.
  * @typedef {'jasno' | 'polojasno' | 'zamracene'} SkyWeather
- * @typedef {{ weather: SkyWeather | null, top: string, bottom: string, shade: string, nav: string }} Sky `weather` null = bez dát,
- *   `shade` farba stmaveného spodku (skyShade), `nav` farba aktívnej karty v navigácii (skyNav)
+ * @typedef {{ weather: SkyWeather | null, top: string, bottom: string, shade: string, nav: string, sklo: string }} Sky `weather` null = bez dát,
+ *   `shade` farba stmaveného spodku (skyShade), `nav` farba aktívnej karty v navigácii (skyNav), `sklo` sklo dlaždíc (skySklo)
  */
 
 // Výšky, v ktorých sa meria kontrast textu na oblohe: od vrchu (0) po spodok obrazovky (1).
@@ -69,8 +69,54 @@ export function skyNav(bottom) {
     return `rgb(${farba(lo).join(', ')})`;
 }
 
+/**
+ * Sklo dlaždíc na karte Teraz pre oblohu `top`, `bottom` so stmaveným spodkom `shade`: najsvetlejšie tmavé sklo
+ * (krytie po stotinách od SKY.sklo.min po max), pri ktorom sa dlaždica od oblohy v každej výške od SKY.sklo.od nadol líši
+ * jasom aspoň SKY.sklo.kontrast. Keď nestačí ani najtmavšie (tmavá noc), tmavé sklo s krytím `min` a na ňom
+ * najmenej bielej, ktorá stačí. Biely text na dlaždici má vždy kontrast aspoň SKY.shadeContrast. Keď nestačí nič,
+ * sklo s najväčším rozdielom v najhoršej výške.
+ * @param {string} top @param {string} bottom @param {string} shade @returns {string} farba `rgba(…)` pre CSS
+ */
+export function skySklo(top, bottom, shade) {
+    // Render sa pýta pri každom prekreslení a obloha sa mení zriedka: výpočet (na telefóne pár ms) len pri zmene.
+    const kluc = `${top}|${bottom}|${shade}`;
+    if (posledneSklo.kluc !== kluc) posledneSklo = { kluc, sklo: vypocitajSklo(top, bottom, shade) };
+    return posledneSklo.sklo;
+}
+
+/** Posledná obloha a jej sklo (skySklo). */
+let posledneSklo = { kluc: '', sklo: '' };
+
+/** Výpočet pre skySklo. @param {string} top @param {string} bottom @param {string} shade @returns {string} */
+function vypocitajSklo(top, bottom, shade) {
+    const { farba, min, max, svetlo, kontrast, od } = SKY.sklo;
+    const [r, g, b] = parseColor(farba);
+    const pozadia = HEIGHTS.filter((t) => t >= od).map((t) => skyAt({ top, bottom, shade }, t));
+    /** @type {import('./contrast.js').Rgba[]} */
+    const kandidati = [];
+    for (let a = Math.round(min * 100); a <= Math.round(max * 100); a++) kandidati.push([r, g, b, a / 100]);
+    // Biela `w` na tmavom skle s krytím `min` ako jedna farba: krytie A = 1 - (1 - w)(1 - min).
+    for (let w = 1; w <= Math.round(svetlo * 100); w++) {
+        const f = w / 100;
+        const A = 1 - (1 - f) * (1 - min);
+        const zlozka = (/** @type {number} */ c) => Math.round((255 * f + c * min * (1 - f)) / A);
+        kandidati.push([zlozka(r), zlozka(g), zlozka(b), Math.round(A * 100) / 100]);
+    }
+    const najhorsi = (/** @type {import('./contrast.js').Rgba} */ k) => Math.min(...pozadia.map((p) => textContrast(k, p)));
+    // Text na dlaždici je biely: svetlé sklo mu nesmie vziať kontrast pod to isté SKY.shadeContrast ako na oblohe.
+    const citatelne = (/** @type {import('./contrast.js').Rgba} */ k) =>
+        pozadia.every((p) => textContrast(WHITE, over(k, p)) >= SKY.shadeContrast);
+    const k =
+        kandidati.find((x) => najhorsi(x) >= kontrast && citatelne(x)) ??
+        kandidati.filter(citatelne).reduce((x, y) => (najhorsi(y) > najhorsi(x) ? y : x), kandidati[0]);
+    return `rgba(${k.join(', ')})`;
+}
+
 /** Obloha s farbami `top` a `bottom` aj so stmaveným spodkom. @param {SkyWeather | null} weather @param {string} top @param {string} bottom @returns {Sky} */
-const sky = (weather, top, bottom) => ({ weather, top, bottom, shade: skyShade(top, bottom), nav: skyNav(bottom) });
+const sky = (weather, top, bottom) => {
+    const shade = skyShade(top, bottom);
+    return { weather, top, bottom, shade, nav: skyNav(bottom), sklo: skySklo(top, bottom, shade) };
+};
 
 /** Počasie z oblačnosti v %. @param {number} cloudPct @returns {SkyWeather} */
 export function skyWeather(cloudPct) {
