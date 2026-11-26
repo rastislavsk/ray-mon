@@ -10,6 +10,7 @@ import {
     BEZI_CAKA_STORAGE_KEY,
     AUTO_OZNAM_STORAGE_KEY,
     BOJLER_OZNAM_STORAGE_KEY,
+    ZASUVKA_OZNAM_STORAGE_KEY,
     DAYLOG_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     HISTORIA_STORAGE_KEY,
@@ -447,6 +448,16 @@ export function loadBojlerOznam() {
 /** @param {boolean} on @returns {boolean} podarilo sa? */
 export function saveBojlerOznam(on) {
     return write(BOJLER_OZNAM_STORAGE_KEY, JSON.stringify(on));
+}
+
+/** Oznámenie o konci behu zo zásuvky na tomto telefóne zapnuté (ZASUVKA_OZNAM_STORAGE_KEY); bez úložiska nie. */
+export function loadZasuvkaOznam() {
+    return readJson(ZASUVKA_OZNAM_STORAGE_KEY, (v) => v === true, false);
+}
+
+/** @param {boolean} on @returns {boolean} podarilo sa? */
+export function saveZasuvkaOznam(on) {
+    return write(ZASUVKA_OZNAM_STORAGE_KEY, JSON.stringify(on));
 }
 
 /** Prahy bojlera (BOJLER_STORAGE_KEY); bez úložiska či pokazené predvolené. @returns {import('../shared/bojler.js').Prahy} */

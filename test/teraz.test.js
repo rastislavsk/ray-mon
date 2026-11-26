@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { installedKw, MINUTES_PER_DAY, PLANT, powerThresholds, SITE, TARIFF, TYPICAL_PLANT } from '../shared/config.js';
+import { TERAZ_BEZI } from '../shared/messages-teraz.js';
 import {
     boxHitsLine,
     cellAt,
@@ -1025,6 +1026,21 @@ test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať s
         'susicka',
     );
     assert.deepEqual('zapis' in kratko && kratko.zapis?.cas?.zvysok, { h: 0, m: 5 });
+});
+
+test('spotrebič na zásuvke (U1): bez „Už beží“ a nastavenia času, so zmeraným príkonom; zásuvka, ktorá mlčí, nie', () => {
+    const teraz = at('13:00').getTime();
+    const zasuvky = { pracka: { at: teraz - 60000, w: 2100, bezi: true }, umyvacka: { at: teraz - 60000, w: 3, bezi: false } };
+    const m = terazModel(input(at('13:00'), { bezi: [{ id: 'pracka', d: '2026-09-05', m: hm(12), k: hm(14) }], zasuvky }));
+    assert.deepEqual('zapis' in detail(m, 'pracka') && detail(m, 'pracka').zapis, { stav: 'meria', hotove: [], cas: null, w: 2100 });
+    assert.deepEqual('zapis' in detail(m, 'umyvacka') && detail(m, 'umyvacka').zapis, { stav: 'meria', hotove: [], cas: null, w: 3 });
+    assert.equal('zapis' in detail(m, 'susicka') && detail(m, 'susicka').zapis?.stav, 'moze');
+    const stara = { pracka: { at: teraz - 60 * 60000, w: 0, bezi: false } };
+    const mlci = terazModel(input(at('13:00'), { zasuvky: stara }));
+    assert.equal('zapis' in detail(mlci, 'pracka') && detail(mlci, 'pracka').zapis?.stav, 'moze');
+    assert.equal(detail(m, 'pracka').why, TERAZ_BEZI.zasuvka.why);
+    assert.equal(TERAZ_BEZI.zasuvka.meria(2100), 'Meria zásuvka · teraz 2,1 kW');
+    assert.equal(TERAZ_BEZI.zasuvka.meria(3), 'Meria zásuvka · teraz nebeží');
 });
 
 test('nastavenie času: po „Už beží“ návrh, ktorý ešte nie je uložený - kolieska práčky, čas zapnutia umývačky', () => {

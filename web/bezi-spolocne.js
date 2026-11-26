@@ -12,9 +12,19 @@ import { loadBeziCaka, saveBezi, saveBeziCaka } from './storage.js';
 /** @typedef {import('../shared/bezi.js').Zapis} Zapis */
 /**
  * Stav, ktorý zladenie potrebuje (appka aj obnova dát, web/refresh.js).
- * @typedef {{ get: () => { zdroj: import('../shared/zdroje.js').Zdroj | null, site: { timezone: string }, bezi: Zapis[] },
- *   setState: (patch: { bezi: Zapis[] }) => void }} Store
+ * @typedef {{ get: () => { zdroj: import('../shared/zdroje.js').Zdroj | null, site: { timezone: string }, bezi: Zapis[],
+ *   zasuvky?: Record<string, import('../shared/zasuvka.js').ZasuvkaInfo> },
+ *   setState: (patch: { bezi?: Zapis[], zasuvky?: Record<string, import('../shared/zasuvka.js').ZasuvkaInfo> }) => void }} Store
  */
+
+/**
+ * Stav zásuviek spotrebičov (docs/navrhy/pracka-zasuvka.html) do stavu, keď sa zmenil: kým zásuvka meria, detail spotrebiča
+ * nemá „Už beží“. `?? {}`: starý web/state.js z cache po nasadení pole nemá.
+ * @param {Store} store @param {Record<string, import('../shared/zasuvka.js').ZasuvkaInfo>} zasuvky
+ */
+function prevezmiZasuvky(store, zasuvky) {
+    if (JSON.stringify(zasuvky) !== JSON.stringify(store.get().zasuvky ?? {})) store.setState({ zasuvky });
+}
 
 /** Poradie dopytov: odpoveď staršieho dopytu, ktorá príde po novšom, už nič neprepíše. */
 let poslany = 0;
@@ -41,6 +51,7 @@ export async function zladBehy(store, zmena) {
     // Kým sa čakalo, mohla prísť odpoveď novšieho dopytu alebo iná elektráreň.
     if (!spolocne || cislo < prevzaty || teraz.zdroj?.sposob !== zdroj.sposob || teraz.zdroj.nazov !== zdroj.nazov) return;
     prevzaty = cislo;
+    prevezmiZasuvky(store, spolocne.zasuvky);
     const lokalne = teraz.bezi ?? [];
     // Potvrdená je zmena, ktorej behy sa odvtedy v telefóne nezmenili; ďalšia zmena toho istého spotrebiča ešte čaká.
     const ostava = loadBeziCaka().filter((c) => {
@@ -48,7 +59,7 @@ export async function zladBehy(store, zmena) {
         return !poslana || JSON.stringify(poslana.behy) !== JSON.stringify(behyVeci(lokalne, c.id, c.d));
     });
     saveBeziCaka(ostava);
-    const bezi = prevezmi(lokalne, spolocne, ostava, d);
+    const bezi = prevezmi(lokalne, spolocne.bezi, ostava, d);
     if (JSON.stringify(bezi) === JSON.stringify(lokalne)) return;
     saveBezi(bezi, d);
     store.setState({ bezi });

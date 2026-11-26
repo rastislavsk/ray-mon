@@ -290,6 +290,7 @@ function renderVecSheet(state, m, dom) {
         show(dom.tzVecPas, !!v.slot);
         setHtml(dom.tzVecPas, v.slot ? osHtml(m.os, v.slot) : '');
         renderZapis(v, dom);
+        renderZasuvka(state, v, dom);
         setText(dom.tzVecWhy, v.why);
     }
     const id = state.tzVec;
@@ -310,10 +311,12 @@ function renderZapis(v, dom) {
     /** @type {import('../../shared/teraz.js').VecZapis | null} */
     const z = 'zapis' in v ? /** @type {any} */ (v.zapis) : null;
     renderHotove(z?.hotove ?? [], dom);
-    show(dom.tzVecZapis, !!z);
+    // Spotrebič na zásuvke (docs/navrhy/pracka-zasuvka.html, U1): beh je z merania, zapísať ani nastaviť sa nedá.
+    show(dom.tzVecZapis, !!z && z.stav !== 'meria');
     const bezi = z?.stav === 'bezi';
     const cas = z?.cas ?? null;
-    show(dom.tzVecNote, !bezi);
+    // Že naraz ide len toľko, koľko strecha utiahne, hovorí o pláne - nie o tom, čo už beží (aj zo zásuvky).
+    show(dom.tzVecNote, !bezi && /** @type {any} */ (v).tone !== 'bezi');
     setText(dom.tzVecNote, bezi ? '' : PLAN_DNA_NOTE);
     show(dom.tzVecZapol, !cas);
     setText(dom.tzVecZapol, TERAZ_BEZI.zapol);
@@ -323,6 +326,29 @@ function renderZapis(v, dom) {
     show(dom.tzVecZrus, bezi);
     setText(dom.tzVecZrus, TERAZ_BEZI.nebezi);
     renderCas(cas, dom);
+}
+
+/**
+ * Spotrebič, ktorý meria zásuvka (docs/navrhy/pracka-zasuvka.html, U1): zmeraný príkon a vypínač oznámenia o konci behu
+ * pre tento telefón (web/zasuvka-oznam.js) a prečo sa nepodaril. `?? false`, `?? null`: starý web/state.js z cache po
+ * nasadení tieto polia nemá.
+ * @param {import('../state.js').AppState} state @param {object} v detail spotrebiča @param {Dom} dom
+ */
+function renderZasuvka(state, v, dom) {
+    /** @type {import('../../shared/teraz.js').VecZapis | null} */
+    const z = 'zapis' in v ? /** @type {any} */ (v.zapis) : null;
+    const meria = z?.stav === 'meria';
+    const Z = TERAZ_BEZI.zasuvka;
+    show(dom.tzVecMeria, meria);
+    setText(dom.tzVecMeria, meria ? Z.meria(z?.w ?? 0) : '');
+    show(dom.tzVecOznam, meria);
+    setText(dom.tzVecOznamT, Z.oznam);
+    dom.tzVecOznam.setAttribute('aria-checked', String(state.zasuvkaOznam ?? false));
+    const stav = state.zasuvkaOznamStav ?? null;
+    dom.tzVecOznam.disabled = stav === 'uklada';
+    const chyba = !meria ? '' : stav === 'zakazane' ? Z.zakazane : stav === 'chyba' ? Z.chyba : '';
+    show(dom.tzVecOznamChyba, !!chyba);
+    setText(dom.tzVecOznamChyba, chyba);
 }
 
 /**

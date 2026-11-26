@@ -96,6 +96,11 @@ import { setupInit } from '../shared/setup-flow.js';
  *   klima: import('../shared/klima.js').KlimaStav | null,
  *   klimaNast: { ip: string },
  *   klimaSkript: import('../shared/nastavenie-klima.js').KlimaSkript,
+ *   zasuvky: Record<string, import('../shared/zasuvka.js').ZasuvkaInfo>,
+ *   zasuvkaOznam: boolean,
+ *   zasuvkaOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
+ *   zasuvkaVec: string,
+ *   zasuvkaSkript: import('../shared/nastavenie-klima.js').KlimaSkript,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
  */
@@ -127,7 +132,8 @@ export const NS_FOLDS = /** @type {Exclude<(typeof NASTAVENIE_SEKCIE)[number], '
  * bojlera na prebytky (do skriptu zásuvky) a čo človek zapol („Už beží“ v detaile spotrebiča, shared/bezi.js).
  * @param {{ oznamenia?: import('../shared/oznamenia.js').Oznamenia, oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[],
  *   bojlerPrahy?: import('../shared/bojler.js').Prahy, bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean,
- *   teplomer?: import('../shared/nastavenie-bojler.js').Teplomer, autoOznam?: { z: boolean, k: boolean }, klimaNast?: { ip: string } }} o
+ *   teplomer?: import('../shared/nastavenie-bojler.js').Teplomer, autoOznam?: { z: boolean, k: boolean }, klimaNast?: { ip: string },
+ *   zasuvkaOznam?: boolean }} o
  */
 const telefon = ({
     oznamenia = oznameniaDefault(),
@@ -139,6 +145,7 @@ const telefon = ({
     teplomer = { on: false, ip: '' },
     autoOznam = { z: false, k: false },
     klimaNast = { ip: '' },
+    zasuvkaOznam = false,
 }) => ({
     oznamenia,
     oznamStav,
@@ -178,6 +185,13 @@ const telefon = ({
     klima: /** @type {import('../shared/klima.js').KlimaStav | null} */ (null),
     klimaNast,
     klimaSkript: /** @type {import('../shared/nastavenie-klima.js').KlimaSkript} */ ({ stav: 'nic', text: '', schranka: false }),
+    // Spotrebiče na zásuvkách Shelly (docs/navrhy/pracka-zasuvka.html): stav zásuviek z Workera (s /bezi), oznámenie o konci
+    // behu na tomto telefóne a či sa ukladá, a v Nastavení zvolený spotrebič a príprava skriptu do zásuvky.
+    zasuvky: /** @type {Record<string, import('../shared/zasuvka.js').ZasuvkaInfo>} */ ({}),
+    zasuvkaOznam,
+    zasuvkaOznamStav: /** @type {'uklada' | 'zakazane' | 'chyba' | null} */ (null),
+    zasuvkaVec: 'pracka',
+    zasuvkaSkript: /** @type {import('../shared/nastavenie-klima.js').KlimaSkript} */ ({ stav: 'nic', text: '', schranka: false }),
 });
 
 /**
@@ -206,7 +220,7 @@ const radarStart = ({ radarOblaky = true, radarRychlost = 1 }) => ({
  *   radarOblaky?: boolean, radarRychlost?: 1 | 2 | 3, layout?: Layout, oznamenia?: import('../shared/oznamenia.js').Oznamenia,
  *   oznamStav?: import('./oznamenia.js').OznamStav, doma?: string[], bojlerPrahy?: import('../shared/bojler.js').Prahy,
  *   bezi?: import('../shared/bezi.js').Zapis[], bojlerOznam?: boolean, teplomer?: import('../shared/nastavenie-bojler.js').Teplomer,
- *   autoOznam?: { z: boolean, k: boolean }, klimaNast?: { ip: string } }} start
+ *   autoOznam?: { z: boolean, k: boolean }, klimaNast?: { ip: string }, zasuvkaOznam?: boolean }} start
  *   uložené nastavenie, bez neho uložená poloha (appka počíta s typickou strechou v nej), denník výroby, internet, nastavenie
  *   z odkazu, ktoré appka ponúkne prevziať, vzhľad (tón hlášok, živá obloha), rozloženie a prístup
  *   k meraniu, ktorý výrobca odmietol (shared/pristup.js)

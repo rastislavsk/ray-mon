@@ -136,6 +136,18 @@ Oznámenie o konci (`web/koniec.js`, `POST /koniec`) posiela Durable Object `Bud
 ohrevu (`zmenaOhrevu` v `shared/bojler.js`) telefónom, ktoré si to zaplí v paneli Bojler dnes (`POST /bojler-oznamenia`).
 Worker s novou migráciou Durable Objectu treba nasadiť ručne pred pull requestom (`worker/README.md`).
 
+## Spotrebič na zásuvke Shelly
+
+Návrh a rozhodnutie: `docs/navrhy/pracka-zasuvka.html` (A + U1 + K2 + S2, 26. 11. 2026). Práčka, sušička či umývačka môže mať
+vlastnú zásuvku Shelly so skriptom z Nastavenia (`shared/zasuvka-skript.js`, spotrebič je v skripte): každú minútu pošle
+`POST /spotrebic` s príkonom a počítadlom energie, relé **nikdy neprepína**. Beh rozoznáva Durable Object `UcetHuawei`
+(`krokZasuvky` v `shared/zasuvka.js`, stav `zs:`, prahy `ZASUVKA`): začne po dvoch hláseniach nad prahom, skončí po krátkej
+pauze, len keď trval aspoň 0,7 typickej dĺžky (medián posledných behov zásuvky), po dlhej pauze vždy (K2). Beh ide do
+spoločných behov `bz:` ako „Už beží“ - kým beží, s koncom podľa typickej dĺžky. Kým sa zásuvka ozýva (`ZASUVKA.ozyvaMin`,
+stav chodí s odpoveďou `/bezi`), detail spotrebiča nemá „Už beží“ ani nastavenie času, len zmeraný príkon a vypínač
+oznámenia o konci (`zo:`, `web/zasuvka-oznam.js`) - U1. Príkon zásuviek sa odpočíta zo spotreby domu v histórii aj
+pri odhade nabíjania auta (`domBezBojlera`). Spotrebič meria jedna zásuvka, iná dostane 409, kým sa prvá ozýva.
+
 ## Tok iného dňa na karte Teraz
 
 Iný deň v páse nemá nad dlaždicami meno, dátum ani hlášku, ale pole toku ako dnešok (`docs/navrhy/teraz-pole-ine-dni.html`, B, 26. 11. 2026): slnko → dom → sieť za celý deň v celých kWh so stojacími šípkami (`tokDnaModel` v `shared/teraz-scena.js`,

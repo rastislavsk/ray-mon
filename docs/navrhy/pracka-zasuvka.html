@@ -1,0 +1,353 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Zásuvka Shelly pri práčke</title>
+        <style>
+            /* Návrh (26. 11. 2026): ako napojiť druhú zásuvku Shelly (rovnaký typ ako pri bojleri) na práčku. Bez obrázkov -
+               rozhoduje sa o ceste údajov, nie o vzhľade. Čísla o práčke sú odhady, nie merania. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --card: #131c36;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --yes: #b9f28c;
+                --warn: #ffcf7a;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1100px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1 {
+                margin: 0;
+                font-size: clamp(1.8rem, 5vw, 2.6rem);
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            h2 {
+                margin: 0 0 12px;
+                font-size: 1.35rem;
+                font-weight: 900;
+            }
+            h3 {
+                margin: 0 0 6px;
+                font-size: 1.05rem;
+                font-weight: 800;
+            }
+            p,
+            li {
+                color: var(--dim);
+                max-width: 72ch;
+            }
+            b,
+            strong {
+                color: #fff;
+            }
+            code {
+                font-size: 0.9em;
+                background: rgba(255, 255, 255, 0.08);
+                padding: 1px 5px;
+                border-radius: 4px;
+                color: #fff;
+            }
+            td code {
+                overflow-wrap: anywhere;
+            }
+            table {
+                table-layout: fixed;
+                border-collapse: collapse;
+                width: 100%;
+                max-width: 760px;
+                font-size: 0.92rem;
+            }
+            th,
+            td {
+                text-align: left;
+                padding: 7px 10px;
+                border-bottom: 1px solid var(--line);
+                vertical-align: top;
+            }
+            th {
+                color: var(--dim);
+                font-weight: 700;
+            }
+            .varianty {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+                gap: 24px;
+                align-items: start;
+            }
+            .var {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                padding: 16px;
+            }
+            .var img {
+                display: block;
+                width: 100%;
+                max-width: 360px;
+                margin: 0 auto 12px;
+                border-radius: 12px;
+            }
+            .var .male {
+                display: flex;
+                gap: 12px;
+                justify-content: center;
+                margin-bottom: 12px;
+            }
+            .var .male img {
+                width: 46%;
+                margin: 0;
+            }
+            .znacka {
+                display: inline-block;
+                font-size: 0.75rem;
+                font-weight: 900;
+                letter-spacing: 0.06em;
+                padding: 2px 8px;
+                border-radius: 99px;
+                background: rgba(255, 255, 255, 0.12);
+                margin-right: 6px;
+            }
+            .odpor {
+                background: var(--yes);
+                color: #0b1226;
+            }
+            .plus {
+                color: var(--yes);
+            }
+            .minus {
+                color: var(--warn);
+            }
+            .tok {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 8px;
+                font-size: 0.9rem;
+            }
+            .tok span {
+                background: var(--card);
+                border: 1px solid var(--line);
+                border-radius: 10px;
+                padding: 8px 10px;
+            }
+            .tok i {
+                color: var(--dim);
+                font-style: normal;
+            }
+            .pozn {
+                border-left: 3px solid var(--warn);
+                padding: 2px 0 2px 12px;
+            }
+            .otazky li {
+                margin-bottom: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <p style="margin: 0 0 6px">Návrh · 26. 11. 2026</p>
+                <h1>Zásuvka Shelly pri práčke</h1>
+                <p>
+                    Práčka visí na druhej zásuvke Shelly, rovnakej ako pri bojleri (meria príkon a energiu). Appka dnes o práčke vie len to,
+                    čo človek zadá cez <b>„Už beží“</b> a zvyšok programu. So zásuvkou môže vedieť naozaj: kedy práčka začala a skončila,
+                    koľko kWh vzala, koľko z toho zo slnka a čo zo spotreby domu bola práčka.
+                </p>
+            </header>
+
+            <section>
+                <h2>Čo zásuvka umožní</h2>
+                <table>
+                    <tr>
+                        <th style="width: 30%">Čo</th>
+                        <th>Ako</th>
+                    </tr>
+                    <tr>
+                        <td>Beh bez „Už beží“</td>
+                        <td>
+                            Začiatok, keď príkon stúpne nad prah; koniec, keď je pod prahom dlhšie, než trvajú pauzy programu. Zapíše sa do
+                            spoločných behov <code>bz:</code>, takže ho uvidia všetky telefóny domácnosti.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Dlaždica „zapnutá“</td>
+                        <td>Biely kruh ikony podľa merania, nie podľa slova; odrážka so skutočnými kWh behu.</td>
+                    </tr>
+                    <tr>
+                        <td>Koniec prania</td>
+                        <td>Push „Práčka doprala“ vtedy, keď naozaj skončila - aj keď zvyšok programu nikto nezadal.</td>
+                    </tr>
+                    <tr>
+                        <td>Dom bez práčky</td>
+                        <td>
+                            Profil domu pre učenie sa očistí o práčku ako dnes o bojler - hodiny prania nebudú vyzerať, že dom berie viac.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Typický program</td>
+                        <td>
+                            Plán dňa ráta s pevným programom práčky. Z behov sa naučí skutočnú dĺžku a kWh, neskôr aj priebeh (ohrev vody na
+                            začiatku) - presnejší pásik slnko / sieť.
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Sušička po práčke</td>
+                        <td>Keď práčka naozaj dobehla, plán ponúkne sušičku od toho času, nie od odhadu.</td>
+                    </tr>
+                </table>
+                <p class="pozn">
+                    Zásuvka práčky <b>nikdy neprepína relé</b>: vypnutie by prerušilo pranie a mnohé práčky po výpadku prúdu nepokračujú.
+                    Skript len číta.
+                </p>
+            </section>
+
+            <section>
+                <h2>Cesta údajov – možnosti</h2>
+                <div class="varianty">
+                    <div class="var">
+                        <h3><span class="znacka odpor">A</span>Skript v zásuvke, hlási každú minútu</h3>
+                        <p>
+                            Ako bojler a klíma: appka poskladá skript (Nastavenie), človek ho vloží do zásuvky. Skript každú minútu pošle
+                            <code>POST /spotrebic</code> s pečaťou, ID zariadenia, príkonom a energiou. Beh rozoznáva Durable Object
+                            <code>UcetHuawei</code> pravidlom zo <code>shared/</code>.
+                        </p>
+                        <ul>
+                            <li class="plus">Overený vzor, skript takmer ten istý ako bojlera, len bez prepínania.</li>
+                            <li class="plus">Funguje aj mimo domu, behy zdieľajú telefóny, push o konci posiela Worker.</li>
+                            <li class="plus">Pravidlo začiatku a konca sa dá ladiť vo Workeri bez nového skriptu.</li>
+                            <li class="plus">Priebeh príkonu po minútach - podklad na učenie programu.</li>
+                            <li class="minus">
+                                1 440 požiadaviek za deň navyše (s bojlerom a klímou okolo 4 300, bezplatný limit je 100 000).
+                            </li>
+                            <li class="minus">Začiatok a koniec s presnosťou na minútu.</li>
+                        </ul>
+                    </div>
+                    <div class="var">
+                        <h3><span class="znacka">B</span>Skript hlási len zmeny</h3>
+                        <p>
+                            Skript sleduje príkon priamo v zásuvke (<code>Shelly.addStatusHandler</code>) a pošle hlásenie, keď práčka začne
+                            alebo utíchne, plus „som tu“ každých 15 minút. Koniec behu rozhodne skript sám.
+                        </p>
+                        <ul>
+                            <li class="plus">Najmenej požiadaviek (desiatky za deň), začiatok na sekundy presne.</li>
+                            <li class="minus">Pravidlo konca žije v skripte - každá úprava znamená vložiť nový skript.</li>
+                            <li class="minus">Zložitejší skript v starom JavaScripte Shelly, ťažšie sa testuje.</li>
+                            <li class="minus">Bez priebehu príkonu - na učenie programu menej dát.</li>
+                        </ul>
+                    </div>
+                    <div class="var">
+                        <h3><span class="znacka">C</span>Cloud Shelly, bez skriptu</h3>
+                        <p>
+                            Worker sa pri každom meraní (zásuvka bojlera sa pýta každú minútu) opýta cloudu Shelly na stav zásuvky práčky
+                            kľúčom účtu Shelly.
+                        </p>
+                        <ul>
+                            <li class="plus">Nič do zásuvky, len kľúč a ID zariadenia v Nastavení.</li>
+                            <li class="minus">
+                                Kľúč otvára <b>všetky</b> zariadenia účtu vrátane prepínania bojlera - citlivé, musel by ísť v pečati.
+                            </li>
+                            <li class="minus">Závislosť na cloude Shelly a jeho limitoch; keď bojlerová zásuvka mlčí, nikto sa nepýta.</li>
+                            <li class="minus">Nová cesta, ktorú appka nemá - najviac nového kódu.</li>
+                        </ul>
+                    </div>
+                    <div class="var">
+                        <h3><span class="znacka">D</span>Zásuvka bojlera číta aj práčku</h3>
+                        <p>
+                            Skript bojlera sa pred hlásením opýta zásuvky práčky v domácej sieti (<code>HTTP.GET</code> na jej IP, ako dnes
+                            teplomer) a pošle jej príkon spolu s bojlerom.
+                        </p>
+                        <ul>
+                            <li class="plus">Žiadne nové požiadavky na Worker, do zásuvky práčky nič.</li>
+                            <li class="minus">Keď zásuvka bojlera vypadne, zmizne aj práčka. Skript bojlera sa skomplikuje.</li>
+                            <li class="minus">Pevná IP zásuvky práčky v routeri a heslo v adrese ako pri teplomere.</li>
+                        </ul>
+                    </div>
+                </div>
+                <p>
+                    <b>Nejde:</b> appka priamo na IP zásuvky. Stránka je na HTTPS a zásuvka len na HTTP v domácej sieti - prehliadač to
+                    zablokuje a mimo domu by to nefungovalo vôbec.
+                </p>
+                <p>
+                    <b>Odporúčam A</b>: rovnaký vzor ako bojler a klíma, pravidlá behu sú v <code>shared/</code> a dajú sa ladiť bez nového
+                    skriptu a priebeh po minútach je potrebný na učenie programu. Počet požiadaviek je ďaleko od limitu.
+                </p>
+            </section>
+
+            <section>
+                <h2>Ďalšie rozhodnutia</h2>
+                <h3>„Už beží“ pri práčke</h3>
+                <ul>
+                    <li>
+                        <span class="znacka">U1</span>Zmizne, kým sa zásuvka ozýva - beh je vždy z merania (ako panel bojlera pri
+                        <code>BOJLER.riadenyHod</code>).
+                    </li>
+                    <li><span class="znacka">U2</span>Ostane ako záloha, meranie zadaný začiatok a koniec prepíše skutočným.</li>
+                    <li><span class="znacka">U3</span>Namiesto neho len „Hotové“ pre prípad, že sa koniec nerozozná.</li>
+                </ul>
+                <h3>Kedy je pranie hotové</h3>
+                <ul>
+                    <li>
+                        <span class="znacka">K1</span>Príkon pod prahom (napr. 5 W) aspoň N minút. N nastavím po prvých meraniach - skutočné
+                        pauzy tvojej práčky zatiaľ nepoznám.
+                    </li>
+                    <li>
+                        <span class="znacka">K2</span>K1 a navyše dĺžka podobná naučeným behom (ochrana pred falošným koncom pri dlhej
+                        pauze).
+                    </li>
+                </ul>
+                <h3>Pre koho skript</h3>
+                <ul>
+                    <li><span class="znacka">S1</span>Len práčka (jedno pripnuté ID zariadenia, ako bojler).</li>
+                    <li>
+                        <span class="znacka">S2</span>Všeobecný „spotrebič na zásuvke“: v Nastavení sa zvolí práčka, sušička alebo umývačka
+                        a ďalšia zásuvka už nepotrebuje nový kód.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Neskôr</h2>
+                <ul>
+                    <li>
+                        Odložený štart na slnku: práčku nastaviť a spustiť, zásuvka nechá relé vypnuté a zapne pri prebytku. Ide len s
+                        práčkou, ktorá po zapnutí prúdu sama pokračuje - treba overiť na tvojej.
+                    </li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Rozhodnuté</h2>
+                <p>
+                    26. 11. 2026: <b>A + U1 + K2 + S2</b>. Skript v zásuvke hlási každú minútu, „Už beží“ pri spotrebiči na zásuvke zmizne,
+                    koniec po krátkej pauze len pri dĺžke aspoň 0,7 typickej (inak po 30 minútach ticha), skript pre práčku, sušičku aj
+                    umývačku. Prahy (10 W, pauza 5 min) sú prvý odhad - doladiť po prvých skutočných behoch.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>

@@ -19,21 +19,25 @@
 // pri začiatku a konci push telefónom, ktoré si to zapli (`ao:`). Appka si stav vezme cez /auto.
 // Klimatizácia Daikin (docs/navrhy/klima-daikin.html, shared/klima.js): skript na Shelly hlási cez /klima, objekt drží
 // posledný stav (`kl:`) a body za KLIMA.bodyDni dní (`kt:`); appka si stav vezme cez /klima-stav.
+// Spotrebiče na zásuvkách Shelly (docs/navrhy/pracka-zasuvka.html, shared/zasuvka.js): skript hlási cez /spotrebic, objekt
+// drží stav zásuviek (`zs:`), beh zapíše do spoločných behov (`bz:`) a pri konci pošle push telefónom, ktoré ho chcú
+// (`zo:`). Príkon zásuviek sa do spotreby domu nepočíta. Appka dostane stav zásuviek s /bezi.
 //
 // Bez `cloudflare:workers` (Node by ho v testoch nenačítal): staršia podoba s `fetch`, ktorú
 // Cloudflare podporuje ďalej. Telo dopytu je JSON od Workera, nie od používateľa.
 
-import { BOJLER, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
+import { BOJLER, MOZEM_ITEMS, OZNAMENIA, PUSH_TEXT } from '../../shared/config.js';
 import { autoTiche, krokAuta } from '../../shared/auto-nabija.js';
 import { prahyZ, rozhodni, PAMAT_ZACIATOK, zaznamenaj, zariadenieBojlera, zmenaOhrevu } from '../../shared/bojler.js';
-import { zapisZmeny } from '../../shared/bezi.js';
+import { behyVeci, parseBezi, zapisZmeny } from '../../shared/bezi.js';
 import { hranicaZ, pridajTeplotu, strazVodu, teplotaZ, teplotyDna } from '../../shared/bojler-voda.js';
 import { domBezBojlera, sBojlerom, zapisMeranie, zlucBehy, zlucSnimky } from '../../shared/historia.js';
 import { NB } from '../../shared/huawei-nb.js';
 import { bodyDna, pridajBod, slnkoKlimy, zHlasenia } from '../../shared/klima.js';
 import { localDateKey } from '../../shared/solar.js';
 import { naucene, spolocneOd } from '../../shared/ucenie.js';
-import { autoZmenaText, bojlerZmenaText } from '../../shared/messages-oznamenia.js';
+import { autoZmenaText, bojlerZmenaText, koniecText } from '../../shared/messages-oznamenia.js';
+import { hlasenieZ, infoZasuviek, krokZasuvky, prijmiZasuvku, prikonZasuviekKw, vecZasuvky } from '../../shared/zasuvka.js';
 import { posliPush, vapidKlic } from './webpush.js';
 import { ZdrojChyba, ZDROJE } from './zdroje.js';
 
@@ -95,6 +99,8 @@ export class UcetHuawei {
                 '/auto-oznam': () => this.autoOznam(req),
                 '/klima': () => this.klima(req, now),
                 '/klima-stav': () => this.klimaStav(req, now),
+                '/spotrebic': () => this.spotrebic(req, now),
+                '/spotrebic-oznam': () => this.spotrebicOznam(req),
             };
             const body = await (Object.hasOwn(cesty, path) ? cesty[path]() : this.pv(req.pristup, now));
             return Response.json(body);
@@ -162,10 +168,9 @@ export class UcetHuawei {
      * @param {string} plant @param {PvData} pv @param {Date} now @returns {Promise<Record<string, unknown>>}
      */
     async doHistorie(plant, pv, now) {
-        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
         const hodina = /** @type {import('../../shared/historia.js').Hodina | undefined} */ (await this.storage.get(`hh:${plant}`));
         const dni = /** @type {DenHistorie[] | undefined} */ (await this.storage.get(`hd:${plant}`)) ?? [];
-        const domKw = domBezBojlera(pv.realTimePowerKw, pv.sietKw, bojler, now.getTime());
+        const domKw = await this.domKw(plant, pv, now);
         const r = zapisMeranie({ hodina: hodina ?? null, dni }, { at: now.getTime(), tz: NB.pasmo, vyrobaKw: pv.realTimePowerKw, domKw });
         // Uzavretá hodina staršieho dňa mení vstup modelu učenia - prepočíta sa pri ďalšom /ucenie.
         const minulyDen = r.dni !== dni && hodina && hodina.d !== r.hodina.d;
@@ -177,14 +182,25 @@ export class UcetHuawei {
     }
 
     /**
+     * Spotreba domu z merania bez bojlera a bez spotrebičov na zásuvkách, ktoré sa ozývajú (posledné hlásenia).
+     * @param {string} plant @param {PvData} pv @param {Date} now
+     */
+    async domKw(plant, pv, now) {
+        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
+        const zasuvky = /** @type {Record<string, import('../../shared/zasuvka.js').StavZasuvky> | undefined} */ (
+            await this.storage.get(`zs:${plant}`)
+        );
+        return domBezBojlera(pv.realTimePowerKw, pv.sietKw, bojler, now.getTime(), prikonZasuviekKw(zasuvky, now.getTime()));
+    }
+
+    /**
      * Nové meranie do stavu nabíjania auta (shared/auto-nabija.js, krokAuta): dom bez bojlera podľa posledného hlásenia
      * zásuvky - ten istý ako v histórii. Vráti nový stav a zmenu na oznámenie.
      * @param {string} plant @param {PvData} pv @param {Date} now
      */
     async doAuta(plant, pv, now) {
-        const bojler = /** @type {BojlerInfo | undefined} */ (await this.storage.get(`b:${plant}`));
         const stav = /** @type {import('../../shared/auto-nabija.js').StavAuta | undefined} */ (await this.storage.get(`an:${plant}`));
-        const domKw = domBezBojlera(pv.realTimePowerKw, pv.sietKw, bojler, now.getTime());
+        const domKw = await this.domKw(plant, pv, now);
         const sietKw = typeof pv.sietKw === 'number' && Number.isFinite(pv.sietKw) ? pv.sietKw : null;
         return krokAuta(stav ?? null, { at: now.getTime(), domKw, sietKw });
     }
@@ -269,7 +285,7 @@ export class UcetHuawei {
 
     /**
      * Spoločné behy „Už beží“ (shared/bezi.js): zmeny od telefónu zapíše, dni staršie než HISTORIA.dni zahodí a vráti
-     * dnešné (`d`) behy všetkých telefónov. Bez zmien len číta - zapisuje sa, len keď sa niečo zmenilo. Zmena
+     * dnešné (`d`) behy všetkých telefónov a stav zásuviek spotrebičov (docs/navrhy/pracka-zasuvka.html). Bez zmien len číta - zapisuje sa, len keď sa niečo zmenilo. Zmena
      * staršieho dňa zahodí model učenia.
      * @param {{ pristup: Record<string, unknown>, d: string, zmeny: unknown }} req
      */
@@ -282,7 +298,10 @@ export class UcetHuawei {
             const minule = (/** @type {import('../../shared/bezi.js').Zapis[]} */ l) => JSON.stringify(l.filter((z) => z.d < req.d));
             await this.storage.put({ [kluc]: bezi, ...(minule(bezi) !== minule(stare) ? { [`um:${plant}`]: null } : {}) });
         }
-        return { bezi: bezi.filter((z) => z.d === req.d) };
+        const zasuvky = /** @type {Record<string, import('../../shared/zasuvka.js').StavZasuvky> | undefined} */ (
+            await this.storage.get(`zs:${plant}`)
+        );
+        return { bezi: bezi.filter((z) => z.d === req.d), zasuvky: infoZasuviek(zasuvky ?? {}) };
     }
 
     /**
@@ -524,6 +543,70 @@ export class UcetHuawei {
         if (!bojler) return null;
         const body = /** @type {import('../../shared/bojler-voda.js').BodyVody | undefined} */ (await this.storage.get(`bt:${plant}`));
         return body?.length ? { ...bojler, teploty: teplotyDna(body, now, NB.pasmo) } : bojler;
+    }
+
+    /**
+     * Hlásenie zásuvky so spotrebičom (docs/navrhy/pracka-zasuvka.html): krok rozoznania behu (shared/zasuvka.js), zápis
+     * behu do spoločných behov (`bz:`) a push o konci telefónom, ktoré ho chcú (`zo:`). Spotrebič meria jedna zásuvka -
+     * hlásenie inej, kým sa prvá ozýva, sa odmietne (`odmietnute`). Zlé hlásenie -> `ok: false`.
+     * @param {{ pristup: Record<string, unknown>, vec: unknown, id: unknown, w: unknown, e: unknown }} req @param {Date} now
+     */
+    async spotrebic(req, now) {
+        const plant = String(req.pristup.plant ?? '');
+        const h = hlasenieZ(req, now.getTime());
+        if (!h || !vecZasuvky(req.vec)) return { ok: false };
+        const vec = req.vec;
+        const kluc = `zs:${plant}`;
+        const zasuvky = /** @type {Record<string, import('../../shared/zasuvka.js').StavZasuvky>} */ ((await this.storage.get(kluc)) ?? {});
+        if (!prijmiZasuvku(zasuvky[vec] ?? null, h)) return { odmietnute: true };
+        const r = krokZasuvky(vec, zasuvky[vec] ?? null, h, NB.pasmo);
+        /** @type {Record<string, unknown>} */ const zapis = { [kluc]: { ...zasuvky, [vec]: r.stav } };
+        await this.storage.put({ ...zapis, ...(await this.behZasuvky(plant, vec, r, now)) });
+        if (r.skoncil) await this.oznamKoniec(plant, vec, now);
+        return { ok: true };
+    }
+
+    /**
+     * Beh zo zásuvky do spoločných behov (`bz:`): bežiaci či skončený nahradí ten s rovnakým začiatkom, príliš krátky
+     * zmaže. Zmena staršieho dňa zahodí model učenia. Vráti, čo zapísať.
+     * @param {string} plant @param {string} vec @param {import('../../shared/zasuvka.js').KrokZasuvky} r @param {Date} now
+     * @returns {Promise<Record<string, unknown>>}
+     */
+    async behZasuvky(plant, vec, r, now) {
+        const beh = r.zapis ?? r.zrus;
+        if (!beh) return {};
+        const stare = parseBezi(await this.storage.get(`bz:${plant}`));
+        const behy = [...behyVeci(stare, vec, beh.d).filter((b) => b.m !== beh.m), ...(r.zapis ? [r.zapis] : [])];
+        const today = localDateKey(now, NB.pasmo);
+        return {
+            [`bz:${plant}`]: zapisZmeny(stare, [{ id: vec, d: beh.d, behy }], today),
+            ...(beh.d < today ? { [`um:${plant}`]: null } : {}),
+        };
+    }
+
+    /**
+     * Push o konci behu zo zásuvky všetkým telefónom, ktoré si ho zapli (`zo:`). Text ako pri konci programu z „Už beží“,
+     * so značkou `koniec-<spotrebič>` (ťuknutie oživí jeho dlaždicu).
+     * @param {string} plant @param {string} vec @param {Date} now
+     */
+    async oznamKoniec(plant, vec, now) {
+        const kluc = `zo:${plant}`;
+        const odbery = /** @type {OdberBojlera[]} */ ((await this.storage.get(kluc)) ?? []);
+        const name = MOZEM_ITEMS.find((i) => i.id === vec)?.device ?? vec;
+        await this.posliVsetkym(kluc, odbery, odbery, { ...koniecText({ id: vec, name, caka: null }), tag: `koniec-${vec}` }, now);
+    }
+
+    /**
+     * Oznámenia o konci behu zo zásuvky od appky: odber telefónu pridá (`on`) či odoberie. Najviac PUSH_TEXT.maxOdberov
+     * na elektráreň, najstarší ide preč.
+     * @param {{ pristup: Record<string, unknown>, endpoint: string, keys: OdberBojlera['keys'] | null, on: boolean }} req
+     */
+    async spotrebicOznam(req) {
+        const kluc = `zo:${String(req.pristup.plant ?? '')}`;
+        const stare = /** @type {OdberBojlera[]} */ ((await this.storage.get(kluc)) ?? []).filter((o) => o.e !== req.endpoint);
+        const odbery = req.on && req.keys ? [...stare, { e: req.endpoint, keys: req.keys }].slice(-PUSH_TEXT.maxOdberov) : stare;
+        await this.storage.put(kluc, odbery);
+        return { ok: true };
     }
 
     /**

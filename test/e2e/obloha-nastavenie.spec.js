@@ -13,6 +13,7 @@ import {
     KLIMA_STORAGE_KEY,
     WORKER_KLIMA_STAV_URL,
     WORKER_KLIMA_URL,
+    WORKER_SPOTREBIC_URL,
     BOJLER_STORAGE_KEY,
     DOMA_STORAGE_KEY,
     TEPLOMER_STORAGE_KEY,
@@ -42,6 +43,9 @@ import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { klimaStavZ, zHlasenia } from '../../shared/klima.js';
 import { skriptKlimy } from '../../shared/klima-skript.js';
 import { KLIMA_NAST_TEXTS } from '../../shared/nastavenie-klima.js';
+import { ZASUVKA_NAST_TEXTS } from '../../shared/nastavenie-zasuvka.js';
+import { TERAZ_BEZI } from '../../shared/messages-teraz.js';
+import { skriptZasuvky } from '../../shared/zasuvka-skript.js';
 import { klimaDetail, klimaDlazdica, TERAZ_KLIMA_TEXTS } from '../../shared/teraz-klima.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
@@ -1411,6 +1415,61 @@ test.describe('bojler na prebytky', () => {
         expect(dopyty.at(-1).zmeny).toEqual([{ id: 'pracka', d, behy: [] }]);
         expect(spolocne).toEqual([]);
         await expect(prDl).not.toHaveAttribute('data-zapnuty');
+        expect(errors).toEqual([]);
+    });
+
+    test('spotrebič na zásuvke (U1): detail práčky bez „Už beží“, so zmeraným príkonom a oznámením; Nastavenie so skriptom', async ({
+        page,
+    }) => {
+        // docs/navrhy/pracka-zasuvka.html: Worker podvrhnutý behom práčky zo zásuvky a stavom zásuvky.
+        await page.addInitScript(() => {
+            Object.defineProperty(navigator, 'clipboard', {
+                value: { writeText: (/** @type {string} */ x) => /** @type {any} */ ((window.__schranka = x), Promise.resolve()) },
+            });
+        });
+        await page.addInitScript(
+            ([k, v]) => localStorage.setItem(k, v),
+            [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['pracka', 'susicka']))],
+        );
+        const beh = { id: 'pracka', d: '2026-09-05', m: 12 * 60, k: 14 * 60 };
+        const zasuvky = { pracka: { at: FIXED_NOW.getTime() - 60000, w: 2100, bezi: true } };
+        await page.route(WORKER_BEZI_URL, (route) => route.fulfill({ json: { bezi: [beh], zasuvky } }));
+        await page.route(WORKER_BOJLER_PECAT_URL, (route) => route.fulfill({ json: { pecat: PECAT_ZASUVKY } }));
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ } });
+        const prDl = page.locator('#tz-co [data-vec="pracka"]');
+        await expect(prDl).toHaveAttribute('data-zapnuty', '');
+        await prDl.click();
+        await expect(page.locator('#tz-vec-meria')).toHaveText(TERAZ_BEZI.zasuvka.meria(2100));
+        await expect(page.locator('#tz-vec-zapis')).toBeHidden();
+        await expect(page.locator('#tz-vec-oznam')).toBeVisible();
+        await expect(page.locator('#tz-vec-oznam-t')).toHaveText(TERAZ_BEZI.zasuvka.oznam);
+        await expect(page.locator('#tz-vec-oznam')).toHaveAttribute('aria-checked', 'false');
+        await page.locator('#tz-vec-sheet').screenshot({ path: test.info().outputPath('zasuvka-detail.png') });
+        expect((await new AxeBuilder({ page }).include('#tz-vec-sheet').analyze()).violations).toEqual([]);
+        await page.keyboard.press('Escape');
+        // Sušička zásuvku nemá: „Už beží“ ostáva.
+        await page.locator('#tz-co [data-vec="susicka"]').click();
+        await expect(page.locator('#tz-vec-zapol')).toBeVisible();
+        await expect(page.locator('#tz-vec-meria')).toBeHidden();
+        await expect(page.locator('#tz-vec-oznam')).toBeHidden();
+        await page.keyboard.press('Escape');
+        // Nastavenie: zásuvka práčky sa ozvala, skript pre sušičku.
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-doma').click();
+        await expect(page.locator('#ns-zasuvka')).toBeVisible();
+        await expect(page.locator('#ns-zasuvka-title')).toHaveText(ZASUVKA_NAST_TEXTS.title);
+        await expect(page.locator('#ns-zasuvka-stav')).toHaveText(/^ozvala sa o \d\d:\d\d$/);
+        await page.locator('#ns-zasuvka-vec [data-zasuvka="susicka"]').click();
+        await expect(page.locator('#ns-zasuvka-vec [data-zasuvka="susicka"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#ns-zasuvka-stav')).toHaveText(ZASUVKA_NAST_TEXTS.nikdy);
+        await page.locator('#ns-zasuvka-skript').click();
+        await expect(page.locator('#ns-zasuvka-sprava')).toHaveText(ZASUVKA_NAST_TEXTS.hotovo[0]);
+        expect(await page.evaluate(() => /** @type {any} */ (window).__schranka)).toBe(
+            skriptZasuvky({ url: WORKER_SPOTREBIC_URL, pecat: PECAT_ZASUVKY, vec: 'susicka' }),
+        );
+        await expect(page.locator('#ns-zasuvka-kroky li')).toHaveCount(ZASUVKA_NAST_TEXTS.kroky.length);
+        await page.locator('#ns-zasuvka').screenshot({ path: test.info().outputPath('zasuvka-nastavenie.png') });
+        expect((await new AxeBuilder({ page }).include('#ns-zasuvka').analyze()).violations).toEqual([]);
         expect(errors).toEqual([]);
     });
 

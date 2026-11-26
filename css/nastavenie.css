@@ -224,6 +224,13 @@
 .set .it b {
     font-weight: 600;
 }
+/* Spotrebič na zásuvke (docs/navrhy/pracka-zasuvka.html): tri voľby sa vedľa popisu nezmestia, idú pod neho. */
+.set .ns-zasuvka-vec {
+    flex-wrap: wrap;
+}
+.set .it.ns-zasuvka-vec > span:first-of-type {
+    flex-basis: 100%;
+}
 .set .it small {
     font-size: 0.7813rem;
     color: var(--dim);

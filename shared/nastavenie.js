@@ -20,6 +20,7 @@ import { tariffHint, tariffKind, tariffPricesText } from './tariff.js';
 import { menoZnacky } from './zdroje.js';
 import { bojlerSekcia } from './nastavenie-bojler.js';
 import { klimaSekcia } from './nastavenie-klima.js';
+import { zasuvkaSekcia } from './nastavenie-zasuvka.js';
 import { ucenieSekcia } from './nastavenie-ucenie.js';
 
 /** @typedef {import('./setup-flow.js').SetupState} SetupState */
@@ -33,7 +34,8 @@ import { ucenieSekcia } from './nastavenie-ucenie.js';
  *   bojler: import('./bojler.js').BojlerInfo | null, bojlerPrahy: import('./bojler.js').Prahy,
  *   bojlerSkript: import('./nastavenie-bojler.js').BojlerSkript, teplomer?: import('./nastavenie-bojler.js').Teplomer,
  *   bojlerHranica?: 'uklada' | 'chyba' | null, klima?: { at: number } | null, klimaNast?: { ip: string },
- *   klimaSkript?: import('./nastavenie-klima.js').KlimaSkript,
+ *   klimaSkript?: import('./nastavenie-klima.js').KlimaSkript, zasuvky?: Record<string, import('./zasuvka.js').ZasuvkaInfo>,
+ *   zasuvkaVec?: string, zasuvkaSkript?: import('./nastavenie-klima.js').KlimaSkript,
  *   ucenie: import('./ucenie.js').Naucene | null }} NastavenieState
  */
 /**
@@ -286,6 +288,7 @@ export function nastavenieModel(state) {
             note: inVoice(T.domaNote, voice),
             bojler: bojlerSekcia({ ...state, voice }),
             klima: klimaSekcia({ ...state, voice }),
+            zasuvka: zasuvkaSekcia({ ...state, voice }),
             ucenie: ucenieSekcia(state),
         },
         oznamenia: oznameniaSekcia(state),

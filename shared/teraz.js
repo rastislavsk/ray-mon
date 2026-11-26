@@ -29,6 +29,7 @@ import {
     terazWindowText,
     voiceTexts,
 } from './messages-core.js';
+import { TERAZ_BEZI } from './messages-teraz.js';
 import { dayCtx, planWindows } from './mozem-jadro.js';
 import { mozemModel } from './mozem.js';
 import { chosen } from './plan-dna.js';
@@ -40,12 +41,14 @@ import { bojlerRiadeny } from './teraz-bojler.js';
 import { tokDnaModel } from './teraz-scena.js';
 import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzaRiadok, nudzoveCasy } from './tyzden.js';
 import { domProfil, potrebaBojlera } from './ucenie.js';
+import { meria } from './zasuvka.js';
 
 /**
  * @typedef {import('./day-plan.js').PlanInput & { zdroj: unknown, loading: boolean,
  *   known: import('./settings.js').Known, previewMinutes: number | null,
  *   pristup?: import('./pristup.js').Odmietnutie | null, vecNavrh?: { id: string, min: number } | null,
- *   autoDen?: import('./auto-slnko.js').AutoDen | null, autoNabija?: import('./auto-nabija.js').AutoInfo | null }} TerazInput
+ *   autoDen?: import('./auto-slnko.js').AutoDen | null, autoNabija?: import('./auto-nabija.js').AutoInfo | null,
+ *   zasuvky?: Record<string, import('./zasuvka.js').ZasuvkaInfo> }} TerazInput
  * @typedef {import('./day-chart.js').Tone} Tone
  */
 
@@ -190,27 +193,45 @@ function dnesOf(input, rows, teraz, span, voice) {
     const d = localDateKey(input.now, input.site.timezone);
     const navrh = (/** @type {string} */ id) => (input.vecNavrh?.id === id ? input.vecNavrh.min : null);
     const cas = (/** @type {string} */ id) => nastavenieCasu(input.bezi ?? [], id, d, teraz.nowMin, navrh(id));
+    // Spotrebič, ktorý meria zásuvka (docs/navrhy/pracka-zasuvka.html, U1): beh je vždy z merania, „Už beží“ ani nastavenie
+    // času nemá - len zmeraný príkon.
+    const zasuvka = (/** @type {string} */ id) => (meria(input.zasuvky, id, input.now.getTime()) ? (input.zasuvky?.[id] ?? null) : null);
+    /** @param {string} id @returns {VecZapis | null} */
+    const meraZapis = (id) => {
+        const z = zasuvka(id);
+        return z ? { stav: 'meria', hotove: hotove(id), cas: null, w: z.w } : null;
+    };
     const moze = (/** @type {VecDetail} */ v) =>
         daSaZapisat(v.id)
-            ? { ...v, zapis: { stav: /** @type {const} */ ('moze'), hotove: hotove(v.id), cas: navrh(v.id) === null ? null : cas(v.id) } }
+            ? {
+                  ...v,
+                  zapis: meraZapis(v.id) ?? {
+                      stav: /** @type {const} */ ('moze'),
+                      hotove: hotove(v.id),
+                      cas: navrh(v.id) === null ? null : cas(v.id),
+                  },
+              }
             : v;
     return {
         co: coZapnutModel(rows, { ...teraz, nudza: nudza.map((n) => n.riadok), potom }, voice),
         veci: [
             ...rows.filter((r) => dnesny(r)).map((r) => moze(vecDetail(r, teraz.nowMin, span))),
             ...nudza.map((n) => moze(n.detail)),
-            ...bezia.map((b) => behDetail(b, span, hotove(b.id), cas(b.id))),
+            ...bezia.map((b) => {
+                const z = meraZapis(b.id);
+                const d = behDetail(b, span, z ?? { stav: 'bezi', hotove: hotove(b.id), cas: cas(b.id) });
+                return z ? { ...d, why: TERAZ_BEZI.zasuvka.why } : d;
+            }),
         ],
     };
 }
 
 /**
- * Detail spotrebiča, ktorý beží: od-do, jeho úsek na osi dňa a zápis - nastavenie času (`cas`) a čo dnes už dobehlo
- * (`hotove`).
- * @param {Beh} b @param {{ from: number, to: number }} span os dňa
- * @param {VecZapis['hotove']} hotove @param {NastavCas} cas @returns {VecDetail}
+ * Detail spotrebiča, ktorý beží: od-do, jeho úsek na osi dňa a zápis - nastavenie času a čo dnes už dobehlo, pri
+ * spotrebiči na zásuvke zmeraný príkon.
+ * @param {Beh} b @param {{ from: number, to: number }} span os dňa @param {VecZapis} zapis @returns {VecDetail}
  */
-function behDetail(b, span, hotove, cas) {
+function behDetail(b, span, zapis) {
     const slot =
         b.end <= span.from || b.start >= span.to
             ? null
@@ -220,8 +241,6 @@ function behDetail(b, span, hotove, cas) {
                   tone: /** @type {const} */ ('bezi'),
                   dnes: true,
               };
-    /** @type {VecZapis} */
-    const zapis = { stav: 'bezi', hotove, cas };
     return { id: b.id, name: b.name, tone: 'bezi', den: '', ...terazBehVecText(b, b.name, zoZvysku(b.id)), slot, zapis };
 }
 
@@ -417,9 +436,10 @@ function soFar(hourly, nowMin) {
  *   zapis?: VecZapis }} VecDetail
  */
 /**
- * Zápis v detaile spotrebiča: dnes sa dá zapísať, že beží (`moze`, tlačidlo „Už beží“), alebo už beží (`bezi`).
+ * Zápis v detaile spotrebiča: dnes sa dá zapísať, že beží (`moze`, tlačidlo „Už beží“), alebo už beží (`bezi`). Spotrebič,
+ * ktorý meria zásuvka (`meria`, docs/navrhy/pracka-zasuvka.html, U1), zapísať nejde - má zmeraný príkon `w` (W).
  * `cas`: nastavenie času - pri bežiacom behu vždy, pri `moze` po „Už beží“, inak null. `hotove`: behy, ktoré dnes už dobehli.
- * @typedef {{ stav: 'moze' | 'bezi', hotove: Array<{ text: string, cas: string }>, cas: NastavCas | null }} VecZapis
+ * @typedef {{ stav: 'moze' | 'bezi' | 'meria', hotove: Array<{ text: string, cas: string }>, cas: NastavCas | null, w?: number }} VecZapis
  */
 /**
  * Nastavenie času: zvyšok programu na kolieskach (práčka, sušička) alebo čas zapnutia „HH:MM“ (umývačka, `max` je teraz)

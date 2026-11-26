@@ -8,6 +8,8 @@ import {
     handleAutoOznam,
     handleKlima,
     handleKlimaStav,
+    handleSpotrebic,
+    handleSpotrebicOznam,
     handleBezi,
     handleBojler,
     handleBojlerOznam,
@@ -1366,6 +1368,86 @@ test('klimatizácia: skript na Shelly hlási odpovede adaptéra, telefón dostan
     assert.deepEqual(zajtra.klima.zdroje, []);
 });
 
+test('spotrebič na zásuvke: beh z hlásení ide do spoločných behov, pri konci push tomu, kto chce', async () => {
+    const { s, env, telefon, zasuvka } = await sBojlerom({ pushStatus: () => 201 }, { VAPID_JWK: await vapidTest() });
+    const { ua, keys } = await odberTelefonu();
+    const FCM = 'https://fcm.googleapis.com/fcm/send/pracka1';
+    const oznam = (/** @type {object} */ o) =>
+        handleSpotrebicOznam(
+            post('/spotrebic-oznamenia', JSON.stringify({ pecat: telefon, endpoint: FCM, keys, on: true, ...o })),
+            env,
+            po(0),
+        );
+    assert.deepEqual(await (await oznam({})).json(), { ok: true });
+    let e = 1000;
+    const hlas = (/** @type {number} */ min, /** @type {number} */ w, id = 'shellyplugmg3-pracka') => {
+        e += w / 60;
+        return handleSpotrebic(post('/spotrebic', JSON.stringify({ pecat: zasuvka, id, vec: 'pracka', w, e })), env, po(min));
+    };
+    const bezi = async (/** @type {number} */ min) =>
+        (await handleBezi(post('/bezi', JSON.stringify({ pecat: telefon, d: '2026-09-05', zmeny: [] })), env, po(min))).json();
+    assert.deepEqual(await (await hlas(0, 2)).json(), { ok: true });
+    await hlas(1, 2000);
+    await hlas(2, 2000);
+    // Začala o 13:01, koniec podľa programu práčky (120 min).
+    const b = await bezi(3);
+    assert.deepEqual(b.bezi, [{ id: 'pracka', d: '2026-09-05', m: 13 * 60 + 1, k: 15 * 60 + 1 }]);
+    assert.deepEqual(b.zasuvky, { pracka: { at: po(2).getTime(), w: 2000, bezi: true } });
+    // Iná zásuvka pre práčku, kým sa prvá ozýva: 409. Zlé hlásenie 400.
+    assert.equal((await hlas(3, 5, 'shellyplugmg3-ina')).status, 409);
+    assert.equal(
+        (await handleSpotrebic(post('/spotrebic', JSON.stringify({ pecat: zasuvka, id: 'x', vec: 'bojler', w: 1, e: 1 })), env, po(3)))
+            .status,
+        400,
+    );
+    assert.equal(
+        (await handleSpotrebic(post('/spotrebic', JSON.stringify({ pecat: 'x', id: 'x', vec: 'pracka', w: 1, e: 1 })), env, po(3))).status,
+        400,
+    );
+    for (let m = 3; m <= 90; m++) await hlas(m, 500);
+    assert.equal(s.pushe.length, 0);
+    for (let m = 91; m <= 96; m++) await hlas(m, 1);
+    // Skončila o 14:31 (prvá chvíľa pod prahom), push s textom konca programu.
+    assert.deepEqual((await bezi(97)).bezi, [{ id: 'pracka', d: '2026-09-05', m: 781, k: 871 }]);
+    assert.equal(s.pushe.length, 1);
+    const push = JSON.parse(await rozsifruj(s.pushe[0].init.body, ua, keys.auth));
+    assert.deepEqual(push, { title: 'Práčka dobehla', body: 'Pranie je hotové.', tag: 'koniec-pracka' });
+    // Vypnuté oznámenie: ďalší beh bez pushu.
+    await oznam({ on: false, keys: null });
+    for (let m = 100; m <= 200; m++) await hlas(m, 500);
+    for (let m = 201; m <= 240; m++) await hlas(m, 0);
+    assert.equal(s.pushe.length, 1);
+    assert.equal((await bezi(241)).bezi.length, 2);
+});
+
+test('spotrebič na zásuvke: zlé dopyty 400, bez objektov 503', async () => {
+    const { env, telefon, zasuvka } = await sBojlerom();
+    const oznam = (/** @type {object} */ o) =>
+        handleSpotrebicOznam(
+            post(
+                '/spotrebic-oznamenia',
+                JSON.stringify({ pecat: telefon, endpoint: 'https://fcm.googleapis.com/fcm/send/x', on: true, ...o }),
+            ),
+            env,
+            po(0),
+        );
+    const e = 1;
+    assert.equal((await oznam({ keys: null })).status, 400);
+    assert.equal((await oznam({ on: 'ano' })).status, 400);
+    assert.equal((await handleSpotrebic(post('/spotrebic', JSON.stringify({ pecat: zasuvka })), ENV, po(1))).status, 503);
+    assert.equal((await handleSpotrebicOznam(post('/spotrebic-oznamenia', JSON.stringify({ pecat: telefon })), ENV, po(1))).status, 503);
+    assert.equal(
+        (
+            await handleRequest(
+                post('/spotrebic', JSON.stringify({ pecat: zasuvka, id: 'shellyplugmg3-pracka', vec: 'pracka', w: 0, e })),
+                env,
+                po(300),
+            )
+        ).status,
+        200,
+    );
+});
+
 test('pečať zásuvky: len Huawei Northbound, bez relácie a krivky, krátka; zlé dopyty 400, bez objektov 503', async () => {
     const { env, telefon, zasuvka } = await sBojlerom();
     const key = /** @type {Promise<CryptoKey>} */ (pecatKey(ENV.PECAT_KLUC));
@@ -1591,15 +1673,16 @@ test('spoločné behy: telefón zapíše „Už beží“, druhý telefón ho do
     const { env, telefon } = await sBojlerom();
     const D = '2026-09-05';
     const bezi = async (/** @type {object} */ telo) => handleBezi(post('/bezi', JSON.stringify({ pecat: telefon, ...telo })), env, po(1));
-    assert.deepEqual(await (await bezi({ d: D })).json(), { bezi: [] }, 'zatiaľ nič');
+    assert.deepEqual(await (await bezi({ d: D })).json(), { bezi: [], zasuvky: {} }, 'zatiaľ nič');
     const beh = { id: 'pracka', d: D, m: 600, k: 720 };
     const vcera = { id: 'umyvacka', d: '2026-09-04', m: 600, k: 720 };
     assert.deepEqual(await (await bezi({ d: '2026-09-04', zmeny: [{ id: 'umyvacka', d: '2026-09-04', behy: [vcera] }] })).json(), {
         bezi: [vcera],
+        zasuvky: {},
     });
     assert.deepEqual(
         await (await bezi({ d: D, zmeny: [{ id: 'pracka', d: D, behy: [beh] }] })).json(),
-        { bezi: [beh] },
+        { bezi: [beh], zasuvky: {} },
         'telefón dostane len dnešok',
     );
     // Objekt drží behy HISTORIA.dni dní pre učenie Plánu dňa (docs/navrhy/ucenie-vo-workeri.html).
@@ -1611,10 +1694,10 @@ test('spoločné behy: telefón zapíše „Už beží“, druhý telefón ho do
     const obsah = /** @type {any} */ (await otvor(key, telefon, NOW));
     const druhy = await zapecat(key, { sposob: 'huawei-northbound', pristup: { ...obsah.pristup, tokenAt: 0 } });
     const r = await handleRequest(post('/bezi', JSON.stringify({ pecat: druhy, d: D })), env, po(2));
-    assert.deepEqual(await r.json(), { bezi: [beh] });
+    assert.deepEqual(await r.json(), { bezi: [beh], zasuvky: {} });
     // „Nebeží“ z druhého telefónu.
     await handleBezi(post('/bezi', JSON.stringify({ pecat: druhy, d: D, zmeny: [{ id: 'pracka', d: D, behy: [] }] })), env, po(3));
-    assert.deepEqual(await (await bezi({ d: D })).json(), { bezi: [] });
+    assert.deepEqual(await (await bezi({ d: D })).json(), { bezi: [], zasuvky: {} });
     // Bez dňa, so zdieľaným odkazom či bez Durable Objects nie.
     assert.equal((await bezi({ d: '5. 9.' })).status, 400);
     const zdielana = await zapecat(key, { sposob: 'huawei-northbound', pristup: obsah.pristup, platiDo: po(60).getTime() });

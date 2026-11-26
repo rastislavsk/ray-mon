@@ -135,6 +135,10 @@ function terazBojlerDom() {
 function terazZapisDom() {
     return {
         tzVecZapis: byId('tz-vec-zapis'),
+        tzVecMeria: byId('tz-vec-meria'),
+        tzVecOznam: /** @type {HTMLButtonElement} */ (byId('tz-vec-oznam')),
+        tzVecOznamT: byId('tz-vec-oznam-t'),
+        tzVecOznamChyba: byId('tz-vec-oznam-chyba'),
         tzVecZapol: /** @type {HTMLButtonElement} */ (byId('tz-vec-zapol')),
         tzVecNastav: byId('tz-vec-nastav'),
         tzVecTtl: byId('tz-vec-ttl'),
@@ -566,6 +570,17 @@ function klimaDom() {
         nsKlimaSprava: byId('ns-klima-sprava'),
         nsKlimaText: /** @type {HTMLTextAreaElement} */ (byId('ns-klima-text')),
         nsKlimaKroky: byId('ns-klima-kroky'),
+        nsZasuvka: byId('ns-zasuvka'),
+        nsZasuvkaTitle: byId('ns-zasuvka-title'),
+        nsZasuvkaIntro: byId('ns-zasuvka-intro'),
+        nsZasuvkaVecL: byId('ns-zasuvka-vec-l'),
+        nsZasuvkaVec: byId('ns-zasuvka-vec'),
+        nsZasuvkaStavL: byId('ns-zasuvka-stav-l'),
+        nsZasuvkaStav: byId('ns-zasuvka-stav'),
+        nsZasuvkaSkript: /** @type {HTMLButtonElement} */ (byId('ns-zasuvka-skript')),
+        nsZasuvkaSprava: byId('ns-zasuvka-sprava'),
+        nsZasuvkaText: /** @type {HTMLTextAreaElement} */ (byId('ns-zasuvka-text')),
+        nsZasuvkaKroky: byId('ns-zasuvka-kroky'),
     };
 }
 export function collectDom() {
