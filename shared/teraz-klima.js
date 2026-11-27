@@ -15,6 +15,11 @@ const MIN = 60 * 1000;
 
 export const TERAZ_KLIMA_TEXTS = {
     meno: 'Klíma',
+    /** Meno dlaždice podľa režimu na Daikine (docs/navrhy/teraz-klima-rezim.html): vypnutá Off, bez spojenia Off-line. */
+    menoRezim: { kurenie: 'Kúrenie', chladenie: 'Chladenie', auto: 'Auto', susenie: 'Sušenie', ventilator: 'Vetranie' },
+    menoVypnuta: 'Off',
+    menoMlci: 'Off-line',
+    ventilatorSr: (/** @type {string} */ ako) => `ventilátor ${ako}`,
     kw: 'kW',
     dnesKwh: (/** @type {string} */ kwh) => `dnes ${kwh} kWh`,
     mlci: 'klimatizácia mlčí',
@@ -95,14 +100,21 @@ function energiaDnes(k, dnes, tariff) {
 }
 
 /**
+ * Ventilátor na dlaždicu: A automaticky, B tichý, `f_rate` 3 až 7 ako stupeň 1 až 5; iné a bez údaja null.
+ * @param {string | null} f
+ */
+const ventilatorStupen = (f) => (f === 'A' || f === 'B' ? f : f && /^[3-7]$/.test(f) ? String(Number(f) - 2) : null);
+
+/**
  * Dlaždica Klíma (B): príkon veľkým číslom, odrážky „vonku / nastavená“ len hodnotami a „dnes … kWh“, pásik slnko /
  * sieť / drahé pásmo (`podiel`, `draha` v %, kým dnes nič nespotrebovala null). Kompresor beží = zapnutá (`riadi` bezi,
  * biely kruh, Z1). Skript mlčí dlhšie ako KLIMA.tichoMin - tón `chyba` (jantárový rám) a ako dlho.
  * @param {KlimaStav} k @param {Date} now @param {string} tz @param {Tariff | null} tariff
  * Na dlaždici sú len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B): pod menom teplota vonku a nastavená so značkami (`mv`),
- * dnešné kWh sú v paneli; slová (`odr`) číta čítačka.
+ * dnešné kWh sú v paneli; slová (`odr`) číta čítačka. Meno je režim nastavený na Daikine, vypnutá Off, bez spojenia
+ * Off-line; zapnutá ukáže vpravo hore ventilátor (`vent`: A, B tichý, 1 až 5 stupeň), docs/navrhy/teraz-klima-rezim.html.
  * @returns {{ tone: string, riadi: string, zn?: import('./messages-teraz.js').Znacka, velky: string, za?: string, meno: string, odr: string[],
- *   mv: import('./messages-teraz.js').MaleCislo[], podiel: number | null, draha: number }}
+ *   mv: import('./messages-teraz.js').MaleCislo[], podiel: number | null, draha: number, vent?: string | null }}
  */
 export function klimaDlazdica(k, now, tz, tariff) {
     const T = TERAZ_KLIMA_TEXTS;
@@ -120,20 +132,22 @@ export function klimaDlazdica(k, now, tz, tariff) {
             riadi: 'mlci',
             zn: 'ticho',
             velky: ticho(now.getTime() - k.at),
-            meno: T.meno,
+            meno: T.menoMlci,
             odr: [T.mlci, T.bezSpojenia],
             mv: [],
             ...pasik,
         };
     }
     const bezi = k.pow && (k.hz ?? 0) > 0;
+    const vent = k.pow ? ventilatorStupen(k.ventilator) : null;
     return {
         tone: 'tiche',
         riadi: bezi ? 'bezi' : 'vyp',
         velky: fmt1((k.w ?? 0) / 1000),
         za: T.kw,
-        meno: T.meno,
-        odr: [`${st(k.vonkuC)} / ${st(k.stempC)}`, dnesKwh],
+        meno: k.pow ? T.menoRezim[k.rezim] : T.menoVypnuta,
+        odr: [`${st(k.vonkuC)} / ${st(k.stempC)}`, dnesKwh, ...(vent && k.ventilator ? [T.ventilatorSr(T.ventilator(k.ventilator))] : [])],
+        vent,
         mv: [male('vonku', st(k.vonkuC)), male('doma', st(k.stempC))],
         ...pasik,
     };

@@ -216,8 +216,9 @@ test('klimaDlazdica: príkon, vonku / nastavená, dnešné kWh, pásik so slnkom
     const d = klimaDlazdica(odWorkera(), new Date(NOW), TZ, null);
     assert.equal(d.velky, '1,2');
     assert.equal(d.za, 'kW');
-    assert.equal(d.meno, TERAZ_KLIMA_TEXTS.meno);
-    assert.deepEqual(d.odr, ['2° / 23,5°', 'dnes 12,9 kWh']);
+    assert.equal(d.meno, 'Kúrenie');
+    assert.equal(d.vent, 'A');
+    assert.deepEqual(d.odr, ['2° / 23,5°', 'dnes 12,9 kWh', 'ventilátor automaticky']);
     assert.equal(d.riadi, 'bezi');
     // Zo slnka 600 + 1200 + 500 Wh z 12 900.
     assert.equal(d.podiel, Math.round((100 * 2300) / 12900));
@@ -225,18 +226,39 @@ test('klimaDlazdica: príkon, vonku / nastavená, dnešné kWh, pásik so slnkom
     const vt = klimaDlazdica(odWorkera(), new Date(NOW), TZ, TARIFA);
     assert.ok(vt.draha > 0);
     assert.equal(klimaDlazdica(odWorkera({ hz: 0 }), new Date(NOW), TZ, null).riadi, 'vyp');
-    assert.equal(klimaDlazdica(odWorkera({ pow: false }), new Date(NOW), TZ, null).riadi, 'vyp');
-    const bez = klimaDlazdica(odWorkera({ hod: null, vonkuC: null, stempC: null, w: null }), new Date(NOW), TZ, null);
+    const vyp = klimaDlazdica(odWorkera({ pow: false }), new Date(NOW), TZ, null);
+    assert.equal(vyp.riadi, 'vyp');
+    assert.equal(vyp.meno, 'Off');
+    assert.equal(vyp.vent, null);
+    assert.equal(vyp.odr.length, 2);
+    const bez = klimaDlazdica(odWorkera({ hod: null, vonkuC: null, stempC: null, w: null, ventilator: null }), new Date(NOW), TZ, null);
     assert.equal(bez.podiel, null);
     assert.equal(bez.velky, '0,0');
     assert.deepEqual(bez.odr, ['– / –', 'dnes 0,0 kWh']);
     assert.equal(klimaDlazdica(odWorkera({ vonkuC: -12.5 }), new Date(NOW), TZ, null).odr[0], '−12,5° / 23,5°'.replace('−', '-'));
 });
 
+test('klimaDlazdica: meno podľa režimu a stupeň ventilátora', () => {
+    const d = (/** @type {object} */ x) => klimaDlazdica(odWorkera(x), new Date(NOW), TZ, null);
+    assert.deepEqual(
+        ['kurenie', 'chladenie', 'auto', 'susenie', 'ventilator'].map((rezim) => d({ rezim }).meno),
+        ['Kúrenie', 'Chladenie', 'Auto', 'Sušenie', 'Vetranie'],
+    );
+    assert.deepEqual(
+        ['A', 'B', '3', '7', 'X'].map((ventilator) => d({ ventilator }).vent),
+        ['A', 'B', '1', '5', null],
+    );
+    assert.equal(d({ ventilator: '5' }).odr[2], 'ventilátor stupeň 3');
+    assert.equal(d({ ventilator: 'B' }).odr[2], 'ventilátor tichý');
+    assert.equal(d({ ventilator: 'X' }).odr.length, 2);
+});
+
 test('klimaDlazdica: skript mlčí - tón chyba a ako dlho', () => {
     const d = klimaDlazdica(odWorkera(), new Date(NOW + 20 * 60000), TZ, null);
     assert.equal(d.tone, 'chyba');
     assert.equal(d.velky, '20 min');
+    assert.equal(d.meno, 'Off-line');
+    assert.equal(d.vent, undefined);
     assert.deepEqual(d.odr, [TERAZ_KLIMA_TEXTS.mlci, TERAZ_KLIMA_TEXTS.bezSpojenia]);
     assert.equal(klimaDlazdica(odWorkera(), new Date(NOW + 3 * 3600000), TZ, null).velky, '3 h');
 });

@@ -28,7 +28,7 @@ import { dialog, setHtml, setText, show } from './write.js';
 /**
  * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, pred?: string, zn?: import('../../shared/messages-teraz.js').Znacka,
  *   velky: string, meno: string, podiel: number | null, draha?: number, odr: string[], mv?: import('../../shared/messages-teraz.js').MaleCislo[],
- *   potom?: import('../../shared/teraz.js').Potom | null, bezDetailu?: boolean, za?: string, zapnuty?: 'nabija' }} Dlazdica
+ *   potom?: import('../../shared/teraz.js').Potom | null, bezDetailu?: boolean, za?: string, zapnuty?: 'nabija', vent?: string | null }} Dlazdica
  * `bezDetailu`: auto zo slnka, kým appka nevie o nabíjaní - ťuknutie otvorí detail len s vetou (P1). `zapnuty: 'nabija'`:
  * auto sa asi nabíja. `mv`: malé čísla pod menom (`?? []`: model zo starého shared/ z cache po nasadení ich nemá).
  */
@@ -110,12 +110,28 @@ function renderHreben(h, dom) {
  */
 const dlazdicaHtml = (d, stlpec, oziv) =>
     `<button type="button" class="dl" data-stlpec="${stlpec}"${stavDlazdice(d, oziv)}>` +
-    `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${odznakHtml(d.potom)}</span>` +
+    `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${odznakHtml(d.potom)}</span>${ventHtml(d.vent)}` +
     `<span><span class="velky">${d.zn ? znackaIcon(d.zn) : ''}${predHtml(d.pred)}${escapeHtml(d.velky)}${zaHtml(d.za)}</span>` +
     `<b>${escapeHtml(d.meno)}</b>` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%;--n:${100 - (d.draha ?? 0)}%"`}></i>` +
     `<small class="mv" aria-hidden="true">${(d.mv ?? []).map((m) => `<span>${znackaIcon(m.zn)}${escapeHtml(m.t)}</span>`).join('')}</small>` +
     `<span class="sr">${slovaHtml(d)}</span></span></button>`;
+
+/**
+ * Ventilátor klimatizácie vpravo hore (docs/navrhy/teraz-klima-rezim.html, F1): päť stĺpcov ako na ovládači Daikin,
+ * plné do stupňa; automaticky „A“, tichý mesiac. Len ozdoba - slovom ho nesie skrytý text dlaždice.
+ * @param {string | null | undefined} v
+ */
+function ventHtml(v) {
+    if (!v) return '';
+    const vnutro =
+        v === 'A'
+            ? '<span>A</span>'
+            : v === 'B'
+              ? '<svg viewBox="0 0 24 24" focusable="false"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>'
+              : [1, 2, 3, 4, 5].map((i) => `<i${i <= Number(v) ? ' data-plny' : ''}></i>`).join('');
+    return `<i class="dl-vent" data-vent="${v}" aria-hidden="true">${vnutro}</i>`;
+}
 
 /** Odznak pri ikone: skratka dňa, keď bude slnko (tmavý o dva a viac dní), alebo „2×“. @param {Dlazdica['potom']} p */
 const odznakHtml = (p) => (p ? `<em class="odz"${p.dlho ? ' data-dlho' : ''}>${escapeHtml(p.kratko ?? '')}</em>` : '');
