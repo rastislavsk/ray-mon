@@ -4,7 +4,7 @@
 // prevziať nastavenie z otvoreného odkazu. Zbaľovanie sekcií a sekcie Čo máš doma, Oznámenia,
 // Vzhľad a Appka: spotrebiče, ranný plán dňa, tón hlášok, živá obloha, Zdieľať appku a Vymazať údaje.
 
-import { VOICES, WORKER_BOJLER_URL, WORKER_KLIMA_URL, WORKER_SPOTREBIC_URL } from '../shared/config.js';
+import { VOICES, WORKER_BOJLER_URL, WORKER_KLIMA_URL, WORKER_SPOTREBIC_URL, ZASUVKA } from '../shared/config.js';
 import { posunPrahy } from '../shared/bojler.js';
 import { posunHranicu } from '../shared/bojler-voda.js';
 import { ADRESA_V_SIETI, adresaTeplomera, skriptBojlera } from '../shared/bojler-skript.js';
@@ -13,6 +13,10 @@ import { skriptZasuvky } from '../shared/zasuvka-skript.js';
 import { backAction } from '../shared/setup-flow.js';
 import { applySettings, initSetupWiring, runSetupAction } from './setup-wiring.js';
 import { prepniSpotrebic } from '../shared/doma.js';
+import { NS_OKNA } from '../shared/nastavenie-doma.js';
+import { vypniOznamAuta, zmenOznamAuta } from './auto-nabija.js';
+import { zmenOznamBojlera } from './bojler-oznam.js';
+import { zmenOznamZasuvky } from './zasuvka-oznam.js';
 import { bojlerPecat, ulozHranicuBojlera, zdielajPecat } from './data.js';
 import { nastavOznamenia, vypniOznamenia } from './oznamenia.js';
 import { zacniOdznova } from './ucenie.js';
@@ -54,6 +58,7 @@ export function initNastavenie(store, dom, refresh) {
     initBojler(store, dom);
     initKlima(store, dom);
     initZasuvka(store, dom);
+    initOkno(store, dom);
     initLook(store, dom);
     initOznam(store, dom);
     initAppSheets(store, dom);
@@ -79,16 +84,56 @@ function initFolds(store, dom) {
 const APP = './';
 
 /**
- * Čo máš doma: spotrebič pridá či uberie a uloží (doma-v1).
+ * Čo máš doma (docs/navrhy/nastavenie-co-mas-doma.html): prepínač vec pridá či uberie a uloží (doma-v1), riadok pripojenia
+ * otvorí okno veci (krok navigácie). Vypnutá vec vypne aj oznámenia tohto telefónu, ktoré k nej patria (P1) - inak by
+ * chodili ďalej a vypínač by nebolo kde nájsť. Oznámenie o konci platí pre všetky zásuvky, preto sa vypne, len keď
+ * zapnutý neostal žiadny spotrebič so zásuvkou.
  * @param {Store} store @param {Dom} dom
  */
 function initDoma(store, dom) {
     dom.nsDoma.addEventListener('click', (e) => {
-        const btn = e.target instanceof Element ? e.target.closest('[data-device]') : null;
-        if (!(btn instanceof HTMLElement) || !btn.dataset.device) return;
-        const doma = prepniSpotrebic(store.get().doma, btn.dataset.device);
+        const el = e.target instanceof Element ? e.target : null;
+        const okno = el?.closest('[data-ns-okno]');
+        const sheet = okno instanceof HTMLElement && NS_OKNA.find((o) => o === okno.dataset.nsOkno);
+        const nic = /** @type {const} */ ({ stav: 'nic', text: '', schranka: false });
+        if (sheet) return store.setState({ appSheet: sheet, ...(sheet.startsWith('zasuvka:') ? { zasuvkaSkript: nic } : {}) });
+        const btn = el?.closest('[data-device]');
+        if (!(btn instanceof HTMLButtonElement) || btn.disabled || !btn.dataset.device) return;
+        const id = btn.dataset.device;
+        const doma = prepniSpotrebic(store.get().doma, id);
         saveDoma(doma);
         store.setState({ doma });
+        if (!doma.includes(id)) vypniOznamyVeci(store, id, doma);
+    });
+}
+
+/**
+ * Oznámenia vypnutej veci `id` (P1). @param {Store} store @param {string} id @param {readonly string[]} doma voľba po vypnutí
+ */
+function vypniOznamyVeci(store, id, doma) {
+    const s = store.get();
+    if (id === 'auto') vypniOznamAuta(store);
+    if (id === 'bojler' && s.bojlerOznam) zmenOznamBojlera(store, false);
+    const zasuvky = s.zasuvky ?? {};
+    const inaZasuvka = ZASUVKA.veci.some((v) => v !== id && doma.includes(v) && !!zasuvky[v]);
+    if (ZASUVKA.veci.includes(id) && s.zasuvkaOznam && !inaZasuvka) zmenOznamZasuvky(store, false);
+}
+
+/**
+ * Okno veci: prepínače oznámení (P3) - tie isté ako v paneloch karty Teraz. Zatvorenie (krížik, Escape, ťuknutie vedľa)
+ * je ten istý krok ako tlačidlo Späť.
+ * @param {Store} store @param {Dom} dom
+ */
+function initOkno(store, dom) {
+    initSheet(dom.nsOkno, () => stepBack(store, { appSheet: null }));
+    dom.nsOknoOznam.addEventListener('click', (e) => {
+        const btn = e.target instanceof Element ? e.target.closest('[data-oznam]') : null;
+        if (!(btn instanceof HTMLButtonElement) || btn.disabled) return;
+        const s = store.get();
+        const key = btn.dataset.oznam;
+        if (key === 'bojler') zmenOznamBojlera(store, !s.bojlerOznam);
+        else if (key === 'zasuvka') zmenOznamZasuvky(store, !s.zasuvkaOznam);
+        else if (key === 'z' || key === 'k') zmenOznamAuta(store, key, !(s.autoOznam ?? { z: false, k: false })[key]);
     });
 }
 
@@ -203,22 +248,17 @@ function initKlima(store, dom) {
 }
 
 /**
- * Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html): voľba spotrebiča (len do skriptu, neukladá sa), „Skopíruj
+ * Zásuvka Shelly spotrebiča (docs/navrhy/pracka-zasuvka.html): spotrebič je ten, ktorého okno je otvorené. „Skopíruj
  * skript“ si od Workera vypýta pečať (tá istá ako pre zásuvku bojlera), poskladá skript a dá ho do schránky. Kde schránka
- * nie je, skript ukáže v poli na ručné skopírovanie.
+ * nie je, skript ukáže v poli na ručné skopírovanie. Pole so skriptom zmizne pri každom otvorení okna (initDoma) - mohlo by
+ * byť pre iný spotrebič.
  * @param {Store} store @param {Dom} dom
  */
 function initZasuvka(store, dom) {
-    const nic = /** @type {const} */ ({ stav: 'nic', text: '', schranka: false });
-    dom.nsZasuvkaVec.addEventListener('click', (e) => {
-        const btn = e.target instanceof Element ? e.target.closest('[data-zasuvka]') : null;
-        const vec = btn instanceof HTMLElement ? btn.dataset.zasuvka : undefined;
-        // Starý skript je pre iný spotrebič - pole s ním zmizne.
-        if (vec && vec !== store.get().zasuvkaVec) store.setState({ zasuvkaVec: vec, zasuvkaSkript: nic });
-    });
     dom.nsZasuvkaSkript.addEventListener('click', async () => {
-        const { zdroj, zasuvkaVec } = store.get();
-        if (!zdroj) return;
+        const { zdroj, appSheet } = store.get();
+        const zasuvkaVec = appSheet?.startsWith('zasuvka:') ? appSheet.slice('zasuvka:'.length) : null;
+        if (!zdroj || !zasuvkaVec) return;
         store.setState({ zasuvkaSkript: { stav: 'robim', text: '', schranka: false } });
         const pecat = await bojlerPecat(zdroj.pecat);
         const text = pecat && skriptZasuvky({ url: WORKER_SPOTREBIC_URL, pecat, vec: zasuvkaVec });

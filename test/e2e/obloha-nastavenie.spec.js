@@ -15,7 +15,9 @@ import {
     WORKER_KLIMA_URL,
     WORKER_SPOTREBIC_URL,
     BOJLER_STORAGE_KEY,
+    AUTO_OZNAM_STORAGE_KEY,
     DOMA_STORAGE_KEY,
+    WORKER_AUTO_OZNAM_URL,
     TEPLOMER_STORAGE_KEY,
     OZNAMENIA,
     BEZI_CAKA_STORAGE_KEY,
@@ -41,6 +43,7 @@ import { pripojenieText } from '../../shared/messages-core.js';
 import { autoDetail, autoDlazdicaNabija } from '../../shared/auto-nabija.js';
 import { skriptBojlera } from '../../shared/bojler-skript.js';
 import { klimaStavZ, zHlasenia } from '../../shared/klima.js';
+import { DOMA_TEXTS } from '../../shared/nastavenie-doma.js';
 import { skriptKlimy } from '../../shared/klima-skript.js';
 import { KLIMA_NAST_TEXTS } from '../../shared/nastavenie-klima.js';
 import { ZASUVKA_NAST_TEXTS } from '../../shared/nastavenie-zasuvka.js';
@@ -1026,6 +1029,9 @@ test.describe('bojler na prebytky', () => {
         const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ }, bojler: BOJLER_INFO });
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-doma').click();
+        // Riadenie je okno pod bojlerom (docs/navrhy/nastavenie-co-mas-doma.html, A).
+        await page.locator('#ns-doma [data-ns-okno="bojler"]').click();
+        await expect(page.locator('#ns-okno-title')).toHaveText('Bojler › Riadenie zo zásuvky');
         return errors;
     }
 
@@ -1057,8 +1063,13 @@ test.describe('bojler na prebytky', () => {
         const skript = await page.evaluate(() => /** @type {any} */ (window).__schranka);
         expect(skript).toBe(skriptBojlera({ url: WORKER_BOJLER_URL, pecat: PECAT_ZASUVKY, zapKw: 2.4, vypKw: 2 }));
         await expect(page.locator('#ns-bojler-text')).toBeHidden();
-        const axe = await new AxeBuilder({ page }).include('#ns-bojler').analyze();
+        await expect(page.locator('#ns-bojler-tepl')).toBeHidden();
+        const axe = await new AxeBuilder({ page }).include('#ns-okno').analyze();
         expect(axe.violations).toEqual([]);
+        // Zatvorenie vráti fokus na riadok, ktorý okno otvoril.
+        await page.keyboard.press('Escape');
+        await expect(page.locator('#ns-okno')).toBeHidden();
+        await expect(page.locator('#ns-doma [data-ns-okno="bojler"]')).toBeFocused();
         expect(errors).toEqual([]);
     });
 
@@ -1096,6 +1107,8 @@ test.describe('bojler na prebytky', () => {
         // N2: prepínač ukáže adresu a heslo; bez hesla skript nebude, s heslom ponesie teplomer.
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-doma').click();
+        await page.locator('#ns-doma [data-ns-okno="teplomer"]').click();
+        await expect(page.locator('#ns-bojler-riadenie')).toBeHidden();
         const prepinac = page.locator('#ns-teplomer');
         await expect(page.locator('#ns-teplomer-small')).toHaveText(
             BOJLER_TEXTS.teplomer.voda('52 °C', minutesToTimeStr(localMinutes(new Date(info.voda.at), SITE.timezone))),
@@ -1137,17 +1150,51 @@ test.describe('bojler na prebytky', () => {
             }),
         );
         expect(JSON.stringify(await page.evaluate(() => ({ ...localStorage })))).not.toContain('Tajne-heslo1');
-        await page.locator('#ns-bojler').screenshot({ path: test.info().outputPath('nastavenie-teplomer.png') });
-        expect((await new AxeBuilder({ page }).include('#ns-bojler').analyze()).violations).toEqual([]);
+        await page.locator('#ns-okno').screenshot({ path: test.info().outputPath('nastavenie-teplomer.png') });
+        expect((await new AxeBuilder({ page }).include('#ns-okno').analyze()).violations).toEqual([]);
         expect(errors).toEqual([]);
     });
 
-    test('bez bojlera doma či pri inom meraní sekcia nie je', async ({ page }) => {
+    test('pri inom meraní veci nemajú pripojenia, len prepínač', async ({ page }) => {
         const errors = await openObloha(page);
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-doma').click();
-        await expect(page.locator('#ns-doma')).toBeVisible();
-        await expect(page.locator('#ns-bojler')).toBeHidden();
+        await expect(page.locator('#ns-doma [data-device]')).toHaveCount(6);
+        await expect(page.locator('#ns-doma [data-ns-okno]')).toHaveCount(0);
+        expect(errors).toEqual([]);
+    });
+
+    test('Čo máš doma: bojler riadený zásuvkou sa vypnúť nedá (L5b), vypnutý elektromobil vypne oznámenia (P1)', async ({ page }) => {
+        // V zozname bojler nie je, zásuvka ho však riadi - karta Teraz ho ukazuje, Nastavenie tiež.
+        await page.addInitScript(
+            ([k, v, ka, va]) => {
+                localStorage.setItem(k, v);
+                localStorage.setItem(ka, va);
+            },
+            [DOMA_STORAGE_KEY, JSON.stringify(domaToStored(['auto'])), AUTO_OZNAM_STORAGE_KEY, JSON.stringify({ z: true, k: false })],
+        );
+        await page.route(WORKER_AUTO_OZNAM_URL, (route) => route.fulfill({ json: { ok: true } }));
+        const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ }, bojler: BOJLER_INFO });
+        await page.locator('#nav-nastavenie').click();
+        await page.locator('#ns-fold-doma').click();
+        const bojler = page.locator('#ns-doma [data-device="bojler"]');
+        await expect(bojler).toHaveAttribute('aria-checked', 'true');
+        await expect(bojler).toBeDisabled();
+        await expect(bojler).toContainText(DOMA_TEXTS.zamknute.bojler);
+        await expect(page.locator('#ns-doma [data-ns-okno="bojler"]')).toBeVisible();
+        // P3: oznámenia auta sú aj v okne pod elektromobilom.
+        await expect(page.locator('#ns-doma [data-ns-okno="auto"]')).toContainText('začiatok');
+        await page.locator('#ns-doma [data-ns-okno="auto"]').click();
+        await expect(page.locator('#ns-okno-title')).toHaveText('Elektromobil › Oznámenia o nabíjaní');
+        await expect(page.locator('#ns-okno-oznam [data-oznam="z"]')).toHaveAttribute('aria-checked', 'true');
+        await page.keyboard.press('Escape');
+        // P1: vypnutý elektromobil vypne aj oznámenia tohto telefónu.
+        await page.locator('#ns-doma [data-device="auto"]').click();
+        await expect(page.locator('#ns-doma [data-device="auto"]')).toHaveAttribute('aria-checked', 'false');
+        await expect(page.locator('#ns-doma [data-ns-okno="auto"]')).toHaveCount(0);
+        await expect
+            .poll(() => page.evaluate((k) => localStorage.getItem(k), AUTO_OZNAM_STORAGE_KEY))
+            .toBe(JSON.stringify({ z: false, k: false }));
         expect(errors).toEqual([]);
     });
 
@@ -1461,13 +1508,18 @@ test.describe('bojler na prebytky', () => {
         await expect(page.locator('#tz-vec-oznam')).toBeHidden();
         await page.keyboard.press('Escape');
         // Nastavenie: zásuvka práčky sa ozvala, skript pre sušičku.
+        // Nastavenie: každá zásuvka pod svojím spotrebičom, umývačka (vypnutá) zásuvku nemá (L1).
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-doma').click();
-        await expect(page.locator('#ns-zasuvka')).toBeVisible();
-        await expect(page.locator('#ns-zasuvka-title')).toHaveText(ZASUVKA_NAST_TEXTS.title);
+        await expect(page.locator('#ns-doma [data-ns-okno="zasuvka:pracka"]')).toContainText(DOMA_TEXTS.bezi(2100));
+        await expect(page.locator('#ns-doma [data-ns-okno="zasuvka:susicka"]')).toContainText(DOMA_TEXTS.nepripojena);
+        await expect(page.locator('#ns-doma [data-ns-okno="zasuvka:umyvacka"]')).toHaveCount(0);
+        await page.locator('#ns-doma [data-ns-okno="zasuvka:pracka"]').click();
         await expect(page.locator('#ns-zasuvka-stav')).toHaveText(/^ozvala sa o \d\d:\d\d$/);
-        await page.locator('#ns-zasuvka-vec [data-zasuvka="susicka"]').click();
-        await expect(page.locator('#ns-zasuvka-vec [data-zasuvka="susicka"]')).toHaveAttribute('aria-pressed', 'true');
+        await expect(page.locator('#ns-okno-oznam [data-oznam="zasuvka"]')).toHaveAttribute('aria-checked', 'false');
+        await page.keyboard.press('Escape');
+        await page.locator('#ns-doma [data-ns-okno="zasuvka:susicka"]').click();
+        await expect(page.locator('#ns-okno-title')).toHaveText('Sušička › Zásuvka Shelly');
         await expect(page.locator('#ns-zasuvka-stav')).toHaveText(ZASUVKA_NAST_TEXTS.nikdy);
         await page.locator('#ns-zasuvka-skript').click();
         await expect(page.locator('#ns-zasuvka-sprava')).toHaveText(ZASUVKA_NAST_TEXTS.hotovo[0]);
@@ -1475,8 +1527,12 @@ test.describe('bojler na prebytky', () => {
             skriptZasuvky({ url: WORKER_SPOTREBIC_URL, pecat: PECAT_ZASUVKY, vec: 'susicka' }),
         );
         await expect(page.locator('#ns-zasuvka-kroky li')).toHaveCount(ZASUVKA_NAST_TEXTS.kroky.length);
-        await page.locator('#ns-zasuvka').screenshot({ path: test.info().outputPath('zasuvka-nastavenie.png') });
-        expect((await new AxeBuilder({ page }).include('#ns-zasuvka').analyze()).violations).toEqual([]);
+        await page.locator('#ns-okno').screenshot({ path: test.info().outputPath('zasuvka-nastavenie.png') });
+        expect((await new AxeBuilder({ page }).include('#ns-okno').analyze()).violations).toEqual([]);
+        // Vypnutá sušička svoje okno stratí (L1).
+        await page.keyboard.press('Escape');
+        await page.locator('#ns-doma [data-device="susicka"]').click();
+        await expect(page.locator('#ns-doma [data-ns-okno="zasuvka:susicka"]')).toHaveCount(0);
         expect(errors).toEqual([]);
     });
 
@@ -1509,8 +1565,8 @@ test.describe('bojler na prebytky', () => {
         expect(dopyty[0].behy).toEqual([behVcera]);
         expect(dopyty[0].od).toBe('2026-08-01');
         await page.locator('#nav-nastavenie').click();
-        const doma = page.locator('#ns-fold-doma');
-        if ((await doma.getAttribute('aria-expanded')) !== 'true') await doma.click();
+        const ucenie = page.locator('#ns-fold-ucenie');
+        if ((await ucenie.getAttribute('aria-expanded')) !== 'true') await ucenie.click();
         await expect(page.locator('#ns-ucenie-dni'), 'model od Workera, nie z telefónu').toHaveText(UCENIE_TEXTS.dni(12));
         // Obnova dát v ten istý deň sa Workera nepýta znova.
         await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
@@ -1677,14 +1733,21 @@ test.describe('klimatizácia Daikin (docs/navrhy/klima-daikin.html)', () => {
         const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ } });
         await page.locator('#nav-nastavenie').click();
         await page.locator('#ns-fold-doma').click();
+        // Klimatizácia v zozname nie je, ale jej Shelly sa ozýva: je zapnutá a vypnúť sa nedá (L5b).
+        const klima = page.locator('#ns-doma [data-device="klima"]');
+        await expect(klima).toHaveAttribute('aria-checked', 'true');
+        await expect(klima).toBeDisabled();
+        await page.locator('#ns-doma [data-ns-okno="klima"]').click();
         const sekcia = page.locator('#ns-klima');
         await expect(sekcia).toBeVisible();
-        await expect(page.locator('#ns-klima-title')).toHaveText(KLIMA_NAST_TEXTS.title);
+        await expect(page.locator('#ns-okno-title')).toHaveText('Klimatizácia › Shelly, ktoré ju číta');
         await expect(page.locator('#ns-klima-stav')).toHaveText(/^ozvala sa o \d\d:\d\d$/);
         // Bez adresy skript nebude.
         await page.locator('#ns-klima-skript').click();
         await expect(page.locator('#ns-klima-sprava')).toHaveText(KLIMA_NAST_TEXTS.adresa[0]);
         await page.locator('#ns-klima-ip').fill('10.10.10.148');
+        // Adresa sa uloží pri opustení poľa; okno zdola sa potom zmenší (zmizne hláška) a tlačidlo poskočí.
+        await page.locator('#ns-klima-ip').blur();
         await page.locator('#ns-klima-skript').click();
         await expect(page.locator('#ns-klima-sprava')).toHaveText(KLIMA_NAST_TEXTS.hotovo[0]);
         expect(await page.evaluate(() => /** @type {any} */ (window).__schranka)).toBe(
@@ -1692,7 +1755,7 @@ test.describe('klimatizácia Daikin (docs/navrhy/klima-daikin.html)', () => {
         );
         expect(await page.evaluate((x) => localStorage.getItem(x), KLIMA_STORAGE_KEY)).toBe(JSON.stringify({ ip: '10.10.10.148' }));
         await expect(page.locator('#ns-klima-kroky li')).toHaveCount(KLIMA_NAST_TEXTS.kroky.length);
-        expect((await new AxeBuilder({ page }).include('#ns-klima').analyze()).violations).toEqual([]);
+        expect((await new AxeBuilder({ page }).include('#ns-okno').analyze()).violations).toEqual([]);
         expect(errors).toEqual([]);
     });
 });

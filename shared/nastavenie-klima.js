@@ -21,7 +21,6 @@ export function klimaNastZ(raw) {
 }
 
 export const KLIMA_NAST_TEXTS = {
-    title: 'Klimatizácia Daikin',
     intro: 'Shelly v domácej sieti každú minútu prečíta stav klimatizácie a pošle ho appke. Klimatizáciu nijako neriadi.',
     ip: 'Adresa klimatizácie v domácej sieti',
     stav: 'Klimatizácia',
@@ -48,14 +47,14 @@ export const KLIMA_NAST_TEXTS = {
     ]),
     kroky: /** @type {Array<[string, string]>} */ ([
         [
-            'V prehliadači otvor Shelly s teplomerom cez jeho adresu v domácej sieti a choď do Scripts › Create script.',
-            'V prehliadači otvorte Shelly s teplomerom cez jeho adresu v domácej sieti a choďte do Scripts › Create script.',
+            'V prehliadači otvor Shelly, ktoré má klimatizáciu čítať, cez jeho adresu v domácej sieti a choď do Scripts › Create script.',
+            'V prehliadači otvorte Shelly, ktoré má klimatizáciu čítať, cez jeho adresu v domácej sieti a choďte do Scripts › Create script.',
         ],
         ['Vlož skopírovaný text a ulož ho.', 'Vložte skopírovaný text a uložte ho.'],
         ['Zapni Run on startup a skript spusti.', 'Zapnite Run on startup a skript spustite.'],
         [
-            'Skript patrí do iného Shelly než skript bojlera, nie do zásuvky s bojlerom.',
-            'Skript patrí do iného Shelly než skript bojlera, nie do zásuvky s bojlerom.',
+            'Hodí sa Shelly, ktoré je v sieti stále zapnuté, napr. to s teplomerom v bojleri. Do zásuvky s bojlerom ani so spotrebičom skript nepatrí.',
+            'Hodí sa Shelly, ktoré je v sieti stále zapnuté, napr. to s teplomerom v bojleri. Do zásuvky s bojlerom ani so spotrebičom skript nepatrí.',
         ],
     ]),
 };
@@ -73,7 +72,7 @@ function kedy(at, now, tz) {
  * Riadok o klimatizácii: kedy sa ozvala; tón ako stav merania (`ok` hlási, `stale` mlčí, `wait` ešte sa neozvala).
  * @param {{ at: number } | null} k @param {Date} now @param {string} tz
  */
-function stavKlimy(k, now, tz) {
+export function stavKlimy(k, now, tz) {
     const T = KLIMA_NAST_TEXTS;
     if (!k) return { tone: 'wait', text: T.nikdy };
     return klimaSpojena(k, now.getTime())
@@ -98,7 +97,6 @@ export function klimaSekcia(s) {
         sk.stav
     ];
     return {
-        title: T.title,
         intro: T.intro,
         ipLabel: T.ip,
         ip: s.klimaNast?.ip ?? '',

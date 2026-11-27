@@ -119,7 +119,7 @@ ten istý `render`, zavolaný na chvíľu so susedným dňom v stave. Posun poč
 kam pás po pustení dobehne, rozhodne `shared/day-pager.js` a do stavu ide až výsledný deň.
 `storage.js` ukladá nastavenie elektrárne do `localStorage` (`settings-store.js` ho znova vyváža a pridáva zrkadlenie do adresy). Kartu Nastavenie tvorí
 prehľad a sprievodca nastavením elektrárne (`setup-interactions.js`, `render/nastavenie.js`). Prehľad –
-výzva, hlásenie o prístupe, karta elektrárne a sekcie Elektráreň, Čo máš doma, Oznámenia, Vzhľad
+výzva, hlásenie o prístupe, karta elektrárne a sekcie Elektráreň, Čo máš doma, Učenie z histórie, Oznámenia, Vzhľad
 a Appka – skladá pre obe appky jeden model `shared/nastavenie.js` (poradie `NASTAVENIE_SEKCIE`
 v `shared/config.js`, návrh `docs/navrhy/nastavenie-zjednotenie.html`); súčasná appka ho kreslí
 v `render/prehlad.js`, poslucháče má `prehlad-interactions.js`. Sekcia Appka bola kedysi samostatnou
@@ -127,7 +127,9 @@ kartou Info; odtiaľ názvy `infoOpen`, `INFO_ITEMS` a id `info-share`, ktoré o
 nemenil stav ani HTML. `INFO_ITEMS` dnes zahŕňa všetky rozbaľovacie položky karty (Elektráreň,
 Čo máš doma, Oznámenia, Vzhľad, Zdieľať appku, Vymazať údaje): rozbalená je najviac jedna a je
 krokom navigácie, takže ju tlačidlo Späť zbalí. Nová appka má to isté pre svoje sekcie Nastavenia (`nsOpen`, `NS_FOLDS`
-v `web/state.js`, v kroku histórie `fold`), so zbaliteľnou hlavičkou ako Plán dňa. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
+v `web/state.js`, v kroku histórie `fold`), so zbaliteľnou hlavičkou ako Plán dňa. Čo máš doma sú veci s prepínačom a pod
+zapnutou riadky jej pripojení (`shared/nastavenie-doma.js`); riadok otvorí okno veci `#ns-okno` - to je `appSheet`
+s hodnotou z `NS_OKNA`, krok navigácie rovnako ako Zdieľať appku. Popup s návodom k ciferníku zanikol s ciferníkom; položka histórie, ktorá
 ho ešte nesie (`guide`), sa vráti na kartu bez neho. Sprievodca ukazuje vždy jednu obrazovku (`setupStep` a plocha
 `setupRoof` v stave); poradie obrazoviek a to, či sa z nich dá ísť ďalej, je v
 `shared/setup.js`. Obrazovka je krok navigácie, takže tlačidlo Späť na telefóne vracia

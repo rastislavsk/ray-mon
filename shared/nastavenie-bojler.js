@@ -33,7 +33,6 @@ export function teplomerZ(raw) {
 const inVoice = (t, voice) => (typeof t === 'string' ? t : t[polite(voice) ? 1 : 0]);
 
 export const BOJLER_TEXTS = {
-    title: 'Bojler na prebytky',
     intro: 'Zásuvka Shelly s bojlerom ho zapne, keď strecha posiela do siete dosť, a vypne, keď prebytok klesne. Beží aj bez telefónu.',
     zap: 'Zapni od',
     vyp: 'Vypni pod',
@@ -117,10 +116,10 @@ function kedy(at, now, tz) {
 
 /**
  * Riadok o zásuvke: kedy sa ozvala a čo robí bojler; tón ako stav merania (`ok` beží, `stale`
- * mlčí, `wait` ešte sa neozvala - tlmené).
+ * mlčí, `wait` ešte sa neozvala - tlmené). Píše ho okno bojlera aj riadok Riadenie zo zásuvky v Čo máš doma.
  * @param {BojlerInfo | null} b @param {Date} now @param {string} tz
  */
-function stavZasuvky(b, now, tz) {
+export function stavRiadenia(b, now, tz) {
     const T = BOJLER_TEXTS;
     if (!b) return { tone: 'wait', text: T.nikdy };
     const stav = bojlerStav(b, now.getTime());
@@ -140,6 +139,18 @@ function stavTeplomera(b, on, now, tz) {
     if (voda) return T.voda(stupne(voda.t), kedy(voda.at, now, tz));
     if (b?.voda) return T.mlci(kedy(b.voda.at, now, tz));
     return on ? T.caka : T.small;
+}
+
+/**
+ * Riadok Teplomer v Čo máš doma (pri zapnutom teplomeri): posledná teplota s hranicou, odkedy mlčí, alebo že teplotu ešte
+ * nemá. @param {BojlerInfo | null} b @param {Date} now @param {string} tz @returns {{ tone: string, text: string }}
+ */
+export function teplomerRiadok(b, now, tz) {
+    const voda = b ? vodaTeraz(b, now.getTime()) : null;
+    const text = stavTeplomera(b, true, now, tz);
+    if (!voda) return { tone: b?.voda ? 'stale' : 'wait', text };
+    const h = b?.hranica ?? null;
+    return { tone: 'ok', text: h === null ? text : `${text} · ${BOJLER_TEXTS.hranica.label.toLowerCase()} ${stupne(h)}` };
 }
 
 /**
@@ -217,14 +228,13 @@ export function bojlerSekcia(s) {
     // `?? `: starý web/state.js z cache po nasadení teplomer nemá (CLAUDE.md, Nasadenie a cache).
     const tp = s.teplomer ?? teplomerZ(null);
     return {
-        title: T.title,
         intro: T.intro,
         prahSmall: T.prahSmall,
         menej: T.menej,
         viac: T.viac,
         prahy: [prah('zapKw', T.zap), prah('vypKw', T.vyp)],
         zasuvka: T.zasuvka,
-        stav: stavZasuvky(b, s.now, s.site.timezone),
+        stav: stavRiadenia(b, s.now, s.site.timezone),
         ine,
         tlacidlo: v(T.tlacidlo),
         robim: sk.stav === 'robim',

@@ -4,6 +4,7 @@
 
 import { BOJLER, LAYOUT_PX, MOZEM_ITEMS, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
 import { domaDefault } from '../shared/doma.js';
+import { NS_OKNA } from '../shared/nastavenie-doma.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
@@ -20,7 +21,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, a `incoming` nastavenie
  * z otvoreného odkazu, ktoré čaká na potvrdenie. `voice` je tón hlášok a `liveSky` živá obloha (Nastavenie › Vzhľad), `appSheet`
- * otvorené okno sekcie Appka (Zdieľať appku, potvrdenie Vymazať údaje), `nsOpen` rozbalená sekcia
+ * otvorené okno karty Nastavenie (Zdieľať appku, potvrdenie Vymazať údaje, okno veci z Čo máš doma - NS_OKNA), `nsOpen` rozbalená sekcia
  * karty Nastavenie (NS_FOLDS; pri štarte sú všetky zbalené) a `shareSettings`,
  * `shareKiosk` voľby zdieľania - pribaliť nastavenie elektrárne, k nemu aj prístup k živému meraniu (`sharePecat` pečať na čas, ktorú naň vydal Worker; `shareKioskFail` nevydal ju). Polia sprievodcu nastavením (setup…, settings…, geo) sú tie isté
  * a mení ich ten istý kód (shared/setup-flow.js). `layout` je rozloženie podľa šírky okna (layoutOf).
@@ -31,7 +32,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * @typedef {'narrow' | 'medium' | 'wide'} Layout
  * @typedef {'nacitavam' | 'ok' | 'chyba' | 'mimo' | 'bezpolohy'} RadarStav
  * @typedef {'day' | 'week'} WeekDetail
- * @typedef {'share' | 'reset'} AppSheet
+ * @typedef {'share' | 'reset' | import('../shared/nastavenie-doma.js').NsOkno} AppSheet
  * @typedef {'tok'} TzChip
  * @typedef {{ id: string, d: string, behy: import('../shared/bezi.js').Zapis[], k: number | null }} VecBublina
  * @typedef {'dnes' | 'zajtra'} MzChip
@@ -100,7 +101,6 @@ import { setupInit } from '../shared/setup-flow.js';
  *   zasuvky: Record<string, import('../shared/zasuvka.js').ZasuvkaInfo>,
  *   zasuvkaOznam: boolean,
  *   zasuvkaOznamStav: 'uklada' | 'zakazane' | 'chyba' | null,
- *   zasuvkaVec: string,
  *   zasuvkaSkript: import('../shared/nastavenie-klima.js').KlimaSkript,
  * }} AppState
  * @typedef {ReturnType<typeof import('./store.js').createStore<AppState>>} Store
@@ -191,7 +191,6 @@ const telefon = ({
     zasuvky: /** @type {Record<string, import('../shared/zasuvka.js').ZasuvkaInfo>} */ ({}),
     zasuvkaOznam,
     zasuvkaOznamStav: /** @type {'uklada' | 'zakazane' | 'chyba' | null} */ (null),
-    zasuvkaVec: 'pracka',
     zasuvkaSkript: /** @type {import('../shared/nastavenie-klima.js').KlimaSkript} */ ({ stav: 'nic', text: '', schranka: false }),
 });
 
@@ -425,10 +424,11 @@ const ROVNAKE_V_KROKU = ['detail', 'setup', 'roof', 'sheet', 'fold', 'vec', 'chi
 const weekDetailOf = (panel, dash, detail) => ((panel === '7dni' || dash) && (detail === 'day' || detail === 'week') ? detail : null);
 
 /**
- * Okno sekcie Appka z položky histórie. Patrí len karte Nastavenie; položka zo skoršej verzie ho nemá.
+ * Okno karty Nastavenie z položky histórie. Patrí len tej karte; položka zo skoršej verzie ho nemá.
  * @param {Panel} panel @param {unknown} sheet @returns {AppSheet | null}
  */
-const appSheetOf = (panel, sheet) => (panel === 'nastavenie' && (sheet === 'share' || sheet === 'reset') ? sheet : null);
+const appSheetOf = (panel, sheet) =>
+    (panel === 'nastavenie' && (sheet === 'share' || sheet === 'reset' ? sheet : NS_OKNA.find((o) => o === sheet))) || null;
 
 /**
  * Rozbalená sekcia karty Nastavenie z položky histórie. Patrí len tej karte; položka zo skoršej

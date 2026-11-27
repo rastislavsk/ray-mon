@@ -1,17 +1,15 @@
-// Nastavenie › Čo máš doma › Spotrebič na zásuvke (docs/navrhy/pracka-zasuvka.html, A + S2): ktorý spotrebič je na
-// zásuvke Shelly, kedy sa jeho zásuvka naposledy ozvala a skript do nej. Len pri meraní Huawei Northbound - beh rozozná
+// Nastavenie › Čo máš doma › spotrebič › Zásuvka Shelly (docs/navrhy/pracka-zasuvka.html, A + S2;
+// docs/navrhy/nastavenie-co-mas-doma.html, A): kedy sa zásuvka spotrebiča naposledy ozvala a skript do nej. Len pri meraní Huawei Northbound - beh rozozná
 // Durable Object účtu. Čistá funkcia - stav dostane, texty vráti.
 
-import { MOZEM_ITEMS, ZASUVKA } from './config.js';
+import { ZASUVKA } from './config.js';
 import { minutesToTimeStr } from './format.js';
 import { polite } from './messages-core.js';
 import { localDateKey, localMinutes } from './solar.js';
 import { meria } from './zasuvka.js';
 
 export const ZASUVKA_NAST_TEXTS = {
-    title: 'Spotrebič na zásuvke Shelly',
     intro: 'Zásuvka každú minútu pošle appke, koľko spotrebič berie. Appka z toho vie, kedy beží a kedy dobehol. Zásuvku nikdy nevypne.',
-    vec: 'Čo je na zásuvke',
     stav: 'Zásuvka',
     nikdy: 'ešte sa neozvala',
     ok: (/** @type {string} */ kedy) => `ozvala sa o ${kedy}`,
@@ -54,11 +52,11 @@ function kedy(at, now, tz) {
 }
 
 /**
- * Riadok o zásuvke: kedy sa ozvala; tón ako stav merania (`ok` hlási, `stale` mlčí, `wait` ešte sa neozvala).
+ * Riadok o zásuvke spotrebiča `vec`: kedy sa ozvala; tón ako stav merania (`ok` hlási, `stale` mlčí, `wait` ešte sa neozvala).
  * @param {{ zasuvky?: Record<string, import('./zasuvka.js').ZasuvkaInfo>, now: Date, site: { timezone: string } }} s
  * @param {string} vec
  */
-function stavZasuvky(s, vec) {
+export function stavZasuvky(s, vec) {
     const T = ZASUVKA_NAST_TEXTS;
     const z = s.zasuvky?.[vec];
     if (!z) return { tone: 'wait', text: T.nikdy };
@@ -67,7 +65,7 @@ function stavZasuvky(s, vec) {
 }
 
 /**
- * Sekcia spotrebiča na zásuvke, alebo null pri inom zdroji merania než Huawei Northbound. Polia môžu chýbať: starý
+ * Okno zásuvky spotrebiča `zasuvkaVec` (ten, pod ktorým je riadok v Čo máš doma), alebo null pri inom zdroji merania než Huawei Northbound. Polia môžu chýbať: starý
  * web/state.js z cache po nasadení ich nemá (CLAUDE.md, Nasadenie a cache).
  * @param {{ zdroj: { sposob: string } | null, zasuvky?: Record<string, import('./zasuvka.js').ZasuvkaInfo>, zasuvkaVec?: string,
  *   zasuvkaSkript?: import('./nastavenie-klima.js').KlimaSkript, now: Date, site: { timezone: string },
@@ -82,10 +80,7 @@ export function zasuvkaSekcia(s) {
     const sk = s.zasuvkaSkript ?? { stav: 'nic', text: '', schranka: false };
     const sprava = { nic: '', robim: T.robim, hotovo: v(sk.schranka ? T.hotovo : T.rucne), chyba: v(T.chyba), adresa: v(T.chyba) }[sk.stav];
     return {
-        title: T.title,
         intro: T.intro,
-        vecLabel: T.vec,
-        veci: ZASUVKA.veci.map((id) => ({ id, label: MOZEM_ITEMS.find((i) => i.id === id)?.device ?? id, on: id === vec })),
         stavLabel: T.stav,
         stav,
         tlacidlo: v(T.tlacidlo),

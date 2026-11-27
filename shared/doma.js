@@ -4,8 +4,14 @@
 import { MOZEM_ITEMS, PLAN_DNA } from './config.js';
 import { isObj } from './valid.js';
 
-/** Spotrebiče, ktoré sa dajú vybrať: veci karty Môžem?, ktoré majú spotrebič. */
-export const DOMA_DEVICES = MOZEM_ITEMS.filter((i) => i.device).map((i) => i.id);
+/**
+ * Čo sa dá vybrať: veci karty Môžem?, ktoré majú spotrebič, a klimatizácia - tá v Pláne dňa nie je, appka ju len sleduje
+ * (docs/navrhy/klima-daikin.html, docs/navrhy/nastavenie-co-mas-doma.html).
+ */
+export const DOMA_DEVICES = [...MOZEM_ITEMS.filter((i) => i.device).map((i) => i.id), 'klima'];
+
+/** Verzia uloženej voľby: od 2 pozná klimatizáciu (staršia ju nemohla mať, appka ju raz doplní podľa adresy). */
+const DOMA_VERZIA = 2;
 
 /**
  * Pred prvou voľbou: spotrebiče plánu dňa a auto - to v pláne nie je, ale karta Teraz ukáže, koľko by dalo slnko
@@ -32,12 +38,15 @@ function jsonOf(raw) {
 }
 
 /**
- * Uložená voľba `{ devices }` (JSON z úložiska). Poškodená alebo chýbajúca je predvolená.
- * @param {string | null} raw @returns {string[]}
+ * Uložená voľba `{ devices, v }` (JSON z úložiska). Poškodená alebo chýbajúca je predvolená. Voľba spred verzie 2 klimatizáciu
+ * poznať nemohla: kto má zadanú jej adresu (`klimaAdresa`), ten ju má.
+ * @param {string | null} raw @param {boolean} [klimaAdresa] @returns {string[]}
  */
-export function parseDoma(raw) {
+export function parseDoma(raw, klimaAdresa = false) {
     const v = jsonOf(raw);
-    return (isObj(v) && devicesOf(v.devices)) || domaDefault();
+    const devices = (isObj(v) && devicesOf(v.devices)) || domaDefault();
+    const stara = !isObj(v) || v.v !== DOMA_VERZIA;
+    return stara && klimaAdresa && !devices.includes('klima') ? [...devices, 'klima'] : devices;
 }
 
 /**
@@ -51,7 +60,7 @@ export function domaZOznameni(rawOznamenia) {
 }
 
 /** Voľba v tvare na uloženie. @param {readonly string[]} devices */
-export const domaToStored = (devices) => ({ devices: [...devices] });
+export const domaToStored = (devices) => ({ devices: [...devices], v: DOMA_VERZIA });
 
 /** Pridá či uberie spotrebič. @param {readonly string[]} devices @param {string} id @returns {string[]} */
 export const prepniSpotrebic = (devices, id) => (devices.includes(id) ? devices.filter((d) => d !== id) : [...devices, id]);

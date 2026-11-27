@@ -317,12 +317,13 @@ export function saveOdberAt(at) {
 
 /**
  * Spotrebiče doma (DOMA_STORAGE_KEY); bez úložiska predvolené. Kým vlastné miesto nemali, boli
- * v nastavení oznámení - odtiaľ sa pri prvom načítaní raz presunú, aby nikto neprišiel o voľbu.
+ * v nastavení oznámení - odtiaľ sa pri prvom načítaní raz presunú, aby nikto neprišiel o voľbu. Voľba spred klimatizácie
+ * ju dostane, keď je zadaná jej adresa.
  * @returns {string[]}
  */
 export function loadDoma() {
     const raw = read(DOMA_STORAGE_KEY);
-    if (raw !== null) return parseDoma(raw);
+    if (raw !== null) return parseDoma(raw, !!loadKlimaNast().ip);
     const stare = domaZOznameni(read(OZNAMENIA_STORAGE_KEY));
     if (!stare) return parseDoma(null);
     saveDoma(stare);

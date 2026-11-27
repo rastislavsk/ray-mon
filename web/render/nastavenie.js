@@ -94,31 +94,75 @@ function renderHome(state, m, dom) {
     );
 }
 
-/** Čo máš doma: spotrebiče a pri bojleri riadenie podľa prebytkov. @param {Model} m @param {Dom} dom */
+/**
+ * Riadky Čo máš doma (docs/navrhy/nastavenie-co-mas-doma.html, A): vec s prepínačom a pod zapnutou jej pripojenia so stavom,
+ * ktoré otvoria okno veci. Zamknutá vec (L5b) má prepínač vypnutý pre ťuknutie a pod menom prečo.
+ * @param {Model['doma']['veci']} veci
+ */
+const domaHtml = (veci) =>
+    veci
+        .map((v) => {
+            const zamk = v.zamknute ? `<small>${escapeHtml(v.zamknute)}</small>` : '';
+            const vec =
+                `<button type="button" class="it" role="switch" data-device="${v.id}" aria-checked="${v.on}"${v.zamknute ? ' disabled' : ''}>` +
+                `<span><b>${escapeHtml(v.name)}</b>${zamk}</span><i class="tg" aria-hidden="true"></i></button>`;
+            const pod = v.pripojenia
+                .map(
+                    (p) =>
+                        `<button type="button" class="it ns-pod" data-ns-okno="${p.okno}" aria-haspopup="dialog">` +
+                        `<span><b>${escapeHtml(p.label)}</b><small><span data-tone="${p.stav.tone}">${escapeHtml(p.stav.text)}</span></small></span>` +
+                        `<span aria-hidden="true">›</span></button>`,
+                )
+                .join('');
+            return vec + pod;
+        })
+        .join('');
+
+/** Čo máš doma: veci s pripojeniami. Okno veci kreslí renderOkno. @param {Model} m @param {Dom} dom */
 function renderDoma(m, dom) {
     setText(dom.nsDomaTitle, m.doma.title);
     setText(dom.nsDomaHint, m.doma.hint);
-    setHtml(dom.nsDoma, minisHtml(m.doma.devices.map((d) => ({ attr: `data-device="${d.id}"`, label: d.name, on: d.on }))));
+    setHtml(dom.nsDoma, domaHtml(m.doma.veci));
     setText(dom.nsDomaNote, m.doma.note);
-    renderUcenie(m.doma.ucenie, dom);
-    renderBojler(m.doma.bojler, dom);
-    renderKlima(m.doma.klima, dom);
-    // `?? null`: model zo starého shared/nastavenie.js z cache po nasadení sekciu nemá.
-    renderZasuvka(m.doma.zasuvka ?? null, dom);
+    renderUcenie(m.ucenie, dom);
 }
 
 /**
- * Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html): ktorý spotrebič, kedy sa zásuvka ozvala, skript a kroky.
+ * Okno veci (docs/navrhy/nastavenie-co-mas-doma.html, A + P3): nadpis, prepínače oznámení a časť - riadenie bojlera,
+ * teplomer, klimatizácia, zásuvka spotrebiča; auto má len oznámenia. Otvára a zatvára ho renderAppSheets.
+ * @param {NonNullable<Model['doma']['okno']>} o @param {Dom} dom
+ */
+function renderOkno(o, dom) {
+    setText(dom.nsOknoTitle, o.title);
+    setHtml(
+        dom.nsOknoOznam,
+        o.prepinace
+            .map(
+                (x) =>
+                    `<button type="button" class="it" role="switch" data-oznam="${x.key}" aria-checked="${x.on}"${o.busy ? ' disabled' : ''}>` +
+                    `<span><b>${escapeHtml(x.label)}</b>${x.small ? `<small>${escapeHtml(x.small)}</small>` : ''}</span>` +
+                    '<i class="tg" aria-hidden="true"></i></button>',
+            )
+            .join(''),
+    );
+    show(dom.nsOknoOznamChyba, !!o.chyba);
+    setText(dom.nsOknoOznamChyba, o.chyba);
+    renderBojler(o.bojler, dom);
+    show(dom.nsBojlerRiadenie, o.cast === 'bojler');
+    show(dom.nsBojlerTepl, o.cast === 'teplomer');
+    renderKlima(o.klima, dom);
+    renderZasuvka(o.zasuvka, dom);
+}
+
+/**
+ * Zásuvka Shelly spotrebiča (docs/navrhy/pracka-zasuvka.html): kedy sa ozvala, skript a kroky.
  * Tlačidlá obsluhuje web/nastavenie-interactions.js.
- * @param {Model['doma']['zasuvka'] | null} z @param {Dom} dom
+ * @param {NonNullable<Model['doma']['okno']>['zasuvka']} z @param {Dom} dom
  */
 function renderZasuvka(z, dom) {
     show(dom.nsZasuvka, !!z);
     if (!z) return;
-    setText(dom.nsZasuvkaTitle, z.title);
     setText(dom.nsZasuvkaIntro, z.intro);
-    setText(dom.nsZasuvkaVecL, z.vecLabel);
-    setHtml(dom.nsZasuvkaVec, minisHtml(z.veci.map((x) => ({ attr: `data-zasuvka="${x.id}"`, label: x.label, on: x.on }))));
     setText(dom.nsZasuvkaStavL, z.stavLabel);
     setHtml(dom.nsZasuvkaStav, `<span data-tone="${z.stav.tone}">${escapeHtml(z.stav.text)}</span>`);
     setText(dom.nsZasuvkaSkript, z.tlacidlo);
@@ -134,12 +178,11 @@ function renderZasuvka(z, dom) {
 /**
  * Klimatizácia Daikin (docs/navrhy/klima-daikin.html): adresa v domácej sieti, kedy sa ozvala, skript na Shelly a kroky.
  * Tlačidlo a pole obsluhuje web/nastavenie-interactions.js.
- * @param {Model['doma']['klima']} k @param {Dom} dom
+ * @param {NonNullable<Model['doma']['okno']>['klima']} k @param {Dom} dom
  */
 function renderKlima(k, dom) {
     show(dom.nsKlima, !!k);
     if (!k) return;
-    setText(dom.nsKlimaTitle, k.title);
     setText(dom.nsKlimaIntro, k.intro);
     setText(dom.nsKlimaIpL, k.ipLabel);
     // Kým človek píše, pole neprepisovať - adresa sa uloží až pri opustení poľa.
@@ -159,12 +202,11 @@ function renderKlima(k, dom) {
 /**
  * Bojler na prebytky: prahy s tlačidlami menej a viac, stav zásuvky, skript a kroky, ako ho nahrať.
  * Tlačidlá obsluhuje web/nastavenie-interactions.js.
- * @param {Model['doma']['bojler']} b @param {Dom} dom
+ * @param {NonNullable<Model['doma']['okno']>['bojler']} b @param {Dom} dom
  */
 function renderBojler(b, dom) {
     show(dom.nsBojler, !!b);
     if (!b) return;
-    setText(dom.nsBojlerTitle, b.title);
     setText(dom.nsBojlerIntro, b.intro);
     setHtml(
         dom.nsBojlerPrahy,
@@ -294,30 +336,54 @@ function renderQr(url, dom) {
 
 /** Okno sekcie Appka, ktoré je práve otvorené - po zatvorení sa fokus vráti na jeho riadok. @type {HTMLElement | null} */
 let opener = null;
+/** Okno veci, ktoré je otvorené - riadok pripojenia render skladá nanovo, fokus sa vráti na ten s týmto oknom. @type {string | null} */
+let oknoOd = null;
+
+/** Zdieľať appku: texty, voľby, odkaz a QR kód. @param {AppState} state @param {Model} m @param {Dom} dom */
+function renderShare(state, m, dom) {
+    const t = m.share;
+    setText(dom.nsShareTitle, t.title);
+    setText(dom.nsShareText, t.text);
+    show(dom.nsShareOpts, t.options);
+    dom.nsShareSettings.checked = t.settingsOn;
+    setText(dom.nsShareSettingsLabel, t.settings);
+    dom.nsShareKiosk.checked = t.kioskOn;
+    setText(dom.nsShareKioskLabel, t.kiosk);
+    show(dom.nsShareKioskRow, t.kioskShown);
+    setText(dom.nsShareWa, t.wa);
+    const url = currentShareUrl(state);
+    dom.nsShareLink.href = url;
+    setText(dom.nsShareLink, url);
+    dom.nsShareWa.href = `https://wa.me/?text=${encodeURIComponent(url)}`;
+    renderQr(url, dom);
+}
 
 /**
- * Okná sekcie Appka podľa stavu: otvorí, prekreslí a zavrie. Okno patrí karte Nastavenie.
+ * Otvorí či zavrie dialóg podľa stavu; po zatvorení vráti fokus na to, čo ho otvorilo.
+ * @param {HTMLDialogElement} d @param {boolean} on @param {() => HTMLElement | null} from @param {boolean} naKarte
+ */
+function prepniDialog(d, on, from, naKarte) {
+    if (on && !d.open) {
+        d.showModal();
+        opener = d;
+    } else if (!on && d.open) {
+        d.close();
+        if (opener === d && naKarte) from()?.focus();
+        if (opener === d) opener = null;
+    }
+}
+
+/**
+ * Okná karty Nastavenie podľa stavu: Zdieľať appku, Vymazať údaje a okno veci z Čo máš doma. Otvorí, prekreslí a zavrie.
  * @param {AppState} state @param {Model} m @param {Dom} dom
  */
 function renderAppSheets(state, m, dom) {
     const sheet = state.panel === 'nastavenie' ? state.appSheet : null;
-    const share = sheet === 'share';
-    if (share) {
-        const t = m.share;
-        setText(dom.nsShareTitle, t.title);
-        setText(dom.nsShareText, t.text);
-        show(dom.nsShareOpts, t.options);
-        dom.nsShareSettings.checked = t.settingsOn;
-        setText(dom.nsShareSettingsLabel, t.settings);
-        dom.nsShareKiosk.checked = t.kioskOn;
-        setText(dom.nsShareKioskLabel, t.kiosk);
-        show(dom.nsShareKioskRow, t.kioskShown);
-        setText(dom.nsShareWa, t.wa);
-        const url = currentShareUrl(state);
-        dom.nsShareLink.href = url;
-        setText(dom.nsShareLink, url);
-        dom.nsShareWa.href = `https://wa.me/?text=${encodeURIComponent(url)}`;
-        renderQr(url, dom);
+    if (sheet === 'share') renderShare(state, m, dom);
+    const okno = sheet && m.doma.okno?.id === sheet ? m.doma.okno : null;
+    if (okno) {
+        renderOkno(okno, dom);
+        oknoOd = okno.id;
     }
     if (sheet === 'reset') {
         setText(dom.nsResetTitle, m.clear.ask);
@@ -325,19 +391,10 @@ function renderAppSheets(state, m, dom) {
         setText(dom.nsResetOk, m.clear.ok);
         setText(dom.nsResetCancel, m.clear.cancel);
     }
-    for (const [d, on, from] of /** @type {const} */ ([
-        [dom.nsShareSheet, share, dom.nsShare],
-        [dom.nsResetSheet, sheet === 'reset', dom.nsReset],
-    ])) {
-        if (on && !d.open) {
-            d.showModal();
-            opener = from;
-        } else if (!on && d.open) {
-            d.close();
-            if (opener === from && state.panel === 'nastavenie') from.focus();
-            if (opener === from) opener = null;
-        }
-    }
+    const naKarte = state.panel === 'nastavenie';
+    prepniDialog(dom.nsShareSheet, sheet === 'share', () => dom.nsShare, naKarte);
+    prepniDialog(dom.nsResetSheet, sheet === 'reset', () => dom.nsReset, naKarte);
+    prepniDialog(dom.nsOkno, !!okno, () => dom.nsDoma.querySelector(`[data-ns-okno="${oknoOd}"]`), naKarte);
 }
 
 /** Zbaliteľné sekcie: rozbalená je najviac jedna (nsOpen). @param {AppState} state @param {Dom} dom */
@@ -350,13 +407,11 @@ function renderFolds(state, dom) {
 }
 
 /**
- * Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): z koľkých dní, strecha oproti predpovedi a dom
- * ako malé grafy, potreba bojlera a „Začať odznova“.
- * @param {ReturnType<typeof nastavenieModel>['doma']['ucenie']} u @param {Dom} dom
+ * Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B), vlastná sekcia: z koľkých dní, strecha oproti predpovedi
+ * a dom ako malé grafy, potreba bojlera a „Začať odznova“.
+ * @param {Model['ucenie']} u @param {Dom} dom
  */
 function renderUcenie(u, dom) {
-    show(dom.nsUcenie, !!u);
-    if (!u) return;
     setText(dom.nsUcenieTitle, u.nazov);
     setText(dom.nsUcenieDni, u.dni);
     show(dom.nsUcenieZatial, !!u.zatial);

@@ -341,8 +341,8 @@ test.describe('oznámenia', () => {
         await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 8 });
         await page.locator('#ns-fold-doma').click();
         await page.locator('#ns-doma [data-device="bojler"]').click();
-        await expect(page.locator('#ns-doma [data-device="bojler"]')).toHaveAttribute('aria-pressed', 'true');
-        await expect.poll(() => doma(page)).toEqual({ devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
+        await expect(page.locator('#ns-doma [data-device="bojler"]')).toHaveAttribute('aria-checked', 'true');
+        await expect.poll(() => doma(page)).toEqual({ devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'], v: 2 });
         await page.locator('#nav-terazky').click();
         const rows = plan(['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'])?.rows ?? [];
         // Auto je mimo Plánu dňa, jeho dlaždica zo slnka sa nepočíta.
@@ -392,7 +392,7 @@ test.describe('oznámenia', () => {
         await otvor(page, 'granted');
         await expect.poll(() => ulozene(page)).toEqual({ on: false, hour: 9 });
         // Spotrebiče zo staršej verzie sa presunuli do Čo máš doma.
-        expect(await doma(page)).toEqual({ devices: ['pracka'] });
+        expect(await doma(page)).toEqual({ devices: ['pracka'], v: 2 });
     });
     // Push tu oznámenie neukáže (prehliadač bez okna nedá povolenie oznámení) - odber z čias,
     // keď appka bývala v obloha/, musí aspoň naštartovať service worker.
