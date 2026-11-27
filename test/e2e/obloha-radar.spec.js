@@ -75,6 +75,9 @@ async function otvor(page, { mapa = true, site = SITE, model } = {}) {
     return errors;
 }
 
+/** Hlavička pri najnovšej snímke: jej vek od teraz, nie „Teraz“ (docs/navrhy/radar-obnova.html, D1). */
+const NAJNOVSIA = /^Pred \d+ min · meranie$/;
+
 /**
  * Všetko je načítané a dá sa prehrávať. Pri súbežných testoch rozbalí 25 falošných snímok aj za desať sekúnd.
  * @param {import('@playwright/test').Page} page
@@ -87,7 +90,7 @@ async function pripraveny(page) {
 test('Radar: načíta sa, ukáže čas a dá sa ovládať', async ({ page }) => {
     const errors = await otvor(page);
     await pripraveny(page);
-    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    await expect(page.locator('#rd-druh')).toHaveText(NAJNOVSIA);
     await expect(page.locator('#rd-os-svg text')).toHaveCount(5);
     await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť');
     await page.locator('#rd-hraj').click();
@@ -104,7 +107,7 @@ test('Radar: načíta sa, ukáže čas a dá sa ovládať', async ({ page }) => 
     await expect(page.locator('[data-rozsah="zajtra"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#rd-druh')).toHaveText('Zajtra · predpoveď modelu');
     await page.locator('[data-rozsah="2h"]').click();
-    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    await expect(page.locator('#rd-druh')).toHaveText(NAJNOVSIA);
     expect(errors).toEqual([]);
 });
 
@@ -132,7 +135,7 @@ test('Radar: kým sa nenačíta všetko, obiehajú slnko a mesiac a prehrávanie
         },
     });
     // Najnovšia snímka je už na mape, model ešte nie.
-    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    await expect(page.locator('#rd-druh')).toHaveText(NAJNOVSIA);
     await expect(page.locator('#rd-svitanie')).toBeVisible();
     await expect(page.locator('#rd-hlaska')).toBeHidden();
     await expect(page.locator('#rd-hraj')).toBeDisabled();
@@ -140,7 +143,7 @@ test('Radar: kým sa nenačíta všetko, obiehajú slnko a mesiac a prehrávanie
     await expect(page.locator('#rd-bez-modelu')).toBeHidden();
     await page.locator('#rd-os').focus();
     await page.keyboard.press('ArrowLeft');
-    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    await expect(page.locator('#rd-druh')).toHaveText(NAJNOVSIA);
     pust();
     await pripraveny(page);
     await expect(page.locator('#rd-svitanie')).toBeHidden();
@@ -193,6 +196,41 @@ test('Radar: zastavená os v minulosti ostane po obnove na tej istej chvíli', a
     expect(errors).toEqual([]);
 });
 
+test('Radar: ťuknutie na čas obnoví hneď a kým sťahuje, točí sa krúžok', async ({ page }) => {
+    const errors = await otvor(page);
+    await pripraveny(page);
+    const pred = /** @type {string} */ (await page.locator('#rd-cas').textContent());
+    /** @type {() => void} */
+    let pust = () => {};
+    const cakaj = new Promise((res) => (pust = () => res(undefined)));
+    await page.route(`${WORKER_RADAR_URL}*`, async (r) => {
+        await cakaj;
+        await r.fallback();
+    });
+    // Ďalšia snímka už je, no čas zverejnenia ešte neprešiel: sama by sa appka nepýtala.
+    await page.clock.setFixedTime(new Date(FIXED_NOW).getTime() + (RADAR.krokMin + 1) * 60000);
+    await expect(page.locator('#rd-obnova')).toBeHidden();
+    await page.locator('#rd-chvila').click();
+    await expect(page.locator('#rd-obnova')).toBeVisible();
+    pust();
+    await expect(page.locator('#rd-obnova')).toBeHidden({ timeout: 30000 });
+    await expect(page.locator('#rd-cas')).not.toHaveText(pred);
+    await expect(page.locator('#rd-druh')).toHaveText('Pred 1 min · meranie');
+    expect(errors).toEqual([]);
+});
+
+test('Radar: keď najnovšia snímka mešká, vek pri nej má inú farbu', async ({ page }) => {
+    const errors = await otvor(page);
+    await pripraveny(page);
+    await expect(page.locator('#rd-druh')).not.toHaveClass(/meska/);
+    await page.route(`${WORKER_RADAR_URL}*`, (r) => r.fulfill({ status: 404, headers: { 'access-control-allow-origin': '*' } }));
+    await page.clock.setFixedTime(new Date(FIXED_NOW).getTime() + 40 * 60000);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.locator('#rd-druh')).toHaveText('Pred 40 min · meranie');
+    await expect(page.locator('#rd-druh')).toHaveClass(/meska/);
+    expect(errors).toEqual([]);
+});
+
 test('Radar: ťah po osi zastaví prehrávanie a posunie čas, klávesnica ide po krokoch', async ({ page }) => {
     const errors = await otvor(page);
     await pripraveny(page);
@@ -214,7 +252,7 @@ test('Radar: nespustí sa sám, prehrá os raz od začiatku a zastane', async ({
     await pripraveny(page);
     await page.waitForTimeout(600);
     await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť');
-    await expect(page.locator('#rd-druh')).toHaveText('Teraz');
+    await expect(page.locator('#rd-druh')).toHaveText(NAJNOVSIA);
     await page.locator('#rd-rychlost').click();
     await page.locator('#rd-rychlost').click();
     await page.locator('#rd-hraj').click();

@@ -78,23 +78,28 @@ function trvanie(min) {
 }
 
 /**
- * Čo karta píše k zobrazenej chvíli.
- * @param {RadarRozsah} rozsah @param {number} poz poloha na osi @param {number} terazMs @param {number} polnocMs @param {number} posunMin
- * @returns {{ cas: string, druh: string, predpoved: boolean }}
+ * Čo karta píše k zobrazenej chvíli. V rozsahu 2 h je vek každej snímky aj predpovede od chvíle `nowMs`, nie od
+ * najnovšej snímky - tá je stará aspoň čas zverejnenia (docs/navrhy/radar-obnova.html, D1). `meska`: najnovšia
+ * snímka je staršia ako `RADAR.meskaMin` (D3).
+ * @param {RadarRozsah} rozsah @param {number} poz poloha na osi
+ * @param {{ terazMs: number, polnocMs: number, posunMin: number, nowMs: number }} c najnovšia snímka, polnoc, posun miestneho času, teraz
  */
-export function popisChvile(rozsah, poz, terazMs, polnocMs, posunMin) {
+export function popisChvile(rozsah, poz, { terazMs, polnocMs, posunMin, nowMs }) {
     if (rozsah === '2h') {
         const krokov = Math.round(poz) - krokovMinulost;
-        const min = krokov * RADAR.krokMin;
-        const cas = hhmm(terazMs + min * 60000, posunMin);
-        if (min === 0) return { cas, druh: 'Teraz', predpoved: false };
-        return min < 0
-            ? { cas, druh: `Pred ${trvanie(-min)} · meranie`, predpoved: false }
-            : { cas, druh: `O ${trvanie(min)} · predpoveď`, predpoved: true };
+        const ms = terazMs + krokov * RADAR.krokMin * 60000;
+        const cas = hhmm(ms, posunMin);
+        const min = Math.round((ms - nowMs) / 60000);
+        if (krokov <= 0) {
+            const meska = krokov === 0 && nowMs - terazMs > RADAR.meskaMin * 60000;
+            return { cas, druh: `Pred ${trvanie(Math.max(1, -min))} · meranie`, predpoved: false, meska };
+        }
+        const druh = min > 0 ? `O ${trvanie(min)}` : min < 0 ? `Pred ${trvanie(-min)}` : 'Teraz';
+        return { cas, druh: `${druh} · predpoveď`, predpoved: true, meska: false };
     }
     const den = rozsah === 'dnes' ? 0 : 1;
     const ms = polnocMs + (den * 24 + Math.round(poz)) * 3600000;
-    return { cas: hhmm(ms, posunMin), druh: `${rozsah === 'dnes' ? 'Dnes' : 'Zajtra'} · predpoveď modelu`, predpoved: true };
+    return { cas: hhmm(ms, posunMin), druh: `${rozsah === 'dnes' ? 'Dnes' : 'Zajtra'} · predpoveď modelu`, predpoved: true, meska: false };
 }
 
 /** @typedef {0 | 1 | 2} TypZrazok dážď, dážď so snehom, sneh */

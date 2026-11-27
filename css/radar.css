@@ -61,17 +61,49 @@ body:has(.radar:not(.hidden)) .st {
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
 }
+/* Chvíľa je tlačidlo: ťuknutie obnoví snímky (docs/navrhy/radar-obnova.html, D1). */
 .rd-chvila {
+    display: grid;
+    justify-items: start;
     min-height: 44px;
     padding: 0 4px;
+    border: 0;
+    border-radius: 12px;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    text-shadow: inherit;
+    cursor: pointer;
+    pointer-events: auto;
+}
+.rd-riadok-casu {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.rd-obnova {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: rd-toc 0.9s linear infinite;
+}
+@keyframes rd-toc {
+    to {
+        transform: rotate(360deg);
+    }
 }
 .rd-cas {
+    display: block;
     font-size: 1.75rem;
     line-height: 28px;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
 }
 .rd-druh {
+    display: block;
     min-height: 16px;
     font-size: 0.8125rem;
     line-height: 16px;
@@ -80,6 +112,10 @@ body:has(.radar:not(.hidden)) .st {
 }
 .rd-druh.predpoved {
     color: var(--amber-text);
+}
+/* Najnovšia snímka mešká (D3). Nie jantárová - tá na karte Radar znamená predpoveď. */
+.rd-druh.meska {
+    color: #ff9b85;
 }
 .rd-prepinac {
     display: flex;
