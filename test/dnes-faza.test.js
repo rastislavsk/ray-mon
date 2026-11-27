@@ -131,7 +131,8 @@ test('večer: ako dopadol dnešok z nameraného, zajtrajšok a v páse predpove�
     assert.equal(d.tomorrow.cls, cls);
     assert.equal(d.tomorrow.word, DEN_WORDS.iny[cls]);
     assert.equal(d.tomorrow.chip, DEN_NAZVY[cls], 'Zajtra hovorí nadpis dlaždice');
-    assert.match(d.tomorrow.text, new RegExp(`^~${Math.round(i.forecast.days[1].kwhTotal)} kWh · \\d\\d:\\d\\d – \\d\\d:\\d\\d$`));
+    // Pod slovom len predpoveď v kWh, bez okna - pole je zladené s Dneškom.
+    assert.equal(d.tomorrow.text, `~${Math.round(i.forecast.days[1].kwhTotal)} kWh`);
     assert.equal(faza(i, 'slusny').d?.tomorrow?.word, voiceTexts('slusny').DEN_WORDS.iny[cls]);
 });
 
@@ -395,6 +396,7 @@ test('pás: večer Ako dopadol dnešok, hneď za ním Zajtra, potom namerané s 
     assert.ok(d?.tomorrow && d.grade && sky.day);
     assert.deepEqual(druhy(karty), ['dnes', 'zajtra', 'strecha', 'eq', 'predpoved', 'oblacnost'], 'dnešok vedľa zajtrajška');
     assert.equal(karty[0].title, DNES_TEXTS.grade);
+    assert.equal(karty[0].text, d.grade, 'pod slovom dneška namerané kWh');
     assert.deepEqual(karty[2], { kind: 'strecha', title: sky.day.label, value: d.grade, text: d.line, pct: null });
     const t = d.tomorrow;
     assert.deepEqual(karty[1], { kind: 'zajtra', title: t.kick, chip: t.chip, cls: t.cls, word: t.word, text: t.text });

@@ -942,11 +942,11 @@ test.describe('karta Dnes', () => {
         });
     }
 
-    test('časy okna sú tučne: odpočet cez deň, plán ráno aj zajtrajšok večer', async ({ page }) => {
+    // Zajtra večer čas okna nemá, len kWh - pole je zladené s Dneškom (27. 11. 2026).
+    test('časy okna sú tučne: odpočet cez deň a plán ráno', async ({ page }) => {
         for (const [hm, sel] of /** @type {const} */ ([
             ['13:00', '#mz-karty [data-kind="velke"] .k-text'],
             ['05:30', '#mz-karty [data-kind="velke"] .k-text'],
-            ['21:00', '#mz-karty [data-kind="zajtra"] .k-text'],
         ])) {
             const errors = await openObloha(page, { time: at(hm) });
             await naDnes(page);
