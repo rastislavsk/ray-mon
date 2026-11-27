@@ -19,6 +19,19 @@ export function radarTag(ms) {
 /** Posledný krok snímok najneskôr v danej chvíli. @param {number} ms */
 export const radarKrok = (ms) => Math.floor(ms / (RADAR.krokMin * 60000)) * RADAR.krokMin * 60000;
 
+/**
+ * Či sa oplatí obnoviť snímky: ďalšia po najnovšej už mala byť zverejnená a od posledného pokusu
+ * prešlo aspoň `obnovaPokusMs`. Bez snímky (prvé načítanie ešte beží) nie.
+ * @param {number} najnovsiaMs čas najnovšej snímky na osi, 0 = žiadna
+ * @param {number} pokusMs kedy sa obnova naposledy spustila
+ * @param {number} nowMs
+ */
+export function obnovitRadar(najnovsiaMs, pokusMs, nowMs) {
+    if (!najnovsiaMs) return false;
+    const dalsia = najnovsiaMs + (RADAR.krokMin + RADAR.zverejnenieMin) * 60000;
+    return nowMs >= dalsia && nowMs - pokusMs >= RADAR.obnovaPokusMs;
+}
+
 /** Počet krokov osi za minulosť a za celé dve hodiny dopredu aj dozadu. */
 export const krokovMinulost = RADAR.minulostMin / RADAR.krokMin;
 export const krokovSpolu = krokovMinulost + RADAR.buducnostMin / RADAR.krokMin;

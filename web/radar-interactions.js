@@ -37,7 +37,6 @@ export function initRadar(store, dom) {
     dom.rdZnova.addEventListener('click', () => hrac.otvor());
 
     const os = dom.rdOs;
-    let tahaj = false;
     /** @param {PointerEvent} e */
     const posun = (e) => {
         const box = os.getBoundingClientRect();
@@ -46,14 +45,19 @@ export function initRadar(store, dom) {
     os.addEventListener('pointerdown', (e) => {
         // Kým sa načítava, os čaká (render/radar.js ju stlmí).
         if (!store.get().radarHotovo) return;
-        tahaj = true;
+        hrac.tahaj = true;
         os.setPointerCapture(e.pointerId);
         store.setState({ radarHra: false });
         posun(e);
     });
-    os.addEventListener('pointermove', (e) => tahaj && posun(e));
-    os.addEventListener('pointerup', () => (tahaj = false));
-    os.addEventListener('pointercancel', () => (tahaj = false));
+    os.addEventListener('pointermove', (e) => hrac.tahaj && posun(e));
+    // Pustená os prevezme dáta, ktoré obnova medzitým pripravila.
+    const pusti = () => {
+        hrac.tahaj = false;
+        hrac.prevezmi();
+    };
+    os.addEventListener('pointerup', pusti);
+    os.addEventListener('pointercancel', pusti);
     os.addEventListener('keydown', (e) => {
         const smer = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
         if (!smer || !store.get().radarHotovo) return;
@@ -62,7 +66,11 @@ export function initRadar(store, dom) {
         hrac.krok(smer);
     });
     new ResizeObserver(() => store.get().panel === 'radar' && hrac.kresliOs()).observe(os);
+    // Nové snímky, kým je karta na obrazovke: po návrate do appky a každú minútu (`obnovitRadar` povie, či už mali vyjsť).
+    const naObrazovke = () => !document.hidden && store.get().panel === 'radar';
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && store.get().radarHra) store.setState({ radarHra: false });
+        if (naObrazovke()) hrac.skusObnovit();
     });
+    setInterval(() => naObrazovke() && hrac.skusObnovit(), RADAR.obnovaPokusMs);
 }

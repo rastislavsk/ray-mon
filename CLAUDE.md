@@ -33,8 +33,10 @@ Model má vlastný Web Worker a v prehliadači sa drží 3 hodiny (`radar-model-
 
 Pri načítaní je najnovšia snímka hneď na mape, no kým neprídu všetky snímky, pohyb, model a dlaždice mapy (najviac
 `RADAR.cakanieMs`), v strede obiehajú slnko a mesiac (`#rd-svitanie`) a Play, os aj rozsahy čakajú (`radarHotovo`):
-prehrávanie potom nič nedoťahuje. Obnova po `obnovaMs` sťahuje bokom (`nove` v `web/radar-hrac.js`) a vymení všetko
-naraz, keď os stojí.
+prehrávanie potom nič nedoťahuje. Obnova sa spustí, keď už mala vyjsť ďalšia snímka (`obnovitRadar` v `shared/radar.js`:
+krok + `zverejnenieMin` po najnovšej, pokus najviac raz za `obnovaPokusMs`) - pri prepnutí na kartu, návrate do appky
+a každú minútu, kým je karta na obrazovke. Sťahuje bokom (`nove` v `web/radar-hrac.js`) a vymení všetko naraz, keď os
+stojí a nik ju neťahá; zastavená os v rozsahu 2 h ostane na tej istej chvíli.
 
 Sneh (`docs/navrhy/radar-sneh.html`, D1 + V1 + legenda C, 26. 11. 2026): radar typ zrážok nevie (OPERA ani kompozity SHMÚ ho
 nemajú), podiel snehu dáva model z toho istého dopytu (`snowfall`, `temperature_2m`, `podielSnehu` v `shared/radar-data.js`).

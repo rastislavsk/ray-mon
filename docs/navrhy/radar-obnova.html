@@ -1,0 +1,524 @@
+<title>Obnova radaru</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+    /* Jeden stĺpec ako appka v telefóne; náhľady sú horná časť karty Radar v skutočnej šírke (360 px) a písme appky. */
+    @font-face {
+        font-family: 'Archivo';
+        font-style: normal;
+        font-weight: 100 900;
+        font-stretch: 62% 125%;
+        src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+    }
+    :root {
+        color-scheme: dark;
+        --bg: #0b1222;
+        --plocha: #131c31;
+        --ciara: rgba(255, 255, 255, 0.12);
+        --text: #e8edf6;
+        --tlmene: #9fadc4;
+        --akcent: #8fb8ff;
+        --plus: #6fdcaa;
+        --minus: #ffa07a;
+        --druh: #dfe6f1;
+        --predpoved: #ffd166;
+        --meska: #ff9b85;
+        --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        --font-nadpis: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+        --font-appka: 'Archivo', system-ui, sans-serif;
+        --mapa: linear-gradient(160deg, #6b7383, #8a909c 40%, #7d8696);
+    }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font: 15px/1.55 var(--font);
+    }
+    .obal {
+        max-width: 760px;
+        margin: 0 auto;
+        padding-block: 28px 64px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 28px;
+    }
+    h1,
+    h2,
+    h3 {
+        font-family: var(--font-nadpis);
+        text-wrap: balance;
+        margin: 0;
+        line-height: 1.2;
+    }
+    h1 {
+        font-size: 1.8rem;
+    }
+    h2 {
+        font-size: 1.3rem;
+    }
+    p,
+    ul {
+        margin: 0;
+        max-width: 65ch;
+    }
+    ul {
+        padding-left: 1.2em;
+        display: grid;
+        gap: 4px;
+    }
+    .oko {
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--tlmene);
+    }
+    .sekcia {
+        display: grid;
+        gap: 14px;
+    }
+    .hotove {
+        border: 1px solid var(--ciara);
+        border-radius: 14px;
+        padding: 16px;
+        display: grid;
+        gap: 8px;
+        background: var(--plocha);
+    }
+    code {
+        font-size: 0.85em;
+        color: var(--akcent);
+    }
+
+    /* Prepínač stavu pre všetky náhľady naraz. */
+    .stavy {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    .stavy button {
+        min-height: 40px;
+        padding: 0 14px;
+        border: 1px solid var(--ciara);
+        border-radius: 20px;
+        background: transparent;
+        color: var(--text);
+        font: inherit;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+    .stavy button[aria-pressed='true'] {
+        background: var(--akcent);
+        border-color: var(--akcent);
+        color: var(--bg);
+        font-weight: 600;
+    }
+    .stavy button:focus-visible,
+    .nahlad [data-tukni]:focus-visible {
+        outline: 2px solid var(--akcent);
+        outline-offset: 2px;
+    }
+
+    .moznost {
+        display: grid;
+        gap: 12px;
+        padding-top: 20px;
+        border-top: 1px solid var(--ciara);
+    }
+    .moznost h2 span {
+        color: var(--tlmene);
+        font-weight: 400;
+    }
+    .pz {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+    @media (max-width: 520px) {
+        .pz {
+            grid-template-columns: 1fr;
+        }
+    }
+    .pz div {
+        display: grid;
+        gap: 4px;
+        align-content: start;
+    }
+    .pz b {
+        font-size: 0.8rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+    .plus b {
+        color: var(--plus);
+    }
+    .minus b {
+        color: var(--minus);
+    }
+    .odporucam {
+        border-left: 3px solid var(--akcent);
+        padding-left: 14px;
+        display: grid;
+        gap: 6px;
+    }
+
+    /* Náhľad: horná časť karty Radar podľa css/radar.css (.rd-hore, .rd-cas, .rd-druh, .rd-seg, .rd-prepinac). */
+    .nahlad {
+        position: relative;
+        width: 360px;
+        max-width: 100%;
+        height: 170px;
+        border-radius: 18px;
+        overflow: hidden;
+        background: var(--mapa);
+        background-size: 360px 780px;
+        background-position: 0 -250px;
+        font-family: var(--font-appka);
+        color: #fff;
+        -webkit-font-smoothing: antialiased;
+    }
+    .rd-hore {
+        position: absolute;
+        inset: 0 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 10px 10px 44px;
+        background: linear-gradient(to bottom, rgba(9, 14, 27, 0.9), rgba(9, 14, 27, 0));
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+    }
+    .rd-stlpec {
+        display: grid;
+        justify-items: start;
+        gap: 6px;
+        min-width: 0;
+    }
+    .rd-stlpec.vpravo {
+        justify-items: end;
+    }
+    .rd-chvila {
+        min-height: 44px;
+        padding: 0 4px;
+    }
+    .rd-riadok-casu {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .rd-cas {
+        font-size: 1.75rem;
+        line-height: 28px;
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+    .rd-druh {
+        min-height: 16px;
+        font-size: 0.8125rem;
+        line-height: 16px;
+        font-weight: 600;
+        color: var(--druh);
+        white-space: nowrap;
+    }
+    .rd-druh.meska {
+        color: var(--meska);
+    }
+    .rd-seg {
+        display: flex;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.12);
+    }
+    .rd-seg span {
+        min-width: 52px;
+        min-height: 44px;
+        padding: 0 11px;
+        display: grid;
+        place-items: center;
+        border-radius: 22px;
+        color: var(--druh);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .rd-seg span:first-child {
+        background: rgba(255, 255, 255, 0.22);
+        color: #fff;
+    }
+    .rd-prepinac {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 44px;
+        padding: 0 12px 0 14px;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+    .rd-prepinac i {
+        position: relative;
+        width: 32px;
+        height: 18px;
+        border-radius: 9px;
+        background: #3f7fe0;
+    }
+    .rd-prepinac i::after {
+        content: '';
+        position: absolute;
+        left: 16px;
+        top: 2px;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: #fff;
+    }
+    .rd-legenda {
+        display: grid;
+        gap: 9px;
+        width: 116px;
+        padding-top: 4px;
+    }
+    .rd-legenda i {
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(to right, #2b6cff, #22c3c3, #3ad06b, #f4e04d, #ff8a3d, #e5384f);
+    }
+    .rd-legenda i:nth-child(2) {
+        background: linear-gradient(to right, #f3a6d8, #d46bd0, #9a52d6);
+    }
+    .rd-legenda i:nth-child(3) {
+        background: linear-gradient(to right, #e9eef8, #b9c7ff, #8a6bff);
+    }
+    [data-tukni] {
+        cursor: pointer;
+        border-radius: 12px;
+    }
+    /* Ťuknutie na chvíľu (D1) ukáže krúžok obnovy za časom. */
+    .kruzok {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-top-color: #fff;
+        animation: toc 0.9s linear infinite;
+    }
+    @keyframes toc {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    /* D2: sklenené tlačidlo s vekom snímky vedľa času. */
+    .rd-vek {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        min-height: 32px;
+        padding: 0 10px 0 8px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.12);
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: var(--druh);
+        white-space: nowrap;
+    }
+    .rd-vek svg {
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+    }
+    .rd-vek.toci svg {
+        animation: toc 0.9s linear infinite;
+    }
+    .rd-vek.meska {
+        color: var(--meska);
+    }
+    .pretiekol {
+        color: var(--minus);
+        font-size: 0.85rem;
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .kruzok,
+        .rd-vek.toci svg {
+            animation: none;
+        }
+    }
+</style>
+
+<div class="obal">
+    <header class="sekcia">
+        <p class="oko">Karta Radar · 27. 11. 2026</p>
+        <h1>Obnova radaru</h1>
+        <p>
+            Doteraz sa radar obnovoval len pri prepnutí na kartu, a to najskôr po 5 minútach. Na karte ani po návrate do appky sa nič
+            nedoťahovalo. Vybral si A + C + D.
+        </p>
+    </header>
+
+    <section class="hotove">
+        <h2>A + C: hotové v kóde (bez viditeľnej zmeny)</h2>
+        <ul>
+            <li>
+                Appka sa pýta, keď už mala vyjsť ďalšia snímka: čas najnovšej + 5 min krok + 5 min zverejnenie (<code>obnovitRadar</code>).
+                Najnovšia snímka tak býva stará zhruba 10 minút, viac sa z OPERA dostať nedá.
+            </li>
+            <li>Kontroluje pri prepnutí na kartu, pri návrate do appky a každú minútu, kým je karta na obrazovke.</li>
+            <li>Kým nová snímka neprišla, skúša znova o minútu. Sťahuje len chýbajúcu snímku, nie všetkých 24.</li>
+            <li>Nové dáta sa vymenia, až keď os stojí a nikto ju neťahá. Zastavená os v minulosti ostane na tej istej chvíli.</li>
+        </ul>
+    </section>
+
+    <section class="sekcia">
+        <h2>D: vek snímky a ťuknutie</h2>
+        <p>
+            Náhľady sú horná časť karty v šírke 360 px a v písme appky, na skutočnej mape z dnešného rána. Prepínač mení stav všetkých
+            náhľadov naraz. Na náhľad sa dá aj ťuknúť.
+        </p>
+        <div class="stavy" role="group" aria-label="Stav náhľadov">
+            <button type="button" id="st-bezne" data-stav="bezne" aria-pressed="true">Bežne (10 min)</button>
+            <button type="button" id="st-toci" data-stav="toci" aria-pressed="false">Obnovuje sa</button>
+            <button type="button" id="st-meska" data-stav="meska" aria-pressed="false">Mešká (40 min)</button>
+        </div>
+    </section>
+
+    <section class="moznost" data-moznost="d1">
+        <h2>D1 <span>· vek namiesto „Teraz“</span></h2>
+        <div class="nahlad"></div>
+        <p>
+            Pri najnovšej snímke nie je „Teraz“, ale jej vek, rovnako ako pri starších snímkach („Pred 1 h · meranie“). Ťuknutie na čas
+            obnoví a za časom sa vtedy točí krúžok. Os ostáva s „Teraz“.
+        </p>
+        <div class="pz">
+            <div class="plus">
+                <b>Výhody</b>
+                <span>Žiadny nový prvok na plnej karte. Text je pravdivý: snímka z 08:30 nie je „teraz“.</span>
+            </div>
+            <div class="minus">
+                <b>Nevýhody</b>
+                <span>Že sa dá ťuknúť na čas, nie je vidno. Slovo „Teraz“ zmizne z hlavičky.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="moznost" data-moznost="d2">
+        <h2>D2 <span>· tlačidlo s vekom vedľa času</span></h2>
+        <div class="nahlad"></div>
+        <p>„Teraz“ ostane. Vedľa času je sklenené tlačidlo so šípkou obnovy a vekom snímky, pri obnove sa šípka točí.</p>
+        <div class="pz">
+            <div class="plus">
+                <b>Výhody</b>
+                <span>Je jasné, že sa dá obnoviť. Vek je vidno pri každej polohe osi.</span>
+            </div>
+            <div class="minus">
+                <b>Nevýhody</b>
+                <span>Ďalšie tlačidlo v hornom rohu. Ručná obnova má zmysel málokedy, keď appka obnovuje sama.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="moznost" data-moznost="d3">
+        <h2>D3 <span>· len keď snímka mešká</span></h2>
+        <div class="nahlad"></div>
+        <p>
+            Bežne vyzerá karta ako dnes. Keď je najnovšia snímka staršia ako 15 minút (výpadok OPERA, slabý signál), je pod časom „Snímka
+            mešká · 40 min“ a ťuknutie skúsi obnovu hneď.
+        </p>
+        <div class="pz">
+            <div class="plus">
+                <b>Výhody</b>
+                <span>Nič navyše, kým je všetko v poriadku. Upozorní len vtedy, keď na tom záleží.</span>
+            </div>
+            <div class="minus">
+                <b>Nevýhody</b>
+                <span>Bežný vek (10 min) nevidno. Ťuknutie funguje len pri meškaní.</span>
+            </div>
+        </div>
+    </section>
+
+    <section class="odporucam">
+        <h2>Odporúčam D1 s meškaním z D3</h2>
+        <p>
+            Vek namiesto „Teraz“ nepridá nový prvok a povie pravdu o snímke. Keď mešká viac ako 15 minút, text sa zafarbí ako v D3. Farba
+            meškania nie je jantárová, tá na karte Radar znamená predpoveď.
+        </p>
+    </section>
+</div>
+
+<script>
+    // Náhľady: jedna šablóna hlavičky karty, každá možnosť mení len chvíľu (čas, druh, tlačidlo).
+    const CAS = '08:30';
+    const VEK = { bezne: 10, toci: 10, meska: 40 };
+    const sipka = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4.5h-4.5" /></svg>';
+    let stav = 'bezne';
+
+    /** Ľavý stĺpec podľa možnosti a stavu. */
+    function chvila(m) {
+        const vek = VEK[stav];
+        const toci = stav === 'toci';
+        const meska = stav === 'meska';
+        if (m === 'd1') {
+            return `<div class="rd-chvila" data-tukni tabindex="0" role="button" aria-label="Obnoviť radar">
+                <div class="rd-riadok-casu"><div class="rd-cas">${CAS}</div>${toci ? '<i class="kruzok"></i>' : ''}</div>
+                <div class="rd-druh${meska ? ' meska' : ''}">Pred ${vek} min · meranie</div></div>`;
+        }
+        if (m === 'd2') {
+            return `<div class="rd-chvila"><div class="rd-riadok-casu"><div class="rd-cas">${CAS}</div>
+                <span class="rd-vek${toci ? ' toci' : ''}${meska ? ' meska' : ''}" data-tukni tabindex="0" role="button"
+                aria-label="Obnoviť radar">${sipka}${vek} min</span></div><div class="rd-druh">Teraz</div></div>`;
+        }
+        const druh = meska ? `<div class="rd-druh meska">Snímka mešká · ${vek} min</div>` : '<div class="rd-druh">Teraz</div>';
+        return `<div class="rd-chvila"${meska ? ' data-tukni tabindex="0" role="button" aria-label="Obnoviť radar"' : ''}>
+            <div class="rd-riadok-casu"><div class="rd-cas">${CAS}</div>${toci ? '' : ''}</div>${druh}</div>`;
+    }
+
+    function kresli() {
+        for (const sek of document.querySelectorAll('[data-moznost]')) {
+            const m = sek.dataset.moznost;
+            const n = sek.querySelector('.nahlad');
+            n.innerHTML = `<div class="rd-hore"><div class="rd-stlpec">${chvila(m)}
+                <div class="rd-seg"><span>2 h</span><span>Dnes</span><span>Zajtra</span></div></div>
+                <div class="rd-stlpec vpravo"><div class="rd-prepinac">Oblaky<i></i></div>
+                <div class="rd-legenda"><i></i><i></i><i></i></div></div></div>`;
+            // Kontrola, či sa ľavý stĺpec nezrazí s pravým.
+            const l = n.querySelector('.rd-chvila').getBoundingClientRect();
+            const p = n.querySelector('.rd-prepinac').getBoundingClientRect();
+            const druh = n.querySelector('.rd-druh').getBoundingClientRect();
+            const zrazka = Math.max(l.right, druh.right) + 8 > p.left && l.top < p.bottom;
+            let upozornenie = sek.querySelector('.pretiekol');
+            if (zrazka && !upozornenie) {
+                upozornenie = document.createElement('p');
+                upozornenie.className = 'pretiekol';
+                upozornenie.textContent = 'Pozor: text sa zrazí s prepínačom Oblaky.';
+                n.after(upozornenie);
+            } else if (!zrazka && upozornenie) upozornenie.remove();
+        }
+    }
+
+    function nastav(s) {
+        stav = s;
+        for (const b of document.querySelectorAll('[data-stav]')) b.setAttribute('aria-pressed', String(b.dataset.stav === s));
+        kresli();
+    }
+
+    document.querySelector('.stavy').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-stav]');
+        if (b) nastav(b.dataset.stav);
+    });
+    // Ťuknutie na náhľad: chvíľu sa obnovuje, potom je snímka o 5 minút novšia.
+    let casovac = 0;
+    function tukni(e) {
+        if (!e.target.closest('[data-tukni]')) return;
+        if (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ') return;
+        e.preventDefault();
+        clearTimeout(casovac);
+        nastav('toci');
+        casovac = setTimeout(() => {
+            VEK.bezne = 5;
+            nastav('bezne');
+            VEK.bezne = 10;
+        }, 1500);
+    }
+    document.addEventListener('click', tukni);
+    document.addEventListener('keydown', tukni);
+    if (document.fonts) document.fonts.ready.then(kresli);
+    kresli();
+</script>
