@@ -1,8 +1,20 @@
-// Web Worker karty Radar: rozbalenie snímok, výrez, čistenie a pohyb. Beží mimo hlavného vlákna, aby
-// prehrávanie a mapa neťukali. Správy posiela web/radar-data.js.
+// Web Worker karty Radar: rozbalenie snímok, výrez, čistenie, pohyb a maska oblakov zo satelitu. Beží mimo hlavného
+// vlákna, aby prehrávanie a mapa neťukali. Správy posiela web/radar-data.js.
 
 import { RADAR } from '../shared/config.js';
-import { dbzNaBajt, mapaBodov, mmNaDbz, ocisti, pohyb, pohybBajty, telaBlokov, vlozBlok, vyrez, zjemni } from '../shared/radar-data.js';
+import {
+    dbzNaBajt,
+    mapaBodov,
+    mmNaDbz,
+    oblakyZMasky,
+    ocisti,
+    pohyb,
+    pohybBajty,
+    telaBlokov,
+    vlozBlok,
+    vyrez,
+    zjemni,
+} from '../shared/radar-data.js';
 
 /** @typedef {import('../shared/radar-data.js').Oblast} Oblast */
 
@@ -98,8 +110,39 @@ async function spracuj(m) {
     }
 }
 
-// Správy idú po jednej: najnovšia snímka je hotová skôr, než sa začne ďalšia.
+/**
+ * Jedna snímka masky oblakov ako sila 0–255, alebo null, keď WMS obrázok nedal (čas mimo rozsahu vráti XML s chybou).
+ * @param {string} url
+ */
+async function maska(url) {
+    const r = await fetch(url);
+    if (!r.ok || !r.headers.get('content-type')?.startsWith('image/')) return null;
+    const obr = await createImageBitmap(await r.blob());
+    const { width: w, height: h } = obr;
+    const ctx = /** @type {OffscreenCanvasRenderingContext2D} */ (new OffscreenCanvas(w, h).getContext('2d'));
+    ctx.drawImage(obr, 0, 0);
+    obr.close();
+    return { w, h, f: oblakyZMasky(ctx.getImageData(0, 0, w, h).data, w, h) };
+}
+
+/**
+ * Snímky satelitu naraz, každá ide späť hneď, ako je hotová; na konci `satelit-hotovo`.
+ * @param {Array<{ ms: number, url: string }>} zoznam
+ */
+async function satelit(zoznam) {
+    await Promise.all(
+        zoznam.map(async ({ ms, url }) => {
+            const m = await maska(url).catch(() => null);
+            if (m) postMessage({ druh: 'satelit', ms, ...m }, { transfer: [m.f.buffer] });
+        }),
+    );
+    postMessage({ druh: 'satelit-hotovo' });
+}
+
+// Správy idú po jednej: najnovšia snímka je hotová skôr, než sa začne ďalšia. Satelit ide mimo radu, sťahovanie
+// by inak zdržalo model.
 let rad = Promise.resolve();
 onmessage = ({ data }) => {
+    if (data.druh === 'satelit') return void satelit(data.zoznam);
     rad = rad.then(() => spracuj(data));
 };

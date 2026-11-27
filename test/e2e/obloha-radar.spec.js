@@ -59,6 +59,7 @@ async function otvor(page, { mapa = true, site = SITE, model } = {}) {
     await page.route(/cdnjs\.cloudflare\.com/, (r) => r.abort());
     if (mapa) await page.addInitScript(FALOSNA_MAPA);
     await page.route(/tiles\.openfreemap\.org/, (r) => r.abort());
+    await page.route(/view\.eumetsat\.int/, (r) => r.abort());
     await page.route(WORKER_PV_URL, (r) => r.fulfill({ json: { pv } }));
     await page.route(/api\.open-meteo\.com/, (r) => r.fulfill({ json: weather }));
     if (model) await page.route(/models=icon_eu/, model);

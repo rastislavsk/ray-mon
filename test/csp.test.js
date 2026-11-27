@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { geocodeUrl, openMeteoUrl, RADAR, radarModelUrl, SITE, WORKER_URL } from '../shared/config.js';
+import { geocodeUrl, openMeteoUrl, RADAR, radarModelUrl, radarSatelitUrl, SITE, WORKER_URL } from '../shared/config.js';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const content = /http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html)?.[1] ?? '';
@@ -31,7 +31,14 @@ test('CSP: stránka ju má a skripty smú byť len vlastné a z cdnjs, nič vlo�
 });
 
 test('CSP: každá adresa, z ktorej appka číta dáta, je v connect-src', () => {
-    const adresy = [WORKER_URL, openMeteoUrl(SITE), geocodeUrl('Dvorany'), RADAR.styl, radarModelUrl([{ lat: 48, lon: 17 }])];
+    const adresy = [
+        WORKER_URL,
+        openMeteoUrl(SITE),
+        geocodeUrl('Dvorany'),
+        RADAR.styl,
+        radarModelUrl([{ lat: 48, lon: 17 }]),
+        radarSatelitUrl({ x0: 0.5, y0: 0.3, x1: 0.6, y1: 0.4 }, 0),
+    ];
     for (const url of adresy) assert.ok(csp['connect-src'].includes(origin(url)), `connect-src nepovoľuje ${origin(url)}`);
 });
 

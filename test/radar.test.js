@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { RADAR, radarModelUrl } from '../shared/config.js';
+import { RADAR, radarModelUrl, radarSatelitUrl } from '../shared/config.js';
 import {
     bajtNaDbz,
     blokyParam,
@@ -16,7 +16,10 @@ import {
     mmNaDbz,
     modelBody,
     modelSnimky,
+    oblakySatelitu,
+    oblakyZMasky,
     podielSnehu,
+    satelitCasy,
     oblastBlokov,
     ocisti,
     parseUlozenyModel,
@@ -392,4 +395,61 @@ test('obnovitRadar: až keď mala vyjsť ďalšia snímka, najviac raz za pokus'
     assert.equal(obnovitRadar(t, t, t + caka), true);
     assert.equal(obnovitRadar(t, t + caka, t + caka + RADAR.obnovaPokusMs - 1), false, 'pokus pred chvíľou');
     assert.equal(obnovitRadar(t, t + caka, t + caka + RADAR.obnovaPokusMs), true, 'snímka neprišla, skúsi znova');
+});
+
+test('satelitCasy: od najnovšej, ktorá už asi vyšla, cez celú minulosť osi po 15 minútach', () => {
+    const now = Date.UTC(2026, 10, 23, 18, 51);
+    const casy = satelitCasy(now);
+    // 18:51 - 20 min = 18:31, snímka 18:30.
+    assert.equal(casy.at(-1), Date.UTC(2026, 10, 23, 18, 30));
+    assert.equal(casy[0], Date.UTC(2026, 10, 23, 16, 30));
+    assert.equal(casy.length, RADAR.minulostMin / RADAR.satelit.krokMin + 1);
+    assert.ok(casy.every((t, i) => i === 0 || t - casy[i - 1] === RADAR.satelit.krokMin * 60000));
+});
+
+test('radarSatelitUrl: výrez v metroch EPSG:3857, pomer strán a čas na minúty', () => {
+    const u = new URL(radarSatelitUrl({ x0: 0.5, y0: 0.25, x1: 0.75, y1: 0.5 }, Date.UTC(2026, 10, 23, 18, 45, 30)));
+    assert.equal(u.origin, new URL(RADAR.satelit.url).origin);
+    assert.equal(u.searchParams.get('layers'), RADAR.satelit.vrstva);
+    assert.equal(u.searchParams.get('crs'), 'EPSG:3857');
+    const [minx, miny, maxx, maxy] = String(u.searchParams.get('bbox')).split(',').map(Number);
+    assert.deepEqual([minx, miny], [0, 0]);
+    assert.ok(Math.abs(maxx - 10018754) < 2 && Math.abs(maxy - 10018754) < 2);
+    assert.equal(u.searchParams.get('width'), String(RADAR.satelit.sirka));
+    assert.equal(u.searchParams.get('height'), String(RADAR.satelit.sirka));
+    assert.equal(u.searchParams.get('time'), '2026-11-23T18:45:00Z');
+});
+
+test('oblakyZMasky: biela je oblak, zelená a modrá jasno, priehľadné nič; okraj je mäkký', () => {
+    const w = 12;
+    const h = 3;
+    const rgba = new Uint8Array(w * h * 4);
+    for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++) {
+            const p = (y * w + x) * 4;
+            // Vľavo oblak, vpravo zelená zem, posledný stĺpec modrá voda.
+            rgba.set(x < 6 ? [255, 255, 255, 255] : x < 11 ? [0, 200, 0, 255] : [0, 0, 255, 255], p);
+        }
+    const f = oblakyZMasky(rgba, w, h, 1);
+    assert.equal(f[0], 255);
+    assert.equal(f[w - 1], 0);
+    assert.ok(f[5] < 255 && f[5] > 127, 'pri okraji slabne');
+    assert.ok(f[6] > 0 && f[6] < 128, 'za okrajom ešte trochu');
+    assert.deepEqual([...oblakyZMasky(new Uint8Array([255, 255, 255, 0]), 1, 1, 1)], [0]);
+});
+
+test('oblakySatelitu: satelit drží do teraz, potom a pred prvou snímkou sa prelieva do modelu', () => {
+    const m = 60000;
+    const casy = [0, 15 * m, 30 * m];
+    const teraz = 50 * m;
+    assert.equal(oblakySatelitu([], 0, teraz), null);
+    assert.deepEqual(oblakySatelitu(casy, 20 * m, teraz), { a: 1, b: 2, f: 1 / 3, vaha: 1 });
+    assert.deepEqual(oblakySatelitu(casy, 15 * m, teraz), { a: 1, b: 2, f: 0, vaha: 1 });
+    // Po poslednej snímke do teraz posledná snímka naplno.
+    assert.deepEqual(oblakySatelitu(casy, teraz, teraz), { a: 2, b: 2, f: 0, vaha: 1 });
+    const p = RADAR.satelit.prechodMin * m;
+    assert.equal(oblakySatelitu(casy, teraz + p / 2, teraz)?.vaha, 0.5);
+    assert.equal(oblakySatelitu(casy, teraz + p, teraz), null);
+    assert.deepEqual(oblakySatelitu(casy, -p / 4, teraz), { a: 0, b: 0, f: 0, vaha: 0.75 });
+    assert.equal(oblakySatelitu(casy, -p, teraz), null);
 });
