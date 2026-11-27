@@ -131,7 +131,10 @@ každých `KLIMA.hodinyMin` energiu, každých `KLIMA.rokMin` rok a Wi-Fi, a sur
 z `/bojler-pecat`. Čítať ich vie `shared/klima.js` (`zHlasenia`); objekt `UcetHuawei` drží stav (`kl:`) a body (`kt:`)
 a appka si cez `/klima-stav` berie stav s dnešnými bodmi a zdrojmi hodín (`slnkoKlimy` z `hd:` - klimatizácia ide pred
 bojlerom). Dlaždica (`shared/teraz-klima.js`) je v pravom stĺpci pod autom: príkon, „vonku / nastavená“ len hodnotami
-a dnešné kWh; panel Klíma má graf dňa, energiu, 14 dní, rok a podrobnosti. Klimatizáciu appka len sleduje, riadenie
+a dnešné kWh; panel Klíma má graf dňa, energiu, 14 dní, rok a podrobnosti. Meno dlaždice je režim nastavený na Daikine
+(`menoRezim`: Kúrenie, Chladenie, Auto, Sušenie, Vetranie), vypnutá Off, bez spojenia Off-line s časom aj menom v jantárovej
+farbe rámu; zapnutá má vpravo hore ventilátor (`vent`, `.dl-vent`: päť stĺpcov, A automaticky, mesiac tichý),
+`docs/navrhy/teraz-klima-rezim.html`, 27. 11. 2026. Klimatizáciu appka len sleduje, riadenie
 a odčítanie z odhadu nabíjania auta sú v `docs/to do later.md`. Aktualizácia firmvéru adaptéra (appka Onecta) môže lokálne
 API zrušiť - potom ostáva cloud Onecta (200 volaní za deň) alebo ESP32 Faikin.
 

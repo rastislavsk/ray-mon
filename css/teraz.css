@@ -350,6 +350,60 @@
     background: #14300c;
     color: #ffd166;
 }
+/* Ventilátor klimatizácie vpravo hore, na výške stredu ikony (docs/navrhy/teraz-klima-rezim.html, F1): päť stĺpcov ako
+   na ovládači Daikin, plné do stupňa; automaticky „A“, tichý mesiac. */
+.dl-vent {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-style: normal;
+}
+.dl-vent > i {
+    width: 5px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.28);
+    align-self: center;
+    /* Stĺpce rastú zľava doprava od 6 po 20 px, spodky na jednej čiare. */
+    height: calc(6px + (var(--i) - 1) * 3.5px);
+    margin-top: calc(20px - (6px + (var(--i) - 1) * 3.5px));
+}
+.dl-vent > i:nth-child(1) {
+    --i: 1;
+}
+.dl-vent > i:nth-child(2) {
+    --i: 2;
+}
+.dl-vent > i:nth-child(3) {
+    --i: 3;
+}
+.dl-vent > i:nth-child(4) {
+    --i: 4;
+}
+.dl-vent > i:nth-child(5) {
+    --i: 5;
+}
+.dl-vent > i[data-plny] {
+    background: #fff;
+}
+.dl-vent > span {
+    font-size: 17px;
+    font-weight: 900;
+    font-variation-settings: 'wdth' 112;
+    line-height: 1;
+}
+.dl-vent svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
 /* Ikona spotrebiča: čiarová, farbu berie z textu. */
 .vi {
     width: 24px;
@@ -1169,6 +1223,11 @@
 /* Zásuvka bojlera bez spojenia: jantárový rám. */
 .dl[data-tone='chyba'] {
     border: 2px solid var(--amber-text);
+}
+/* Klimatizácia bez spojenia: aj čas a Off-line vo farbe rámu (docs/navrhy/teraz-klima-rezim.html). */
+.dl[data-tone='chyba'][data-vec='klima'] .velky,
+.dl[data-tone='chyba'][data-vec='klima'] b {
+    color: var(--amber-text);
 }
 /* Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html): dlaždica je na skle ako ostatné, „do 14:30“ a „beží“ povedia
    odrážky. Na osi v detaile je jeho úsek krémový. Čo dobehlo, vlastnú dlaždicu nemá - dlaždica s ďalším časom

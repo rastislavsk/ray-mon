@@ -46,7 +46,7 @@ import { KLIMA_NAST_TEXTS } from '../../shared/nastavenie-klima.js';
 import { ZASUVKA_NAST_TEXTS } from '../../shared/nastavenie-zasuvka.js';
 import { TERAZ_BEZI } from '../../shared/messages-teraz.js';
 import { skriptZasuvky } from '../../shared/zasuvka-skript.js';
-import { klimaDetail, klimaDlazdica, TERAZ_KLIMA_TEXTS } from '../../shared/teraz-klima.js';
+import { klimaDetail, klimaDlazdica } from '../../shared/teraz-klima.js';
 import { domaToStored } from '../../shared/doma.js';
 import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
 import { UCENIE_TEXTS } from '../../shared/nastavenie-ucenie.js';
@@ -1629,7 +1629,10 @@ test.describe('klimatizácia Daikin (docs/navrhy/klima-daikin.html)', () => {
         await expect(dl).toHaveAttribute('data-stlpec', 'p');
         await expect(dl).toHaveAttribute('data-zapnuty', '');
         await expect(dl.locator('.velky')).toHaveText(`${m.velky} ${m.za}`);
-        await expect(dl.locator('b')).toHaveText(TERAZ_KLIMA_TEXTS.meno);
+        await expect(dl.locator('b')).toHaveText(m.meno);
+        // Ventilátor automaticky (f_rate A): „A“ vpravo hore, na výške ikony.
+        await expect(dl.locator('.dl-vent')).toHaveAttribute('data-vent', 'A');
+        await expect(dl.locator('.dl-vent')).toHaveText('A');
         // Na oko len čísla so značkami, slová má čítačka (docs/navrhy/teraz-dlazdice-cisla.html, B).
         await expect(dl.locator('.mv > span')).toHaveText(m.mv.map((x) => x.t));
         await expect(dl.locator('.mv ~ .sr')).toHaveText(m.odr.map((x) => `, ${x}`).join(''));

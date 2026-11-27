@@ -1,0 +1,845 @@
+<title>Dlaždica Klíma: režim a ventilátor</title>
+<meta name="claude:viewport-fit-sides" content="cover" />
+<style>
+    /* Rozloženie: jeden stĺpec otázok, každá s popisom situácie, tromi voľbami a živým náhľadom mena v šírke dlaždice. */
+    :root {
+        --bg: #eef2f7;
+        --karta: #ffffff;
+        --fg: #17212e;
+        --tlmene: #5b6878;
+        --linka: #d5dde8;
+        --akcent: #2f6fb8;
+        --zle: #b5452f;
+        --dobre: #2e7d4f;
+        --obloha: #3d6aa3;
+        --sklo: rgba(20, 40, 75, 0.38);
+        --sklo-text: #ffffff;
+        --pismo: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+            --bg: #11161d;
+            --karta: #1a222c;
+            --fg: #e6ecf3;
+            --tlmene: #9aa7b6;
+            --linka: #2c3744;
+            --akcent: #7cb4f0;
+            --zle: #f08a6e;
+            --dobre: #6fcf97;
+            color-scheme: dark;
+        }
+    }
+    :root[data-theme='dark'] {
+        --bg: #11161d;
+        --karta: #1a222c;
+        --fg: #e6ecf3;
+        --tlmene: #9aa7b6;
+        --linka: #2c3744;
+        --akcent: #7cb4f0;
+        --zle: #f08a6e;
+        --dobre: #6fcf97;
+        color-scheme: dark;
+    }
+    @font-face {
+        font-family: 'Archivo';
+        src:
+            url('../../fonts/archivo-obloha.woff2') format('woff2'),
+            url('fonts/archivo-obloha.woff2') format('woff2');
+        font-weight: 100 900;
+        font-stretch: 62% 125%;
+    }
+    body {
+        background: var(--bg);
+        color: var(--fg);
+        font: 15px/1.5 var(--pismo);
+    }
+    main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding-block: 24px 64px;
+        padding-left: max(16px, env(safe-area-inset-left, 0px));
+        padding-right: max(16px, env(safe-area-inset-right, 0px));
+        display: grid;
+        gap: 28px;
+    }
+    h1 {
+        font-size: 1.6rem;
+        line-height: 1.2;
+        margin: 0;
+        text-wrap: balance;
+        font-variation-settings: 'wdth' 108;
+    }
+    h2 {
+        font-size: 1.2rem;
+        margin: 0;
+        text-wrap: balance;
+    }
+    h3 {
+        font-size: 1.02rem;
+        margin: 0;
+    }
+    p {
+        margin: 0;
+    }
+    .uvod {
+        display: grid;
+        gap: 10px;
+        color: var(--tlmene);
+        max-width: 65ch;
+    }
+    .uvod b {
+        color: var(--fg);
+    }
+    .lista {
+        position: sticky;
+        top: env(safe-area-inset-top, 0px);
+        z-index: 5;
+        background: var(--bg);
+        padding-block: 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--linka);
+    }
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0 0 auto;
+        height: env(safe-area-inset-top, 0px);
+        z-index: 10;
+        background: var(--bg);
+    }
+    .pocet {
+        font-weight: 700;
+        font-variant-numeric: tabular-nums;
+    }
+    .stav {
+        color: var(--tlmene);
+        font-size: 0.85rem;
+    }
+    button {
+        font: inherit;
+        cursor: pointer;
+    }
+    .hotovo {
+        border: 0;
+        border-radius: 999px;
+        padding: 8px 18px;
+        background: var(--akcent);
+        color: var(--karta);
+        font-weight: 700;
+    }
+    .hotovo:disabled {
+        opacity: 0.5;
+        cursor: default;
+    }
+    section {
+        display: grid;
+        gap: 14px;
+    }
+    .sekcia-pop {
+        color: var(--tlmene);
+        max-width: 65ch;
+    }
+    .otazka {
+        background: var(--karta);
+        border: 1px solid var(--linka);
+        border-radius: 14px;
+        padding: 16px;
+        display: grid;
+        gap: 12px;
+    }
+    .otazka-hlava {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        justify-content: space-between;
+        flex-wrap: wrap;
+    }
+    .kod {
+        font-size: 0.78rem;
+        color: var(--tlmene);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+    .kedy {
+        color: var(--tlmene);
+        font-size: 0.92rem;
+        max-width: 65ch;
+    }
+    .telo {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        align-items: start;
+    }
+    @media (max-width: 560px) {
+        .telo {
+            grid-template-columns: minmax(0, 1fr);
+        }
+    }
+    .volby {
+        display: grid;
+        gap: 8px;
+        min-width: 0;
+    }
+    .volba {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 4px 10px;
+        align-items: start;
+        padding: 8px 10px;
+        border: 1px solid var(--linka);
+        border-radius: 10px;
+        cursor: pointer;
+    }
+    .volba:has(input:checked) {
+        border-color: var(--akcent);
+        box-shadow: inset 0 0 0 1px var(--akcent);
+    }
+    .volba input[type='radio'] {
+        margin-top: 4px;
+        accent-color: var(--akcent);
+    }
+    .volba .dovod {
+        grid-column: 2;
+        color: var(--tlmene);
+        font-size: 0.85rem;
+    }
+    .volba input[type='text'] {
+        grid-column: 2;
+        font: inherit;
+        padding: 6px 8px;
+        border: 1px solid var(--linka);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--fg);
+        min-width: 0;
+    }
+    :focus-visible {
+        outline: 2px solid var(--akcent);
+        outline-offset: 2px;
+    }
+    /* Náhľad: riadok mena dlaždice v appke pri 360 px - obsah 133 px, Archivo 800, 21,25 px, wdth 108. */
+    .nahlad {
+        display: grid;
+        gap: 6px;
+        justify-items: start;
+    }
+    .dl {
+        width: 161px;
+        box-sizing: border-box;
+        padding: 14px;
+        border-radius: 24px;
+        background: var(--sklo);
+        color: var(--sklo-text);
+        box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.85);
+    }
+    .dl-ram {
+        background: var(--obloha);
+        padding: 10px;
+        border-radius: 30px;
+    }
+    .dl .cislo {
+        font-weight: 900;
+        font-size: 28px;
+        line-height: 1;
+        font-variation-settings: 'wdth' 112;
+    }
+    .dl .cislo small {
+        font-size: 0.55em;
+        font-weight: 800;
+    }
+    .dl .meno {
+        display: block;
+        margin-top: 2px;
+        font-size: 21.25px;
+        font-weight: 800;
+        line-height: 1.1;
+        font-variation-settings: 'wdth' 108;
+        overflow-wrap: anywhere;
+    }
+    .miera {
+        font-size: 0.8rem;
+        font-variant-numeric: tabular-nums;
+        color: var(--dobre);
+    }
+    .miera[data-zle] {
+        color: var(--zle);
+    }
+    .meric {
+        position: absolute;
+        visibility: hidden;
+        white-space: nowrap;
+        font-size: 21.25px;
+        font-weight: 800;
+        font-variation-settings: 'wdth' 108;
+        font-family: var(--pismo);
+    }
+    .snimky {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    figure {
+        margin: 0;
+        display: grid;
+        gap: 4px;
+        max-width: 100%;
+    }
+    figure img {
+        width: 360px;
+        max-width: 100%;
+        border-radius: 10px;
+        display: block;
+    }
+    figcaption {
+        font-size: 0.82rem;
+        color: var(--tlmene);
+    }
+    .za-proti {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 6px 16px;
+        font-size: 0.88rem;
+    }
+    .za-proti ul {
+        margin: 0;
+        padding-left: 1.1em;
+    }
+    .za-proti b {
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--tlmene);
+    }
+    .odporucam {
+        font-size: 0.75rem;
+        font-weight: 700;
+        color: var(--dobre);
+        border: 1px solid currentColor;
+        border-radius: 999px;
+        padding: 0 8px;
+    }
+    textarea {
+        font: inherit;
+        width: 100%;
+        box-sizing: border-box;
+        min-height: 80px;
+        padding: 8px;
+        border: 1px solid var(--linka);
+        border-radius: 10px;
+        background: var(--karta);
+        color: var(--fg);
+    }
+    .tab {
+        overflow-x: auto;
+    }
+    table {
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        font-variant-numeric: tabular-nums;
+    }
+    td,
+    th {
+        text-align: left;
+        padding: 4px 12px 4px 0;
+        border-bottom: 1px solid var(--linka);
+    }
+</style>
+
+<main>
+    <header class="uvod">
+        <h1>Dlaždica Klíma: meno podľa režimu a ventilátor</h1>
+        <p>
+            <b>Rozhodnuté 27. 11. 2026:</b> Kúrenie, Chladenie, Auto, Sušenie, Vetranie (odpoveď sa stratila - v dotazníku mala ten istý
+            kľúč ako ventilátor, ostal návrh), vypnutá Off, bez spojenia Off-line s časom aj menom vo farbe jantárového rámu. Ventilátor F1
+            - stĺpce vpravo hore, len keď je zapnutá. Snímky hotovej dlaždice: <code>teraz-klima-rezim/hotove-*.png</code>.
+        </p>
+        <p>
+            Dlaždica na karte Teraz sa dnes volá vždy <b>Klíma</b>. Návrh: volať ju podľa režimu, ktorý je nastavený priamo na Daikine
+            (adaptér ho hlási v <code>mode</code>), a vpravo hore ukázať otáčky ventilátora (<code>f_rate</code>).
+        </p>
+        <p>
+            Rozmery sú zmerané v appke pri šírke telefónu 360 px: dlaždica má 161 px, na meno ostáva <b>133 px</b> v písme appky (Archivo
+            800, 21,25 px). Náhľad pri každej otázke meria v tom istom písme a povie, keď sa meno nezmestí. Snímky dole sú z appky s ručne
+            vloženým obsahom.
+        </p>
+    </header>
+
+    <div class="lista">
+        <span><span class="pocet" id="pocet">0 / 9</span> zodpovedaných</span>
+        <span class="stav" id="stav">Načítavam odpovede…</span>
+        <button class="hotovo" id="hotovo" type="button">Vyplnené</button>
+    </div>
+
+    <section>
+        <h2>Meno dlaždice podľa režimu</h2>
+        <p class="sekcia-pop">
+            Meno sa mení hneď, ako niekto prepne režim ovládačom alebo v appke Onecta - appka ho uvidí pri ďalšom hlásení skriptu Shelly
+            (každú minútu). Pri každom režime: 1 ponechať „Klíma“, 2 vlastné, 3 môj návrh.
+        </p>
+        <div id="mena"></div>
+        <div class="snimky">
+            <figure>
+                <img src="teraz-klima-rezim/m-kurenie.png" alt="Dlaždica Kúrenie v appke" />
+                <figcaption>Kúrenie, kompresor beží (biely kruh)</figcaption>
+            </figure>
+            <figure>
+                <img src="teraz-klima-rezim/m-chladenie.png" alt="Dlaždica Chladenie v appke" />
+                <figcaption>Chladenie - najdlhšie, čo sa zmestí (116 px)</figcaption>
+            </figure>
+            <figure>
+                <img src="teraz-klima-rezim/m-vypnuta.png" alt="Dlaždica Klíma vypnutá" />
+                <figcaption>Vypnutá: Klíma, kruh nie je biely</figcaption>
+            </figure>
+            <figure>
+                <img src="teraz-klima-rezim/m-vykurovanie.png" alt="Vykurovanie sa zalomí" />
+                <figcaption>Vykurovanie (143 px) sa nezmestí a zalomí - preto Kúrenie</figcaption>
+            </figure>
+        </div>
+    </section>
+
+    <section>
+        <h2>Otáčky ventilátora na dlaždici</h2>
+        <p class="sekcia-pop">
+            Daikin hlási <code>f_rate</code>: A = automaticky, B = tichý režim, 3 až 7 = stupne 1 až 5 (ako na ovládači). Panel Klíma ho už
+            ukazuje v Podrobnostiach. Návrh pre všetky varianty: na dlaždici len keď je klimatizácia zapnutá; vypnutá ani bez spojenia
+            ventilátor neukazuje. Čítačka dostane text „ventilátor stupeň 3“, „ventilátor automaticky“, „tichý“.
+        </p>
+        <div id="vent"></div>
+    </section>
+
+    <section>
+        <h2>Poznámka</h2>
+        <label for="poznamka" class="sekcia-pop">Čokoľvek ďalšie k dlaždici (nepovinné).</label>
+        <textarea id="poznamka"></textarea>
+    </section>
+
+    <section>
+        <h2>Zmerané šírky mien</h2>
+        <p class="sekcia-pop">
+            V appke pri 360 px, miesto na meno 133 px. Pri užšom telefóne sa písmo zmenšuje spolu s dlaždicou, pomer ostáva.
+        </p>
+        <div class="tab">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Meno</th>
+                        <th>Šírka</th>
+                        <th>Zmestí sa</th>
+                    </tr>
+                </thead>
+                <tbody id="sirky"></tbody>
+            </table>
+        </div>
+    </section>
+</main>
+<span class="meric" id="meric" aria-hidden="true"></span>
+
+<script>
+    const SIRKY = {
+        Klíma: 66,
+        Kúrenie: 89,
+        Chladenie: 116,
+        Sušenie: 93,
+        Vetranie: 97,
+        Ventilátor: 113,
+        Automat: 99,
+        Auto: 55,
+        Kúri: 47,
+        Chladí: 73,
+        Suší: 50,
+        Vetrá: 62,
+        Vetrák: 76,
+        Odvlhčuje: 116,
+        Klimatizácia: 142,
+        Vykurovanie: 143,
+    };
+    const MIESTO = 133;
+
+    const MENA = [
+        {
+            id: 'kurenie',
+            kod: 'mode 4',
+            nazov: 'Kúrenie',
+            kedy: 'Daikin je prepnutý na vykurovanie (Onecta: „Vykurovanie“). Platí aj vtedy, keď kompresor práve stojí, lebo izba je nahriata - režim je stále kúrenie, len kruh ikony nie je biely.',
+            navrh: 'Kúrenie',
+            dovod: '„Vykurovanie“ má 143 px a zalomí sa. „Kúrenie“ (89 px) je slovo, ktoré sa doma používa.',
+        },
+        {
+            id: 'chladenie',
+            kod: 'mode 3',
+            nazov: 'Chladenie',
+            kedy: 'Daikin chladí (Onecta: „Chladenie“). V lete hlavný režim.',
+            navrh: 'Chladenie',
+            dovod: 'Zmestí sa (116 px) a hovorí presne to isté, čo Kúrenie v zime. „Klíma“ tiež sedí, ale potom by meno režim neprezradilo.',
+        },
+        {
+            id: 'auto',
+            kod: 'mode 0, 1, 7',
+            nazov: 'Automaticky',
+            kedy: 'Daikin sám volí medzi kúrením a chladením podľa nastavenej teploty.',
+            navrh: 'Automat',
+            dovod: '„Auto“ nejde: hneď nad Klímou je dlaždica Auto (elektromobil). „Automat“ má 99 px.',
+        },
+        {
+            id: 'susenie',
+            kod: 'mode 2',
+            nazov: 'Sušenie',
+            kedy: 'Odvlhčovanie (na ovládači kvapka, Onecta „Sušenie“). Zriedkavé.',
+            navrh: 'Sušenie',
+            dovod: 'Názov z ovládača, 93 px. „Odvlhčuje“ (116 px) je presnejšie, ale dlhšie a sloveso medzi podstatnými menami.',
+        },
+        {
+            id: 'ventilator',
+            kod: 'mode 6',
+            nazov: 'Ventilátor',
+            kedy: 'Len vetrá, kompresor nebeží (Onecta „Ventilátor“).',
+            navrh: 'Vetranie',
+            dovod: 'Ladí s Kúrenie / Chladenie / Sušenie (všetko „čo robí“), 97 px. „Ventilátor“ sa zmestí tiež (113 px).',
+        },
+        {
+            id: 'vypnuta',
+            kod: 'pow 0',
+            nazov: 'Vypnutá',
+            kedy: 'Klimatizácia je vypnutá. Adaptér hlási aj posledný režim, ten však teraz nebeží.',
+            navrh: 'Klíma',
+            dovod: 'Vypnutý spotrebič má meno spotrebiča, ako Bojler či Práčka. Posledný režim by klamal, že niečo robí.',
+        },
+        {
+            id: 'mlci',
+            kod: 'bez spojenia',
+            nazov: 'Klimatizácia mlčí',
+            kedy: 'Skript na Shelly sa neozval dlhšie ako KLIMA.tichoMin - dlaždica má jantárový rám a čas, odkedy mlčí.',
+            navrh: 'Klíma',
+            dovod: 'Režim nepoznáme, tak len meno spotrebiča.',
+        },
+    ];
+
+    const VENT = [
+        {
+            id: 'F1',
+            nazov: 'Stĺpce vpravo hore',
+            odporucam: true,
+            snimky: [
+                ['f1-1', 'stupeň 1'],
+                ['f1-3', 'stupeň 3'],
+                ['f1-5', 'stupeň 5'],
+                ['f1-A', 'automaticky'],
+                ['f1-B', 'tichý'],
+            ],
+            za: [
+                'miesto vedľa ikony je na každej dlaždici prázdne - nič sa neposunie ani nezmenší',
+                'päť stĺpcov ako na ovládači Daikin, stupeň vidno na prvý pohľad',
+                'všetky dlaždice ostanú rovnako vysoké',
+            ],
+            proti: ['nový znak na karte - „A“ a mesiac treba raz pochopiť', 'stĺpce sa podobajú na signál Wi-Fi'],
+        },
+        {
+            id: 'F2',
+            nazov: 'Vrtuľka s číslom',
+            snimky: [
+                ['f2-3', 'stupeň 3'],
+                ['f2-A', 'automaticky'],
+                ['f2-B', 'tichý'],
+            ],
+            za: ['hneď jasné, že ide o ventilátor', 'vrtuľka by sa točila rýchlejšie pri vyššom stupni (pri obmedzenom pohybe stojí)'],
+            proti: [
+                'jediná stále sa hýbuca vec medzi dlaždicami ťahá oko',
+                'číslo bez stĺpcov nepovie, koľko je najviac (5)',
+                'v snímke vrtuľka stojí',
+            ],
+        },
+        {
+            id: 'F3',
+            nazov: 'Stĺpce za menom',
+            snimky: [
+                ['f3-3', 'Kúrenie + stupeň 3'],
+                ['f3-A', 'Kúrenie + automaticky'],
+                ['f3-chl', 'Chladenie sa už nezmestí'],
+            ],
+            za: ['režim a ventilátor v jednom riadku, čítajú sa spolu'],
+            proti: [
+                's Chladením (116 + 40 px) sa riadok zalomí a dlaždica narastie (snímka vpravo)',
+                'fungovalo by len pri krátkych menách',
+            ],
+        },
+        {
+            id: 'F0',
+            nazov: 'Na dlaždici nič',
+            snimky: [],
+            za: ['najjednoduchšie, nič nového', 'ventilátor už je v paneli Klíma v Podrobnostiach'],
+            proti: ['otáčky treba hľadať ťuknutím do panelu'],
+        },
+    ];
+
+    const POCET = MENA.length + 2;
+    const odpovede = {};
+    let db = null;
+    const stav = document.getElementById('stav');
+    const meric = document.getElementById('meric');
+
+    function sirka(text) {
+        meric.textContent = text;
+        return Math.ceil(meric.getBoundingClientRect().width);
+    }
+
+    function el(tag, attrs = {}, ...deti) {
+        const e = document.createElement(tag);
+        for (const [k, v] of Object.entries(attrs)) {
+            if (k === 'text') e.textContent = v;
+            else if (v !== false && v !== undefined) e.setAttribute(k, v === true ? '' : v);
+        }
+        deti.flat().forEach((d) => d && e.append(d));
+        return e;
+    }
+
+    function menoZ(o) {
+        const a = odpovede[o.id];
+        if (!a) return o.navrh;
+        if (a.volba === 'ponechat') return 'Klíma';
+        if (a.volba === 'vlastne') return a.text || '';
+        return o.navrh;
+    }
+
+    function nahladDlazdice(o) {
+        const meno = menoZ(o);
+        const w = sirka(meno || ' ');
+        const zle = w > MIESTO;
+        const box = el(
+            'div',
+            { class: 'nahlad' },
+            el(
+                'div',
+                { class: 'dl-ram' },
+                el(
+                    'div',
+                    { class: 'dl' },
+                    el('span', { class: 'cislo' }, o.id === 'vypnuta' ? '0,0' : '1,2', el('small', { text: ' kW' })),
+                    el('span', { class: 'meno', text: meno || '–' }),
+                ),
+            ),
+            el('span', {
+                class: 'miera',
+                'data-zle': zle,
+                text: zle ? `${w} px - nezmestí sa (miesto ${MIESTO} px)` : `${w} px z ${MIESTO} px`,
+            }),
+        );
+        return box;
+    }
+
+    async function uloz(id, data) {
+        odpovede[id] = data;
+        pocitaj();
+        if (!db) {
+            stav.textContent = 'Odpovede sa neukladajú (databáza stránky nie je dostupná).';
+            return;
+        }
+        try {
+            await db
+                .collection('odpovede')
+                .doc(id)
+                .set({ ...data, at: Date.now() });
+            stav.textContent = 'Uložené';
+        } catch (e) {
+            stav.textContent = 'Neuložilo sa: ' + (e && e.message ? e.message : 'chyba');
+        }
+    }
+
+    function otazkaMena(o) {
+        const a = odpovede[o.id];
+        const meno = `m-${o.id}`;
+        const telo = el('div', { class: 'telo' });
+        const nahlad = el('div');
+        const prekresli = () => nahlad.replaceChildren(nahladDlazdice(o));
+        const vlastne = el('input', {
+            type: 'text',
+            id: `${meno}-text`,
+            value: a?.text || '',
+            placeholder: 'tvoje meno',
+            'aria-label': `Vlastné meno pre ${o.nazov}`,
+        });
+        const radio = (v, popis, ...extra) =>
+            el(
+                'label',
+                { class: 'volba' },
+                el('input', { type: 'radio', name: meno, id: `${meno}-${v}`, value: v, checked: a?.volba === v }),
+                el('span', { text: popis }),
+                ...extra,
+            );
+        const volby = el(
+            'div',
+            { class: 'volby' },
+            radio('ponechat', 'Ponechať „Klíma“'),
+            radio('vlastne', 'Zadám vlastné', vlastne),
+            radio('navrh', `Návrh: „${o.navrh}“`, el('span', { class: 'dovod', text: o.dovod })),
+        );
+        volby.addEventListener('change', (e) => {
+            if (e.target.type !== 'radio') return;
+            uloz(o.id, { volba: e.target.value, text: vlastne.value.trim() });
+            prekresli();
+        });
+        let casovac = 0;
+        vlastne.addEventListener('input', () => {
+            volby.querySelector(`#${meno}-vlastne`).checked = true;
+            odpovede[o.id] = { volba: 'vlastne', text: vlastne.value.trim() };
+            prekresli();
+            clearTimeout(casovac);
+            casovac = setTimeout(() => uloz(o.id, { volba: 'vlastne', text: vlastne.value.trim() }), 600);
+        });
+        telo.append(volby, nahlad);
+        prekresli();
+        return el(
+            'article',
+            { class: 'otazka' },
+            el('div', { class: 'otazka-hlava' }, el('h3', { text: o.nazov }), el('span', { class: 'kod', text: o.kod })),
+            el('p', { class: 'kedy', text: o.kedy }),
+            telo,
+        );
+    }
+
+    function otazkaVent() {
+        const a = odpovede.ventilator;
+        const wrap = el('div', { class: 'volby' });
+        for (const v of VENT) {
+            const lab = el(
+                'label',
+                { class: 'volba' },
+                el('input', { type: 'radio', name: 'vent', id: `vent-${v.id}`, value: v.id, checked: a?.volba === v.id }),
+                el(
+                    'span',
+                    {},
+                    el('b', { text: `${v.id} ${v.nazov} ` }),
+                    v.odporucam ? el('span', { class: 'odporucam', text: 'odporúčam' }) : null,
+                ),
+                el(
+                    'div',
+                    { class: 'dovod' },
+                    el(
+                        'div',
+                        { class: 'za-proti' },
+                        el(
+                            'div',
+                            {},
+                            el('b', { text: 'Výhody' }),
+                            el(
+                                'ul',
+                                {},
+                                v.za.map((t) => el('li', { text: t })),
+                            ),
+                        ),
+                        el(
+                            'div',
+                            {},
+                            el('b', { text: 'Nevýhody' }),
+                            el(
+                                'ul',
+                                {},
+                                v.proti.map((t) => el('li', { text: t })),
+                            ),
+                        ),
+                    ),
+                    v.snimky.length
+                        ? el(
+                              'div',
+                              { class: 'snimky' },
+                              v.snimky.map(([s, t]) =>
+                                  el(
+                                      'figure',
+                                      {},
+                                      el('img', { src: `teraz-klima-rezim/${s}.png`, alt: `${v.nazov}: ${t}`, loading: 'lazy' }),
+                                      el('figcaption', { text: t }),
+                                  ),
+                              ),
+                          )
+                        : null,
+                ),
+            );
+            wrap.append(lab);
+        }
+        wrap.addEventListener('change', (e) => e.target.name === 'vent' && uloz('ventilator', { volba: e.target.value }));
+        return el(
+            'article',
+            { class: 'otazka' },
+            el('div', { class: 'otazka-hlava' }, el('h3', { text: 'Ako ukázať ventilátor' }), el('span', { class: 'kod', text: 'f_rate' })),
+            el('p', {
+                class: 'kedy',
+                text: 'Snímky sú dlaždica Kúrenie v appke pri 360 px, s bielym kruhom (kompresor beží). Varianty sú vložené ručne, v appke ešte nie sú.',
+            }),
+            wrap,
+        );
+    }
+
+    function pocitaj() {
+        const n = MENA.filter((o) => odpovede[o.id]).length + (odpovede.ventilator ? 1 : 0) + (odpovede.poznamka?.text ? 1 : 0);
+        document.getElementById('pocet').textContent = `${n} / ${POCET}`;
+    }
+
+    function vykresli() {
+        document.getElementById('mena').replaceChildren(...MENA.map(otazkaMena));
+        document.getElementById('mena').style.cssText = 'display:grid;gap:12px';
+        document.getElementById('vent').replaceChildren(otazkaVent());
+        document.getElementById('poznamka').value = odpovede.poznamka?.text || '';
+        document
+            .getElementById('sirky')
+            .replaceChildren(
+                ...Object.entries(SIRKY).map(([m, w]) =>
+                    el('tr', {}, el('td', { text: m }), el('td', { text: `${w} px` }), el('td', { text: w <= MIESTO ? 'áno' : 'nie' })),
+                ),
+            );
+        pocitaj();
+    }
+
+    let poznCas = 0;
+    document.getElementById('poznamka').addEventListener('input', (e) => {
+        clearTimeout(poznCas);
+        const text = e.target.value;
+        poznCas = setTimeout(() => uloz('poznamka', { text }), 700);
+    });
+
+    document.getElementById('hotovo').addEventListener('click', async () => {
+        if (!db) {
+            stav.textContent = 'Bez databázy stránky sa „Vyplnené“ neuloží.';
+            return;
+        }
+        try {
+            await db.collection('odpovede').doc('stav').set({ vyplnene: true, at: Date.now() });
+            stav.textContent = 'Vyplnené - napíš mi do chatu a zapracujem to.';
+        } catch (e) {
+            stav.textContent = 'Neuložilo sa: ' + (e && e.message ? e.message : 'chyba');
+        }
+    });
+
+    (document.fonts?.ready ?? Promise.resolve()).then(vykresli);
+
+    (async () => {
+        const limit = setTimeout(() => {
+            if (!db) stav.textContent = 'Databáza stránky neodpovedá, odpovede sa neuložia.';
+        }, 10000);
+        try {
+            db = window.claude ? await window.claude.use('db') : null;
+        } catch {
+            db = null;
+        }
+        clearTimeout(limit);
+        if (!db) {
+            stav.textContent = 'Odpovede sa neukladajú (databáza stránky nie je dostupná).';
+            return;
+        }
+        try {
+            const snap = await db.collection('odpovede').get();
+            snap.docs.forEach((d) => {
+                if (d.id !== 'stav') odpovede[d.id] = d.data();
+            });
+            stav.textContent = snap.docs.length ? 'Odpovede načítané' : 'Každá voľba sa hneď uloží';
+            await document.fonts?.ready;
+            vykresli();
+        } catch (e) {
+            stav.textContent = 'Odpovede sa nenačítali: ' + (e && e.message ? e.message : 'chyba');
+        }
+    })();
+</script>
