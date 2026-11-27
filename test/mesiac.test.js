@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { HVIEZDY, SITE } from '../shared/config.js';
 import { premietni } from '../shared/hviezdy.js';
-import { mesiacFaza, mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
+import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
 
 const RIO = { lat: -22.91, lon: -43.17 };
 
@@ -28,9 +28,9 @@ test('mesiacNaOblohe: poloha a fáza do pol stupňa od nezávislého výpočtu',
     }
 });
 
-test('mesiacFaza: nov, spln a štvrte v skutočných chvíľach', () => {
+test('mesiacNaOblohe: fáza - nov, spln a štvrte v skutočných chvíľach', () => {
     /** Vzdialenosť od cieľa po kružnici fáz. @param {string} iso @param {number} ciel */
-    const odchylka = (iso, ciel) => Math.abs(((mesiacFaza(new Date(iso)) - ciel + 1.5) % 1) - 0.5);
+    const odchylka = (iso, ciel) => Math.abs(((mesiacNaOblohe(new Date(iso), SITE.lat, SITE.lon).faza - ciel + 1.5) % 1) - 0.5);
     assert.ok(odchylka('2026-11-09T07:02:42Z', 0) < 0.002);
     assert.ok(odchylka('2026-11-24T14:54:04Z', 0.5) < 0.002);
     assert.ok(odchylka('2027-01-15T20:35:05Z', 0.25) < 0.002);

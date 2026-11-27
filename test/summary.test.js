@@ -5,7 +5,7 @@ import { lastDays, monthDays, parseDayLog, recordDay, yearDays } from '../shared
 import { fmt1, fmtSum } from '../shared/format.js';
 import { carbonFacts, carbonPayback, co2SavedKg } from '../shared/carbon.js';
 import { plural, posterCo2Value, posterPayback, STATISTIKA_TEXTS, suctyOdNote } from '../shared/messages.js';
-import { bestOf, bigText, kwhText, restToday, summaryModel, yearMonths } from '../shared/summary.js';
+import { bestOf, bigText, restToday, summaryModel, yearMonths } from '../shared/summary.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
 const { pv, forecast } = fixtureData();
@@ -108,13 +108,11 @@ test('bestOf: najvyšší deň, deň bez čísla sa nepočíta, pri rovnosti sko
     );
 });
 
-test('bigText a kwhText: do 100 kWh s desatinou, potom celé; bez súčtu pomlčka', () => {
+test('bigText: do 100 kWh s desatinou, potom celé; bez súčtu pomlčka', () => {
     assert.equal(bigText(31.74), '31,7');
     assert.equal(bigText(168.2), '168');
     assert.equal(bigText(9112.4), fmtSum(9112, 0));
     assert.equal(bigText(null), '–');
-    assert.equal(kwhText(null), '–');
-    assert.equal(kwhText(9112.4), fmtSum(9112.4, 1));
 });
 
 test('posterCo2Value: kg s desatinou, kg celé, od tony tony', () => {

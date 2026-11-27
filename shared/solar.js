@@ -304,16 +304,6 @@ export function daylightSpan(site, dateKey) {
 }
 
 /**
- * Výroba za jasnej oblohy v daný miestny deň (kWh): súčet bezoblačného stropu po desiatich
- * minútach. Pri predvolenej teplote 25 °C, lebo sprievodca počíta aj pre lokalitu, ku ktorej
- * appka predpoveď ešte nemá.
- * @param {Site} site @param {Plant} plant @param {string} dateKey
- */
-export function clearDayKwh(site, plant, dateKey) {
-    return localDayTimes(dateKey, site.timezone, 10).reduce((kwh, t) => kwh + clearSkyAcKw(t, site, plant) / 6, 0);
-}
-
-/**
  * Koľko energie dostane rovina panelu za rok pri jasnej oblohe oproti najlepšej rovine na tom
  * istom mieste (0-1). Najlepšia sa pozerá k rovníku so sklonom, ktorý tam dá najviac. Ročný
  * súčet stačí vzorkou: jeden deň v mesiaci, bod každú pol hodinu.

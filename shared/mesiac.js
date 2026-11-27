@@ -50,12 +50,6 @@ function efemerida(date) {
 const fazaZ = (e) => do360(e.dlzka - e.slnko) / 360;
 
 /**
- * Fáza Mesiaca 0-1 (0 nov, 0,25 prvá štvrť, 0,5 spln, 0,75 posledná štvrť): uhol medzi Mesiacom a
- * Slnkom na ekliptike. @param {Date} date
- */
-export const mesiacFaza = (date) => fazaZ(efemerida(date));
-
-/**
  * Kde je Mesiac nad miestom `lat`, `lon`: výška nad obzorom (s paralaxou, pri obzore skoro 1°),
  * azimut od severu cez východ a fáza. `uhol` hovorí, kam ukazuje osvetlená strana: stupne proti
  * smeru hodinových ručičiek od zvislice, teda k Slnku.

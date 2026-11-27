@@ -3,7 +3,7 @@
 import { MINUTES_PER_DAY, PLAN_DNA } from './config.js';
 import { fmt1, kwpRoughText } from './format.js';
 import { MOZEM_ITEM_TEXTS, MOZEM_SKY_TEXTS, PLAN_AFTER, PLAN_PO_BOJLERI, countdownText } from './messages-mozem.js';
-import { andList, cap, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
+import { cap, endHm, hm, onDay, polite, spanText } from './messages-zaklad.js';
 
 // ---- Karta Teraz -----------------------------------------------------
 // Výkon, odporúčanie a plán dňa počíta heroModel a
@@ -385,65 +385,6 @@ export function terazVecText(r, teraz) {
     return { kedy: `${teraz ? 'Teraz' : 'Dnes'} ${zdroj}`, cas: `${hm(r.start)} – ${koniecHm(r.end)}`, why };
 }
 
-/** Sieť v odčítaní karty Deň podľa úrovne pásma. */
-const SIET_DO = /** @type {Record<string, string>} */ ({ lacna: 'lacná sieť', draha: 'drahá sieť', bezna: 'bežná cena' });
-
-/**
- * Odčítanie karty Deň pre zvolený čas (alebo teraz): čas, výkon a odkiaľ je. `veta` je pre čítačku
- * a povie aj to, čo karta ukazuje krivkou a farbami: či slnko stačí a o koľko, sieť a dokedy,
- * oblačnosť a čo z plánu vtedy beží, inak čo príde.
- * @param {{ min: number, teraz: boolean, kw: number, source: 'live' | 'measured' | 'forecast' | null,
- *   slnko: 'go' | 'part' | 'noc', limitKw: number, level: string, levelDo: number, cloud: number | null,
- *   bezi: string[], dalsi: { name: string, start: number } | null }} c
- */
-export function terazCitanieText(c) {
-    const kw = Number.isFinite(c.kw) ? `${fmt1(c.kw)} kW` : '–';
-    const zdroj = c.source ? terazSourceText(c.source) : '';
-    const slnko =
-        c.slnko === 'go'
-            ? `slnko stačí · ${terazLimitGap(c.kw, c.limitKw)}`
-            : c.slnko === 'part'
-              ? `svieti, nestačí · ${terazLimitGap(c.kw, c.limitKw)}`
-              : 'slnko nesvieti';
-    const siet = `${SIET_DO[c.level] ?? SIET_DO.bezna} do ${koniecHm(c.levelDo)}`;
-    const mraky = c.slnko === 'noc' || c.cloud === null ? '' : `oblačnosť ${terazCloudText(c.cloud)}`;
-    const low = (/** @type {string} */ n) => n.toLowerCase();
-    const plan = c.bezi.length ? `beží ${andList(c.bezi.map(low))}` : c.dalsi ? `potom ${low(c.dalsi.name)} o ${hm(c.dalsi.start)}` : '';
-    const cas = c.teraz ? `Teraz ${hm(c.min)}` : hm(c.min);
-    return {
-        cas,
-        kw,
-        zdroj,
-        veta: [`${cas}, ${kw}${zdroj ? `, ${zdroj}` : ''}`, slnko, siet, mraky, plan].filter(Boolean).join('. '),
-    };
-}
-
-/** Slová pásu spotrebičov pod grafom detailu dňa (úrovne fitLevel z day-plan.js). Zelené („Zapni veľké“)
- * nesie aj okno pod grafom dňa na karte Teraz, preto sú tu a nie v messages-sedem.js. */
-export const FIT_WORDS = { go: 'Zapni veľké', part: 'čiastočne', grid: 'zo siete' };
-
-/** @type {typeof FIT_WORDS} */
-const FIT_WORDS_SLUSNE = { ...FIT_WORDS, go: 'Zapnite veľké' };
-
-/** Približná šírka znaku popisu pásu (11,5 px Space Grotesk) - na odhad, či sa popis zmestí. */
-const FIT_CHAR_PX = 6.4;
-
-/**
- * Popis úseku pásu spotrebičov: pri zelenom aj s časom („Zapni veľké · 11–16“, „8:30–17:30“), keď sa
- * zmestí, inak len slovo, a keď ani to, nič - úsek potom nesie farba, legenda a tooltip.
- * @param {{ from: number, to: number, level: import('./day-plan.js').FitLevel }} seg @param {number} widthPx
- * @param {import('./messages-zaklad.js').Voice} [voice]
- */
-export function fitLabel(seg, widthPx, voice = 'drzy') {
-    const fits = (/** @type {string} */ t) => t.length * FIT_CHAR_PX + 8 <= widthPx;
-    const short = (/** @type {number} */ min) =>
-        min % 60 ? `${Math.floor(min / 60)}:${String(min % 60).padStart(2, '0')}` : String(min / 60);
-    const word = (polite(voice) ? FIT_WORDS_SLUSNE : FIT_WORDS)[seg.level];
-    const full = `${word} · ${short(seg.from)}–${short(seg.to)}`;
-    if (seg.level === 'go' && fits(full)) return full;
-    return fits(word) ? word : '';
-}
-
 /**
  * Riadok pod číslom: odkiaľ výkon je. Živé meranie, namerané (krivka dneška), alebo odhad
  * z predpovede. Keď appka teraz meranie nemá, povie to pás pod číslom (terazNoteText) a tento
@@ -481,34 +422,10 @@ export function terazPreviewTime(min) {
     return hm(min);
 }
 
-// Zoznam pod grafom dňa (docs/navrhy/teraz-rozbalovaci-zoznam.html, B): hodnoty v čase, na ktorom
-// je bod grafu - teraz, alebo náhľad pod prstom.
-
-/** Oblačnosť v percentách, bez údaja pomlčka. @param {number | null} pct */
-export function terazCloudText(pct) {
-    return pct === null ? '–' : `${Math.round(pct)} %`;
-}
-
-/** Koľko výkonu chýba do hranice veľkých spotrebičov, alebo koľko je ho navyše. @param {number} kw @param {number} limitKw */
-export function terazLimitGap(kw, limitKw) {
-    if (!Number.isFinite(kw)) return '–';
-    return kw < limitKw ? `chýba ${fmt1(limitKw - kw)} kW` : `navyše ${fmt1(kw - limitKw)} kW`;
-}
-
 /** Okno na veľké veci dnes: prebieha či príde, už bolo, alebo nebude. @param {{ from: number, to: number } | null} w @param {boolean} past */
 export function terazWindowText(w, past) {
     if (!w) return 'Okno na veľké veci dnes nebude.';
     return `Okno na veľké veci ${past ? 'bolo ' : ''}${spanText(w)}.`;
-}
-
-/**
- * Textový popis grafu pre čítačku obrazovky: teraz, okno na veľké veci, kedy je lacná a kedy
- * drahá sieť - to, čo inak nesie farba pásu.
- * @param {{ span: { from: number, to: number }, nowMin: number, kwText: string, tone: import('./day-chart.js').Tone,
- *   sun: Array<{ from: number, to: number }>, cheap: Array<{ from: number, to: number }>, costly: Array<{ from: number, to: number }> }} d
- */
-export function terazChartText({ span, nowMin, kwText, tone, sun, cheap, costly }) {
-    return dayChartText({ span, now: { min: nowMin, kwText, tone }, sun, cheap, costly });
 }
 
 /**

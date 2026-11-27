@@ -22,7 +22,6 @@ import {
     sedemTitle,
     sedemWindowsText,
     sedemWindowTile,
-    terazChartText,
     weekMessage,
 } from '../shared/messages.js';
 import { planWindows } from '../shared/mozem-jadro.js';
@@ -337,18 +336,18 @@ test('texty karty 7 dní', () => {
     assert.equal(sedemDayMessage(pts, th, false).title, 'Slabý deň');
 });
 
-test('dayChartText: bez „teraz“ pre iný deň, terazChartText ostáva to isté', () => {
+test('dayChartText: bez „teraz“ pre iný deň, s ním teraz výkon a stav', () => {
     const w = [{ from: m(9), to: m(17) }];
     assert.equal(
         dayChartText({ span: FULL_DAY, now: null, sun: [], cheap: w, costly: [] }),
         'Výroba počas dňa. Okno na veľké veci nebude. Lacná sieť 09:00 – 17:00.',
     );
     assert.equal(
-        terazChartText({ span: FULL_DAY, nowMin: m(13), kwText: '5,0', tone: 'sun', sun: w, cheap: [], costly: [] }),
+        dayChartText({ span: FULL_DAY, now: { min: m(13), kwText: '5,0', tone: 'sun' }, sun: w, cheap: [], costly: [] }),
         'Výroba počas dňa. Teraz 13:00: 5,0 kW, slnko stačí. Okno na veľké veci 09:00 – 17:00.',
     );
     assert.equal(
-        terazChartText({ span: FULL_DAY, nowMin: m(13), kwText: '0,0', tone: 'plain', sun: [], cheap: [], costly: w }),
+        dayChartText({ span: FULL_DAY, now: { min: m(13), kwText: '0,0', tone: 'plain' }, sun: [], cheap: [], costly: w }),
         'Výroba počas dňa. Teraz 13:00: 0,0 kW, bežná cena. Okno na veľké veci dnes nebude. Drahá sieť 09:00 – 17:00.',
     );
 });

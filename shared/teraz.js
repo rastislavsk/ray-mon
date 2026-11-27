@@ -7,14 +7,13 @@ import { autoDlazdicaNabija, nabijaSa } from './auto-nabija.js';
 import { autoDna } from './auto-slnko.js';
 import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
 import { interpolate } from './chart-model.js';
-import { installedKw, PLAN_DNA, powerThresholds, TARIFF_LIMITS } from './config.js';
+import { installedKw, PLAN_DNA, TARIFF_LIMITS } from './config.js';
 import { dayPlan } from './day-plan.js';
 import { heroModel } from './hero-model.js';
 import {
     terazAutoText,
     terazBehText,
     terazBehVecText,
-    terazCitanieText,
     terazDalsiText,
     terazDlazdicaText,
     terazHotoveText,
@@ -590,79 +589,6 @@ function horeDalsi(p, nowMin) {
  *   mv: MaleCislo[], podiel: number, draha: number, potom: Potom | null }>,
  *   dalsi: { id: string, name: string, zn?: Znacka, cas: string, odr: string[], mv: MaleCislo[], podiel: number, draha: number, potom?: Potom | null } | null }} CoZapnutHore
  */
-
-/**
- * Graf dňa: odčítanie zvoleného času (`min`, null = teraz) - výkon a odkiaľ je, pre čítačku aj či
- * slnko stačí, sieť, oblačnosť a čo z Plánu dňa (`rows`) vtedy beží - a slnko na oblohe panelu. Výkon v inom čase je ten istý ako náhľad grafu (heroModel): dozadu meranie,
- * dopredu predpoveď.
- * @param {TerazInput} input @param {RiadokPlanu[]} rows @param {number | null} min
- * @param {import('./messages.js').Voice} [voice] @param {Beh[]} [behy] čo človek dnes zapol - tiež vtedy beží
- */
-export function denModel(input, rows, min, voice = 'drzy', behy = []) {
-    const tz = input.site.timezone;
-    const nowMin = localMinutes(input.now, tz);
-    const plan = dayPlan(input);
-    const t = Math.max(0, Math.min(plan.length * STEP - 1, min ?? nowMin));
-    return {
-        citanie: citanieOf(input, plan, rows, { t, min, behy }, voice),
-        slnko: slnkoVKarte(daylightSpan(input.site, localDateKey(input.now, tz)), t),
-        min: t,
-        zvolene: min !== null,
-    };
-}
-
-/**
- * Slnko na oblohe panelu s grafom dňa v minúte `t`: zľava (východ) doprava (západ) po oblúku, v % plochy panelu
- * (`x` zľava, `y` zhora). Len dekorácia, poloha z dĺžky dňa, nie presná výška slnka. Mimo dňa null.
- * @param {{ from: number, to: number }} span @param {number} t
- */
-function slnkoVKarte(span, t) {
-    if (t < span.from || t > span.to) return null;
-    const f = (t - span.from) / (span.to - span.from);
-    return { x: Math.round(6 + f * 88), y: Math.round(78 - Math.sin(Math.PI * f) * 70) };
-}
-
-/**
- * Odčítanie grafu dňa v minúte `t` (zvolený čas `min`, null = teraz). @param {TerazInput} input @param {import('./day-plan.js').PlanSlot[]} plan
- * @param {RiadokPlanu[]} rows @param {{ t: number, min: number | null, behy: Beh[] }} cas `behy` čo človek dnes zapol
- * @param {import('./messages.js').Voice} voice
- */
-function citanieOf(input, plan, rows, { t, min, behy }, voice) {
-    const hero = heroModel({ ...input, previewMinutes: min }, voice);
-    const slot = plan[Math.floor(t / STEP)];
-    const slnko = slot.tier === 'green' ? 'go' : slot.night ? 'noc' : 'part';
-    const pasmo = /** @type {{ from: number, to: number }} */ (
-        planWindows(plan, (s) => s.level === slot.level).find((w) => w.from <= t && t < w.to)
-    );
-    const hour = input.forecast?.hourlyToday.find((p) => p.hour === Math.floor(t / 60));
-    // Teraz je pre plán najbližšia štvrťhodina, ako v Pláne dňa a pri dlaždiciach - inak by vec, ktorá
-    // ide teraz, bola tu „potom o …“.
-    const { bezi, dalsi } = coBezi(rows, min === null ? Math.ceil(t / STEP) * STEP : t, behy);
-    return terazCitanieText({
-        min: t,
-        teraz: min === null,
-        kw: hero.power,
-        source: hero.source,
-        slnko,
-        limitKw: powerThresholds(input.plant).lowKw,
-        level: slot.level,
-        levelDo: pasmo.to,
-        cloud: Number.isFinite(hour?.cloud) ? /** @type {number} */ (hour?.cloud) : null,
-        bezi: bezi.map((r) => r.name),
-        dalsi: dalsi ? { name: dalsi.name, start: dalsi.start } : null,
-    });
-}
-
-/**
- * Čo z Plánu dňa a z toho, čo človek zapol (`behy`), beží v minúte `t`, a keď nič, čo príde najskôr (inak null).
- * @param {RiadokPlanu[]} rows @param {number} t @param {Beh[]} behy
- */
-function coBezi(rows, t, behy) {
-    const dnes = rows.filter(dnesny);
-    const bezi = [...behy, ...dnes].filter((r) => r.start <= t && t < r.end);
-    const dalsi = bezi.length ? null : (dnes.filter((r) => r.start > t).sort((a, b) => a.start - b.start)[0] ?? null);
-    return { bezi, dalsi };
-}
 
 /**
  * Detail spotrebiča (panel po ťuknutí na dlaždicu či riadok): kedy a odkiaľ, od-do, prečo práve

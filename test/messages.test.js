@@ -73,14 +73,3 @@ test('weekMessage: najsilnejší a najslabší deň', () => {
     assert.match(msg.body, /Najslabšie bude po 7\.9\./);
     assert.doesNotMatch(weekMessage([days[0]]).body, /Najslabšie/);
 });
-
-test('fitLabel: zelený úsek s časom, keď sa zmestí, inak slovo, inak nič', async () => {
-    const { fitLabel } = await import('../shared/messages.js');
-    const go = { from: 11 * 60, to: 16 * 60, level: /** @type {const} */ ('go') };
-    assert.equal(fitLabel(go, 200), 'Zapni veľké · 11–16');
-    assert.equal(fitLabel({ ...go, from: 11 * 60 + 15 }, 200), 'Zapni veľké · 11:15–16');
-    assert.equal(fitLabel(go, 90), 'Zapni veľké');
-    assert.equal(fitLabel(go, 30), '');
-    assert.equal(fitLabel({ from: 0, to: 60, level: 'part' }, 80), 'čiastočne');
-    assert.equal(fitLabel({ from: 0, to: 60, level: 'grid' }, 80), 'zo siete');
-});

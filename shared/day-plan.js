@@ -97,31 +97,3 @@ export function dayHourTiers(day, tariff, plant) {
 }
 
 /** @typedef {'go' | 'part' | 'grid'} FitLevel */
-
-/**
- * Ako veľmi štvrťhodina plánu pokryje veľké spotrebiče - pás pod grafom v detaile dňa.
- * `go`: slnko stačí (tá istá zelená ako v pláne dňa, smartTier). `part`: slnko je hore
- * a panely dávajú aspoň toľko, koľko je špička slabého dňa - časť pôjde zo siete. `grid`:
- * zvyšok, všetko zo siete. Tarifa sem nevstupuje, pás hovorí len o slnku.
- * @param {PlanSlot} slot @param {import('./config.js').PowerThresholds} th @returns {FitLevel}
- */
-export function fitLevel(slot, th) {
-    if (slot.tier === 'green') return 'go';
-    return !slot.night && slot.kw >= th.weakPeakKw ? 'part' : 'grid';
-}
-
-/**
- * Plán dňa zlúčený do úsekov s rovnakou úrovňou (fitLevel), v minútach dňa.
- * @param {PlanSlot[]} plan @param {import('./config.js').PowerThresholds} th
- * @returns {Array<{ from: number, to: number, level: FitLevel }>}
- */
-export function fitSegments(plan, th) {
-    /** @type {Array<{ from: number, to: number, level: FitLevel }>} */ const out = [];
-    for (const s of plan) {
-        const level = fitLevel(s, th);
-        const last = out[out.length - 1];
-        if (last && last.level === level && last.to === s.startMin) last.to += s.min;
-        else out.push({ from: s.startMin, to: s.startMin + s.min, level });
-    }
-    return out;
-}
