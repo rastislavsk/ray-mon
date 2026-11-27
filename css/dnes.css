@@ -255,9 +255,10 @@
 .cas {
     font-weight: 800;
 }
-/* Dlaždica s dneškom: hláška začína v tej istej výške ako obsah susednej dlaždice (Veľké veci, Zajtra), nie v strede
-   svojej dlaždice - pri rôzne dlhých textoch by inak každá začínala inde. */
-.karta:has(> .cast[data-kind='dnes']) .cast > :nth-child(2) {
+/* Dnes a Zajtra: veľké slovo začína hore pod nadpisom, nie v strede dlaždice - večer tak Dnešok a Zajtra stoja vedľa
+   seba rovnako (zladené polia, 27. 11. 2026), pri rôzne dlhých slovách by inak každé začínalo inde. */
+.cast[data-kind='dnes'] > :nth-child(2),
+.cast[data-kind='zajtra'] > :nth-child(2) {
     margin-top: 4px;
 }
 /* Pás dlaždíc pod posuvníkom (docs/navrhy/dnes-upravy.html, nižšie dlaždice docs/navrhy/dnes-nizsie-dlazdice.html, D):

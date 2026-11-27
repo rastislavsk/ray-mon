@@ -190,17 +190,17 @@ export function dnesGradeText(kwh, forecastKwh) {
 }
 
 /**
- * Večer: zajtrajšok - trieda dňa, veľké slovo, koľko dá strecha a okno na veľké veci.
- * @param {{ cls: import('./den-trieda.js').DenTrieda, kwh: number, window: { from: number, to: number } | null }} d @param {import('./messages-zaklad.js').Voice} voice
+ * Večer: zajtrajšok - trieda dňa, veľké slovo a koľko dá strecha (bez okna, 27. 11. 2026 - pole je zladené s Dneškom,
+ * ktorý má pod slovom len namerané kWh).
+ * @param {{ cls: import('./den-trieda.js').DenTrieda, kwh: number }} d @param {import('./messages-zaklad.js').Voice} voice
  */
-export function dnesZajtraText({ cls, kwh, window }, voice) {
-    const okolo = `~${fmtSum(Math.round(kwh), 0)} kWh`;
+export function dnesZajtraText({ cls, kwh }, voice) {
     return {
         kick: 'Zajtra',
         // Nadpis dlaždice už hovorí Zajtra - odznak nesie len triedu dňa.
         chip: DEN_NAZVY[cls],
         word: mozemTexts(voice).DEN_WORDS.iny[cls],
-        text: window ? `${okolo} · ${spanText(window)}` : `${okolo} · bez okna`,
+        text: `~${fmtSum(Math.round(kwh), 0)} kWh`,
     };
 }
 

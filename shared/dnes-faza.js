@@ -9,7 +9,6 @@
 
 import { HOUR_RANGE } from './chart-model.js';
 import { PLAN_DNA, PREDPOVED_HODINY } from './config.js';
-import { forecastDayPlan } from './day-plan.js';
 import { DEN_TRIEDY, denTriedaDna, denTriedaVeci, silnyDen } from './den-trieda.js';
 import { weekDayName } from './format.js';
 import {
@@ -29,7 +28,6 @@ import {
     MOZEM_ITEM_TEXTS,
     stupne,
 } from './messages-core.js';
-import { mainWindow, sunWindows } from './mozem-jadro.js';
 import { skyWeather } from './sky.js';
 import { localDateKey, localMinutes, sunTimes } from './solar.js';
 import { dnesCards, todayOf } from './teraz.js';
@@ -216,7 +214,7 @@ function slnkoOf(input) {
 }
 
 /**
- * Zajtrajšok z predpovede: trieda dňa, koľko dá strecha a hlavné okno na veľké veci. Keď predpoveď
+ * Zajtrajšok z predpovede: trieda dňa a koľko dá strecha. Keď predpoveď
  * nezačína dneškom alebo zajtrajšok nemá, null.
  * @param {Input} input @param {readonly string[]} devices @param {import('./messages.js').Voice} voice
  */
@@ -225,7 +223,7 @@ function tomorrowOf(input, devices, voice) {
     if (!next || !input.forecast) return null;
     const data = { ...input, forecast: input.forecast };
     const cls = denTriedaDna(data, 1, devices);
-    return { cls, ...dnesZajtraText({ cls, kwh: next.kwhTotal, window: mainWindow(sunWindows(forecastDayPlan(data, 1))) }, voice) };
+    return { cls, ...dnesZajtraText({ cls, kwh: next.kwhTotal }, voice) };
 }
 
 /**
@@ -250,6 +248,13 @@ export function denVysvetlenie(input, kedy, { voice = 'drzy', devices = PLAN_DNA
 }
 
 /**
+ * Riadok pod slovom dneška: bez dní v číslach veta, prečo dáta nie sú; večer namerané kWh, ako pod slovom zajtrajška
+ * predpoveď (zladené polia, 27. 11. 2026); inak nič.
+ * @param {{ lead: string, day: object | null }} sky @param {DnesFaza | null} d
+ */
+const dnesText = (sky, d) => (!sky.day ? sky.lead : d?.faza === 'vecer' ? (d.grade ?? '') : '');
+
+/**
  * Celý pás karty Dnes (docs/navrhy/dnes-obloha-posuvnik.html, A): to, čo bolo nad pásom, sú jeho prvé dlaždice -
  * Dnes (odznak a veľké slovo; večer nadpis Ako dopadol dnešok), Veľké veci (ráno plán, cez deň odpočet okna alebo
  * veta o ňom), večer hneď za Dnes Zajtra, potom Zo strechy a Ako keby (večer namerané a čo sľubovala predpoveď). Za nimi karty časti
@@ -267,7 +272,7 @@ export function dnesKarty(sky, d) {
         chip: d?.chip ?? '',
         cls: sky.den ? sky.den.cls : null,
         word: sky.word,
-        text: sky.day ? '' : sky.lead,
+        text: dnesText(sky, d),
     };
     if (!d) return sky.word ? [dnes] : [];
     const vecer = d.faza === 'vecer';

@@ -33,8 +33,12 @@ export function wordSize(word) {
     return word.length <= 7 ? 46 : word.length <= 11 ? 38 : word.length <= 16 ? 32 : 26;
 }
 
-/** Atribút style veľkého slova: veľkosť podľa dĺžky a najdlhšie slovo v ňom. @param {string} word */
-const wordStyle = (word) => `--word:${wordSize(word)}px;--word-len:${Math.max(1, ...word.split(/\s+/).map((w) => w.length))}`;
+/**
+ * Atribút style veľkého slova: veľkosť podľa dĺžky a najdlhšie slovo v ňom. Večer majú Dnešok a Zajtra slovo rovnako
+ * veľké (zladené polia, 27. 11. 2026) - podľa dlhšieho z nich, aby sa zmestili obe. @param {string[]} slova
+ */
+const wordStyle = (slova) =>
+    `--word:${Math.min(...slova.map(wordSize))}px;--word-len:${Math.max(1, ...slova.flatMap((s) => s.split(/\s+/)).map((w) => w.length))}`;
 
 /** Čas alebo úsek časov vo vete („17:30“, „07:15 – 17:30“). */
 const CAS = /\d\d:\d\d(?: – \d\d:\d\d)?/g;
@@ -113,15 +117,16 @@ function predpovedHtml(k) {
 
 /**
  * Obsah jednej karty pod jej nadpisom: veľká hodnota alebo obrázok a krátky riadok. Obrázky (stĺpce, pásiky,
- * ikony) sú pre čítačku skryté - to isté povie text vedľa nich. @param {Karta} k
+ * ikony) sú pre čítačku skryté - to isté povie text vedľa nich.
+ * @param {Karta} k @param {string} slovo atribút style veľkého slova (wordStyle)
  */
-function obsahHtml(k) {
+function obsahHtml(k, slovo) {
     const text = (/** @type {string} */ t) => (t ? `<p class="k-text">${sCasmi(t)}</p>` : '');
     const val = (/** @type {string} */ v) => (v ? `<p class="k-val">${escapeHtml(v).replace(/ kWh$/, ' <small>kWh</small>')}</p>` : '');
     const bar = (/** @type {number | null} */ pct) =>
         pct === null ? '' : `<div class="bar" aria-hidden="true"><i style="width:${pct}%"></i></div>`;
     if (k.kind === 'dnes' || k.kind === 'zajtra')
-        return `<p${k.kind === 'dnes' ? ' id="mz-word"' : ''} class="k-slovo" style="${wordStyle(k.word)}">${escapeHtml(k.word)}</p>${text(k.text)}`;
+        return `<p${k.kind === 'dnes' ? ' id="mz-word"' : ''} class="k-slovo" style="${slovo}">${escapeHtml(k.word)}</p>${text(k.text)}`;
     if (k.kind === 'predpoved') return predpovedHtml(k);
     if (k.kind === 'oblacnost') return `<p class="k-val k-ikona">${weatherIcon('zamracene')}${escapeHtml(k.value)}</p>${bar(k.pct)}`;
     if (k.kind === 'eq')
@@ -155,11 +160,11 @@ function tapHtml(k) {
 /**
  * Dlaždica pásu: každá karta má vlastnú (docs/navrhy/dnes-polia-samostatne.html, B), s nadpisom a `data-kind`.
  * Slovo dneška nesie id, podľa ktorého ho nájdu testy (#mz-word).
- * @param {Karta} k
+ * @param {Karta} k @param {string} slovo atribút style veľkého slova
  */
-const dlazdicaHtml = (k) =>
+const dlazdicaHtml = (k, slovo) =>
     `<section class="karta glass"><div class="cast" data-kind="${k.kind}"><h2 class="glass-ttl">${escapeHtml(k.title)}</h2>` +
-    `${obsahHtml(k)}${tapHtml(k)}</div></section>`;
+    `${obsahHtml(k, slovo)}${tapHtml(k)}</div></section>`;
 
 /**
  * Pás dlaždíc pod posuvníkom a pod ním bodky so šípkami (jedna dlaždica bez nich).
@@ -169,7 +174,8 @@ const dlazdicaHtml = (k) =>
 function renderKarty(k, dom) {
     show(dom.mzKarty, k.length > 0);
     dom.mzKarty.setAttribute('aria-label', DNES_TEXTS.karty);
-    setHtml(dom.mzKarty, k.map(dlazdicaHtml).join(''));
+    const slovo = wordStyle(k.flatMap((x) => (x.kind === 'dnes' || x.kind === 'zajtra' ? [x.word] : [])));
+    setHtml(dom.mzKarty, k.map((x) => dlazdicaHtml(x, slovo)).join(''));
     show(dom.mzPasOvladanie, k.length > 1);
     dom.mzPasSpat.setAttribute('aria-label', DNES_TEXTS.pasSpat);
     dom.mzPasDalej.setAttribute('aria-label', DNES_TEXTS.pasDalej);
