@@ -60,17 +60,42 @@ async function najdiSubor(tag, fetchImpl) {
 }
 
 /**
- * Hlavička s rozmermi a bloky za ňou.
+ * Jeden blok súboru. Iná odpoveď než 206 presnej dĺžky (výpadok, server rozsah ignoroval) je null:
+ * pokazený blok by inak ostal v cache celý deň.
+ * @param {string} subor @param {{ size: number, addr: number }} b @param {typeof fetch} fetchImpl
+ */
+async function blok(subor, b, fetchImpl) {
+    const r = await fetchImpl(subor, { headers: { range: `bytes=${b.addr}-${b.addr + b.size - 1}` } });
+    if (r.status !== 206) return null;
+    const data = await r.arrayBuffer();
+    return data.byteLength === b.size ? data : null;
+}
+
+/**
+ * Hlavička s rozmermi a bloky za ňou, alebo null, keď niektorý blok neprišiel celý.
  * @param {string} subor @param {Array<{ row: number, col: number, size: number, addr: number }>} vyber @param {typeof fetch} fetchImpl
  */
 async function teloOdpovede(subor, vyber, fetchImpl) {
-    const casti = await Promise.all(
-        vyber.map((b) => fetchImpl(subor, { headers: { range: `bytes=${b.addr}-${b.addr + b.size - 1}` } }).then((r) => r.arrayBuffer())),
-    );
+    const casti = await Promise.all(vyber.map((b) => blok(subor, b, fetchImpl)));
+    if (casti.some((c) => c === null)) return null;
     const meta = new TextEncoder().encode(JSON.stringify(vyber.map(({ row, col, size }) => ({ row, col, size }))));
     const dlzka = new Uint8Array(4);
     new DataView(dlzka.buffer).setUint32(0, meta.length, true);
-    return new Blob([dlzka, meta, ...casti]);
+    return new Blob([dlzka, meta, .../** @type {ArrayBuffer[]} */ (casti)]);
+}
+
+/**
+ * Požadované bloky snímky ako telo odpovede, alebo stav chyby: 404 snímka ešte nie je, 502 výpadok či blok,
+ * ktorý súbor nemá alebo neprišiel celý.
+ * @param {string} tag @param {number[][]} chcem @param {typeof fetch} fetchImpl
+ * @returns {Promise<{ telo: Blob, status?: undefined } | { telo?: undefined, status: number }>}
+ */
+async function blokySnimky(tag, chcem, fetchImpl) {
+    const { subor, bloky, status } = await najdiSubor(tag, fetchImpl);
+    if (status) return { status };
+    const vyber = bloky?.filter((b) => chcem.some(([row, col]) => row === b.row && col === b.col));
+    const telo = vyber?.length ? await teloOdpovede(subor, vyber, fetchImpl) : null;
+    return telo ? { telo } : { status: 502 };
 }
 
 /**
@@ -83,11 +108,9 @@ export async function handleRadar(request, { fetchImpl, cache, waitUntil }) {
     if (request.method !== 'GET' || !tag || !chcem) return new Response('', { status: 400, headers: HLAVICKA });
     const hit = await cache?.match(request);
     if (hit) return hit;
-    const { subor, bloky, status } = await najdiSubor(tag, fetchImpl);
-    if (status) return new Response('', { status, headers: { ...HLAVICKA, 'cache-control': 'no-store' } });
-    const vyber = bloky?.filter((b) => chcem.some(([row, col]) => row === b.row && col === b.col));
-    if (!vyber?.length) return new Response('', { status: 502, headers: HLAVICKA });
-    const res = new Response(await teloOdpovede(subor, vyber, fetchImpl), {
+    const { telo, status } = await blokySnimky(tag, chcem, fetchImpl);
+    if (!telo) return new Response('', { status, headers: { ...HLAVICKA, 'cache-control': 'no-store' } });
+    const res = new Response(telo, {
         headers: { ...HLAVICKA, 'content-type': 'application/octet-stream', 'cache-control': 'public, max-age=86400' },
     });
     if (cache) waitUntil(cache.put(request, res.clone()));
