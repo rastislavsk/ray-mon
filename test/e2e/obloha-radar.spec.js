@@ -148,16 +148,48 @@ test('Radar: kým sa nenačíta všetko, obiehajú slnko a mesiac a prehrávanie
     expect(errors).toEqual([]);
 });
 
-test('Radar: po návrate o 6 minút sa nové snímky vymenia naraz, bez slnka a mesiaca', async ({ page }) => {
+test('Radar: po prepnutí karty sa nové snímky vymenia naraz, až keď mala vyjsť ďalšia, bez slnka a mesiaca', async ({ page }) => {
     const errors = await otvor(page);
     await pripraveny(page);
-    const pred = await page.locator('#rd-cas').textContent();
+    const pred = /** @type {string} */ (await page.locator('#rd-cas').textContent());
+    const start = new Date(FIXED_NOW).getTime();
+    // Ďalšia snímka vyjde krok + zverejnenie po najnovšej, skôr sa appka nepýta.
+    const caka = (RADAR.krokMin + RADAR.zverejnenieMin) * 60000;
     await page.locator('#nav-terazky').click();
-    await page.clock.setFixedTime(new Date(FIXED_NOW).getTime() + 6 * 60000);
+    await page.clock.setFixedTime(start + caka - 60000);
     await page.locator('#nav-radar').click();
-    await expect(page.locator('#rd-cas')).not.toHaveText(/** @type {string} */ (pred), { timeout: 30000 });
+    await page.waitForTimeout(1000);
+    await expect(page.locator('#rd-cas')).toHaveText(pred);
+    await page.locator('#nav-terazky').click();
+    await page.clock.setFixedTime(start + caka);
+    await page.locator('#nav-radar').click();
+    await expect(page.locator('#rd-cas')).not.toHaveText(pred, { timeout: 30000 });
     await expect(page.locator('#rd-svitanie')).toBeHidden();
     await expect(page.locator('#rd-hraj')).toBeEnabled();
+    expect(errors).toEqual([]);
+});
+
+test('Radar: po návrate do appky na karte Radar sa obnoví aj bez prepnutia karty', async ({ page }) => {
+    const errors = await otvor(page);
+    await pripraveny(page);
+    const pred = /** @type {string} */ (await page.locator('#rd-cas').textContent());
+    await page.clock.setFixedTime(new Date(FIXED_NOW).getTime() + (RADAR.krokMin + RADAR.zverejnenieMin) * 60000);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.locator('#rd-cas')).not.toHaveText(pred, { timeout: 30000 });
+    expect(errors).toEqual([]);
+});
+
+test('Radar: zastavená os v minulosti ostane po obnove na tej istej chvíli', async ({ page }) => {
+    const errors = await otvor(page);
+    await pripraveny(page);
+    await page.locator('#rd-os').focus();
+    for (let i = 0; i < 12; i++) await page.keyboard.press('ArrowLeft');
+    await expect(page.locator('#rd-druh')).toHaveText('Pred 1 h · meranie');
+    const cas = /** @type {string} */ (await page.locator('#rd-cas').textContent());
+    await page.clock.setFixedTime(new Date(FIXED_NOW).getTime() + (RADAR.krokMin + RADAR.zverejnenieMin) * 60000);
+    await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+    await expect(page.locator('#rd-druh')).not.toHaveText('Pred 1 h · meranie', { timeout: 30000 });
+    await expect(page.locator('#rd-cas')).toHaveText(cas);
     expect(errors).toEqual([]);
 });
 

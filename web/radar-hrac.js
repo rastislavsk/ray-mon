@@ -3,7 +3,7 @@
 
 import { RADAR } from '../shared/config.js';
 import { dazdVBode, mercX, mercY, oblastBlokov, radarBloky } from '../shared/radar-data.js';
-import { farbaBajtu, krokovMinulost, osRadaru, pasOsi, popisChvile, typZrazok } from '../shared/radar.js';
+import { farbaBajtu, krokovMinulost, obnovitRadar, osRadaru, pasOsi, popisChvile, typZrazok } from '../shared/radar.js';
 import { indexKroku, RadarData } from './radar-data.js';
 import { RadarVrstva } from './radar-gl.js';
 import { vytvorMapu } from './radar-mapa.js';
@@ -59,6 +59,8 @@ export class RadarHrac {
     obnovene = 0;
     /** @type {any} model, ktorý prišiel skôr než mapa */ cakaModel = null;
     /** @type {Nove | null} */ nove = null;
+    /** Prst alebo kurzor práve ťahá os: nové dáta počkajú, kým ju pustí. */
+    tahaj = false;
 
     /** @param {import('./state.js').Store} store @param {import('./dom.js').Dom} dom */
     constructor(store, dom) {
@@ -376,11 +378,18 @@ export class RadarHrac {
         this.prevezmi();
     }
 
+    /** V rozsahu 2 h ostane zastavená os na tej istej chvíli, „teraz“ ide s najnovšou snímkou. @param {number} noveMs */
+    drzChvilu(noveMs) {
+        if (this.rozsah !== '2h' || Math.round(this.poz) === krokovMinulost) return;
+        this.poz = Math.max(0, this.poz - (indexKroku(noveMs) - indexKroku(this.terazMs)));
+    }
+
     /** Dáta z obnovy na os, keď sú všetky a os stojí. */
     prevezmi() {
         const n = this.nove;
-        if (!n?.hotove || this.store.get().radarHra) return;
+        if (!n?.hotove || this.tahaj || this.store.get().radarHra) return;
         this.nove = null;
+        this.drzChvilu(n.terazMs);
         // Staršie než dve hodiny už na osi nie sú.
         const pod = indexKroku(n.terazMs) - krokovMinulost;
         for (const [i, s] of this.snimky) {
@@ -400,7 +409,7 @@ export class RadarHrac {
     /** Karta je na obrazovke. Prvé otvorenie stiahne mapu aj dáta, ďalšie len doplní nové. */
     otvor() {
         if (this.zaciatok) {
-            if (this.data && Date.now() - this.obnovene > RADAR.obnovaMs) this.obnov().catch(() => {});
+            this.skusObnovit();
             this.map?.resize();
             return this.kresliOs();
         }
@@ -415,6 +424,11 @@ export class RadarHrac {
             this.terazMs = 0;
             this.store.setState({ radarStav: 'chyba', radarHra: false, radarHotovo: false });
         });
+    }
+
+    /** Obnova, keď už mala vyjsť ďalšia snímka. Volá sa pri prepnutí karty, návrate do appky a každú minútu. */
+    skusObnovit() {
+        if (this.zaciatok && this.data && obnovitRadar(this.terazMs, this.obnovene, Date.now())) this.obnov().catch(() => {});
     }
 
     /** Prehrávanie podľa stavu. */

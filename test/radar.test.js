@@ -35,6 +35,7 @@ import {
     krokovMinulost,
     krokovSpolu,
     legendaPrechod,
+    obnovitRadar,
     osRadaru,
     pasOsi,
     typZrazok,
@@ -342,4 +343,15 @@ test('pasOsi: bez dažďa nič, sila ide do výšky', () => {
     const p = pasOsi([0, 255]);
     assert.deepEqual(p, [{ poz: 1, vyska: 1, bajt: 255, typ: 0 }]);
     assert.equal(pasOsi([10, 20], [0, 2])[1].typ, 2);
+});
+
+test('obnovitRadar: až keď mala vyjsť ďalšia snímka, najviac raz za pokus', () => {
+    const t = Date.UTC(2026, 10, 27, 10, 0);
+    const min = 60000;
+    const caka = (RADAR.krokMin + RADAR.zverejnenieMin) * min;
+    assert.equal(obnovitRadar(0, 0, t), false, 'bez snímky čaká prvé načítanie');
+    assert.equal(obnovitRadar(t, t, t + caka - 1), false, 'ďalšia ešte nevyšla');
+    assert.equal(obnovitRadar(t, t, t + caka), true);
+    assert.equal(obnovitRadar(t, t + caka, t + caka + RADAR.obnovaPokusMs - 1), false, 'pokus pred chvíľou');
+    assert.equal(obnovitRadar(t, t + caka, t + caka + RADAR.obnovaPokusMs), true, 'snímka neprišla, skúsi znova');
 });
