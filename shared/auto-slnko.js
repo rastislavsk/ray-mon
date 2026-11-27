@@ -4,7 +4,7 @@
 // riadi zásuvka (ide pred autom, tak ako v Pláne dňa). Ráno odhad z predpovede, ktorý telefón zamrazí, po západe slnka
 // prepis skutočnosťou (web/auto-den.js). Čisté funkcie - čas a dáta prichádzajú ako parametre.
 
-import { AUTO_SLNKO, DEVICES } from './config.js';
+import { AUTO_SLNKO, NABIJACKA_KW } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { dayCtx, freeKw, kmOf } from './mozem-jadro.js';
 import { bojlerDna, bojlerInyDen } from './plan-dna.js';
@@ -18,7 +18,6 @@ import { DATE_RE, isObj } from './valid.js';
 /** Uložený deň v telefóne (AUTO_DEN_STORAGE_KEY). @typedef {AutoSlnko & { d: string }} AutoDen */
 
 const DAY_MIN = 24 * 60;
-const NABIJACKA_KW = /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === 'Auto')).powerKw;
 
 /**
  * Energia, ktorú by auto chytilo z prebytku `prebytok` (kW po minútach): minúta s prebytkom aspoň AUTO_SLNKO.minKw dá

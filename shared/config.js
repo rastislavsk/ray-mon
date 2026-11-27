@@ -382,6 +382,9 @@ export const DEVICES = [
     { name: 'Bojler', powerKw: 2, cheapGrid: true, weakDay: true },
 ];
 
+/** Príkon nabíjačky auta v kW: najviac, koľko auto zo slnka vezme (shared/auto-slnko.js) a koľko odhad nabíjania pripíše autu (shared/auto-nabija.js). */
+export const NABIJACKA_KW = /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === 'Auto')).powerKw;
+
 /**
  * Spotreba domu na pozadí v kW (chladnička, router, pohotovostné režimy). Spotrebiču ostáva len
  * výroba nad ňou - Plán dňa aj odpovede karty Môžem? s ňou rátajú. Jedna pre každého, s veľkosťou
