@@ -61,6 +61,33 @@ export const TERAZ_TEXTS_SLUSNE = {
 };
 
 // ---- Čo zapnúť na karte Teraz (docs/navrhy/teraz-navrh-2.html) -----------------------
+// Dlaždica ukazuje len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B + P1, 27. 11. 2026): veľké číslo so značkou,
+// meno, pásik a riadok malých čísel. Slová (`odr`) číta čítačka a v detaile sú ako veta (`vetaDlazdice`).
+
+/**
+ * Značka pri čísle dlaždice - čo číslo znamená, kreslená (web/render/icons.js), nie slovom: štart, štart teraz, koniec,
+ * koľko ešte, podiel zo slnka, dnešné kWh, teplota vonku a nastavená, ako dlho sa zariadenie neozýva.
+ * @typedef {'start' | 'teraz' | 'koniec' | 'zostava' | 'slnko' | 'kwh' | 'vonku' | 'doma' | 'ticho'} Znacka
+ */
+/** Malé číslo dlaždice so značkou. @typedef {{ zn: Znacka, t: string }} MaleCislo */
+
+/** Malé číslo so značkou. @param {Znacka} zn @param {string} t @returns {MaleCislo} */
+export const male = (zn, t) => ({ zn, t });
+
+/**
+ * Podiel zo slnka ako malé číslo - len keď ho slnko nepokryje skoro celý a niečo predsa dá (celý ukáže pásik).
+ * @param {number} p podiel 0 až 1 @returns {MaleCislo[]}
+ */
+const slnkoMale = (p) => (p > 0 && p < CELE_ZO_SLNKA ? [male('slnko', `${Math.round(p * 100)}\u00a0%`)] : []);
+
+/**
+ * Veta v detaile (P1) zo slov dlaždice: „Dobehne 15:40, väčšina zo slnka.“ @param {string[]} odr
+ * @param {{ text: string } | null} [potom] odznak dlaždice
+ */
+export const vetaDlazdice = (odr, potom = null) => {
+    const casti = [...odr, ...(potom ? [potom.text] : [])];
+    return casti.length ? `${cap(casti.join(', '))}.` : '';
+};
 // Mriežka dlaždíc (docs/navrhy/teraz-dlazdice.html)
 // a karta Deň s odčítaním zvoleného času. Pri bežných spotrebičoch bez ceny, pri aute km.
 // Veľké písmená robí štýl, texty sú v bežnom tvare.
@@ -82,21 +109,30 @@ export function terazZaText(min) {
  * číslom („do“), prázdne keď nie je. Keď slnko nepokryje celý program, povie „zo slnka“ slovom, koľko.
  * @param {{ id: string, name: string, kind: 'sun' | 'siet' | 'cheap', start: number, end: number, podiel: number }} r
  * @param {import('./messages-zaklad.js').Voice} [voice]
- * @returns {{ pred: string, velky: string, meno: string, odr: string[] }}
+ * @returns {{ pred: string, zn: Znacka, velky: string, meno: string, odr: string[], mv: MaleCislo[] }}
  */
 export function terazDlazdicaText(r, voice = 'drzy') {
     const vy = polite(voice);
     const lacna = 'lacná elektrina';
     const zapni = vy ? 'zapnite teraz' : 'zapni teraz';
-    if (r.kind === 'cheap') return { pred: 'do', velky: koniecHm(r.end), meno: r.name, odr: [zapni, lacna] };
+    /** @type {Znacka} */ const koniec = 'koniec';
+    if (r.kind === 'cheap') return { pred: 'do', zn: koniec, velky: koniecHm(r.end), meno: r.name, odr: [zapni, lacna], mv: [] };
     const zdroj = r.kind === 'siet' ? 'zo siete' : zoSlnkaSlovo(r.podiel);
-    return { pred: '', velky: hm(r.start), meno: r.name, odr: [zapni, zdroj] };
+    /** @type {Znacka} */ const teraz = 'teraz';
+    return {
+        pred: '',
+        zn: teraz,
+        velky: hm(r.start),
+        meno: r.name,
+        odr: [zapni, zdroj],
+        mv: [...slnkoMale(r.podiel), male('koniec', koniecHm(r.end))],
+    };
 }
 
 /**
  * Dlaždica auta čisto zo slnka (docs/navrhy/auto-mimo-planu.html, Z1): veľké km (jednotka `za` je malá za číslom, aby sa
  * číslo v polovičnej šírke nezalomilo), pod menom kWh a či je to ranný odhad na celý deň, alebo po západe slnka skutočnosť.
- * @param {import('./auto-slnko.js').AutoSlnko} a @returns {{ velky: string, za: string, meno: string, odr: string[] }}
+ * @param {import('./auto-slnko.js').AutoSlnko} a @returns {{ velky: string, za: string, meno: string, odr: string[], mv: MaleCislo[] }}
  */
 export function terazAutoText(a) {
     return {
@@ -104,6 +140,7 @@ export function terazAutoText(a) {
         za: 'km',
         meno: MOZEM_ITEM_TEXTS.auto.name,
         odr: [`${fmt1(a.kwh)} kWh zo slnka`, a.vecer ? 'dnes naozaj' : 'odhad na celý deň'],
+        mv: [male('kwh', `${fmt1(a.kwh)} kWh`)],
     };
 }
 
@@ -184,10 +221,17 @@ export const terazOpakText = (n) => `dnes už ${n}×`;
  * Dlaždica spotrebiča, ktorý beží: do kedy a koľko ešte. Tie isté prvky ako ostatné dlaždice (veľký čas, meno,
  * dve odrážky), aby sedeli v rade.
  * @param {{ end: number }} r @param {number} nowMin
- * @returns {{ pred: string, velky: string, odr: string[] }}
+ * @returns {{ pred: string, zn: Znacka, velky: string, odr: string[], mv: MaleCislo[] }}
  */
 export function terazBehText(r, nowMin) {
-    return { pred: 'do', velky: hm(r.end % MINUTES_PER_DAY), odr: ['beží', `ešte ${terazZaText(Math.max(1, r.end - nowMin))}`] };
+    const zostava = terazZaText(Math.max(1, r.end - nowMin));
+    return {
+        pred: 'do',
+        zn: 'koniec',
+        velky: hm(r.end % MINUTES_PER_DAY),
+        odr: ['beží', `ešte ${zostava}`],
+        mv: [male('zostava', zostava)],
+    };
 }
 
 /**
@@ -232,18 +276,21 @@ const zoSlnkaSlovo = (p) => (p >= CELE_ZO_SLNKA ? 'zo slnka' : podielSlovo(p));
  * Dlaždica ďalšieho spotrebiča: veľký čas a pod menom krátky doplnok - dobehne, po čom ide (aj „po bojleri“),
  * lacná elektrina - ako odrážky. Keď slnko nepokryje skoro celý program, druhá odrážka povie koľko („väčšina zo
  * slnka“); odznak spotrebiča ju môže nahradiť. „Tento týždeň nie“ má namiesto času pomlčku. Lacné pásmo má
- * pred časom malé „od“ (`pred`).
- * @param {import('./plan-dna.js').PlanRow} r @returns {{ pred?: string, cas: string, odr: string[] }}
+ * pred časom malé „od“ (`pred`). Na dlaždici je čas so značkou štartu (`zn`) a malé čísla (`mv`): koľko zo slnka (keď nie
+ * skoro celé) a kedy dobehne - lacné pásmo dokedy je.
+ * @param {import('./plan-dna.js').PlanRow} r @returns {{ pred?: string, zn?: Znacka, cas: string, odr: string[], mv: MaleCislo[] }}
  */
 export function terazRiadokText(r) {
-    if (r.kind === 'none') return { cas: '–', odr: ['slnko nestačí'] };
-    if (r.kind === 'cheap') return { pred: 'od', cas: hm(r.start), odr: ['lacná elektrina'] };
+    if (r.kind === 'none') return { cas: '–', odr: ['slnko nestačí'], mv: [] };
+    /** @type {Znacka} */ const zn = 'start';
+    if (r.kind === 'cheap') return { pred: 'od', zn, cas: hm(r.start), odr: ['lacná elektrina'], mv: [male('koniec', koniecHm(r.end))] };
     const start = r.kind === 'later' ? r.day.start : r.start;
     const after = r.after ? (PLAN_AFTER[r.after] ?? '') : '';
+    const mv = [...slnkoMale(r.podiel), male('koniec', koniecHm(r.end))];
     // Sušička ide hneď po práčke aj vtedy, keď ju slnko neutiahne - povie, že pôjde zo siete.
     const kolko = kolkoSlovo(r.podiel, Boolean(after));
-    if (after) return { cas: hm(start), odr: [after, ...kolko] };
-    return { cas: hm(start), odr: odrazkyDomu(r, kolko) };
+    if (after) return { zn, cas: hm(start), odr: [after, ...kolko], mv };
+    return { zn, cas: hm(start), odr: odrazkyDomu(r, kolko), mv };
 }
 
 /**
@@ -262,13 +309,14 @@ export const TERAZ_HREBEN = { label: 'Plán podľa dňa', pod: 'slnko na veľké
 
 /**
  * Odznak na dlaždici a v riadku toho, čo ide dnes zo slnka: kedy bude slnko na ten spotrebič
- * najbližšie, keď to nie je zajtra (`dalsi` null = v predpovedi už nie). `dlho`: dva a viac dní bez slnka.
- * @param {{ name: string, index: number } | null} dalsi
+ * najbližšie, keď to nie je zajtra (`dalsi` null = v predpovedi už nie). `dlho`: dva a viac dní bez slnka. Na dlaždici
+ * je len skratka dňa (`kratko`, „So“), veta ide čítačke a do detailu.
+ * @param {{ name: string, kratko: string, index: number } | null} dalsi
  */
 export function terazPotomText(dalsi) {
-    if (!dalsi) return { text: 'tento týždeň už nie', dlho: true };
+    if (!dalsi) return { text: 'tento týždeň už nie', kratko: '–', dlho: true };
     const dlho = dalsi.index > 2;
-    return { text: `potom ${dlho ? 'až ' : ''}${onDay(dalsi.name)}`, dlho };
+    return { text: `potom ${dlho ? 'až ' : ''}${onDay(dalsi.name)}`, kratko: dalsi.kratko, dlho };
 }
 
 /** Koľko programu pokryje slnko, slovom - na riadok odrážky v dlaždici, na S22 najviac asi 18 znakov. @param {number} p podiel 0 až 1 */
@@ -297,11 +345,19 @@ export function terazNudzaText(r, voice = 'drzy') {
     return {
         cas: od || '–',
         odr: r.dnes && r.potom ? [info, `${CELY[r.id ?? ''] ?? 'celá'} ${onDay(r.potom)}`] : [info],
+        mv: nudzaMale(r),
         kedy: 'Najmenej zo siete',
         odDo: r.start === null || r.end === null ? '–' : `${od} – ${koniecHm(r.end)}`,
         why: `${nudzaWhy(r.zdroj, od, r.dnes, voice)}${r.dnes ? nudzaPotom(r.potom) : ''}`,
     };
 }
+
+/**
+ * Malé čísla dlaždice núdzového času: koľko zo slnka (cez deň) a kedy dobehne; bez štartu nič.
+ * @param {{ start: number | null, end: number | null, podiel: number, zdroj: string }} r @returns {MaleCislo[]}
+ */
+const nudzaMale = (r) =>
+    r.start === null || r.end === null ? [] : [...(r.zdroj === 'slnko' ? slnkoMale(r.podiel) : []), male('koniec', koniecHm(r.end))];
 
 /**
  * Prečo práve vtedy, v detaile núdzového času. @param {'slnko' | 'lacna' | 'bezna' | 'siet'} zdroj @param {string} od čas štartu

@@ -93,3 +93,28 @@ export function kartaIcon(id) {
     const inner = KARTA[id];
     return inner ? `<svg class="vi" data-ikona="${id}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${inner}</svg>` : '';
 }
+
+/** Hodiny: ako dlho ešte beží a ako dlho sa zariadenie neozýva. */
+const HODINY = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>';
+
+/**
+ * Značky čísel na dlaždici karty Teraz (docs/navrhy/teraz-dlazdice-cisla.html, B): čo číslo znamená - štart (plný = teraz),
+ * koniec, koľko ešte, podiel zo slnka, dnešné kWh, teplota vonku a nastavená, ticho. Kreslené, nie znak (písmo appky je
+ * podmnožina); slovo má čítačka v skrytom texte dlaždice.
+ * @type {Record<import('../../shared/messages-teraz.js').Znacka, string>}
+ */
+const ZNACKY = {
+    start: '<path d="M8 5.5l10 6.5-10 6.5z"/>',
+    teraz: '<path class="zn-plna" d="M8 5.5l10 6.5-10 6.5z"/>',
+    koniec: '<path d="M6 21V4h11l-2.5 4 2.5 4H6"/>',
+    zostava: HODINY,
+    ticho: HODINY,
+    slnko: TOK.slnko,
+    kwh: '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',
+    vonku: '<path d="M12 3l6 9h-3.5l4.5 6H5l4.5-6H6z"/><path d="M12 18v3"/>',
+    doma: '<path d="M4 11l8-7 8 7v9H4z"/>',
+};
+
+/** Značka čísla na dlaždici. @param {import('../../shared/messages-teraz.js').Znacka} zn */
+export const znackaIcon = (zn) =>
+    `<svg class="zn" data-zn="${zn}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ZNACKY[zn]}</svg>`;

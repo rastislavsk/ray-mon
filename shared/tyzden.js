@@ -88,7 +88,7 @@ export function hrebenModel(dni) {
  */
 export function dalsieSlnko(dni, id) {
     const d = dni.slice(1).find((x) => x.slnko.some((r) => r.id === id));
-    return d ? { name: d.name, index: d.index } : null;
+    return d ? { name: d.name, kratko: dayNameShort(d.day.date), index: d.index } : null;
 }
 
 /**
@@ -233,8 +233,10 @@ export function nudzaRiadok(n, { name, span, den, potom }, voice) {
             id: n.id,
             name,
             kind: /** @type {const} */ ('nudza'),
+            ...(n.start === null ? {} : { zn: /** @type {const} */ ('start') }),
             cas: t.cas,
             odr: t.odr,
+            mv: t.mv,
             podiel: Math.round(n.podiel * 100),
             draha: Math.round(n.draha * 100),
         },

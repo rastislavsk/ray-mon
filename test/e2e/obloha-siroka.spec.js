@@ -188,7 +188,8 @@ async function expectTextyKariet(page) {
     );
     // Jedna mriežka: čo ide teraz (alebo najbližšia vec) a za tým ďalšie spotrebiče dňa.
     const co = teraz.co;
-    await expect(page.locator('#tz-dlazdice [data-vec]')).toHaveCount(
+    // Auto je mimo Plánu dňa, má vlastnú dlaždicu.
+    await expect(page.locator('#tz-dlazdice [data-vec]:not([data-vec="auto"])')).toHaveCount(
         co ? co.hore.dlazdice.length + (co.hore.dalsi ? 1 : 0) + co.riadky.length : 0,
     );
     // Aj v širokom stĺpci len dva stĺpce (docs/navrhy/teraz-dlazdice-stlpce.html).

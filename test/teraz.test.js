@@ -788,8 +788,11 @@ test('čo zapnúť v noci: teraz nič, najbližšia vec s odpočtom, lacné pás
     assert.deepEqual(m.hore.dalsi, {
         id: 'bojler',
         name: 'Bojler',
+        zn: 'start',
         cas: '23:30',
         odr: ['za 30 min', 'lacná elektrina'],
+        // Na dlaždici len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B): lacné pásmo dokedy je.
+        mv: [{ zn: 'koniec', t: '07:30' }],
         podiel: 0,
         draha: 0,
     });
@@ -820,18 +823,24 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
             kind: 'nudza',
             cas: '12:00',
             odr: ['polovica zo slnka', 'celá v stredu'],
+            mv: [],
             podiel: 50,
             draha: 20,
         },
     ];
-    const potom = { bojler: { text: 'potom až v stredu', dlho: true } };
+    const potom = { bojler: { text: 'potom až v stredu', kratko: 'St', dlho: true } };
     const m = coZapnutModel(rows, { nowMin: 7 * 60 + 30, nudza, potom }, 'slusny');
     // Slnko pokryje len 60 % prania: pásik to ukáže a odrážka povie slovom.
     assert.deepEqual(m.hore.dalsi, {
         id: 'pracka',
         name: 'Práčka',
+        zn: 'start',
         cas: '09:00',
         odr: ['za 1 h 30 min', 'väčšina zo slnka'],
+        mv: [
+            { zn: 'slnko', t: '60\u00a0%' },
+            { zn: 'koniec', t: '11:00' },
+        ],
         podiel: 60,
         // Zvyšok 40 %: 10 % v drahom pásme, 30 % v lacnom - pásik má tri farby.
         draha: 10,
@@ -841,18 +850,25 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
         id: 'bojler',
         name: 'Bojler',
         kind: 'sun',
+        zn: 'start',
         cas: '12:00',
-        odr: ['dobehne 13:00', 'potom až v stredu'],
+        // Odznak je na dlaždici skratka dňa pri ikone, veta ostáva čítačke a detailu.
+        odr: ['dobehne 13:00'],
+        mv: [{ zn: 'koniec', t: '13:00' }],
         podiel: 100,
         draha: 0,
+        potom: potom.bojler,
     });
     assert.deepEqual(m.riadky.slice(1), nudza);
     // Bez núdzových časov sa veci na iný deň a „tento týždeň nie“ v mriežke neukážu.
     assert.equal(coZapnutModel(rows, { nowMin: 7 * 60 + 30 }).riadky.length, 1);
-    // Dlaždica toho, čo ide teraz zo slnka, nesie odznak namiesto druhej odrážky; lacná sieť nie.
+    // Dlaždica toho, čo ide teraz zo slnka, nesie odznak; lacná sieť nie. Plná značka štartu = teraz.
     const ide = coZapnutModel(rows, { nowMin: 12 * 60, potom });
     const bojler = ide.hore.dlazdice.find((d) => d.id === 'bojler');
-    assert.deepEqual([bojler?.odr, bojler?.potom, bojler?.podiel], [['zapni teraz'], potom.bojler, 100]);
+    assert.deepEqual(
+        [bojler?.zn, bojler?.odr, bojler?.mv, bojler?.potom, bojler?.podiel],
+        ['teraz', ['zapni teraz', 'zo slnka'], [{ zn: 'koniec', t: '13:00' }], potom.bojler, 100],
+    );
     // Práčka ďalej dnes (najbližšie je bojler): druhá odrážka povie, koľko dá slnko; odznak ju nahradí.
     const skoro = [{ ...rows[1], start: 6 * 60 }, rows[0]];
     const rano = coZapnutModel(skoro, { nowMin: 5 * 60 });
@@ -860,13 +876,19 @@ test('čo zapnúť: počkaj na slnko, núdzové časy a odznak „potom“, bez 
         id: 'pracka',
         name: 'Práčka',
         kind: 'sun',
+        zn: 'start',
         cas: '09:00',
         odr: ['dobehne 11:00', 'väčšina zo slnka'],
+        mv: [
+            { zn: 'slnko', t: '60\u00a0%' },
+            { zn: 'koniec', t: '11:00' },
+        ],
         podiel: 60,
         draha: 10,
+        potom: null,
     });
     const ranoPotom = coZapnutModel(skoro, { nowMin: 5 * 60, potom: { pracka: potom.bojler } });
-    assert.deepEqual(ranoPotom.riadky[0].odr, ['dobehne 11:00', 'potom až v stredu']);
+    assert.deepEqual([ranoPotom.riadky[0].odr, ranoPotom.riadky[0].potom], [['dobehne 11:00', 'väčšina zo slnka'], potom.bojler]);
     // Práčka teraz: v dlaždici „väčšina zo slnka“ namiesto „zo slnka“.
     const pranie = coZapnutModel(rows, { nowMin: 9 * 60 });
     assert.deepEqual(pranie.hore.dlazdice[0].odr, ['zapni teraz', 'väčšina zo slnka']);
@@ -967,8 +989,10 @@ test('spotrebič beží: dlaždica „beží“ hore; dobehnutý má dlaždicu s
                 tone: 'bezi',
                 meno: 'Umývačka',
                 pred: 'do',
+                zn: 'koniec',
                 velky: '14:30',
                 odr: ['beží', 'ešte 1 h 30 min'],
+                mv: [{ zn: 'zostava', t: '1 h 30 min' }],
                 podiel: true,
                 draha: 0,
             },
@@ -979,8 +1003,8 @@ test('spotrebič beží: dlaždica „beží“ hore; dobehnutý má dlaždicu s
     assert.ok(!dlazdice.some((t) => t.id === 'umyvacka'), 'čo beží, sa nerozvrhuje');
     const pracka = dlazdice.find((t) => t.id === 'pracka');
     if (!pracka) throw new Error('práčka nemá ďalší čas');
-    assert.equal(pracka.odr[1], 'dnes už 1×');
-    assert.equal(pracka.odr.length, 2);
+    // Na dlaždici odznak „1×“ pri ikone, veta „dnes už 1×“ pre čítačku a detail.
+    assert.deepEqual(pracka.potom, { text: 'dnes už 1×', kratko: '1×', dlho: false });
 });
 
 test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať sa dajú len práčka, sušička a umývačka', () => {

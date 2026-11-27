@@ -111,6 +111,8 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
         velky: '2,2 kW',
         meno: 'Bojler',
         odr: ['hreje zo slnka', 'od 12:30'],
+        // Na dlaždici len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B): dnešné kWh.
+        mv: [{ zn: 'kwh', t: '3,9 kWh' }],
         podiel: 94,
     });
     const oblak = bojlerDlazdica(info({ prebytokKw: 1.2, den: null }), NOW, TZ);
@@ -124,20 +126,30 @@ test('dlaždica: hreje zo slnka, hreje so sieťou, čaká, nahriata, mlčí - me
         velky: '0 kW',
         meno: 'Bojler',
         odr: ['čaká na slnko', 'zapne pri 2,3 kW'],
+        mv: [{ zn: 'start', t: '2,3 kW' }],
         podiel: 94,
     });
+    // Keď plán vie, kedy zásuvka zapne, je pod menom čas.
+    const plan = { zapne: 690, dohreje: null, nahriaty: false };
+    assert.deepEqual(bojlerDlazdica(info({ rele: false, w: 0, prebytokKw: -0.4 }), NOW, TZ, plan).mv, [{ zn: 'start', t: '11:30' }]);
     const hotovo = bojlerDlazdica(info({ w: 3, den: { ...DEN, hotovo: 835 } }), NOW, TZ);
-    assert.deepEqual([hotovo.tone, hotovo.velky, hotovo.odr], ['tiche', '3,6 kWh', ['nahriata o 13:55', 'dnes zo slnka']]);
+    // Bez teplomera je veľké číslo kWh zo slnka a pod menom, kedy bola voda nahriata.
+    assert.deepEqual(
+        [hotovo.tone, hotovo.velky, hotovo.odr, hotovo.mv],
+        ['tiche', '3,6 kWh', ['nahriata o 13:55', 'dnes zo slnka'], [{ zn: 'koniec', t: '13:55' }]],
+    );
     // Záznam zo včera sa nepočíta.
     const vcera = bojlerDlazdica(info({ w: 3, den: { ...DEN, den: '2026-11-14' } }), NOW, TZ);
-    assert.deepEqual([vcera.velky, vcera.odr], ['0,0 kWh', ['nahriata', 'dnes zo slnka']]);
+    assert.deepEqual([vcera.velky, vcera.odr, vcera.mv], ['0,0 kWh', ['nahriata', 'dnes zo slnka'], []]);
     // Tichá zásuvka.
     assert.deepEqual(bojlerDlazdica(info({ kontaktAt: NOW.getTime() - 18 * MIN }), NOW, TZ), {
         tone: 'chyba',
         riadi: 'mlci',
+        zn: 'ticho',
         velky: '18 min',
         meno: 'Bojler',
         odr: ['zásuvka mlčí', 'skript alebo Wi-Fi'],
+        mv: [],
         podiel: 94,
     });
     assert.equal(bojlerDlazdica(info({ kontaktAt: NOW.getTime() - 130 * MIN }), NOW, TZ).velky, '2 h');
@@ -151,6 +163,7 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
         velky: '2,2 kW',
         meno: 'Bojler',
         odr: ['hreje', 'od 12:30'],
+        mv: [{ zn: 'kwh', t: '3,9 kWh' }],
         podiel: 94,
     });
     assert.deepEqual(rucne({ den: null }).odr, ['hreje']);
@@ -161,6 +174,7 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
         velky: '0,0 kW',
         meno: 'Bojler',
         odr: ['nahriata', 'dnes 3,9 kWh'],
+        mv: [{ zn: 'kwh', t: '3,9 kWh' }],
         podiel: 94,
     });
     assert.deepEqual(rucne({ w: 3, den: null }).odr, ['nahriata', 'dnes 0,0 kWh']);
@@ -171,6 +185,7 @@ test('ručný režim: dlaždica na skle bez rady so značkou ručne - hreje, vod
         velky: '0 kW',
         meno: 'Bojler',
         odr: ['vypnutý', 'od 11:25'],
+        mv: [{ zn: 'kwh', t: '1,6 kWh' }],
         podiel: 100,
     });
     assert.deepEqual(rucne({ rele: false, w: 0, den: null }).odr, ['vypnutý']);

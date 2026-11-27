@@ -1218,7 +1218,9 @@ test.describe('bojler na prebytky', () => {
         const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
         await expect(dl).toHaveAttribute('data-tone', t.tone);
         await expect(dl).toContainText(t.meno);
-        await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
+        // Na oko len čísla so značkami, slová má čítačka (docs/navrhy/teraz-dlazdice-cisla.html, B).
+        await expect(dl.locator('.mv > span')).toHaveText(t.mv.map((x) => x.t));
+        await expect(dl.locator('.mv ~ .sr')).toHaveText(t.odr.map((x) => `, ${x}`).join(''));
         // Bojler hreje, preto má plný biely kruh ikony so žiarou (docs/navrhy/teraz-zapnuty-farba.html, F1); značka, kto ho riadi, pri ikone nie je.
         await expect(dl.locator('.dl-ico > :not(.vi)')).toHaveCount(0);
         await expect(dl).toHaveAttribute('data-zapnuty', '');
@@ -1299,7 +1301,9 @@ test.describe('bojler na prebytky', () => {
         await expect(dl.locator('.dl-ico')).toHaveCSS('background-color', 'rgb(242, 245, 251)');
         await expect(dl.locator('.dl-ico')).toHaveCSS('box-shadow', 'rgba(242, 245, 251, 0.65) 0px 0px 16px 0px');
         await expect(dl.locator('.velky')).toHaveText(`${t2.velky} ${t2.za}`);
-        await expect(dl.locator('small > span:not(.sr)')).toHaveText(t2.odr);
+        // Na oko len čísla so značkami, slová má čítačka (docs/navrhy/teraz-dlazdice-cisla.html, B).
+        await expect(dl.locator('.mv > span')).toHaveText(t2.mv.map((x) => x.t));
+        await expect(dl.locator('.mv ~ .sr')).toHaveText(t2.odr.map((x) => `, ${x}`).join(''));
         expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });
         await dl.click();
         const sheet = page.locator('#tz-auto-sheet');
@@ -1354,7 +1358,7 @@ test.describe('bojler na prebytky', () => {
         await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
         // Prvý riadok je stav zo zásuvky; druhý (kedy zapne) ráta appka z predpovede.
         const vyp = bojlerDlazdica(/** @type {any} */ (stav), FIXED_NOW, SITE.timezone);
-        await expect(dl.locator('small > span:not(.sr)').first()).toHaveText(vyp.odr[0]);
+        await expect(dl.locator('.mv ~ .sr')).toContainText(vyp.odr[0]);
         await expect(dl).not.toHaveAttribute('data-zapnuty', '');
         expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });
         expect(merania, 'na meranie sa appka znova nepýta').toBe(1);
@@ -1572,7 +1576,9 @@ test.describe('bojler na prebytky', () => {
         const dl = page.locator('#tz-dlazdice [data-vec="bojler"]');
         await expect(dl).toHaveAttribute('data-tone', 'tiche');
         await expect(dl).toContainText(t.meno);
-        await expect(dl.locator('small > span:not(.sr)')).toHaveText(t.odr);
+        // Na oko len čísla so značkami, slová má čítačka (docs/navrhy/teraz-dlazdice-cisla.html, B).
+        await expect(dl.locator('.mv > span')).toHaveText(t.mv.map((x) => x.t));
+        await expect(dl.locator('.mv ~ .sr')).toHaveText(t.odr.map((x) => `, ${x}`).join(''));
         // Ručný režim dlaždica nehovorí (značka pri ikone zrušená 26. 11. 2026), povie ho panel Bojler dnes.
         await expect(dl.locator('.dl-ico > :not(.vi)')).toHaveCount(0);
         await expect(dl).not.toContainText('ručne');
@@ -1624,11 +1630,13 @@ test.describe('klimatizácia Daikin (docs/navrhy/klima-daikin.html)', () => {
         await expect(dl).toHaveAttribute('data-zapnuty', '');
         await expect(dl.locator('.velky')).toHaveText(`${m.velky} ${m.za}`);
         await expect(dl.locator('b')).toHaveText(TERAZ_KLIMA_TEXTS.meno);
-        await expect(dl.locator('small > span:not(.sr)')).toHaveText(m.odr);
+        // Na oko len čísla so značkami, slová má čítačka (docs/navrhy/teraz-dlazdice-cisla.html, B).
+        await expect(dl.locator('.mv > span')).toHaveText(m.mv.map((x) => x.t));
+        await expect(dl.locator('.mv ~ .sr')).toHaveText(m.odr.map((x) => `, ${x}`).join(''));
         expect(JSON.parse(dopyty[0])).toEqual({ pecat: NB_ZDROJ.pecat });
         // Nič nepretečie: riadky dlaždice sú užšie ako ona.
         const pretek = await dl.evaluate(
-            (el) => [...el.querySelectorAll('.velky, b, small > span:not(.sr)')].filter((x) => x.scrollWidth > x.clientWidth + 0.5).length,
+            (el) => [...el.querySelectorAll('.velky, b, .mv > span')].filter((x) => x.scrollWidth > x.clientWidth + 0.5).length,
         );
         expect(pretek).toBe(0);
         await dl.click();

@@ -174,6 +174,12 @@ na karte Dnes; pravidlá s „novou vecou“ z PR #525 boli zrušené už predt�
 
 ## Dlaždice bez farby stavu
 
+Dlaždica ukazuje len čísla (`docs/navrhy/teraz-dlazdice-cisla.html`, B + P1, 27. 11. 2026): veľké číslo so značkou, čo
+znamená (`zn`: štart, plný štart = teraz, koniec, ticho), meno, pásik a riadok malých čísel so značkami (`mv`, `male`
+v `shared/messages-teraz.js`, značky `znackaIcon` vo `web/render/icons.js`); kedy bude slnko a „2×“ sú odznak pri ikone
+(`potom.kratko`). Slová (`odr`, veta odznaku) sú pre čítačku v skrytom texte dlaždice a v detaile spotrebiča ako veta
+(`vetaDlazdice`, `#tz-vec-veta`). Auto bez správ o nabíjaní otvorí detail len s menom a vetou.
+
 Rozhodnuté 21. 11. 2026: dlaždice spotrebičov na karte Teraz sú všetky na skle s bielym textom - farba nehovorí,
 či slnko stačí, z akej siete ide prúd, ani že spotrebič beží (aj krémová bežiaceho zmizla). Riadok nad dlaždicami
 (bodka + „Teraz zo slnka“) aj jeho panel s vysvetlením sú preč. `data-tone` na dlaždici ostáva ako údaj, štýl ho

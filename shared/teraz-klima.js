@@ -4,6 +4,7 @@
 
 import { dateParts, dayNameShort, fmt1 } from './format.js';
 import { klimaSpojena } from './klima.js';
+import { male } from './messages-teraz.js';
 import { addDays, localDateKey, localMinutes } from './solar.js';
 import { casti, drahaDna, maDrahu } from './teraz-bojler.js';
 
@@ -98,7 +99,10 @@ function energiaDnes(k, dnes, tariff) {
  * sieť / drahé pásmo (`podiel`, `draha` v %, kým dnes nič nespotrebovala null). Kompresor beží = zapnutá (`riadi` bezi,
  * biely kruh, Z1). Skript mlčí dlhšie ako KLIMA.tichoMin - tón `chyba` (jantárový rám) a ako dlho.
  * @param {KlimaStav} k @param {Date} now @param {string} tz @param {Tariff | null} tariff
- * @returns {{ tone: string, riadi: string, velky: string, za?: string, meno: string, odr: string[], podiel: number | null, draha: number }}
+ * Na dlaždici sú len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B): pod menom teplota vonku a nastavená so značkami (`mv`),
+ * dnešné kWh sú v paneli; slová (`odr`) číta čítačka.
+ * @returns {{ tone: string, riadi: string, zn?: import('./messages-teraz.js').Znacka, velky: string, za?: string, meno: string, odr: string[],
+ *   mv: import('./messages-teraz.js').MaleCislo[], podiel: number | null, draha: number }}
  */
 export function klimaDlazdica(k, now, tz, tariff) {
     const T = TERAZ_KLIMA_TEXTS;
@@ -111,7 +115,16 @@ export function klimaDlazdica(k, now, tz, tariff) {
     };
     const dnesKwh = T.dnesKwh(kwh(spolu));
     if (!klimaSpojena(k, now.getTime())) {
-        return { tone: 'chyba', riadi: 'mlci', velky: ticho(now.getTime() - k.at), meno: T.meno, odr: [T.mlci, T.bezSpojenia], ...pasik };
+        return {
+            tone: 'chyba',
+            riadi: 'mlci',
+            zn: 'ticho',
+            velky: ticho(now.getTime() - k.at),
+            meno: T.meno,
+            odr: [T.mlci, T.bezSpojenia],
+            mv: [],
+            ...pasik,
+        };
     }
     const bezi = k.pow && (k.hz ?? 0) > 0;
     return {
@@ -121,6 +134,7 @@ export function klimaDlazdica(k, now, tz, tariff) {
         za: T.kw,
         meno: T.meno,
         odr: [`${st(k.vonkuC)} / ${st(k.stempC)}`, dnesKwh],
+        mv: [male('vonku', st(k.vonkuC)), male('doma', st(k.stempC))],
         ...pasik,
     };
 }

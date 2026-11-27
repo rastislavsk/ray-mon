@@ -214,12 +214,12 @@
 [data-stlpec='p'] {
     grid-column: 2;
 }
-/* Dlaždica: všetky na skle s bielym textom - farba nehovorí, či slnko stačí, ani že spotrebič beží; to povedia
-   čas a odrážky (rozhodnuté 21. 11. 2026). Ploché, bez lemu.
-   Dlaždice v rade zdieľajú päť riadkov mriežky (subgrid): ikona, číslo, meno, pásik, odrážky s odznakom -
-   číslo aj pásik sú tak v celom rade na rovnakej výške, aj keď sa meno v jednej zalomí. Odrážky majú vždy
-   miesto na dva riadky (odznak je jeden z nich), takže sú všetky dlaždice rovnako vysoké, kým sa pri väčšom
-   písme v systéme niečo nezalomí (docs/navrhy/teraz-pasik-zdroje.html). Medzery
+/* Dlaždica: všetky na skle s bielym textom - farba nehovorí, či slnko stačí, ani že spotrebič beží (rozhodnuté
+   21. 11. 2026). Ploché, bez lemu. Ukazuje len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B + P1, 27. 11. 2026):
+   veľké číslo so značkou, meno, pásik a riadok malých čísel; slová číta čítačka a sú vetou v detaile.
+   Dlaždice v rade zdieľajú päť riadkov mriežky (subgrid): ikona, číslo, meno, pásik, malé čísla - číslo aj pásik
+   sú tak v celom rade na rovnakej výške, aj keď sa meno v jednej zalomí. Riadok malých čísel má miesto aj prázdny,
+   takže sú všetky dlaždice rovnako vysoké, kým sa pri väčšom písme v systéme niečo nezalomí. Medzery
    v dlaždici robia okraje prvkov, nie medzera mriežky (tá je medzi dlaždicami). */
 .dl {
     position: relative;
@@ -246,9 +246,10 @@
     display: contents;
 }
 .dl-ico {
+    position: relative;
     width: 44px;
     height: 44px;
-    margin-bottom: 22px;
+    margin-bottom: 18px;
     display: grid;
     place-items: center;
     border-radius: 50%;
@@ -267,34 +268,6 @@
     line-height: 1.1;
     overflow-wrap: anywhere;
 }
-/* Odrážky (docs/navrhy/teraz-dlazdice-odrazky.html): každá svoj riadok s bodkou. Texty sú krátke, aby sa pri
-   bežnom písme zmestili do riadku; pri väčšom písme v systéme sa odrážka zalomí pod seba s odsadením - neskráti
-   sa „…“, to by text skrylo. Bodka je kreslená, nie znak (písmo appky je podmnožina). */
-.dl .odr {
-    align-self: start;
-    display: block;
-    min-width: 0;
-    /* Dva riadky odrážok, druhý aj s medzerou nad odznakom. */
-    min-height: calc(2 * 0.875rem * 1.3 + 2px);
-    font-size: 0.875rem;
-    font-weight: 600;
-    line-height: 1.3;
-}
-.odr > span:not(.sr) {
-    display: block;
-    position: relative;
-    padding-left: 0.8em;
-}
-.odr > span:not(.sr)::before {
-    content: '';
-    position: absolute;
-    left: 0.1em;
-    top: 0.55em;
-    width: 0.3em;
-    height: 0.3em;
-    border-radius: 50%;
-    background: currentColor;
-}
 .velky {
     display: block;
     font-weight: 900;
@@ -302,7 +275,7 @@
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
-/* Malé slovo pred veľkým číslom („do“, „od“), v riadku s časom. */
+/* Malá jednotka za veľkým číslom („km“, „kW“), v riadku s číslom. */
 .velky .pred {
     font-size: 0.55em;
     font-weight: 800;
@@ -311,22 +284,69 @@
 /* Veľké číslo dlaždice sa nezalomí - pri väčšom písme v systéme sa zmenší so šírkou Čo zapnúť (#tz-co). */
 .dl .velky {
     font-size: min(1.75rem, 10cqi);
+    white-space: nowrap;
 }
-/* Odznak v dlaždici: kedy bude slnko na ten spotrebič najbližšie; tmavý, keď to budú dva a viac dní. Stojí
-   v odrážkach namiesto druhej a je presne taký vysoký ako jej riadok. */
-.potom {
-    display: block;
-    width: fit-content;
-    margin-top: 2px;
-    padding: 0 8px;
+/* Značka čísla (web/render/icons.js, znackaIcon): čo číslo znamená - štart (plný = teraz), koniec, koľko ešte, slnko,
+   kWh, vonku, nastavená, ticho. Čiarová, farbu berie z textu. */
+.zn {
+    flex: none;
+    width: 14px;
+    height: 14px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+.zn .zn-plna {
+    fill: currentColor;
+}
+.dl .velky .zn {
+    width: 0.62em;
+    height: 0.62em;
+    margin-right: 0.2em;
+    vertical-align: 0.08em;
+}
+/* Malé čísla pod pásikom: každé so značkou, v jednom riadku. Pri väčšom písme v systéme sa zalomia pod seba - neskrátia
+   sa „…“, to by číslo skrylo. Prázdny riadok drží miesto, aby boli dlaždice v rade rovnako vysoké. */
+.dl .mv {
+    align-self: start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px 10px;
+    min-width: 0;
+    min-height: calc(0.875rem * 1.3);
+    font-size: 0.875rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.3;
+}
+.mv > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    /* Pri väčšom písme v systéme sa zalomí aj číslo s jednotkou, inak by „33,4 kWh“ vytŕčalo z dlaždice. */
+    max-width: 100%;
+}
+/* Odznak pri ikone: skratka dňa, keď bude slnko na ten spotrebič najbližšie (tmavý, keď to budú dva a viac dní),
+   alebo „2×“ spotrebiča, ktorý dnes už dobehol. */
+.odz {
+    position: absolute;
+    top: -4px;
+    right: -12px;
+    min-width: 22px;
+    padding: 0 6px;
     border-radius: 999px;
-    background: rgba(20, 48, 12, 0.14);
-    font-size: 0.75rem;
+    background: #fff;
+    color: var(--ink);
+    font-size: 0.72rem;
     font-style: normal;
-    font-weight: 800;
-    line-height: calc(0.875rem * 1.3);
+    font-weight: 900;
+    line-height: 18px;
+    text-align: center;
+    white-space: nowrap;
 }
-.potom[data-dlho] {
+.odz[data-dlho] {
     background: #14300c;
     color: #ffd166;
 }
