@@ -41,9 +41,26 @@ export async function obnovAuto(store) {
  * @param {Store} store @param {'z' | 'k'} druh @param {boolean} on
  */
 export async function zmenOznamAuta(store, druh, on) {
-    const { zdroj, autoOznam = { z: false, k: false }, autoOznamStav = null } = store.get();
+    const { autoOznam = { z: false, k: false } } = store.get();
+    await nastavOznamAuta(store, { ...autoOznam, [druh]: on }, on);
+}
+
+/**
+ * Vypne oba odbery naraz - keď človek v Čo máš doma elektromobil vypne (docs/navrhy/nastavenie-co-mas-doma.html, P1).
+ * @param {Store} store
+ */
+export async function vypniOznamAuta(store) {
+    const o = store.get().autoOznam;
+    if (o && (o.z || o.k)) await nastavOznamAuta(store, { z: false, k: false }, false);
+}
+
+/**
+ * Uloží voľbu `novy` vo Workeri a v telefóne. `on`: zapína sa - smie si vypýtať povolenie.
+ * @param {Store} store @param {{ z: boolean, k: boolean }} novy @param {boolean} on
+ */
+async function nastavOznamAuta(store, novy, on) {
+    const { zdroj, autoOznamStav = null } = store.get();
     if (!zdroj || autoOznamStav === 'uklada') return;
-    const novy = { ...autoOznam, [druh]: on };
     const zapnute = novy.z || novy.k;
     store.setState({ autoOznamStav: 'uklada' });
     const odber = await odberSTextom(on);

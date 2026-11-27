@@ -308,7 +308,6 @@ const select = (/** @type {string} */ id) => /** @type {HTMLSelectElement} */ (b
 /** Učenie z histórie v Nastavení (docs/navrhy/plan-dna-ucenie.html). */
 function ucenieDom() {
     return {
-        nsUcenie: byId('ns-ucenie'),
         nsUcenieTitle: byId('ns-ucenie-title'),
         nsUcenieDni: byId('ns-ucenie-dni'),
         nsUcenieZatial: byId('ns-ucenie-zatial'),
@@ -365,7 +364,6 @@ function nastavenieDom() {
         nsDoma: byId('ns-doma'),
         nsDomaNote: byId('ns-doma-note'),
         nsBojler: byId('ns-bojler'),
-        nsBojlerTitle: byId('ns-bojler-title'),
         nsBojlerIntro: byId('ns-bojler-intro'),
         nsBojlerPrahy: byId('ns-bojler-prahy'),
         nsBojlerZasuvka: byId('ns-bojler-zasuvka'),
@@ -436,6 +434,12 @@ function nastavenieSekcieDom() {
         nsResetText: byId('ns-reset-text'),
         nsResetOk: byId('ns-reset-ok'),
         nsResetCancel: byId('ns-reset-cancel'),
+        nsBojlerRiadenie: byId('ns-bojler-riadenie'),
+        nsBojlerTepl: byId('ns-bojler-tepl'),
+        nsOkno: /** @type {HTMLDialogElement} */ (byId('ns-okno')),
+        nsOknoTitle: byId('ns-okno-title'),
+        nsOknoOznam: byId('ns-okno-oznam'),
+        nsOknoOznamChyba: byId('ns-okno-oznam-chyba'),
     };
 }
 
@@ -566,7 +570,6 @@ function klimaDom() {
         tzKlimaPodrN: byId('tz-klima-podr-n'),
         tzKlimaPodr: byId('tz-klima-podr'),
         nsKlima: byId('ns-klima'),
-        nsKlimaTitle: byId('ns-klima-title'),
         nsKlimaIntro: byId('ns-klima-intro'),
         nsKlimaIpL: byId('ns-klima-ip-l'),
         nsKlimaIp: /** @type {HTMLInputElement} */ (byId('ns-klima-ip')),
@@ -577,10 +580,7 @@ function klimaDom() {
         nsKlimaText: /** @type {HTMLTextAreaElement} */ (byId('ns-klima-text')),
         nsKlimaKroky: byId('ns-klima-kroky'),
         nsZasuvka: byId('ns-zasuvka'),
-        nsZasuvkaTitle: byId('ns-zasuvka-title'),
         nsZasuvkaIntro: byId('ns-zasuvka-intro'),
-        nsZasuvkaVecL: byId('ns-zasuvka-vec-l'),
-        nsZasuvkaVec: byId('ns-zasuvka-vec'),
         nsZasuvkaStavL: byId('ns-zasuvka-stav-l'),
         nsZasuvkaStav: byId('ns-zasuvka-stav'),
         nsZasuvkaSkript: /** @type {HTMLButtonElement} */ (byId('ns-zasuvka-skript')),

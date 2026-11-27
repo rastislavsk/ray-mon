@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PLANT, SITE, TARIFF, TARIFF_TEMPLATES } from '../shared/config.js';
-import { editTabs, listText, nastavenieModel, nastavenieRows, setupCta } from '../shared/nastavenie.js';
+import { editTabs, nastavenieModel, nastavenieRows, setupCta } from '../shared/nastavenie.js';
+import { listText } from '../shared/nastavenie-doma.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
 import { emptySettings, SETUP_STEPS } from '../shared/setup.js';
@@ -256,7 +257,7 @@ test('prehľad: Čo máš doma, Oznámenia, Vzhľad a Appka v oboch tónoch', ()
     assert.equal(m.doma.title, 'Čo máš doma');
     assert.equal(m.doma.hint, 'Práčka a elektromobil');
     assert.deepEqual(
-        m.doma.devices.filter((d) => d.on).map((d) => [d.id, d.name]),
+        m.doma.veci.filter((d) => d.on).map((d) => [d.id, d.name]),
         [
             ['pracka', 'Práčka'],
             ['auto', 'Elektromobil'],
@@ -293,7 +294,7 @@ test('prehľad: Čo máš doma, Oznámenia, Vzhľad a Appka v oboch tónoch', ()
     assert.equal(m.credit.length, 2);
     const p = nastavenieModel(state({ voice: 'slusny' }));
     assert.equal(p.doma.title, 'Čo máte doma');
-    assert.match(p.doma.note, /označíte\.$/);
+    assert.equal(p.doma.note, 'Plán dňa a ranné oznámenie rátajú len so zapnutým.');
     assert.equal(p.oznamenia.uses, 'Ráta so spotrebičmi z položky Čo máte doma.');
     assert.equal(p.vzhlad.hint, 'Tón hlášok: slušný');
     assert.match(p.share.text, /pošlite odkaz\.$/);

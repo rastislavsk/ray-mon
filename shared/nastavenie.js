@@ -6,10 +6,9 @@
 // Sprievodca sám je spoločný tiež (shared/setup-flow.js, shared/setup-texts.js).
 
 import { OZNAMENIA, VOICES, ZDIELANIE } from './config.js';
-import { DOMA_DEVICES } from './doma.js';
 import { kwpText } from './format.js';
 import { liveStatus } from './hero-model.js';
-import { oznameniaTexts, polite, voiceTexts } from './messages-core.js';
+import { oznameniaTexts, polite } from './messages-core.js';
 import { oznamOvladanie } from './oznamenia.js';
 import { pristupModel } from './pristup.js';
 import { checkSettings, totalPanels } from './settings.js';
@@ -18,9 +17,7 @@ import { savedSettings } from './setup-flow.js';
 import { GUESS_MARK, kwText, plantHero, TARIFF_TABS, zdrojText } from './setup-texts.js';
 import { tariffHint, tariffKind, tariffPricesText } from './tariff.js';
 import { menoZnacky } from './zdroje.js';
-import { bojlerSekcia } from './nastavenie-bojler.js';
-import { klimaSekcia } from './nastavenie-klima.js';
-import { zasuvkaSekcia } from './nastavenie-zasuvka.js';
+import { domaSekcia, domaUcinne } from './nastavenie-doma.js';
 import { ucenieSekcia } from './nastavenie-ucenie.js';
 
 /** @typedef {import('./setup-flow.js').SetupState} SetupState */
@@ -29,14 +26,9 @@ import { ucenieSekcia } from './nastavenie-ucenie.js';
 /**
  * Stav, z ktorého sa karta skladá: sprievodca, živé meranie, tón, spotrebiče doma, ranné
  * oznámenie a voľby zdieľania.
- * @typedef {SetupState & { pv: import('./kiosk.js').PvData | null, loading: boolean, voice: Voice, doma: readonly string[],
- *   oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean, shareKioskFail: boolean,
- *   bojler: import('./bojler.js').BojlerInfo | null, bojlerPrahy: import('./bojler.js').Prahy,
- *   bojlerSkript: import('./nastavenie-bojler.js').BojlerSkript, teplomer?: import('./nastavenie-bojler.js').Teplomer,
- *   bojlerHranica?: 'uklada' | 'chyba' | null, klima?: { at: number } | null, klimaNast?: { ip: string },
- *   klimaSkript?: import('./nastavenie-klima.js').KlimaSkript, zasuvky?: Record<string, import('./zasuvka.js').ZasuvkaInfo>,
- *   zasuvkaVec?: string, zasuvkaSkript?: import('./nastavenie-klima.js').KlimaSkript,
- *   ucenie: import('./ucenie.js').Naucene | null }} NastavenieState
+ * @typedef {SetupState & import('./nastavenie-doma.js').DomaState & { pv: import('./kiosk.js').PvData | null, loading: boolean,
+ *   voice: Voice, oznamenia: import('./oznamenia.js').Oznamenia, oznamStav: string, shareSettings: boolean, shareKiosk: boolean,
+ *   shareKioskFail: boolean, ucenie: import('./ucenie.js').Naucene | null }} NastavenieState
  */
 /**
  * Riadok sekcie Elektráreň. `edit` je krok, ktorý riadok otvorí na úpravu uloženej elektrárne
@@ -46,11 +38,6 @@ import { ucenieSekcia } from './nastavenie-ucenie.js';
  * @typedef {{ key: string, label: string, value: string, extra: string, guess: boolean,
  *   status: { tone: string, text: string } | null, edit: string | null, start: boolean }} Row
  */
-
-/** Zoznam slovom: „juh“, „juh a východ“, „juh, východ a západ“. @param {string[]} items */
-export function listText(items) {
-    return items.length < 2 ? items.join('') : `${items.slice(0, -1).join(', ')} a ${items[items.length - 1]}`;
-}
 
 /** Počet plôch slovom. @param {number} n */
 const planesText = (n) => (n === 1 ? '1 plocha' : `${n} plochy`);
@@ -75,13 +62,6 @@ export const NASTAVENIE_TEXTS = {
         ]),
     },
     doma: /** @type {[string, string]} */ (['Čo máš doma', 'Čo máte doma']),
-    domaNic: 'zatiaľ nič',
-    /** V Čo máš doma sa auto volá celým menom, inde v appke ostáva „Auto“. @type {Record<string, string>} */
-    domaNazvy: { auto: 'Elektromobil' },
-    domaNote: /** @type {[string, string]} */ ([
-        'Plán dňa a ranné oznámenie rátajú len s tým, čo tu označíš.',
-        'Plán dňa a ranné oznámenie rátajú len s tým, čo tu označíte.',
-    ]),
     vzhlad: 'Vzhľad',
     voiceLabel: 'Tón hlášok',
     voiceSmall: 'drzý tyká, slušný vyká a je vecný',
@@ -261,10 +241,6 @@ export function nastavenieModel(state) {
     const saved = savedSettings(state);
     const h = done ? plantHero(saved) : null;
     const p = done ? pristupOf(state) : null;
-    const names = voiceTexts(voice).MOZEM_ITEM_TEXTS;
-    /** @param {string} id */
-    const domaName = (id) => T.domaNazvy[id] ?? names[id].name;
-    const doma = DOMA_DEVICES.filter((id) => state.doma.includes(id)).map((id, i) => (i ? domaName(id).toLowerCase() : domaName(id)));
     return {
         title: T.title,
         cta: setupCta(state, voice),
@@ -281,16 +257,8 @@ export function nastavenieModel(state) {
             odkaz: done ? T.odkaz : null,
             sprievodca: done ? { label: T.sprievodca.label, small: inVoice(T.sprievodca.small, voice) } : null,
         },
-        doma: {
-            title: inVoice(T.doma, voice),
-            hint: doma.length ? listText(doma) : T.domaNic,
-            devices: DOMA_DEVICES.map((id) => ({ id, name: domaName(id), on: state.doma.includes(id) })),
-            note: inVoice(T.domaNote, voice),
-            bojler: bojlerSekcia({ ...state, voice }),
-            klima: klimaSekcia({ ...state, voice }),
-            zasuvka: zasuvkaSekcia({ ...state, voice }),
-            ucenie: ucenieSekcia(state),
-        },
+        doma: domaSekcia({ ...state, voice }, inVoice(T.doma, voice)),
+        ucenie: ucenieSekcia({ ...state, doma: domaUcinne({ ...state, voice }) }),
         oznamenia: oznameniaSekcia(state),
         vzhlad: {
             title: T.vzhlad,

@@ -7,7 +7,7 @@ const DEVICES = [...PLAN_DNA.devices, 'auto'];
 
 test('parseDoma: predvolené spotrebiče plánu, neznáme a dvojité zahodí, poškodené nahradí', () => {
     assert.deepEqual(domaDefault(), DEVICES);
-    assert.deepEqual(DOMA_DEVICES, ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler']);
+    assert.deepEqual(DOMA_DEVICES, ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler', 'klima']);
     assert.deepEqual(parseDoma(null), DEVICES);
     assert.deepEqual(parseDoma('{zle'), DEVICES);
     assert.deepEqual(parseDoma('"text"'), DEVICES);
@@ -16,6 +16,16 @@ test('parseDoma: predvolené spotrebiče plánu, neznáme a dvojité zahodí, po
     // Nič doma je platná voľba, nie poškodená.
     assert.deepEqual(parseDoma(JSON.stringify({ devices: [] })), []);
     assert.deepEqual(parseDoma(JSON.stringify(domaToStored(['auto']))), ['auto']);
+});
+
+test('parseDoma: voľba spred klimatizácie ju raz doplní, keď je zadaná jej adresa', () => {
+    const stara = JSON.stringify({ devices: ['pracka'] });
+    assert.deepEqual(parseDoma(stara, true), ['pracka', 'klima']);
+    assert.deepEqual(parseDoma(stara, false), ['pracka']);
+    assert.deepEqual(parseDoma(null, true), [...DEVICES, 'klima']);
+    // Nová voľba klimatizáciu pozná - kto ju vypol, ten ju nemá, aj keď adresa ostala.
+    assert.deepEqual(parseDoma(JSON.stringify(domaToStored(['pracka'])), true), ['pracka']);
+    assert.deepEqual(parseDoma(JSON.stringify(domaToStored(['klima'])), true), ['klima']);
 });
 
 test('domaZOznameni: spotrebiče zo staršieho nastavenia oznámení, bez nich null', () => {

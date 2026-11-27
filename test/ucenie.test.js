@@ -260,7 +260,9 @@ test('plán dňa: spotreba domu a potreba bojlera z učenia', () => {
 });
 
 test('Nastavenie: učenie z histórie - dni, grafy, bojler a začať odznova', () => {
-    assert.equal(ucenieSekcia({ ucenie: null, doma: [] }), null);
+    const bez = ucenieSekcia({ ucenie: null, doma: [] });
+    assert.deepEqual([bez.dni, bez.grafy, bez.bojler, bez.odznova], ['0 dní', null, '', 'Začať odznova']);
+    assert.match(bez.zatial, /^Appka si pamätá/);
     const zaciatok = /** @type {NonNullable<ReturnType<typeof ucenieSekcia>>} */ (
         ucenieSekcia({ ucenie: naucene({ dni: [], snimky: [], behy: [], today: DNES, od: null }), doma: ['bojler'] })
     );

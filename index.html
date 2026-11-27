@@ -484,120 +484,35 @@
                                 </button>
                             </h3>
                             <div id="ns-body-doma" class="ns-body hidden">
-                                <div class="it pick">
-                                    <span id="ns-doma" class="minis wrap" role="group" aria-labelledby="ns-doma-title"></span>
-                                </div>
+                                <!-- Veci s prepínačom a pod zapnutou riadky jej pripojení (docs/navrhy/nastavenie-co-mas-doma.html, A).
+                                     Skladá ich render, riadok pripojenia otvorí okno #ns-okno. -->
+                                <div id="ns-doma" class="ns-doma" role="group" aria-labelledby="ns-doma-title"></div>
                                 <p id="ns-doma-note" class="oznam-note"></p>
-                                <!-- Bojler na prebytky (docs/navrhy/bojler-prebytky.html): prahy, stav zásuvky Shelly a skript do nej.
-                                     Len pri meraní Huawei Northbound a s bojlerom doma. -->
-                                <div id="ns-bojler" class="ns-bojler hidden" role="group" aria-labelledby="ns-bojler-title">
-                                    <h4 id="ns-bojler-title" class="ns-sub"></h4>
-                                    <p id="ns-bojler-intro" class="oznam-note"></p>
-                                    <div id="ns-bojler-prahy"></div>
-                                    <div class="it">
-                                        <span><b id="ns-bojler-zasuvka"></b><small id="ns-bojler-stav"></small></span>
-                                    </div>
-                                    <p id="ns-bojler-ine" class="wz-msg hidden"></p>
-                                    <!-- Teplomer v bojleri (docs/navrhy/bojler-teplota.html, N2): adresa a heslo len do skriptu zásuvky. -->
-                                    <button type="button" id="ns-teplomer" class="it" role="switch" aria-checked="false">
-                                        <span><b id="ns-teplomer-label"></b><small id="ns-teplomer-small"></small></span>
-                                        <i class="tg" aria-hidden="true"></i>
-                                    </button>
-                                    <div id="ns-teplomer-polia" class="ns-teplomer hidden">
-                                        <!-- Hranica teploty, ktorú stráži zásuvka (docs/navrhy/bojler-hranica.html, H2 + D1). -->
-                                        <div id="ns-hranica" class="it pick hidden">
-                                            <span><b id="ns-hranica-l"></b><small id="ns-hranica-small"></small></span>
-                                            <span class="minis prah">
-                                                <button type="button" class="mini" id="ns-hranica-menej" data-hranica="-1">-</button>
-                                                <b id="ns-hranica-v" class="prah-v"></b>
-                                                <button type="button" class="mini" id="ns-hranica-viac" data-hranica="1">+</button>
-                                            </span>
-                                        </div>
-                                        <p id="ns-hranica-chyba" class="wz-msg err hidden" role="status"></p>
-                                        <label class="ns-pole">
-                                            <span id="ns-teplomer-ip-l"></span>
-                                            <input
-                                                id="ns-teplomer-ip"
-                                                class="fld"
-                                                inputmode="decimal"
-                                                autocomplete="off"
-                                                spellcheck="false"
-                                            />
-                                        </label>
-                                        <label class="ns-pole">
-                                            <span id="ns-teplomer-heslo-l"></span>
-                                            <input id="ns-teplomer-heslo" class="fld" type="password" autocomplete="off" />
-                                        </label>
-                                        <p id="ns-teplomer-pozn" class="oznam-note"></p>
-                                    </div>
-                                    <div class="btns"><button type="button" id="ns-bojler-skript" class="pbtn"></button></div>
-                                    <p id="ns-bojler-sprava" class="wz-msg hidden" role="status"></p>
-                                    <textarea
-                                        id="ns-bojler-text"
-                                        class="ns-bojler-text hidden"
-                                        readonly
-                                        rows="6"
-                                        aria-labelledby="ns-bojler-sprava"
-                                    ></textarea>
-                                    <ol id="ns-bojler-kroky" class="ns-kroky"></ol>
-                                </div>
-                                <!-- Klimatizácia Daikin (docs/navrhy/klima-daikin.html): adresa v domácej sieti a skript na Shelly, ktorý
-                                     jej stav číta. Len pri meraní Huawei Northbound. -->
-                                <div id="ns-klima" class="ns-bojler hidden" role="group" aria-labelledby="ns-klima-title">
-                                    <h4 id="ns-klima-title" class="ns-sub"></h4>
-                                    <p id="ns-klima-intro" class="oznam-note"></p>
-                                    <div class="ns-teplomer">
-                                        <label class="ns-pole">
-                                            <span id="ns-klima-ip-l"></span>
-                                            <input id="ns-klima-ip" class="fld" inputmode="decimal" autocomplete="off" spellcheck="false" />
-                                        </label>
-                                    </div>
-                                    <div class="it">
-                                        <span><b id="ns-klima-stav-l"></b><small id="ns-klima-stav"></small></span>
-                                    </div>
-                                    <div class="btns"><button type="button" id="ns-klima-skript" class="pbtn"></button></div>
-                                    <p id="ns-klima-sprava" class="wz-msg hidden" role="status"></p>
-                                    <textarea
-                                        id="ns-klima-text"
-                                        class="ns-bojler-text hidden"
-                                        readonly
-                                        rows="6"
-                                        aria-labelledby="ns-klima-sprava"
-                                    ></textarea>
-                                    <ol id="ns-klima-kroky" class="ns-kroky"></ol>
-                                </div>
-                                <!-- Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html, A + S2): ktorý spotrebič, kedy sa zásuvka
-                                     ozvala a skript do nej. Len pri meraní Huawei Northbound. -->
-                                <div id="ns-zasuvka" class="ns-bojler hidden" role="group" aria-labelledby="ns-zasuvka-title">
-                                    <h4 id="ns-zasuvka-title" class="ns-sub"></h4>
-                                    <p id="ns-zasuvka-intro" class="oznam-note"></p>
-                                    <div class="it ns-zasuvka-vec">
-                                        <span><b id="ns-zasuvka-vec-l"></b></span>
-                                        <span id="ns-zasuvka-vec" class="minis" role="group" aria-labelledby="ns-zasuvka-vec-l"></span>
-                                    </div>
-                                    <div class="it">
-                                        <span><b id="ns-zasuvka-stav-l"></b><small id="ns-zasuvka-stav"></small></span>
-                                    </div>
-                                    <div class="btns"><button type="button" id="ns-zasuvka-skript" class="pbtn"></button></div>
-                                    <p id="ns-zasuvka-sprava" class="wz-msg hidden" role="status"></p>
-                                    <textarea
-                                        id="ns-zasuvka-text"
-                                        class="ns-bojler-text hidden"
-                                        readonly
-                                        rows="6"
-                                        aria-labelledby="ns-zasuvka-sprava"
-                                    ></textarea>
-                                    <ol id="ns-zasuvka-kroky" class="ns-kroky"></ol>
-                                </div>
-                                <!-- Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): z koľkých dní, čo sa appka naučila
-                                     a začať odznova. -->
-                                <div id="ns-ucenie" class="ns-bojler hidden" role="group" aria-labelledby="ns-ucenie-title">
-                                    <h4 class="ns-sub ns-ucenie-h"><span id="ns-ucenie-title"></span><small id="ns-ucenie-dni"></small></h4>
-                                    <p id="ns-ucenie-zatial" class="oznam-note hidden"></p>
-                                    <div id="ns-ucenie-grafy" class="ns-ucenie-grafy"></div>
-                                    <p id="ns-ucenie-bojler" class="oznam-note hidden"></p>
-                                    <div class="btns"><button type="button" id="ns-ucenie-odznova" class="pbtn"></button></div>
-                                </div>
+                            </div>
+                        </section>
+                        <!-- Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): z koľkých dní, čo sa appka naučila
+                             a začať odznova. -->
+                        <section class="glass set fold" aria-labelledby="ns-ucenie-title">
+                            <h3 class="fold-h">
+                                <button
+                                    type="button"
+                                    id="ns-fold-ucenie"
+                                    class="fold-head"
+                                    data-ns-fold="ucenie"
+                                    aria-expanded="false"
+                                    aria-controls="ns-body-ucenie"
+                                >
+                                    <span class="fold-t"
+                                        ><span id="ns-ucenie-title" class="glass-ttl"></span
+                                        ><small id="ns-ucenie-dni" class="fold-hint"></small></span
+                                    ><span class="chev" aria-hidden="true"></span>
+                                </button>
+                            </h3>
+                            <div id="ns-body-ucenie" class="ns-body hidden">
+                                <p id="ns-ucenie-zatial" class="oznam-note hidden"></p>
+                                <div id="ns-ucenie-grafy" class="ns-ucenie-grafy"></div>
+                                <p id="ns-ucenie-bojler" class="oznam-note hidden"></p>
+                                <div class="btns ns-ucenie-btns"><button type="button" id="ns-ucenie-odznova" class="pbtn"></button></div>
                             </div>
                         </section>
                         <!-- Oznámenia: ranný plán dňa - voľba telefónu (oznamenia-v1). -->
@@ -1282,6 +1197,110 @@
         </dialog>
 
         <!-- Vymazať údaje: potvrdenie pred vymazaním všetkého uloženého. Nie je to krok, ktorý sa dá vrátiť. -->
+        <!-- Okno veci z Čo máš doma (docs/navrhy/nastavenie-co-mas-doma.html, A + P3): oznámenia a pripojenie jednej veci -
+             riadenie bojlera, teplomer, klimatizácia, zásuvka spotrebiča či oznámenia auta. Ktorú časť ukáže, rozhoduje render. -->
+        <dialog id="ns-okno" class="sheet ns-okno" aria-labelledby="ns-okno-title">
+            <div class="sheet-in">
+                <h2 id="ns-okno-title"></h2>
+                <div class="set">
+                    <div id="ns-okno-oznam"></div>
+                    <p id="ns-okno-oznam-chyba" class="wz-msg err hidden" role="status"></p>
+                    <!-- Bojler na prebytky (docs/navrhy/bojler-prebytky.html): riadenie (prahy, stav zásuvky Shelly) alebo teplomer
+                     a skript do zásuvky. Len pri meraní Huawei Northbound a s bojlerom doma. -->
+                    <div id="ns-bojler" class="ns-okno-cast hidden">
+                        <div id="ns-bojler-riadenie" class="ns-okno-cast">
+                            <p id="ns-bojler-intro" class="oznam-note"></p>
+                            <div id="ns-bojler-prahy"></div>
+                            <div class="it">
+                                <span><b id="ns-bojler-zasuvka"></b><small id="ns-bojler-stav"></small></span>
+                            </div>
+                            <p id="ns-bojler-ine" class="wz-msg hidden"></p>
+                        </div>
+                        <div id="ns-bojler-tepl" class="ns-okno-cast">
+                            <!-- Teplomer v bojleri (docs/navrhy/bojler-teplota.html, N2): adresa a heslo len do skriptu zásuvky. -->
+                            <button type="button" id="ns-teplomer" class="it" role="switch" aria-checked="false">
+                                <span><b id="ns-teplomer-label"></b><small id="ns-teplomer-small"></small></span>
+                                <i class="tg" aria-hidden="true"></i>
+                            </button>
+                            <div id="ns-teplomer-polia" class="ns-teplomer hidden">
+                                <!-- Hranica teploty, ktorú stráži zásuvka (docs/navrhy/bojler-hranica.html, H2 + D1). -->
+                                <div id="ns-hranica" class="it pick hidden">
+                                    <span><b id="ns-hranica-l"></b><small id="ns-hranica-small"></small></span>
+                                    <span class="minis prah">
+                                        <button type="button" class="mini" id="ns-hranica-menej" data-hranica="-1">-</button>
+                                        <b id="ns-hranica-v" class="prah-v"></b>
+                                        <button type="button" class="mini" id="ns-hranica-viac" data-hranica="1">+</button>
+                                    </span>
+                                </div>
+                                <p id="ns-hranica-chyba" class="wz-msg err hidden" role="status"></p>
+                                <label class="ns-pole">
+                                    <span id="ns-teplomer-ip-l"></span>
+                                    <input id="ns-teplomer-ip" class="fld" inputmode="decimal" autocomplete="off" spellcheck="false" />
+                                </label>
+                                <label class="ns-pole">
+                                    <span id="ns-teplomer-heslo-l"></span>
+                                    <input id="ns-teplomer-heslo" class="fld" type="password" autocomplete="off" />
+                                </label>
+                                <p id="ns-teplomer-pozn" class="oznam-note"></p>
+                            </div>
+                        </div>
+                        <div class="btns"><button type="button" id="ns-bojler-skript" class="pbtn"></button></div>
+                        <p id="ns-bojler-sprava" class="wz-msg hidden" role="status"></p>
+                        <textarea
+                            id="ns-bojler-text"
+                            class="ns-bojler-text hidden"
+                            readonly
+                            rows="6"
+                            aria-labelledby="ns-bojler-sprava"
+                        ></textarea>
+                        <ol id="ns-bojler-kroky" class="ns-kroky"></ol>
+                    </div>
+                    <!-- Klimatizácia Daikin (docs/navrhy/klima-daikin.html): adresa v domácej sieti a skript na Shelly, ktorý
+                     jej stav číta. Len pri meraní Huawei Northbound. -->
+                    <div id="ns-klima" class="ns-okno-cast hidden">
+                        <p id="ns-klima-intro" class="oznam-note"></p>
+                        <div class="ns-teplomer">
+                            <label class="ns-pole">
+                                <span id="ns-klima-ip-l"></span>
+                                <input id="ns-klima-ip" class="fld" inputmode="decimal" autocomplete="off" spellcheck="false" />
+                            </label>
+                        </div>
+                        <div class="it">
+                            <span><b id="ns-klima-stav-l"></b><small id="ns-klima-stav"></small></span>
+                        </div>
+                        <div class="btns"><button type="button" id="ns-klima-skript" class="pbtn"></button></div>
+                        <p id="ns-klima-sprava" class="wz-msg hidden" role="status"></p>
+                        <textarea
+                            id="ns-klima-text"
+                            class="ns-bojler-text hidden"
+                            readonly
+                            rows="6"
+                            aria-labelledby="ns-klima-sprava"
+                        ></textarea>
+                        <ol id="ns-klima-kroky" class="ns-kroky"></ol>
+                    </div>
+                    <!-- Zásuvka Shelly spotrebiča (docs/navrhy/pracka-zasuvka.html, A + S2): kedy sa zásuvka ozvala a skript do nej.
+                     Len pri meraní Huawei Northbound. -->
+                    <div id="ns-zasuvka" class="ns-okno-cast hidden">
+                        <p id="ns-zasuvka-intro" class="oznam-note"></p>
+                        <div class="it">
+                            <span><b id="ns-zasuvka-stav-l"></b><small id="ns-zasuvka-stav"></small></span>
+                        </div>
+                        <div class="btns"><button type="button" id="ns-zasuvka-skript" class="pbtn"></button></div>
+                        <p id="ns-zasuvka-sprava" class="wz-msg hidden" role="status"></p>
+                        <textarea
+                            id="ns-zasuvka-text"
+                            class="ns-bojler-text hidden"
+                            readonly
+                            rows="6"
+                            aria-labelledby="ns-zasuvka-sprava"
+                        ></textarea>
+                        <ol id="ns-zasuvka-kroky" class="ns-kroky"></ol>
+                    </div>
+                </div>
+            </div>
+        </dialog>
+
         <dialog id="ns-reset-sheet" class="sheet" aria-labelledby="ns-reset-title" aria-describedby="ns-reset-text">
             <div class="sheet-in">
                 <h2 id="ns-reset-title"></h2>

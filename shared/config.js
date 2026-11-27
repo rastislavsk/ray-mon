@@ -126,7 +126,7 @@ export const PANELS = /** @type {const} */ (['terazky', 'mozem', 'radar', '7dni'
  * Sekcie karty Nastavenie v poradí na karte - rovnaké (shared/nastavenie.js,
  * docs/navrhy/nastavenie-zjednotenie.html).
  */
-export const NASTAVENIE_SEKCIE = /** @type {const} */ (['elektraren', 'doma', 'oznamenia', 'vzhlad', 'appka']);
+export const NASTAVENIE_SEKCIE = /** @type {const} */ (['elektraren', 'doma', 'ucenie', 'oznamenia', 'vzhlad', 'appka']);
 
 /**
  * Šírky okna (px), od ktorých appka mení rozloženie. Pod `medium` je telefón aj tablet na

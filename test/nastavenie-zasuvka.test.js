@@ -11,18 +11,10 @@ const zaklad = {
     voice: /** @type {const} */ ('drzy'),
 };
 
-test('zasuvkaSekcia: len pri Huawei Northbound; voľba spotrebiča, stav zásuvky, správy a kroky v tóne', () => {
+test('zasuvkaSekcia: len pri Huawei Northbound; stav zásuvky spotrebiča, správy a kroky v tóne', () => {
     assert.equal(zasuvkaSekcia({ ...zaklad, zdroj: { sposob: 'huawei-kiosk' } }), null);
     const s = zasuvkaSekcia(zaklad);
     assert.ok(s);
-    assert.deepEqual(
-        s.veci.map((v) => [v.label, v.on]),
-        [
-            ['Práčka', true],
-            ['Sušička', false],
-            ['Umývačka', false],
-        ],
-    );
     assert.deepEqual(s.stav, { tone: 'wait', text: 'ešte sa neozvala' });
     assert.equal(s.sprava, null);
     assert.equal(s.tlacidlo, 'Skopíruj skript do zásuvky');

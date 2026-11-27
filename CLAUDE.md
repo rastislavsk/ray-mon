@@ -140,6 +140,19 @@ farbe rámu; zapnutá má vpravo hore ventilátor (`vent`, `.dl-vent`: päť st�
 a odčítanie z odhadu nabíjania auta sú v `docs/to do later.md`. Aktualizácia firmvéru adaptéra (appka Onecta) môže lokálne
 API zrušiť - potom ostáva cloud Onecta (200 volaní za deň) alebo ESP32 Faikin.
 
+## Nastavenie › Čo máš doma
+
+Návrh a rozhodnutie: `docs/navrhy/nastavenie-co-mas-doma.html` (A + L5b + P1 + P3, 27. 11. 2026). Sekcia je zoznam vecí
+s prepínačom (`DOMA_DEVICES` v `shared/doma.js`, od verzie voľby 2 aj klimatizácia - stará voľba ju raz doplní, keď je zadaná
+adresa klimatizácie). Pod zapnutou vecou sú pri Huawei Northbound riadky jej pripojení so stavom (`domaSekcia`
+v `shared/nastavenie-doma.js`): zásuvka Shelly pri práčke, sušičke a umývačke, riadenie a teplomer pri bojleri, Shelly
+pri klimatizácii, oznámenia pri elektromobile. Riadok otvorí okno veci `#ns-okno` (`appSheet` z `NS_OKNA`, krok navigácie)
+s prepínačmi oznámení (P3, tie isté ako v paneloch karty Teraz) a obsahom - zásuvku teda vidno len pri zapnutom spotrebiči
+a každú zvlášť. Bojler, ktorý riadi zásuvka (`bojlerRiadeny`), a klimatizácia, ktorej Shelly sa ozval (`klimaUkaz`), sa vypnúť
+nedajú (L5b, `zamknuteVeci`) - karta Teraz ich vtedy ukazuje tak či tak. Vypnutá vec vypne oznámenia tohto telefónu, ktoré
+k nej patria (P1, `vypniOznamyVeci` vo `web/nastavenie-interactions.js`); oznámenie o konci zo zásuvky platí pre všetky
+zásuvky, preto len keď žiadny zapnutý spotrebič zásuvku nemá. Učenie z histórie je vlastná sekcia za Čo máš doma.
+
 ## Spotrebič beží
 
 Návrh a rozhodnutie: `docs/navrhy/teraz-bezi-spotrebic.html` (A + 1, 18. 11. 2026), koniec programu a opakovanie

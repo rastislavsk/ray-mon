@@ -1,4 +1,4 @@
-// Nastavenie › Spotrebiče doma › Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): z koľkých dní sa appka
+// Nastavenie › Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): z koľkých dní sa appka
 // učí, čo sa naučila - strecha oproti predpovedi za jasna a spotreba domu v pracovný deň ako malé grafy, potreba
 // bojlera - a „Začať odznova“. Čistá funkcia nad modelom učenia (shared/ucenie.js); kreslí web/render/nastavenie.js.
 
@@ -33,12 +33,13 @@ const HODINY = Array.from({ length: 11 }, (_, i) => 7 + i);
 const G = { w: 260, h: 70, stred: 35, mierka: 70 };
 
 /**
- * Sekcia Učenie z histórie, alebo null, kým appka model nemá. Grafy sú, až keď sa appka z UCENIE.minDni dní naučila.
+ * Sekcia Učenie z histórie (vlastná sekcia karty Nastavenie, docs/navrhy/nastavenie-co-mas-doma.html). Kým appka model nemá,
+ * je to 0 dní s vysvetlením. Grafy sú, až keď sa appka z UCENIE.minDni dní naučila.
  * @param {{ ucenie: Naucene | null, doma: readonly string[] }} state
  */
 export function ucenieSekcia({ ucenie, doma }) {
-    if (!ucenie) return null;
     const T = UCENIE_TEXTS;
+    if (!ucenie) return { nazov: T.nazov, dni: T.dni(0), zatial: T.zatial, grafy: null, bojler: '', odznova: T.odznova };
     const naucene = ucenie.dni >= UCENIE.minDni;
     return {
         nazov: T.nazov,

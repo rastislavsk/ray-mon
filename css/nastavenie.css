@@ -224,13 +224,6 @@
 .set .it b {
     font-weight: 600;
 }
-/* Spotrebič na zásuvke (docs/navrhy/pracka-zasuvka.html): tri voľby sa vedľa popisu nezmestia, idú pod neho. */
-.set .ns-zasuvka-vec {
-    flex-wrap: wrap;
-}
-.set .it.ns-zasuvka-vec > span:first-of-type {
-    flex-basis: 100%;
-}
 .set .it small {
     font-size: 0.7813rem;
     color: var(--dim);
@@ -531,23 +524,36 @@
 .oznam-stav {
     color: #fff;
 }
-/* Spotrebiče v Čo máš doma sa pri úzkom displeji zalomia. */
-.minis.wrap {
-    flex-wrap: wrap;
+
+/* ===== Nastavenie › Čo máš doma (docs/navrhy/nastavenie-co-mas-doma.html, A) ===== */
+/* Pripojenie veci (zásuvka, teplomer…) je odsadený riadok pod ňou s oblúčikom, ktorý ho k veci viaže. */
+.set .it.ns-pod {
+    position: relative;
+    padding-left: 20px;
+}
+.set .it.ns-pod::before {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 0;
+    height: 50%;
+    width: 9px;
+    border-left: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-bottom: 1.5px solid rgba(255, 255, 255, 0.4);
+    border-bottom-left-radius: 5px;
+}
+/* Vec, ktorú vypnúť nejde (riadi ju zásuvka, číta ju Shelly - L5b): prepínač tlmený, dôvod je pod menom. */
+.set .it[role='switch']:disabled {
+    cursor: default;
+}
+.set .it[role='switch']:disabled > .tg {
+    opacity: 0.55;
 }
 
-/* ===== Nastavenie › Čo máš doma › Bojler na prebytky ===== */
-.ns-bojler {
+/* ===== Okno veci: riadenie bojlera, teplomer, klimatizácia, zásuvka, oznámenia auta ===== */
+.ns-okno-cast {
     display: grid;
     gap: 4px;
-    margin-top: 8px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.16);
-}
-.ns-sub {
-    margin: 0;
-    font-size: 0.9375rem;
-    font-weight: 800;
 }
 /* Prah: menej, hodnota, viac. */
 .minis.prah {
@@ -558,11 +564,11 @@
     text-align: center;
     font-variant-numeric: tabular-nums;
 }
-.ns-bojler .btns {
+.ns-okno-cast .btns {
     display: flex;
     padding: 6px 0;
 }
-.ns-bojler .pbtn {
+.ns-okno-cast .pbtn {
     flex: 1;
 }
 /* Skript na ručné skopírovanie, keď schránka nie je dostupná. */
@@ -586,16 +592,13 @@
     gap: 4px;
 }
 
-/* Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B): počet dní pri nadpise a dva malé grafy. */
-.ns-ucenie-h {
+/* Učenie z histórie (docs/navrhy/plan-dna-ucenie.html, variant B), vlastná sekcia: dva malé grafy a Začať odznova. */
+.ns-ucenie-btns {
     display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 8px;
+    padding: 6px 0;
 }
-.ns-ucenie-h small {
-    font-weight: 400;
-    color: var(--dim);
+.ns-ucenie-btns .pbtn {
+    flex: 1;
 }
 .ns-ucenie-grafy {
     display: grid;
