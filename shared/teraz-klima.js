@@ -2,6 +2,7 @@
 // dnešné kWh, pásik slnko / sieť / drahé pásmo ako pri ostatných spotrebičoch) a panel Klíma (graf dňa, energia dneška,
 // 14 dní, rok a podrobnosti). Čisté funkcie - stav dostanú, texty a čísla vrátia.
 
+import { MINUTES_PER_DAY } from './config.js';
 import { dateParts, dayNameShort, fmt1 } from './format.js';
 import { klimaSpojena } from './klima.js';
 import { male } from './messages-teraz.js';
@@ -222,7 +223,7 @@ function grafDna(k, dnes, terazMin) {
     if (!doma.length && !vonku.length && !hod) return null;
     const nast = k.stempC === null ? [] : [k.stempC];
     const { dole, hore } = rozsah([...doma, ...vonku].map((b) => b[1]).concat(nast));
-    const x = (/** @type {number} */ m) => Math.round((m / (24 * 60)) * W * 10) / 10;
+    const x = (/** @type {number} */ m) => Math.round((m / MINUTES_PER_DAY) * W * 10) / 10;
     const y = (/** @type {number} */ t) => Math.round(((hore - t) / (hore - dole)) * H * 10) / 10;
     const kd = krivka(doma, x, y);
     const kv = krivka(vonku, x, y);
@@ -242,7 +243,7 @@ function grafDna(k, dnes, terazMin) {
         nula: dole < 0 && hore > 0 ? pct(y(0), H) : null,
         popisky,
         stlpce: stlpceHodin(hod),
-        teraz: pct(terazMin, 24 * 60),
+        teraz: pct(terazMin, MINUTES_PER_DAY),
         popis: popisky.map((p) => p.text).join(', '),
     };
 }

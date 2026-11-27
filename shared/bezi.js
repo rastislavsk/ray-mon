@@ -6,7 +6,7 @@
 // Plán dňa z neho vie, čo už beží alebo dobehlo (shared/plan-dna.js). Overiť to appka nevie - je to na
 // slovo. Čisté funkcie, úložisko rieši web/storage.js a čas prichádza v parametroch.
 
-import { BEZI, HISTORIA, MOZEM_ITEMS } from './config.js';
+import { BEZI, HISTORIA, MINUTES_PER_DAY, MOZEM_ITEMS } from './config.js';
 import { addDays } from './solar.js';
 import { isObj } from './valid.js';
 
@@ -17,7 +17,6 @@ import { isObj } from './valid.js';
  */
 
 const DATUM = /^\d{4}-\d{2}-\d{2}$/;
-const DEN_MIN = 24 * 60;
 
 /** Dá sa spotrebič zapísať? @param {string} id */
 export const daSaZapisat = (id) => BEZI.veci.includes(id);
@@ -43,9 +42,10 @@ export function parseBezi(raw) {
     for (const x of raw) {
         if (!isObj(x)) continue;
         const { id, d, m, k } = /** @type {Record<string, unknown>} */ (x);
-        if (typeof id !== 'string' || !daSaZapisat(id) || typeof d !== 'string' || !DATUM.test(d) || !cele(m, 0, DEN_MIN - 1)) continue;
+        if (typeof id !== 'string' || !daSaZapisat(id) || typeof d !== 'string' || !DATUM.test(d) || !cele(m, 0, MINUTES_PER_DAY - 1))
+            continue;
         const koniec = k === undefined ? m + dlzka(id) : k;
-        if (!cele(koniec, m + 1, m + DEN_MIN)) continue;
+        if (!cele(koniec, m + 1, m + MINUTES_PER_DAY)) continue;
         const i = out.findIndex((z) => z.id === id && z.d === d && z.m === m);
         if (i >= 0) out.splice(i, 1);
         out.push({ id, d, m, k: koniec });

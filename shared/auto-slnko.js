@@ -4,7 +4,7 @@
 // riadi zásuvka (ide pred autom, tak ako v Pláne dňa). Ráno odhad z predpovede, ktorý telefón zamrazí, po západe slnka
 // prepis skutočnosťou (web/auto-den.js). Čisté funkcie - čas a dáta prichádzajú ako parametre.
 
-import { AUTO_SLNKO, NABIJACKA_KW } from './config.js';
+import { AUTO_SLNKO, MINUTES_PER_DAY, NABIJACKA_KW } from './config.js';
 import { forecastDayPlan } from './day-plan.js';
 import { dayCtx, freeKw, kmOf } from './mozem-jadro.js';
 import { bojlerDna, bojlerInyDen } from './plan-dna.js';
@@ -16,8 +16,6 @@ import { DATE_RE, isObj } from './valid.js';
  * @typedef {{ kwh: number, km: number, vecer: boolean }} AutoSlnko
  */
 /** Uložený deň v telefóne (AUTO_DEN_STORAGE_KEY). @typedef {AutoSlnko & { d: string }} AutoDen */
-
-const DAY_MIN = 24 * 60;
 
 /**
  * Energia, ktorú by auto chytilo z prebytku `prebytok` (kW po minútach): minúta s prebytkom aspoň AUTO_SLNKO.minKw dá
@@ -34,7 +32,7 @@ export function autoKwh(prebytok) {
  * @param {(free: number[]) => number[] | null} bojler
  */
 function zDna(den, bojler) {
-    const free = Array.from({ length: DAY_MIN }, (_, m) => freeKw(den, m));
+    const free = Array.from({ length: MINUTES_PER_DAY }, (_, m) => freeKw(den, m));
     const boj = bojler(free);
     const kwh = autoKwh(boj ? free.map((kw, m) => kw - boj[m]) : free);
     return { kwh: Math.round(kwh * 10) / 10, km: kmOf(kwh) };

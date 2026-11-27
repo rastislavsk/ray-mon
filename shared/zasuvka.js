@@ -3,12 +3,11 @@
 // (shared/bezi.js) - kým beží, s koncom podľa typickej dĺžky, po skončení so skutočným. Zásuvka nič neprepína.
 // Čisté funkcie: Durable Object účtu (worker/src/ucet.js) drží stav a čas dáva v parametroch.
 
-import { MOZEM_ITEMS, ZASUVKA } from './config.js';
+import { MINUTES_PER_DAY, MOZEM_ITEMS, ZASUVKA } from './config.js';
 import { localDateKey, localMinutes } from './solar.js';
 import { isObj } from './valid.js';
 
 const MIN = 60 * 1000;
-const DEN_MIN = 24 * 60;
 
 /** ID zariadenia Shelly (napr. shellyplugmg3-8cbfea9a1b2c): len písmená, číslice a pomlčky. */
 const ID_ZARIADENIA = /^[A-Za-z0-9-]{1,64}$/;
@@ -75,7 +74,7 @@ const minut = (od, po) => Math.round((po - od) / MIN);
  */
 function uzavri(vec, s, beh, koniec, e) {
     const min = minut(beh.at, koniec);
-    const zapis = { id: vec, d: beh.d, m: beh.m, k: beh.m + Math.min(DEN_MIN, Math.max(1, min)) };
+    const zapis = { id: vec, d: beh.d, m: beh.m, k: beh.m + Math.min(MINUTES_PER_DAY, Math.max(1, min)) };
     if (min < ZASUVKA.minBehMin) return { zapis: null, zrus: zapis, skoncil: null, behy: s.behy };
     const hotovy = { min, wh: Math.round(Math.max(0, e - beh.e0)) };
     return { zapis, zrus: null, skoncil: hotovy, behy: [...s.behy, hotovy].slice(-ZASUVKA.typBehov) };
@@ -94,7 +93,7 @@ export function krokZasuvky(vec, stary, h, tz) {
     const s = { ...poTichu, id: h.id, at: h.at, w: h.w, e: h.e };
     const r = s.beh ? vBehu(vec, s, s.beh, h) : bezBehu(s, stary, h, tz);
     if (!r.beh) return { ...out, ...r.vysledok, stav: r.stav };
-    const k = r.beh.m + Math.min(DEN_MIN, Math.max(typickaDlzka(vec, r.stav.behy), minut(r.beh.at, h.at) + 1));
+    const k = r.beh.m + Math.min(MINUTES_PER_DAY, Math.max(typickaDlzka(vec, r.stav.behy), minut(r.beh.at, h.at) + 1));
     return { ...out, stav: r.stav, zapis: { id: vec, d: r.beh.d, m: r.beh.m, k } };
 }
 

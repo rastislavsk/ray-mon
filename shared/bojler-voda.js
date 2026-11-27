@@ -2,7 +2,7 @@
 // sieti a posiela s každým hlásením. Worker si drží body (pridajTeplotu) a appke dá dnešné (teplotyDna); appka z nich
 // kreslí krivku v paneli Bojler dnes (krivkaVody). Čisté funkcie - čas a dáta dostanú.
 
-import { BOJLER } from './config.js';
+import { BOJLER, MINUTES_PER_DAY } from './config.js';
 import { fmt1 } from './format.js';
 import { localDateKey, localMinutes } from './solar.js';
 
@@ -32,7 +32,7 @@ export function pridajTeplotu(body, t, nowMs) {
     const min = Math.floor(nowMs / MIN);
     const posledny = body[body.length - 1];
     if (t === null || (posledny && min - posledny[0] < BOJLER.vodaKrokMin)) return body;
-    const od = min - BOJLER.vodaDni * 24 * 60;
+    const od = min - BOJLER.vodaDni * MINUTES_PER_DAY;
     return [...body.filter(([m]) => m > od), [min, Math.round(t * 10)]];
 }
 
@@ -100,7 +100,7 @@ export function krivkaVody(teploty, hranica) {
     const hodnoty = teploty.map(([, t]) => t);
     const dole = Math.min(30, Math.floor((Math.min(...hodnoty) - 2) / 5) * 5);
     const hore = Math.max(70, Math.ceil((Math.max(...hodnoty) + 2) / 5) * 5);
-    const x = (/** @type {number} */ m) => Math.round((m / (24 * 60)) * W * 10) / 10;
+    const x = (/** @type {number} */ m) => Math.round((m / MINUTES_PER_DAY) * W * 10) / 10;
     const y = (/** @type {number} */ t) => Math.round(((hore - t) / (hore - dole)) * H * 10) / 10;
     /** @type {Array<Array<[number, number]>>} */ const useky = [];
     teploty.forEach((b, i) => {

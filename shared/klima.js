@@ -3,7 +3,7 @@
 // z nich skladá stav (`kl:`), bod každých KLIMA.bodKrokMin minút (`kt:`) a pre appku k dnešným hodinám energie aj to,
 // koľko z nich bolo zo slnka (slnkoKlimy). Čisté funkcie - čas a dáta dostanú.
 
-import { KLIMA } from './config.js';
+import { KLIMA, MINUTES_PER_DAY } from './config.js';
 import { localDateKey, localMinutes } from './solar.js';
 import { DATE_RE, isObj } from './valid.js';
 
@@ -174,7 +174,7 @@ export function pridajBod(body, k, nowMs) {
     const min = Math.floor(nowMs / MIN);
     const posledny = body[body.length - 1];
     if (posledny && min - posledny[0] < KLIMA.bodKrokMin) return body;
-    const od = min - KLIMA.bodyDni * 24 * 60;
+    const od = min - KLIMA.bodyDni * MINUTES_PER_DAY;
     const d = (/** @type {number | null} */ t) => (t === null ? null : Math.round(t * 10));
     return [...body.filter(([m]) => m > od), [min, d(k.domaC), d(k.vonkuC), k.w]];
 }
