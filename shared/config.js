@@ -1005,6 +1005,8 @@ export const RADAR = {
     // kým je karta na obrazovke (pri prepnutí karty, návrate do appky a každú minútu).
     zverejnenieMin: 5,
     obnovaPokusMs: 60 * 1000,
+    // Najnovšia snímka staršia ako toto „mešká“ (výpadok OPERA, slabý signál): vek pri nej má inú farbu.
+    meskaMin: 15,
     // Najdlhšie čakanie na všetky dáta pred prehrávaním. Potom sa prehrá to, čo prišlo (napr. bez modelu pri limite 429).
     cakanieMs: 30000,
     // Prehrávanie pri 1×: dve hodiny merania a dve predpovede za 16 s, deň za 23 s. Prehrá sa raz a zastane.

@@ -37,6 +37,9 @@ prehrávanie potom nič nedoťahuje. Obnova sa spustí, keď už mala vyjsť ďa
 krok + `zverejnenieMin` po najnovšej, pokus najviac raz za `obnovaPokusMs`) - pri prepnutí na kartu, návrate do appky
 a každú minútu, kým je karta na obrazovke. Sťahuje bokom (`nove` v `web/radar-hrac.js`) a vymení všetko naraz, keď os
 stojí a nik ju neťahá; zastavená os v rozsahu 2 h ostane na tej istej chvíli.
+Hlavička nepíše „Teraz“, ale vek snímky od chvíle teraz, aj pri predpovedi (`popisChvile`, `docs/navrhy/radar-obnova.html`,
+D1 + D3, 27. 11. 2026); najnovšia staršia ako `RADAR.meskaMin` má koralovú farbu (jantárová je predpoveď). Ťuknutie na čas
+(`#rd-chvila`) obnoví hneď a kým sťahuje, točí sa krúžok (`radarObnovuje`). Os ostáva s „Teraz“.
 
 Sneh (`docs/navrhy/radar-sneh.html`, D1 + V1 + legenda C, 26. 11. 2026): radar typ zrážok nevie (OPERA ani kompozity SHMÚ ho
 nemajú), podiel snehu dáva model z toho istého dopytu (`snowfall`, `temperature_2m`, `podielSnehu` v `shared/radar-data.js`).

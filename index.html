@@ -219,10 +219,13 @@
                 <div id="rd-mapa" class="rd-mapa"></div>
                 <div class="rd-hore">
                     <div class="rd-stlpec">
-                        <div class="rd-chvila">
-                            <div id="rd-cas" class="rd-cas">--:--</div>
-                            <div id="rd-druh" class="rd-druh"></div>
-                        </div>
+                        <!-- Ťuknutie na chvíľu obnoví snímky, krúžok za časom sa točí, kým sa sťahujú (docs/navrhy/radar-obnova.html, D1). -->
+                        <button type="button" id="rd-chvila" class="rd-chvila">
+                            <span class="rd-riadok-casu"
+                                ><span id="rd-cas" class="rd-cas">--:--</span><i id="rd-obnova" class="rd-obnova hidden"></i
+                            ></span>
+                            <span id="rd-druh" class="rd-druh"></span><span class="sr">, obnoviť</span>
+                        </button>
                         <div id="rd-rozsahy" class="rd-seg" role="group" aria-label="Rozsah">
                             <button type="button" data-rozsah="2h" aria-pressed="true">2 h</button>
                             <button type="button" data-rozsah="dnes" aria-pressed="false">Dnes</button>

@@ -35,6 +35,7 @@ export function initRadar(store, dom) {
         if (rozsah) store.setState({ radarRozsah: rozsah });
     });
     dom.rdZnova.addEventListener('click', () => hrac.otvor());
+    dom.rdChvila.addEventListener('click', () => hrac.obnovRucne());
 
     const os = dom.rdOs;
     /** @param {PointerEvent} e */
@@ -66,7 +67,15 @@ export function initRadar(store, dom) {
         hrac.krok(smer);
     });
     new ResizeObserver(() => store.get().panel === 'radar' && hrac.kresliOs()).observe(os);
-    // Nové snímky, kým je karta na obrazovke: po návrate do appky a každú minútu (`obnovitRadar` povie, či už mali vyjsť).
+    strazObnovu(store, hrac);
+}
+
+/**
+ * Nové snímky a vek snímky v hlavičke, kým je karta na obrazovke: po návrate do appky a každú minútu
+ * (`obnovitRadar` povie, či už mali vyjsť).
+ * @param {import('./state.js').Store} store @param {RadarHrac} hrac
+ */
+function strazObnovu(store, hrac) {
     const naObrazovke = () => !document.hidden && store.get().panel === 'radar';
     document.addEventListener('visibilitychange', () => {
         if (document.hidden && store.get().radarHra) store.setState({ radarHra: false });

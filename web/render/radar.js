@@ -30,6 +30,7 @@ export function renderRadar(state, dom) {
     for (const b of dom.rdRozsahy.querySelectorAll('button'))
         b.setAttribute('aria-pressed', String(b.dataset.rozsah === state.radarRozsah));
     farbyLegendy(dom.rdIntenzita);
+    show(dom.rdObnova, state.radarObnovuje);
     // Kým nie je načítané všetko, obiehajú slnko a mesiac a prehrávanie čaká: najnovšia snímka je už na mape,
     // no os by preskakovala po snímkach, ktoré ešte len prídu.
     const caka = state.radarStav === 'nacitavam' || (state.radarStav === 'ok' && !state.radarHotovo);

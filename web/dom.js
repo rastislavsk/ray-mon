@@ -18,7 +18,9 @@ const perPanel = (prefix) =>
 function radarDom() {
     return {
         rdMapa: byId('rd-mapa'),
+        rdChvila: byId('rd-chvila'),
         rdCas: byId('rd-cas'),
+        rdObnova: byId('rd-obnova'),
         rdDruh: byId('rd-druh'),
         rdOblaky: byId('rd-oblaky'),
         rdHlaska: byId('rd-hlaska'),

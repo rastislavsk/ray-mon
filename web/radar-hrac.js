@@ -136,11 +136,13 @@ export class RadarHrac {
     ukaz() {
         if (!this.terazMs) return;
         const { rdCas, rdDruh, rdOs, rdJazdec } = this.dom;
-        const p = popisChvile(this.rozsah, this.poz, this.terazMs, polnoc(this.terazMs), posunCasu(this.terazMs));
+        const t = this.terazMs;
+        const p = popisChvile(this.rozsah, this.poz, { terazMs: t, polnocMs: polnoc(t), posunMin: posunCasu(t), nowMs: Date.now() });
         if (rdCas.textContent !== p.cas) rdCas.textContent = p.cas;
         if (rdDruh.textContent !== p.druh) {
             rdDruh.textContent = p.druh;
             rdDruh.classList.toggle('predpoved', p.predpoved);
+            rdDruh.classList.toggle('meska', p.meska);
             rdOs.setAttribute('aria-valuetext', `${p.cas}, ${p.druh}`);
             rdOs.setAttribute('aria-valuenow', String(Math.round(this.poz)));
         }
@@ -426,9 +428,22 @@ export class RadarHrac {
         });
     }
 
-    /** Obnova, keď už mala vyjsť ďalšia snímka. Volá sa pri prepnutí karty, návrate do appky a každú minútu. */
+    /**
+     * Vek snímky v hlavičke (ráta sa od teraz) a obnova, keď už mala vyjsť ďalšia snímka.
+     * Volá sa pri prepnutí karty, návrate do appky a každú minútu.
+     */
     skusObnovit() {
+        this.ukaz();
         if (this.zaciatok && this.data && obnovitRadar(this.terazMs, this.obnovene, Date.now())) this.obnov().catch(() => {});
+    }
+
+    /** Ťuknutie na chvíľu: obnova hneď, bez čakania na čas zverejnenia. Krúžok sa točí, kým sťahuje. */
+    obnovRucne() {
+        if (!this.zaciatok || !this.data || this.nove || this.store.get().radarObnovuje) return;
+        this.store.setState({ radarObnovuje: true });
+        this.obnov()
+            .catch(() => {})
+            .finally(() => this.store.setState({ radarObnovuje: false }));
     }
 
     /** Prehrávanie podľa stavu. */

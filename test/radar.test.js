@@ -281,13 +281,25 @@ test('osRadaru: Dnes má teraz, Zajtra nie', () => {
     assert.equal(osRadaru('dnes', CAS + 864e5, POLNOC, 60).teraz, 23);
 });
 
-test('popisChvile: meranie, teraz, predpoveď a model', () => {
-    assert.deepEqual(popisChvile('2h', 24, CAS, POLNOC, 60), { cas: '08:30', druh: 'Teraz', predpoved: false });
-    assert.deepEqual(popisChvile('2h', 12, CAS, POLNOC, 60), { cas: '07:30', druh: 'Pred 1 h · meranie', predpoved: false });
-    assert.deepEqual(popisChvile('2h', 20, CAS, POLNOC, 60), { cas: '08:10', druh: 'Pred 20 min · meranie', predpoved: false });
-    assert.deepEqual(popisChvile('2h', 41, CAS, POLNOC, 60), { cas: '09:55', druh: 'O 1 h 25 min · predpoveď', predpoved: true });
-    assert.deepEqual(popisChvile('dnes', 12, CAS, POLNOC, 60), { cas: '12:00', druh: 'Dnes · predpoveď modelu', predpoved: true });
-    assert.deepEqual(popisChvile('zajtra', 6, CAS, POLNOC, 60), { cas: '06:00', druh: 'Zajtra · predpoveď modelu', predpoved: true });
+test('popisChvile: vek od chvíle teraz, predpoveď, model a meškanie', () => {
+    const o = (/** @type {number} */ min) => CAS + min * 60000;
+    const p = (/** @type {import('../shared/radar.js').RadarRozsah} */ r, /** @type {number} */ poz, /** @type {number} */ now) =>
+        popisChvile(r, poz, { terazMs: CAS, polnocMs: POLNOC, posunMin: 60, nowMs: now });
+    // Najnovšia snímka je 10 min stará, nie „Teraz“.
+    assert.deepEqual(p('2h', 24, o(10)), { cas: '08:30', druh: 'Pred 10 min · meranie', predpoved: false, meska: false });
+    assert.deepEqual(p('2h', 12, o(10)), { cas: '07:30', druh: 'Pred 1 h 10 min · meranie', predpoved: false, meska: false });
+    assert.deepEqual(p('2h', 20, o(0)), { cas: '08:10', druh: 'Pred 20 min · meranie', predpoved: false, meska: false });
+    assert.equal(p('2h', 24, o(0)).druh, 'Pred 1 min · meranie', 'meranie nikdy nie je z budúcnosti');
+    // Predpoveď od teraz: prvé kroky už môžu byť za nami.
+    assert.deepEqual(p('2h', 41, o(10)), { cas: '09:55', druh: 'O 1 h 15 min · predpoveď', predpoved: true, meska: false });
+    assert.equal(p('2h', 25, o(10)).druh, 'Pred 5 min · predpoveď');
+    assert.equal(p('2h', 26, o(10)).druh, 'Teraz · predpoveď');
+    // Meškanie len pri najnovšej snímke.
+    assert.equal(p('2h', 24, o(RADAR.meskaMin)).meska, false);
+    assert.equal(p('2h', 24, o(RADAR.meskaMin + 1)).meska, true);
+    assert.equal(p('2h', 23, o(40)).meska, false);
+    assert.deepEqual(p('dnes', 12, o(10)), { cas: '12:00', druh: 'Dnes · predpoveď modelu', predpoved: true, meska: false });
+    assert.deepEqual(p('zajtra', 6, o(10)), { cas: '06:00', druh: 'Zajtra · predpoveď modelu', predpoved: true, meska: false });
 });
 
 test('farby: rastú s dažďom, bez dažďa priehľadné', () => {
