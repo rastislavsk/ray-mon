@@ -1063,6 +1063,10 @@ export const RADAR = {
     // dážď so snehom, od `snehOd` sneh, na hranici sa farby prelínajú v pásme `prechod`. Zrážky modelu (voda v mm) idú
     // na dBZ pri snehu vzťahom Z = zsA · S^zsB (Sekhon a Srivastava), pri daždi Z = 200 · R^1,6.
     sneh: { cmNaMm: 0.7, minMm: 0.05, tSneh: 0, tDazd: 2, zmiesaneOd: 0.35, snehOd: 0.65, prechod: 0.03, zsA: 2000, zsB: 2 },
+    // Vločky v snehu (V3 so statickými vločkami, 27. 11. 2026): stoja na mape, nepadajú. Jedna na bunku `bunkaPx`
+    // (s pravdepodobnosťou `hustota`), šesť ramien dĺžky `ramenoPx` a hrúbky `hrubkaPx`, všetko v CSS px. Sneh pod
+    // nimi má krytie znížené na `krytie`, aby biele vločky vynikli; tmavý lem ich oddelí aj od bielej.
+    vlocky: { bunkaPx: 18, ramenoPx: 3.4, hrubkaPx: 1, hustota: 0.8, krytie: 0.6 },
     // Mapa nemá vlastné pozadie, pod ňou je obloha appky so závojom (css/radar.css, rozhodnuté 14. 11. 2026).
     // Voda a čiary sú preto priesvitné, aby ladili s každou farbou oblohy.
     mapa: {

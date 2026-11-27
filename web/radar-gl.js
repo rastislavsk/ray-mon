@@ -21,8 +21,30 @@ out vec4 o;
 uniform sampler2D A, B, CA, CB, F, L, SA, SB;
 uniform float f, cf, sf, oblaky, pohyb, doba, slabne, mierka;
 uniform vec3 sneh;
+uniform vec4 vl;
+uniform float dpr, vlKrytie;
 uniform vec2 sz;
 uniform vec3 g;
+const float PI = 3.14159265;
+float nahoda(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+// Statická vločka (docs/navrhy/radar-sneh.html, V3): bunky ukotvené na mape, veľkosť v CSS px. Vráti krytie vločky (x)
+// a jej tmavého lemu (y).
+vec2 vlocka(vec2 p) {
+    float tpx = max(fwidth(p.x), fwidth(p.y)) * dpr;
+    float bunka = exp2(floor(log2(vl.x * tpx) + .5));
+    vec2 id = floor(p / bunka);
+    if (nahoda(id + 3.1) > vl.w) return vec2(0.);
+    vec2 q = (p - (id + .25 + .5 * vec2(nahoda(id), nahoda(id + 17.3))) * bunka) / tpx;
+    float a = atan(q.y, q.x) + nahoda(id + 41.7) * PI;
+    float d = length(q);
+    float kolmo = d * abs(sin(mod(a + PI / 6., PI / 3.) - PI / 6.));
+    float h = vl.z * .5;
+    float rameno = (1. - smoothstep(h - .35, h + .35, kolmo)) * (1. - smoothstep(vl.y - .4, vl.y + .4, d));
+    float lem = (1. - smoothstep(h + .5, h + 1.4, kolmo)) * (1. - smoothstep(vl.y + .3, vl.y + 1.3, d));
+    return vec2(rameno, lem);
+}
 void main() {
     vec2 fl = vec2(0.);
     if (pohyb > 0.) fl = (texture(F, (uv * sz / g.z + .5) / g.xy).rg * 255. - 127.) / mierka / sz;
@@ -37,10 +59,16 @@ void main() {
         mix(texture(L, vec2(x, .5 / 3.)), texture(L, vec2(x, 1.5 / 3.)), smoothstep(sneh.x - sneh.z, sneh.x + sneh.z, s)),
         texture(L, vec2(x, 2.5 / 3.)),
         smoothstep(sneh.y - sneh.z, sneh.y + sneh.z, s));
+    float ws = smoothstep(sneh.y - sneh.z, sneh.y + sneh.z, s);
+    r.a *= mix(1., vlKrytie, ws);
+    vec2 vk = vlocka(uv * sz) * ws * smoothstep(.01, .05, v);
     float c = mix(texture(CA, uv).r, texture(CB, uv).r, cf);
     float ca = smoothstep(.2, 1., c) * .56 * oblaky;
     vec3 cc = mix(vec3(.62, .68, .78), vec3(.9, .93, .98), smoothstep(.45, 1., c));
     vec4 hore = vec4(r.rgb * r.a, r.a);
+    vec4 lem = vec4(vec3(.05, .08, .16), 1.) * vk.y * .45;
+    hore = lem + hore * (1. - lem.a);
+    hore = vec4(vk.x) + hore * (1. - vk.x);
     o = hore + vec4(cc * ca, ca) * (1. - hore.a);
     // Okraj dát sa stratí do mapy, ostrý obdĺžnik by vyzeral ako chyba.
     vec2 k = smoothstep(vec2(0.), vec2(.04), uv) * smoothstep(vec2(0.), vec2(.04), 1. - uv);
@@ -48,7 +76,24 @@ void main() {
 }`;
 
 const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L', 'SA', 'SB']);
-const CISLA = /** @type {const} */ (['mapa', 'rohy', 'f', 'cf', 'sf', 'sneh', 'oblaky', 'pohyb', 'doba', 'slabne', 'mierka', 'sz', 'g']);
+const CISLA = /** @type {const} */ ([
+    'mapa',
+    'rohy',
+    'f',
+    'cf',
+    'sf',
+    'sneh',
+    'vl',
+    'dpr',
+    'vlKrytie',
+    'oblaky',
+    'pohyb',
+    'doba',
+    'slabne',
+    'mierka',
+    'sz',
+    'g',
+]);
 
 /**
  * Čo kresliť v tejto chvíli: dve snímky a podiel medzi nimi, dve hodiny oblakov a podielu snehu a ich podiel.
@@ -150,6 +195,10 @@ export class RadarVrstva {
         gl.uniform1f(u.cf, o.cf);
         gl.uniform1f(u.sf, o.sf);
         gl.uniform3f(u.sneh, RADAR.sneh.zmiesaneOd, RADAR.sneh.snehOd, RADAR.sneh.prechod);
+        const v = RADAR.vlocky;
+        gl.uniform4f(u.vl, v.bunkaPx, v.ramenoPx, v.hrubkaPx, v.hustota);
+        gl.uniform1f(u.vlKrytie, v.krytie);
+        gl.uniform1f(u.dpr, window.devicePixelRatio || 1);
         gl.uniform1f(u.oblaky, o.oblaky ? 1 : 0);
         gl.uniform1f(u.pohyb, o.pohyb ? 1 : 0);
         gl.uniform1f(u.doba, o.doba);
