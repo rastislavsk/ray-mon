@@ -1008,6 +1008,9 @@ test('POST /zdielaj: pečať do odkazu platí ZDIELANIE.platiDni dní, prvé mer
     assert.equal((await otvor(key, zKiosku.pecat, NOW))?.platiDo, platiDo);
     assert.equal((await handleRequest(post('/zdielaj', 'v1.cudzie'), ENV, NOW)).status, 400);
     assert.equal((await handleRequest(post('/zdielaj', 'x'.repeat(10001)), ENV, NOW)).status, 400);
+    // Telo, ktoré je podľa hlavičky príliš dlhé, sa ani nečíta.
+    const velke = new Request('https://w.test/zdielaj', { method: 'POST', body: trvala, headers: { 'content-length': '30001' } });
+    assert.equal((await handleRequest(velke, ENV, NOW)).status, 400);
     assert.equal((await handleRequest(post('/zdielaj', trvala), {}, NOW)).status, 503);
 });
 
@@ -1016,14 +1019,20 @@ test('obmedzenie počtu volaní: pripojenie, zdieľanie a odbery 429 nad limit, 
     const plny = { ...ENV, LIMIT: { limit: async (/** @type {{ key: string }} */ o) => (keys.push(o.key), { success: false }) } };
     const zAdresy = (/** @type {string} */ path) =>
         new Request(`https://w.test${path}`, { method: 'POST', body: 'x', headers: { 'cf-connecting-ip': '203.0.113.7' } });
-    for (const path of ['/pripoj', '/zdielaj', '/oznamenia', '/pripomen']) {
+    for (const path of ['/pripoj', '/zdielaj', '/oznamenia', '/pripomen', '/spotrebic-oznamenia']) {
         const res = await handleRequest(zAdresy(path), plny, NOW);
         assert.equal(res.status, 429, path);
         assert.equal(res.headers.get('access-control-allow-origin'), '*', 'appka musí odpoveď vidieť');
     }
-    assert.deepEqual(keys, ['/pripoj:203.0.113.7', '/zdielaj:203.0.113.7', '/oznamenia:203.0.113.7', '/pripomen:203.0.113.7']);
+    assert.deepEqual(keys, [
+        '/pripoj:203.0.113.7',
+        '/zdielaj:203.0.113.7',
+        '/oznamenia:203.0.113.7',
+        '/pripomen:203.0.113.7',
+        '/spotrebic-oznamenia:203.0.113.7',
+    ]);
     assert.equal((await handleRequest(zAdresy('/pv'), plny, NOW)).status, 400, 'meranie sa nepočíta');
-    assert.equal(keys.length, 4);
+    assert.equal(keys.length, 5);
     const pokazeny = { ...ENV, LIMIT: { limit: async () => Promise.reject(new Error('výpadok')) } };
     assert.equal((await handleRequest(zAdresy('/zdielaj'), pokazeny, NOW)).status, 400, 'prešlo ďalej, zlé telo');
 });

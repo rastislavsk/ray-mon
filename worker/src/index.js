@@ -118,8 +118,13 @@ function zalogujMeranie(sposob, pv) {
     console.log(`meranie: ${sposob}${pv.realTimePowerKw === null ? ' (bez výkonu)' : ''}`);
 }
 
-/** Telo požiadavky ako text, najviac `max` znakov; dlhšie je null. @param {Request} request @param {number} [max] */
+/**
+ * Telo požiadavky ako text, najviac `max` znakov; dlhšie je null. Telo, ktoré podľa hlavičky nemôže byť krátke
+ * (znak v UTF-8 má najviac 3 bajty na jednotku UTF-16), sa ani nečíta - inak by ho Worker celé držal v pamäti.
+ * @param {Request} request @param {number} [max]
+ */
 async function telo(request, max = MAX_BODY) {
+    if (Number(request.headers.get('content-length')) > 3 * max) return null;
     const text = await request.text();
     return text.length <= max ? text : null;
 }
@@ -636,7 +641,7 @@ const CESTY = {
     [WORKER_KLIMA_PATH]: { limit: false, run: handleKlima },
     [WORKER_KLIMA_STAV_PATH]: { limit: false, run: handleKlimaStav },
     [WORKER_SPOTREBIC_PATH]: { limit: false, run: handleSpotrebic },
-    [WORKER_SPOTREBIC_OZNAM_PATH]: { limit: false, run: handleSpotrebicOznam },
+    [WORKER_SPOTREBIC_OZNAM_PATH]: { limit: true, run: handleSpotrebicOznam },
     [WORKER_HISTORIA_PATH]: { limit: true, run: handleHistoria },
     // Appka sa pýta pri každej obnove dát, bez platnej pečate nič nespraví (ako meranie).
     [WORKER_BEZI_PATH]: { limit: false, run: handleBezi },
