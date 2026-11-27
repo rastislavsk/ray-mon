@@ -6,6 +6,7 @@ import { BOJLER } from './config.js';
 import { bojlerStav, suctyDna } from './bojler.js';
 import { krivkaVody, stupne, vodaTeraz } from './bojler-voda.js';
 import { fmt1, minutesToTimeStr } from './format.js';
+import { male } from './messages-teraz.js';
 import { localDateKey, localMinutes } from './solar.js';
 import { bandAt, bandById, scheduleFor } from './tariff.js';
 
@@ -311,7 +312,11 @@ function dlazdicaRucne(b, stav, den) {
  * „zapne okolo …“ namiesto prahu.
  * S teplomerom (docs/navrhy/bojler-teplota.html, T1) je veľké číslo teplota vody, keď ju zásuvka hlási.
  * @param {BojlerInfo} b @param {Date} now @param {string} tz @param {import('./plan-dna.js').BojlerPlan | null} [plan]
- * @returns {{ tone: string, riadi: string, velky: string, meno: string, odr: string[], podiel: number | null }}
+ * Na dlaždici sú len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B): pod menom malé čísla (`mv`) - dnešné kWh, pri čakaní
+ * kedy či pri akom prebytku zapne, pri nahriatej vode bez teplomera (veľké číslo sú kWh zo slnka) kedy bola nahriata;
+ * mlčiaca zásuvka má pri veľkom čísle značku ticha (`zn`). Slová (`odr`) číta čítačka.
+ * @returns {{ tone: string, riadi: string, zn?: import('./messages-teraz.js').Znacka, velky: string, meno: string, odr: string[],
+ *   mv: import('./messages-teraz.js').MaleCislo[], podiel: number | null }}
  */
 export function bojlerDlazdica(b, now, tz, plan = null) {
     const T = TERAZ_BOJLER_TEXTS;
@@ -323,31 +328,44 @@ export function bojlerDlazdica(b, now, tz, plan = null) {
         return {
             tone: 'chyba',
             riadi: 'mlci',
+            zn: 'ticho',
             velky: ticho(now.getTime() - b.kontaktAt),
             meno,
             odr: [T.mlci, T.bezSpojenia],
+            mv: [],
             podiel,
         };
     const voda = vodaTeraz(b, now.getTime());
     /** @template {{ velky: string }} D @param {D} d @returns {D} */
     const sVodou = (d) => (voda ? { ...d, velky: stupne(voda.t) } : d);
-    if (b.rucne) return { ...sVodou(dlazdicaRucne(b, stav, den)), meno, podiel };
-    const t =
-        stav === 'caka'
-            ? // Veľké číslo je odber bojlera ako v ostatných stavoch, prebytok, pri ktorom zapne, je v odrážke.
-              {
-                  tone: 'next',
-                  riadi: 'caka',
-                  velky: '0 kW',
-                  odr: [
-                      T.caka,
-                      plan?.zapne != null ? `${T.zapneOkolo} ${minutesToTimeStr(plan.zapne)}` : `${T.zapnePri} ${fmt1(b.prahy.zapKw)} kW`,
-                  ],
-              }
-            : stav === 'hotovo'
-              ? dlazdicaHotovo(b, den, !!voda)
-              : dlazdicaHreje(b, den);
-    return { ...sVodou(t), meno, podiel };
+    const s = den ? suctyDna(den) : null;
+    const mv = s ? [male('kwh', `${fmt1(s.slnkoKwh + s.sietKwh)} kWh`)] : [];
+    if (b.rucne) return { ...sVodou(dlazdicaRucne(b, stav, den)), meno, mv, podiel };
+    if (stav === 'caka') return { ...sVodou(dlazdicaCaka(b, plan)), meno, podiel };
+    if (stav === 'hotovo') {
+        // Bez teplomera je veľké číslo kWh zo slnka - pod menom je potom, kedy bola voda nahriata.
+        const kedy = den?.hotovo ?? null;
+        const mvHotovo = voda ? mv : kedy === null ? [] : [male('koniec', minutesToTimeStr(kedy))];
+        return { ...sVodou(dlazdicaHotovo(b, den, !!voda)), meno, mv: mvHotovo, podiel };
+    }
+    return { ...sVodou(dlazdicaHreje(b, den)), meno, mv, podiel };
+}
+
+/**
+ * Dlaždica bojlera, ktorý čaká na slnko: veľké číslo je odber ako v ostatných stavoch, kedy zapne (keď to plán vie,
+ * `plan`), inak pri akom prebytku, je pod menom. @param {BojlerInfo} b @param {import('./plan-dna.js').BojlerPlan | null} plan
+ */
+function dlazdicaCaka(b, plan) {
+    const T = TERAZ_BOJLER_TEXTS;
+    const zapne = plan?.zapne != null ? minutesToTimeStr(plan.zapne) : null;
+    const prah = `${fmt1(b.prahy.zapKw)} kW`;
+    return {
+        tone: 'next',
+        riadi: 'caka',
+        velky: '0 kW',
+        odr: [T.caka, zapne ? `${T.zapneOkolo} ${zapne}` : `${T.zapnePri} ${prah}`],
+        mv: [male('start', zapne ?? prah)],
+    };
 }
 
 /** Pozícia minúty na páse v % (orezaná na pás). @param {number} m */

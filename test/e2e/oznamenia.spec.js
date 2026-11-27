@@ -345,7 +345,8 @@ test.describe('oznámenia', () => {
         await expect.poll(() => doma(page)).toEqual({ devices: ['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'] });
         await page.locator('#nav-terazky').click();
         const rows = plan(['pracka', 'umyvacka', 'susicka', 'auto', 'bojler'])?.rows ?? [];
-        await expect(page.locator('#tz-co [data-vec]')).toHaveCount(rows.length);
+        // Auto je mimo Plánu dňa, jeho dlaždica zo slnka sa nepočíta.
+        await expect(page.locator('#tz-co [data-vec]:not([data-vec="auto"])')).toHaveCount(rows.length);
         await expect(page.locator('#tz-co [data-vec="bojler"]')).toContainText(/bojler/i);
     });
 

@@ -503,6 +503,12 @@
     font-variant-numeric: tabular-nums;
     line-height: 1;
 }
+/* Slová z dlaždice ako veta (docs/navrhy/teraz-dlazdice-cisla.html, P1). */
+.vec-sheet .vec-veta {
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
 /* Deň nad časom, keď vec ide iný deň - čas bez dňa by sa čítal ako dnešný. */
 .vec-den {
     display: block;

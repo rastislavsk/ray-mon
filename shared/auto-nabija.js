@@ -7,6 +7,7 @@
 
 import { AUTO_NABIJA, AUTO_SLNKO, BOJLER, DEVICES } from './config.js';
 import { dayNameShort, fmt1, minutesToTimeStr } from './format.js';
+import { male } from './messages-teraz.js';
 import { money } from './messages-zaklad.js';
 import { kmOf } from './mozem-jadro.js';
 import { localDateKey, localMinutes } from './solar.js';
@@ -198,6 +199,8 @@ export function autoDlazdicaNabija(b, tz) {
         za: 'km',
         meno: T.nadpis,
         odr: [T.asiOd(hm(b.m, tz)), T.kw(b.kw)],
+        // Na dlaždici len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B): od kedy sa asi nabíja.
+        mv: [male('start', hm(b.m, tz))],
         podiel: b.wh > 0 ? Math.round((100 * (b.wh - Math.min(b.wh, b.whSiet))) / b.wh) : null,
         zapnuty: /** @type {const} */ ('nabija'),
     };

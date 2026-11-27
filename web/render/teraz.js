@@ -9,7 +9,7 @@ import { dayPlan } from '../../shared/day-plan.js';
 import { escapeHtml } from '../../shared/format.js';
 import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { klimaUkaz } from '../../shared/klima.js';
-import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, voiceTexts } from '../../shared/messages-core.js';
+import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, vetaDlazdice, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
 import { bojlerDetail, bojlerDlazdica, bojlerDrahaDnes, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { klimaDetail, klimaDlazdica, TERAZ_KLIMA_TEXTS } from '../../shared/teraz-klima.js';
@@ -18,7 +18,7 @@ import { oknaSvietia, scenaModel } from '../../shared/teraz-scena.js';
 import { stlpceDlazdic } from '../../shared/teraz-stlpce.js';
 import { hviezdySvg, mesiacSvg, pocasieHtml, pocasieStav } from '../pocasie.js';
 import { dashboard, shows } from '../state.js';
-import { tokIcon, vecIcon, weatherIcon } from './icons.js';
+import { tokIcon, vecIcon, weatherIcon, znackaIcon } from './icons.js';
 import { scenaSvg, tokPoleHtml } from './teraz-scena.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
@@ -26,11 +26,11 @@ import { dialog, setHtml, setText, show } from './write.js';
 /** @typedef {import('../dom.js').Dom} Dom */
 /** @typedef {ReturnType<typeof voiceTexts>} Texts pevné texty v tóne appky */
 /**
- * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, pred?: string, velky: string,
- *   meno: string, podiel: number | null, draha?: number, odr: string[], potom?: { text: string, dlho: boolean } | null,
- *   bezDetailu?: boolean, za?: string, zapnuty?: 'nabija' }} Dlazdica
- * `bezDetailu`: dlaždica bez detailu (auto zo slnka) nie je tlačidlo - ťuknutie na ňu nič neotvorí. `zapnuty: 'nabija'`:
- * auto sa asi nabíja (oranžová ikona).
+ * @typedef {{ id: string, tone: string, kind?: string, riadi?: string, pred?: string, zn?: import('../../shared/messages-teraz.js').Znacka,
+ *   velky: string, meno: string, podiel: number | null, draha?: number, odr: string[], mv?: import('../../shared/messages-teraz.js').MaleCislo[],
+ *   potom?: import('../../shared/teraz.js').Potom | null, bezDetailu?: boolean, za?: string, zapnuty?: 'nabija' }} Dlazdica
+ * `bezDetailu`: auto zo slnka, kým appka nevie o nabíjaní - ťuknutie otvorí detail len s vetou (P1). `zapnuty: 'nabija'`:
+ * auto sa asi nabíja. `mv`: malé čísla pod menom (`?? []`: model zo starého shared/ z cache po nasadení ich nemá).
  */
 
 /** Texty bubliny, keď riadok bublinu nemá. */
@@ -97,27 +97,31 @@ function renderHreben(h, dom) {
 }
 
 /**
- * Dlaždica spotrebiča (docs/navrhy/teraz-dlazdice.html, teraz-dlazdice-odrazky.html, teraz-pasik-zdroje.html): ikona
- * v kruhu, veľké číslo, meno, pásik slnka a siete a najviac dve odrážky, z ktorých druhou môže byť odznak. Prvky
- * idú vždy v tomto poradí a pásik je aj tam, kde nie je čo ukázať (prázdny, drží miesto): dlaždice v rade zdieľajú
- * riadky mriežky, takže číslo aj pásik sú v nich na rovnakej výške, a odrážky majú vždy miesto na dva riadky,
- * takže sú všetky dlaždice rovnako vysoké. Odrážky sú riadky `small`, pre čítačku oddelené čiarkou.
- * `kind` je druh veci, ktorá teraz nejde (lacné pásmo má modrý čas).
+ * Dlaždica spotrebiča (docs/navrhy/teraz-dlazdice-cisla.html, B + P1): len čísla. Ikona v kruhu (pri nej odznak - kedy
+ * bude slnko, „2×“), veľké číslo so značkou, čo znamená (štart, koniec, …), meno, pásik slnka a siete a riadok malých
+ * čísel so značkami. Slová (`odr`, veta odznaku) sú pre čítačku v skrytom texte a v detaile ako veta - na oko ich
+ * nesú značky; malé slovo pred číslom („do“) má len čítačka. Prvky idú vždy v tomto poradí a pásik aj riadok malých
+ * čísel sú aj tam, kde nie je čo ukázať (prázdne, držia miesto): dlaždice v rade zdieľajú riadky mriežky, takže číslo
+ * aj pásik sú v nich na rovnakej výške a všetky dlaždice sú rovnako vysoké. `kind` je druh veci, ktorá teraz nejde.
  * Zapnutý spotrebič (beží, bojler, ktorému zásuvka zapla relé, auto sa asi nabíja) má plný biely kruh ikony
  * (`data-zapnuty`, docs/navrhy/teraz-zapnuty-farba.html, F1). `stlpec` (l, p) je stĺpec dlaždice.
  * `oziv` je dlaždica, ktorej ikona po ťuknutí na oznámenie ožije, a ako (`data-oziv`, pohyb robí CSS).
  * @param {Dlazdica} d @param {string} stlpec @param {Ozivenie | null} oziv
  */
 const dlazdicaHtml = (d, stlpec, oziv) =>
-    `<${znacka(d)} class="dl" data-stlpec="${stlpec}"${stavDlazdice(d, oziv)}>` +
-    `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}</span>` +
-    `<span><span class="velky">${predHtml(d.pred)}${escapeHtml(d.velky)}${zaHtml(d.za)}</span><b>${escapeHtml(d.meno)}</b>` +
+    `<button type="button" class="dl" data-stlpec="${stlpec}"${stavDlazdice(d, oziv)}>` +
+    `<span class="dl-ico" aria-hidden="true">${vecIcon(d.id)}${odznakHtml(d.potom)}</span>` +
+    `<span><span class="velky">${d.zn ? znackaIcon(d.zn) : ''}${predHtml(d.pred)}${escapeHtml(d.velky)}${zaHtml(d.za)}</span>` +
+    `<b>${escapeHtml(d.meno)}</b>` +
     `<i class="podiel"${d.podiel === null ? ' data-prazdny' : ` style="--s:${d.podiel}%;--n:${100 - (d.draha ?? 0)}%"`}></i>` +
-    `<small class="odr">${d.odr.map((t) => `<span>${escapeHtml(t)}</span>`).join('<span class="sr">, </span>')}` +
-    `${d.potom ? `${d.odr.length ? '<span class="sr">, </span>' : ''}<em class="potom"${d.potom.dlho ? ' data-dlho' : ''}>${escapeHtml(d.potom.text)}</em>` : ''}</small></span></${znacka(d).split(' ')[0]}>`;
+    `<small class="mv" aria-hidden="true">${(d.mv ?? []).map((m) => `<span>${znackaIcon(m.zn)}${escapeHtml(m.t)}</span>`).join('')}</small>` +
+    `<span class="sr">${slovaHtml(d)}</span></span></button>`;
 
-/** Prvok dlaždice: tlačidlo, ktoré otvorí detail, alebo bez detailu len blok. @param {Dlazdica} d */
-const znacka = (d) => (d.bezDetailu ? 'div' : 'button type="button"');
+/** Odznak pri ikone: skratka dňa, keď bude slnko (tmavý o dva a viac dní), alebo „2×“. @param {Dlazdica['potom']} p */
+const odznakHtml = (p) => (p ? `<em class="odz"${p.dlho ? ' data-dlho' : ''}>${escapeHtml(p.kratko ?? '')}</em>` : '');
+
+/** Slová dlaždice pre čítačku: odrážky a veta odznaku, oddelené čiarkou. @param {Dlazdica} d */
+const slovaHtml = (d) => escapeHtml([...d.odr, ...(d.potom ? [d.potom.text] : [])].map((t) => `, ${t}`).join(''));
 
 /**
  * Zapnutý spotrebič: beží (zapísaný „Už beží“), alebo bojler, ktorému zásuvka zapla relé (to je zmerané). Auto, ktoré
@@ -130,12 +134,12 @@ const zapnuty = (d) => (d.zapnuty === 'nabija' ? 'nabija' : d.tone === 'bezi' ||
 const zapnutyAttr = (z) => (z === 'nabija' ? ' data-zapnuty="nabija"' : z ? ' data-zapnuty' : '');
 
 /**
- * Atribúty stavu dlaždice: tón, druh, zapnutý, oživená ikona a id veci - `data-vec` otvorí detail, dlaždica bez detailu
- * má `data-id`. @param {Dlazdica} d @param {Ozivenie | null} oziv
+ * Atribúty stavu dlaždice: tón, druh, zapnutý, oživená ikona a id veci - `data-vec` otvorí detail.
+ * @param {Dlazdica} d @param {Ozivenie | null} oziv
  */
 const stavDlazdice = (d, oziv) =>
     ` data-tone="${d.tone}"${d.kind ? ` data-kind="${d.kind}"` : ''}${zapnutyAttr(zapnuty(d))}` +
-    `${oziv?.id === d.id ? ` data-oziv="${oziv.druh}"` : ''} data-${d.bezDetailu ? 'id' : 'vec'}="${d.id}"`;
+    `${oziv?.id === d.id ? ` data-oziv="${oziv.druh}"` : ''} data-vec="${d.id}"`;
 
 /**
  * Oživená ikona po ťuknutí na oznámenie (docs/navrhy/oznamenia-animacie.html): dlaždica a druh pohybu - `plan`,
@@ -179,16 +183,18 @@ function prvyVPlane(co) {
  * (bez predpovede, nič doma) nie je. `bojler` je dlaždica bojlera, ktorý riadi zásuvka (pri dnešku, inak null).
  * `ciel` je ťuknutie na oznámenie, ktoré ešte čaká (ožije ikona jednej dlaždice).
  * `klima` je dlaždica klimatizácie (docs/navrhy/klima-daikin.html, pri dnešku, inak null).
+ * Vráti nakreslené dlaždice - ich slová ukáže detail ako vetu (renderVecSheet).
  * @param {Model['co']} co @param {Dom} dom @param {Dlazdica | null} bojler @param {import('../state.js').AppState['tzOziv']} ciel
- * @param {Dlazdica | null} [klima]
+ * @param {Dlazdica | null} [klima] @returns {Dlazdica[]}
  */
 function renderCo(co, dom, bojler, ciel, klima = null) {
     show(dom.tzCo, !!co);
-    if (!co) return;
+    if (!co) return [];
     const veci = dlazdiceCo(co, bojler, klima);
     const html = dlazdiceHtml(veci, ozivenie(ciel, co, veci));
     setHtml(dom.tzDlazdice, html);
     show(dom.tzDlazdice, html !== '');
+    return veci;
 }
 
 /**
@@ -203,7 +209,22 @@ function dlazdiceCo(co, bojler, klima) {
     const hore = dnes
         ? [
               ...h.dlazdice,
-              ...(p ? [{ id: p.id, tone: 'tiche', velky: p.cas, meno: p.name, podiel: p.podiel, draha: p.draha, odr: p.odr }] : []),
+              ...(p
+                  ? [
+                        {
+                            id: p.id,
+                            tone: 'tiche',
+                            zn: p.zn,
+                            velky: p.cas,
+                            meno: p.name,
+                            podiel: p.podiel,
+                            draha: p.draha,
+                            odr: p.odr,
+                            mv: p.mv,
+                            potom: p.potom,
+                        },
+                    ]
+                  : []),
           ]
         : [];
     const dalsie = co.riadky.map((r) => ({
@@ -211,11 +232,14 @@ function dlazdiceCo(co, bojler, klima) {
         tone: 'tiche',
         kind: r.kind,
         pred: 'pred' in r ? r.pred : '',
+        zn: r.zn,
         velky: r.cas,
         meno: r.name,
         podiel: r.podiel,
         draha: r.draha,
         odr: r.odr,
+        mv: r.mv,
+        potom: 'potom' in r ? r.potom : null,
     }));
     return [...bezia(co, dnes), ...hore, ...(dnes && bojler ? [bojler] : []), ...dalsie, ...autoCo(co), ...(dnes && klima ? [klima] : [])];
 }
@@ -251,8 +275,8 @@ function dlazdiceHtml(veci, oziv) {
  */
 const bezia = (co, dnes) => (dnes ? (co.bezi ?? []) : []);
 
-/** Malé slovo pred veľkým číslom („do 20:30“, „od 22:00“). @param {string | undefined} pred */
-const predHtml = (pred) => (pred ? `<span class="pred">${escapeHtml(pred)} </span>` : '');
+/** Malé slovo pred veľkým číslom („do 20:30“, „od 22:00“) - na oko ho nahrádza značka, číta ho len čítačka. @param {string | undefined} pred */
+const predHtml = (pred) => (pred ? `<span class="sr">${escapeHtml(pred)} </span>` : '');
 
 /** Malá jednotka za veľkým číslom („~70 km“), s nezlomiteľnou medzerou - číslo sa nezalomí. @param {string | undefined} za */
 const zaHtml = (za) => (za ? `<span class="pred"> ${escapeHtml(za)}</span>` : '');
@@ -273,30 +297,56 @@ function osHtml(os, slot) {
 }
 
 /**
- * Detail spotrebiča: ikona, meno, kedy a odkiaľ, od-do (pri inom dni aj deň), jeho úsek na osi dňa,
- * prečo práve vtedy a že naraz ide len toľko, koľko strecha utiahne. Otvorený, kým je v stave
- * a spotrebič je v pláne.
- * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom
+ * Detail spotrebiča: ikona, meno, kedy a odkiaľ, slová dlaždice ako veta (docs/navrhy/teraz-dlazdice-cisla.html, P1 -
+ * dlaždica ukazuje len čísla), od-do (pri inom dni aj deň), jeho úsek na osi dňa, prečo práve vtedy a že naraz ide len
+ * toľko, koľko strecha utiahne. Otvorený, kým je v stave a spotrebič je v pláne. Auto, kým appka nevie o nabíjaní
+ * (dlaždica `bezDetailu`), má v ňom len meno a vetu.
+ * @param {import('../state.js').AppState} state @param {Model | null} m @param {Dom} dom @param {Dlazdica[]} [dlazdice]
  */
-function renderVecSheet(state, m, dom) {
-    const v = state.tzVec && m && !(state.tzVec === 'bojler' && riadeny(state)) ? (m.veci.find((x) => x.id === state.tzVec) ?? null) : null;
-    if (v && m?.os) {
-        dom.tzVecSheet.dataset.tone = v.tone;
-        setHtml(dom.tzVecIco, vecIcon(v.id));
-        setText(dom.tzVecName, v.name);
-        setText(dom.tzVecKedy, v.kedy);
-        // Čas iného dňa nikdy bez dňa - inak by sa čítal ako dnešný.
-        setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
-        show(dom.tzVecPas, !!v.slot);
-        setHtml(dom.tzVecPas, v.slot ? osHtml(m.os, v.slot) : '');
-        renderZapis(v, dom);
-        renderZasuvka(state, v, dom);
-        setText(dom.tzVecWhy, v.why);
-    }
+function renderVecSheet(state, m, dom, dlazdice = []) {
+    const dl = dlazdice.find((x) => x.id === state.tzVec) ?? null;
+    const vPlane = vecVPlane(state, m);
+    // Auto, kým appka nevie o nabíjaní: v detaile len meno a veta.
+    const lenVeta = !vPlane && dl?.bezDetailu ? dl : null;
+    const v =
+        vPlane ?? (lenVeta && { id: lenVeta.id, name: lenVeta.meno, tone: lenVeta.tone, den: '', kedy: '', cas: '', why: '', slot: null });
+    if (v && m?.os) renderVecObsah(state, { v, os: m.os, dl, lenVeta: !!lenVeta }, dom);
     const id = state.tzVec;
     dialog(dom.tzVecSheet, !!v, () => (shows(state, 'terazky') && id ? dom.tzCo.querySelector(`[data-vec="${id}"]`) : null));
     if (v) polohaKolies(dom);
 }
+
+/**
+ * Obsah detailu spotrebiča `v`: hlava, veta z dlaždice `dl`, čas, os dňa, zápis a prečo. `lenVeta`: detail bez plánu (auto).
+ * @param {import('../state.js').AppState} state
+ * @param {{ v: Model['veci'][number], os: NonNullable<Model['os']>, dl: Dlazdica | null, lenVeta: boolean }} o @param {Dom} dom
+ */
+function renderVecObsah(state, { v, os, dl, lenVeta }, dom) {
+    dom.tzVecSheet.dataset.tone = v.tone;
+    setHtml(dom.tzVecIco, vecIcon(v.id));
+    setText(dom.tzVecName, v.name);
+    setText(dom.tzVecKedy, v.kedy);
+    const veta = dl ? vetaDlazdice(dl.odr, dl.potom) : '';
+    show(dom.tzVecVeta, veta !== '');
+    setText(dom.tzVecVeta, veta);
+    // Čas iného dňa nikdy bez dňa - inak by sa čítal ako dnešný.
+    show(dom.tzVecCas, !lenVeta);
+    setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
+    show(dom.tzVecPas, !!v.slot);
+    setHtml(dom.tzVecPas, v.slot ? osHtml(os, v.slot) : '');
+    renderZapis(v, dom);
+    renderZasuvka(state, v, dom);
+    setText(dom.tzVecWhy, v.why);
+    // Že naraz ide len toľko, koľko strecha utiahne, hovorí o Pláne dňa - auto v ňom nie je.
+    if (lenVeta) show(dom.tzVecNote, false);
+}
+
+/**
+ * Detail spotrebiča z plánu, ktorý je v stave (`tzVec`) - bojler riadený zásuvkou má vlastný panel. Inak null.
+ * @param {import('../state.js').AppState} state @param {Model | null} m
+ */
+const vecVPlane = (state, m) =>
+    state.tzVec && m && !(state.tzVec === 'bojler' && riadeny(state)) ? (m.veci.find((x) => x.id === state.tzVec) ?? null) : null;
 
 /**
  * Zápis v detaile spotrebiča (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-cas-nastavenie.html, A + D):
@@ -724,9 +774,9 @@ export function renderTeraz(state, dom) {
     setText(dom.tzAskBtn, T.askBtn);
     renderHreben(m.co ? m.hreben : null, dom);
     // Starý web/state.js z cache po nasadení `tzOziv` nemá - undefined je ako null (CLAUDE.md, Nasadenie a cache).
-    renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler), state.tzOziv, klimaTeraz(state));
+    const dlazdice = renderCo(m.co, dom, bojlerTeraz(state, m.co, m.bojler), state.tzOziv, klimaTeraz(state));
     renderTokPole(s, m.co, dom);
-    renderVecSheet(state, m, dom);
+    renderVecSheet(state, m, dom, dlazdice);
     renderBojlerSheet(state, dom, m.bojler);
     renderAutoSheet(state, dom);
     renderKlimaSheet(state, dom);

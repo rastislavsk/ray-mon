@@ -170,6 +170,7 @@ function terazDom() {
         tzVecIco: byId('tz-vec-ico'),
         tzVecName: byId('tz-vec-name'),
         tzVecKedy: byId('tz-vec-kedy'),
+        tzVecVeta: byId('tz-vec-veta'),
         tzVecHotove: byId('tz-vec-hotove'),
         tzVecCas: byId('tz-vec-cas'),
         tzVecPas: byId('tz-vec-pas'),

@@ -165,6 +165,7 @@ test('dlaždica počas nabíjania (T2): km behu, od kedy, výkon a podiel slnka'
         za: 'km',
         meno: 'Auto',
         odr: ['asi sa nabíja od 12:00', '≈ 7,2 kW'],
+        mv: [{ zn: 'start', t: '12:00' }],
         podiel: 63,
         zapnuty: 'nabija',
     });

@@ -467,9 +467,17 @@ const dnesny = (r) => r.kind === 'sun' || r.kind === 'siet' || r.kind === 'cheap
  * Ďalší spotrebič v mriežke Čo zapnúť (docs/navrhy/teraz-dlazdice.html): veľký čas, meno, najviac dve odrážky
  * a podiel programu zo slnka v % pre pásik (docs/navrhy/teraz-pasik-zdroje.html, B) a zo siete v drahom pásme (`draha`, v %,
  * docs/navrhy/plan-dna-oznamenie-vt.html, P1). Kreslí sa ako dlaždica na skle.
- * @typedef {{ id: string, name: string, kind: string, pred?: string, cas: string, odr: string[], podiel: number, draha: number }} Riadok
+ * Na dlaždici sú len čísla (docs/navrhy/teraz-dlazdice-cisla.html, B): čas so značkou (`zn`), malé čísla (`mv`) a odznak
+ * pri ikone (`odz`: kedy bude slnko, „2×“); slová (`odr`) číta čítačka a ukáže detail.
+ * @typedef {import('./messages-teraz.js').Znacka} Znacka
+ * @typedef {import('./messages-teraz.js').MaleCislo} MaleCislo
+ * @typedef {{ id: string, name: string, kind: string, pred?: string, zn?: Znacka, cas: string, odr: string[], mv: MaleCislo[], podiel: number,
+ *   draha: number, potom?: Potom | null }} Riadok
  */
-/** Odznak, kedy bude slnko na spotrebič najbližšie. @typedef {{ text: string, dlho: boolean }} Potom */
+/**
+ * Odznak, kedy bude slnko na spotrebič najbližšie: veta (`text`) a na dlaždici skratka dňa (`kratko`); „2×“ spotrebiča, ktorý
+ * dnes už dobehol, má vetu „dnes už 2×“. @typedef {{ text: string, kratko: string, dlho: boolean }} Potom
+ */
 
 /**
  * Čo zapnúť dnes (docs/navrhy/teraz-dlazdice.html): dlaždice toho, čo ide teraz (zo slnka, zo siete po praní alebo
@@ -500,11 +508,13 @@ export function coZapnutModel(rows, { nowMin, nudza = [], potom = {}, behy = [] 
             name: r.name,
             kind: r.kind,
             ...(t.pred ? { pred: t.pred } : {}),
+            ...(t.zn ? { zn: t.zn } : {}),
             cas: t.cas,
-            // Odznak nahradí slovo o podiele slnka - ten ukáže pásik. Odrážky sú najviac dve.
-            odr: p ? [t.odr[0], p.text] : t.odr,
+            odr: t.odr,
+            mv: t.mv,
             podiel: pct(r.podiel),
             draha: pct(r.draha),
+            potom: p ?? null,
         };
     };
     const beh = (/** @type {Beh} */ b) => ({
@@ -515,12 +525,12 @@ export function coZapnutModel(rows, { nowMin, nudza = [], potom = {}, behy = [] 
         podiel: pct(b.podiel),
         draha: pct(b.draha),
     });
-    // Spotrebič, ktorý dnes už dobehol, má na dlaždici s ďalším časom druhú odrážku „dnes už 1×“ - namiesto
-    // odznaku či slova o slnku, to ukáže pásik.
-    /** @template {{ id: string, odr: string[] }} T @param {T} d @returns {T} */
+    // Spotrebič, ktorý dnes už dobehol, má na dlaždici s ďalším časom odznak „1×“ (veta „dnes už 1×“) - namiesto
+    // odznaku, kedy bude slnko.
+    /** @template {{ id: string, potom?: Potom | null }} T @param {T} d @returns {T} */
     const opak = (d) => {
         const n = behy.filter((b) => b.id === d.id && b.kind === 'done').length;
-        return n ? { ...d, odr: [d.odr[0], terazOpakText(n)], ...('potom' in d ? { potom: null } : {}) } : d;
+        return n ? { ...d, potom: { text: terazOpakText(n), kratko: `${n}×`, dlho: false } } : d;
     };
     return {
         hore: { dlazdice: hore.dlazdice.map(opak), dalsi: hore.dalsi && opak(hore.dalsi) },
@@ -546,8 +556,6 @@ function horeTeraz(teraz, potom, voice) {
                 id: r.id,
                 tone: r.kind === 'sun' ? 'go' : r.kind,
                 ...t,
-                // Odznak zaberie miesto druhej odrážky, aby boli dlaždice rovnako vysoké.
-                odr: p ? t.odr.slice(0, 1) : t.odr,
                 podiel: pct(r.podiel),
                 draha: pct(r.draha),
                 potom: p,
@@ -567,7 +575,7 @@ function horeDalsi(p, nowMin) {
         dalsi: p && {
             id: p.id,
             name: p.name,
-            cas: terazRiadokText(p).cas,
+            ...(({ zn, cas, mv }) => ({ zn, cas, mv }))(terazRiadokText(p)),
             odr: terazDalsiText(p, nowMin),
             podiel: pct(p.podiel),
             draha: pct(p.draha),
@@ -578,8 +586,9 @@ function horeDalsi(p, nowMin) {
 /**
  * Hore v Čo zapnúť: dlaždice toho, čo ide teraz (`tone` odkiaľ: `go` slnko, `siet` sieť po praní, `cheap` lacná
  * sieť), alebo najbližšia vec.
- * @typedef {{ dlazdice: Array<{ id: string, tone: 'go' | 'siet' | 'cheap', pred: string, velky: string, meno: string, odr: string[], podiel: number, draha: number,
- *   potom: Potom | null }>, dalsi: { id: string, name: string, cas: string, odr: string[], podiel: number, draha: number } | null }} CoZapnutHore
+ * @typedef {{ dlazdice: Array<{ id: string, tone: 'go' | 'siet' | 'cheap', pred: string, zn: Znacka, velky: string, meno: string, odr: string[],
+ *   mv: MaleCislo[], podiel: number, draha: number, potom: Potom | null }>,
+ *   dalsi: { id: string, name: string, zn?: Znacka, cas: string, odr: string[], mv: MaleCislo[], podiel: number, draha: number, potom?: Potom | null } | null }} CoZapnutHore
  */
 
 /**

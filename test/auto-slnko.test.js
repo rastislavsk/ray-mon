@@ -144,7 +144,13 @@ test('dlaždica auta na karte Teraz: iný deň odhad z jeho predpovede, deň bez
     assert.ok(zajtra && zajtra.podiel === 100 && zajtra.odr[1] === 'odhad na celý deň');
     // Deň bez slnka: 0 km, prázdny pásik.
     const nic = terazAutoText({ kwh: 0, km: 0, vecer: true });
-    assert.deepEqual(nic, { velky: '0', za: 'km', meno: 'Auto', odr: ['0,0 kWh zo slnka', 'dnes naozaj'] });
+    assert.deepEqual(nic, {
+        velky: '0',
+        za: 'km',
+        meno: 'Auto',
+        odr: ['0,0 kWh zo slnka', 'dnes naozaj'],
+        mv: [{ zn: 'kwh', t: '0,0 kWh' }],
+    });
     const tma = terazModel(vstup('13:00', { autoDen: { ...autoDen, kwh: 0, km: 0 } }), { devices }).co?.auto;
     assert.equal(tma?.podiel, null);
 });
