@@ -255,84 +255,10 @@
 .cas {
     font-weight: 800;
 }
-/* Štítok s triedou dňa v dlaždici Dnes a Zajtra (docs/navrhy/dnes-tri-smery.html, smer C). */
-.mozem .chip {
-    justify-self: start;
-    background: rgba(14, 36, 80, 0.3);
-}
-/* Odznak, ktorý sa dá ťuknúť: vysvetlenie triedy dňa. Tlačidlo má výšku na prst, odznak v ňom je
-   menší; krúžok s i hovorí, že je za ním viac. */
-.chip-tap {
-    justify-self: start;
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px;
-    margin-block: -6px;
-    padding: 0;
-    border: 0;
-    border-radius: 999px;
-    background: none;
-    color: #fff;
-    font: inherit;
-    cursor: pointer;
-}
-.chip.info {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-.chip.info::after {
-    content: 'i';
-    display: grid;
-    place-items: center;
-    width: 15px;
-    height: 15px;
-    border: 1.5px solid currentColor;
-    border-radius: 50%;
-    font-size: 0.625rem;
-    font-weight: 900;
-    letter-spacing: 0;
-    text-transform: none;
-}
-/* V nadpise dlaždice je odznak len krúžok s i vo farbe triedy, vysoký ako verzálky nadpisu - trieda slovom je pre
-   čítačku a v bubline; v polovici dlaždice by slovo vytlačilo nadpis (docs/navrhy/dnes-vsetky-dvojice.html, O2).
-   Tlačidlo ostáva 44 px na prst, no riadok nadpisu nezvýši - hlavička je rovnako vysoká ako v druhej polovici. */
-.k-hlava .chip-tap {
-    justify-content: center;
-    min-width: 44px;
-    margin-block: -14px;
-    /* Krúžok stojí 4 px za nadpisom (aj „Zajtra“ sa zmestí pri 320 px); doprava tlačidlo nepresahuje, aby nič netrčalo
-       z polovice. */
-    margin-inline-start: -21px;
-}
-.k-hlava .chip.info {
-    justify-content: center;
-    width: 1cap;
-    height: 1cap;
-    padding: 0;
-    border-width: 1px;
-    letter-spacing: 0;
-}
-.k-hlava .chip.info::after {
-    width: auto;
-    height: auto;
-    border: 0;
-    font-size: 0.4375rem;
-}
 /* Dlaždica s dneškom: hláška začína v tej istej výške ako obsah druhej polovice (Veľké veci, Zajtra), nie v strede
    svojej polovice - pri rôzne dlhých textoch by inak každá polovica začínala inde. */
 .karta:has(> .cast[data-kind='dnes']) .cast > :nth-child(2) {
     margin-top: 4px;
-}
-.mozem .chip[data-cls='vyborny'] {
-    background: var(--yes);
-    border-color: var(--yes);
-    color: #14300c;
-}
-.mozem .chip[data-cls='dobry'] {
-    background: #ffc94a;
-    border-color: #ffc94a;
-    color: #3a2a00;
 }
 /* Pás dlaždíc pod posuvníkom (docs/navrhy/dnes-upravy.html, nižšie dlaždice docs/navrhy/dnes-nizsie-dlazdice.html, D):
    posúva ho prehliadač, dlaždica zastane na začiatku pásu a susedná vykukuje sprava. Zvislý ťah cez pás posúva
@@ -388,11 +314,44 @@
 /* Karta v dlaždici: nadpis hore, obsah pod ním v strede zvyšnej výšky. Je kontajner - hodnota a slovo sa
    zmenšia podľa jej šírky, nie okna, takže sa zmestia aj do polovice dlaždice. */
 .cast {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 6px;
     min-width: 0;
     container-type: inline-size;
+}
+/* Pole s bublinou (docs/navrhy/dnes-bubliny-poli.html, V3): ťuká sa na celú polovicu dlaždice - tlačidlo ju prekryje až po
+   okraj skla - a vpravo hore je šípka, na všetkých poliach rovnaká a vo farbe nadpisu. Šípka je kreslená, písmo appky je
+   podmnožina bez nej. */
+.cast-tap {
+    position: absolute;
+    inset: -12px -6px;
+    padding: 0;
+    border: 0;
+    border-radius: 16px;
+    background: none;
+    color: var(--dim);
+    cursor: pointer;
+}
+.cast-tap::after {
+    content: '';
+    position: absolute;
+    top: 17px;
+    right: 4px;
+    width: 6px;
+    height: 6px;
+    border: solid currentColor;
+    border-width: 2px 2px 0 0;
+    transform: rotate(45deg);
+}
+.cast-tap:focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: -2px;
+}
+/* Šípka stojí v medzere za kartou, nadpisu berie len pár px - „Najviac slnka“ sa pri 360 px zmestí celé. */
+.cast:has(> .cast-tap) > .glass-ttl {
+    padding-right: 6px;
 }
 .cast > :nth-child(2) {
     margin-top: auto;
@@ -409,13 +368,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-/* Nadpis Dnes a Zajtra s odznakom triedy dňa v jednom riadku. */
-.k-hlava {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
 }
 /* Veľké slovo v dlaždici Dnes a Zajtra: veľkosť podľa dĺžky (--word z renderu), v úzkej karte ešte menšia podľa
    najdlhšieho slova (--word-len), aby sa slovo nikdy neorezalo. Široké verzálky majú na znak takmer 1 em. */
@@ -686,4 +638,299 @@
     letter-spacing: 0.12em;
     text-transform: uppercase;
     color: var(--dim);
+}
+
+/* Bublina poľa dlaždice (docs/navrhy/dnes-bubliny-poli.html, A): obrázky v paneli zdola. Stĺpce a os sú HTML s výškou či
+   polohou v %, krivka SVG roztiahnuté na šírku - popisky ostávajú v písme appky, aj keď je panel široký. */
+.bublina-sheet h2 {
+    text-wrap: balance;
+}
+.bublina-obsah {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+}
+.bb-popisky {
+    position: relative;
+    height: 14px;
+    margin-top: -6px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--dim);
+}
+.bb-popisky span {
+    position: absolute;
+    transform: translateX(-50%);
+}
+.bb-popisky span:first-child:not(:only-child) {
+    transform: none;
+}
+.bb-popisky span:last-child:not(:only-child)[style*='100'] {
+    transform: translateX(-100%);
+}
+.bublina-sheet .bb-leg {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+.bb-leg i {
+    display: inline-block;
+    width: 14px;
+    height: 8px;
+    margin-right: 6px;
+    border-radius: 3px;
+    vertical-align: middle;
+}
+.bb-leg i[data-druh='okno'],
+.bb-leg i[data-druh='namerane'] {
+    background: var(--yes);
+}
+.bb-leg i[data-druh='teraz'] {
+    width: 2px;
+    background: #fff;
+}
+.bb-leg i[data-druh='predpoved'] {
+    border: 1px dashed #fff;
+    background: rgba(255, 255, 255, 0.2);
+}
+.bublina-sheet .bb-pozn {
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
+/* Os dňa 0 – 24 h (Veľké veci): deň od východu po západ svetlejší, okno so slnkom zelené, teraz biela čiara. */
+.bb-os {
+    position: relative;
+    height: 26px;
+}
+.bb-os::before {
+    content: '';
+    position: absolute;
+    inset: 8px 0;
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.14);
+}
+.bb-den,
+.bb-okno {
+    position: absolute;
+    top: 8px;
+    bottom: 8px;
+    background: rgba(255, 255, 255, 0.22);
+}
+.bb-okno {
+    top: 4px;
+    bottom: 4px;
+    border-radius: 6px;
+    background: var(--yes);
+}
+.bb-teraz {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    margin-left: -1px;
+    background: #fff;
+}
+.bb-veci,
+.bb-eq,
+.bb-hodiny,
+.bb-stlpce {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.bb-veci {
+    display: grid;
+    gap: 8px;
+}
+.bb-veci li {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+}
+.bb-veci b {
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+.bb-kruh {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.1);
+}
+.bb-veci li[data-slnko] .bb-kruh {
+    background: var(--yes);
+    color: #14300c;
+}
+.bb-kruh .vi {
+    width: 24px;
+    height: 24px;
+}
+/* Krivka dňa (Zo strechy): namerané zelenou plochou, predpoveď prerušovanou čiarou, cez deň čiara teraz. */
+.bb-cisla {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+}
+.bublina-sheet .bb-cisla p {
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
+.bb-cisla b {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #fff;
+}
+.bb-krivka {
+    position: relative;
+    height: 120px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+}
+.bb-krivka svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+.bb-pred-plocha {
+    fill: rgba(255, 255, 255, 0.12);
+}
+.bb-pred {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.65);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+    vector-effect: non-scaling-stroke;
+}
+.bb-mer-plocha {
+    fill: rgba(185, 242, 140, 0.35);
+}
+.bb-mer {
+    fill: none;
+    stroke: var(--yes);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+}
+.bb-krivka + .bb-popisky {
+    margin-top: 0;
+}
+/* Ako keby: ikona, číslo s menom a pod ním z čoho sa ráta. */
+.bb-eq {
+    display: grid;
+    gap: 12px;
+}
+.bb-eq li {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 2px 12px;
+    align-items: center;
+}
+.bb-eq .vi {
+    grid-row: span 2;
+    width: 28px;
+    height: 28px;
+}
+.bb-eq b {
+    font-size: 1.125rem;
+    font-weight: 800;
+}
+.bb-eq span {
+    font-size: 0.8125rem;
+    color: var(--dim);
+}
+/* Predpoveď po hodinách: čas, ikona, teplota, zrážky. */
+.bb-hodiny {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 4px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--dim);
+}
+.bb-hodiny li {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+}
+.bb-hodiny .wi {
+    width: 34px;
+    height: 34px;
+}
+.bb-hodiny b {
+    min-height: 1.2em;
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: #fff;
+}
+.bb-zrazky {
+    color: var(--cheap-text);
+}
+/* Stĺpce hodín či dní: hodnota nad stĺpcom, popis pod ním. Najsilnejší zelený, prešlé hodiny tlmené. */
+.bb-stlpce {
+    display: grid;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    gap: 3px;
+    align-items: end;
+    height: 150px;
+}
+.bb-stlpce li {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    height: 100%;
+    min-width: 0;
+}
+/* Plocha stĺpca: výška stĺpca je % z nej, hodnota nad ním vytŕča do horného okraja. */
+.bb-s {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 3px;
+    min-height: 0;
+    padding-top: 16px;
+}
+.bb-stlpce i {
+    flex: none;
+    width: 100%;
+    border-radius: 3px 3px 1px 1px;
+    background: rgba(255, 255, 255, 0.65);
+}
+.bb-stlpce b {
+    font-size: 0.625rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+.bb-stlpce li > span:last-child {
+    min-height: 14px;
+    text-align: center;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--dim);
+}
+.bb-stlpce li[data-druh='preslo'] i {
+    background: rgba(255, 255, 255, 0.3);
+}
+.bb-stlpce li[data-druh='max'] i {
+    background: var(--yes);
+}
+.bb-stlpce li[data-druh='max'] b {
+    color: var(--yes);
+}
+.bb-dni {
+    gap: 6px;
+}
+.bb-dni b {
+    font-size: 0.75rem;
+}
+/* Oblačnosť: plný stĺpec je celá obloha, svetlosivé ako pásik v poli. */
+.bb-oblaky i {
+    background: rgba(210, 218, 235, 0.9);
 }

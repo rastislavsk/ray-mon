@@ -22,7 +22,8 @@ import {
  * @typedef {'dazd' | 'sneh' | null} Precip
  * @typedef {{ hour: number, kw: number, cloud: number | null, precip?: Precip, mm?: number }} HourPoint
  */
-/** @typedef {HourPoint & { clearKw: number }} DayHourPoint */
+/** Hodina dňa predpovede: k tomu bezoblačný strop a teplota (°C; predpoveď z cache spred jej pridania ju nemá). */
+/** @typedef {HourPoint & { clearKw: number, temp?: number }} DayHourPoint */
 /**
  * @typedef {{ date: string, hourly: DayHourPoint[], kwhTotal: number, clearKwhTotal: number,
  *   peakKw: number, peakHour: number | null, cloudAvgPct: number | null,
@@ -374,7 +375,9 @@ function buildDay(dayKey, entries, site, plant) {
     }
     const hourly = hourlySeries(entries, site.timezone).map((h) => {
         const entry = entryByHour.get(h.hour);
-        return { ...h, clearKw: entry ? round(clearSkyAcKw(entry.dateUtc, site, plant, entry.tempC), 2) : 0 };
+        if (!entry) return { ...h, clearKw: 0 };
+        const clearKw = round(clearSkyAcKw(entry.dateUtc, site, plant, entry.tempC), 2);
+        return Number.isFinite(entry.tempC) ? { ...h, clearKw, temp: round(entry.tempC, 1) } : { ...h, clearKw };
     });
     let peak = hourly[0] || { hour: null, kw: 0 };
     for (const h of hourly) if (h.kw > peak.kw) peak = h;

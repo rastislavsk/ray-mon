@@ -1,8 +1,9 @@
 // Poslucháče karty Dnes (kódové meno mozem): „Skúsiť znova“, posuvník dňa hore a odtlačok bežca na teraz
-// (docs/navrhy/dnes-tlacidlo-teraz.html, T4c), vysvetlenie odznaku triedy dňa a pás kariet.
+// (docs/navrhy/dnes-tlacidlo-teraz.html, T4c), bubliny polí dlaždíc a pás kariet.
 // Každý končí volaním setState (alebo krokom v histórii); kreslí render/mozem.js.
 // Pravidlá dotyku sú v CLAUDE.md, časť Dotyk a kurzor: rozhoduje typ vstupu, nie druh udalosti.
 
+import { BUBLINY } from '../shared/dnes-bubliny.js';
 import { dnesOsMinuta } from '../shared/dnes-nebo.js';
 import { localMinutes } from '../shared/solar.js';
 import { bindKarty } from './mozem-karty.js';
@@ -11,6 +12,9 @@ import { stepBack } from './nav-back.js';
 import { initSheet } from './sheet.js';
 import { shows } from './state.js';
 import { bindDayScrub } from './teraz-gestures.js';
+
+/** Polia karty Dnes, na ktoré sa dá ťuknúť. @type {readonly import('./state.js').MzChip[]} */
+const MZ_BUBLINY = ['dnes', 'zajtra', ...BUBLINY];
 
 /** @typedef {import('./state.js').Store} Store */
 /** @typedef {import('./dom.js').Dom} Dom */
@@ -25,15 +29,17 @@ export function initMozem(store, dom, refresh) {
         // Ťukol človek: meranie sa opýta hneď, aj keď by inak čakalo na interval (shared/zdroje.js).
         refresh({ skus: true });
     });
-    // Vysvetlenie odznaku je krok navigácie (robí z Dnes aktívny stĺpec prehľadu), zatvorenie ten istý
-    // krok ako tlačidlo Späť.
-    // Odznak je v dlaždici Dnes (dnešok) či Zajtra (`data-trieda`), dlaždice kreslí render - poslucháč je na páse.
+    // Bublina poľa je krok navigácie (robí z Dnes aktívny stĺpec prehľadu), zatvorenie ten istý krok ako tlačidlo Späť.
+    // Ťuká sa na celú polovicu dlaždice (`data-bublina`, docs/navrhy/dnes-bubliny-poli.html, V3); dlaždice kreslí render -
+    // poslucháč je na páse. Dnes a Zajtra otvoria vysvetlenie triedy dňa, ostatné polia svoju bublinu.
     dom.mzKarty.addEventListener('click', (e) => {
-        const btn = e.target instanceof Element ? e.target.closest('[data-trieda]') : null;
-        const kedy = btn instanceof HTMLElement ? btn.dataset.trieda : null;
-        if (kedy === 'dnes' || kedy === 'zajtra') store.setState({ mzChip: kedy, panel: 'mozem' });
+        const btn = e.target instanceof Element ? e.target.closest('[data-bublina]') : null;
+        const kind = btn instanceof HTMLElement ? btn.dataset.bublina : null;
+        const chip = MZ_BUBLINY.find((c) => c === kind);
+        if (chip) store.setState({ mzChip: chip, panel: 'mozem' });
     });
     initSheet(dom.mzTriedaSheet, () => stepBack(store, { mzChip: null }));
+    initSheet(dom.mzBublinaSheet, () => stepBack(store, { mzChip: null }));
     bindKarty(dom.mzKarty, dom.mzBodky, [dom.mzPasSpat, dom.mzPasDalej]);
     sledujObzor(dom.panels.mozem, dom.mzOs, dom.wx);
     initOs(store, dom);

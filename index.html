@@ -1095,6 +1095,16 @@
             </div>
         </dialog>
 
+        <!-- Bublina poľa dlaždice na karte Dnes (docs/navrhy/dnes-bubliny-poli.html, A): meno poľa, veta s hlavným číslom
+             a obrázok - os dňa, krivka, stĺpce. Model je shared/dnes-bubliny.js, píše ho render/mozem-bubliny.js. -->
+        <dialog id="mz-bublina-sheet" class="sheet bublina-sheet" aria-labelledby="mz-bublina-title">
+            <div class="sheet-in">
+                <p id="mz-bublina-q" class="q"></p>
+                <h2 id="mz-bublina-title"></h2>
+                <div id="mz-bublina-obsah" class="bublina-obsah"></div>
+            </div>
+        </dialog>
+
         <!-- Detail spotrebiča na karte Teraz: kedy a odkiaľ, od-do, jeho úsek na páse dňa a prečo práve vtedy. -->
         <dialog id="tz-vec-sheet" class="sheet vec-sheet" aria-labelledby="tz-vec-name" aria-describedby="tz-vec-why">
             <div class="sheet-in">

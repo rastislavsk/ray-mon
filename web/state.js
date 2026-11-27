@@ -3,6 +3,7 @@
 // takže ich plní ten istý kód (web/refresh.js, web/storage.js).
 
 import { BOJLER, LAYOUT_PX, MOZEM_ITEMS, NASTAVENIE_SEKCIE, PANELS } from '../shared/config.js';
+import { BUBLINY } from '../shared/dnes-bubliny.js';
 import { domaDefault } from '../shared/doma.js';
 import { oznameniaDefault } from '../shared/oznamenia.js';
 import { DEFAULT_LOOK, typicalSettings } from '../shared/settings.js';
@@ -15,7 +16,8 @@ import { setupInit } from '../shared/setup-flow.js';
  * `tzDen` deň zvolený v hrebeni týždňa karty Teraz (poradie od dneška, 0 = dnes; docs/navrhy/teraz-vyhlad-alternativy.html),
  * `tzOziv` na čo sa ťuklo v oznámení, kým čaká alebo beží oživená ikona dlaždice (docs/navrhy/oznamenia-animacie.html, web/oznamenia-klik.js),
  * `tzChip` otvorený panel Elektrina teraz zo scény či poľa toku energie karty Teraz (`tok`),
- * `mzChip` otvorené vysvetlenie odznaku triedy dňa na karte Dnes - dnešného, alebo večer zajtrajšieho (docs/navrhy/dnes-upravy.html),
+ * `mzChip` otvorená bublina poľa dlaždice na karte Dnes: vysvetlenie triedy dňa (`dnes`, večer `zajtra`; docs/navrhy/dnes-upravy.html)
+ *   alebo bublina iného poľa (BUBLINY, docs/navrhy/dnes-bubliny-poli.html),
  * `weekDetail` otvorený detail karty 7 dní (deň, týždeň,
  * null = prehľad dní) a `weekDay` deň v ňom (index v predpovedi), `statsPeriod` obdobie karty Štatistika,
  * `online`, či má telefón internet - podľa toho karta bez dát povie prečo, a `incoming` nastavenie
@@ -34,7 +36,7 @@ import { setupInit } from '../shared/setup-flow.js';
  * @typedef {'share' | 'reset'} AppSheet
  * @typedef {'tok'} TzChip
  * @typedef {{ id: string, d: string, behy: import('../shared/bezi.js').Zapis[], k: number | null }} VecBublina
- * @typedef {'dnes' | 'zajtra'} MzChip
+ * @typedef {'dnes' | 'zajtra' | import('../shared/dnes-bubliny.js').Bublina} MzChip
  * @typedef {(typeof NS_FOLDS)[number]} NsFold
  * @typedef {import('./refresh.js').RefreshState & import('../shared/setup-flow.js').SetupState & {
  *   panel: Panel,
@@ -452,10 +454,13 @@ const tzVecOf = (panel, dash, vec) => ((panel === 'terazky' || dash) && MOZEM_IT
 const tzChipOf = (panel, dash, chip) => ((panel === 'terazky' || dash) && chip === 'tok' ? chip : null);
 
 /**
- * Otvorené vysvetlenie odznaku karty Dnes z položky histórie. Patrí karte Dnes (v prehľade ktorémukoľvek
+ * Otvorená bublina poľa karty Dnes z položky histórie. Patrí karte Dnes (v prehľade ktorémukoľvek
  * stĺpcu); položka zo skoršej verzie ho nemá. @param {Panel} panel @param {boolean} dash @param {unknown} trieda @returns {MzChip | null}
  */
-const mzChipOf = (panel, dash, trieda) => ((panel === 'mozem' || dash) && (trieda === 'dnes' || trieda === 'zajtra') ? trieda : null);
+const mzChipOf = (panel, dash, trieda) => ((panel === 'mozem' || dash) && MZ_CHIPS.find((c) => c === trieda)) || null;
+
+/** Polia karty Dnes s bublinou. @type {readonly MzChip[]} */
+const MZ_CHIPS = ['dnes', 'zajtra', ...BUBLINY];
 
 /**
  * Obrazovka sprievodcu a plocha z položky histórie. Položka zo skoršej verzie sprievodcu nepozná -

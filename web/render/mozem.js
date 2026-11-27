@@ -5,14 +5,16 @@
 // shared/mozem-sky.js, shared/dnes-faza.js a shared/dnes-nebo.js, texty sú v shared/messages.js - tu sa len
 // zapisuje do DOM.
 
+import { BUBLINY, dnesBublina } from '../../shared/dnes-bubliny.js';
 import { denVysvetlenie, dnesFaza, dnesKarty } from '../../shared/dnes-faza.js';
 import { dnesNeboModel } from '../../shared/dnes-nebo.js';
 import { escapeHtml } from '../../shared/format.js';
-import { DNES_TEXTS, voiceTexts } from '../../shared/messages-core.js';
+import { DNES_BUBLINY, DNES_TEXTS, voiceTexts } from '../../shared/messages-core.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { syncBodky } from '../mozem-karty.js';
 import { dashboard, shows } from '../state.js';
 import { kartaIcon, vecIcon, weatherIcon } from './icons.js';
+import { bublinaHtml } from './mozem-bubliny.js';
 import { kresliPocasie } from './teraz.js';
 import { dialog, setHtml, setText, show } from './write.js';
 
@@ -138,17 +140,16 @@ function obsahHtml(k) {
 }
 
 /**
- * Nadpis karty. Pri Dnes a Zajtra je v ňom aj odznak triedy dňa - tlačidlo na jej vysvetlenie (`data-trieda`). Odznak je
- * len krúžok s i vo farbe triedy, trieda slovom je pre čítačku (docs/navrhy/dnes-vsetky-dvojice.html, O2).
+ * Tlačidlo cez celú kartu dlaždice, keď má bublinu (docs/navrhy/dnes-bubliny-poli.html, V3): Dnes a Zajtra vysvetlenie
+ * triedy dňa (len kým ju nadpis hovorí - večerný Dnešok nie), ostatné polia svoju bublinu. Šípku vpravo hore kreslí štýl.
+ * Tlačidlo je posledné, aby obsah karty ostal pre čítačku pred ním; jeho meno je nadpis karty (pri Dnes a Zajtra s triedou dňa).
  * @param {Karta} k
  */
-function nadpisHtml(k) {
-    const head = `<h2 class="glass-ttl">${escapeHtml(k.title)}</h2>`;
-    if ((k.kind !== 'dnes' && k.kind !== 'zajtra') || !k.chip) return head;
-    return (
-        `<div class="k-hlava">${head}<button type="button" class="chip-tap" data-trieda="${k.kind}" aria-haspopup="dialog">` +
-        `<span class="chip info"${k.cls ? ` data-cls="${k.cls}"` : ''}><span class="sr">${escapeHtml(k.chip)}</span></span></button></div>`
-    );
+function tapHtml(k) {
+    const trieda = k.kind === 'dnes' || k.kind === 'zajtra';
+    if (trieda ? !k.chip : !BUBLINY.some((b) => b === k.kind)) return '';
+    const meno = `${k.title}${trieda ? `: ${k.chip}` : ''}, ${DNES_BUBLINY.podrobnosti}`;
+    return `<button type="button" class="cast-tap" data-bublina="${k.kind}" aria-haspopup="dialog" aria-label="${escapeHtml(meno)}"></button>`;
 }
 
 /**
@@ -157,7 +158,8 @@ function nadpisHtml(k) {
  * @param {Karta[]} d
  */
 function dlazdicaHtml(d) {
-    const cast = (/** @type {Karta} */ k) => `<div class="cast" data-kind="${k.kind}">${nadpisHtml(k)}${obsahHtml(k)}</div>`;
+    const cast = (/** @type {Karta} */ k) =>
+        `<div class="cast" data-kind="${k.kind}"><h2 class="glass-ttl">${escapeHtml(k.title)}</h2>${obsahHtml(k)}${tapHtml(k)}</div>`;
     return `<section class="karta glass"${d.length > 1 ? ' data-dvoj' : ''}>${d.map(cast).join('<i class="deli" aria-hidden="true"></i>')}</section>`;
 }
 
@@ -182,11 +184,11 @@ const znacka = (ok) =>
     `<svg class="znacka" viewBox="0 0 16 16" aria-hidden="true"><path d="${ok ? 'M4 8.5l2.6 2.6L12 5.6' : 'M5 8h6'}"/></svg>`;
 
 /**
- * Vysvetlenie odznaku triedy dňa: otvorené, kým je v stave a je čo vysvetliť (dnešok s predpoveďou,
+ * Vysvetlenie triedy dňa (bublina poľa Dnes a Zajtra): otvorené, kým je v stave a je čo vysvetliť (dnešok s predpoveďou,
  * zajtrajšok v predpovedi). @param {import('../state.js').AppState} state @param {Dom} dom
  */
 function renderTrieda(state, dom) {
-    const kedy = state.mzChip;
+    const kedy = state.mzChip === 'dnes' || state.mzChip === 'zajtra' ? state.mzChip : null;
     const v = kedy && state.forecast ? denVysvetlenie(state, kedy, { voice: state.voice, devices: state.doma }) : null;
     if (v) {
         setText(dom.mzTriedaChip, v.chip);
@@ -216,8 +218,29 @@ function renderTrieda(state, dom) {
         );
         setText(dom.mzTriedaNote, v.note);
     }
-    // Zatvorené vráti fokus na odznak v dlaždici, z ktorej sa otvorilo.
-    dialog(dom.mzTriedaSheet, !!v, () => (shows(state, 'mozem') ? dom.mzKarty.querySelector(`[data-trieda="${kedy}"]`) : null));
+    // Zatvorené vráti fokus na pole dlaždice, z ktorého sa otvorilo.
+    dialog(dom.mzTriedaSheet, !!v, () => opener(state, dom));
+}
+
+/** Pole dlaždice, z ktorého sa bublina otvorila - po zatvorení naň ide fokus. @param {import('../state.js').AppState} state @param {Dom} dom */
+const opener = (state, dom) =>
+    shows(state, 'mozem') && state.mzChip ? dom.mzKarty.querySelector(`[data-bublina="${state.mzChip}"]`) : null;
+
+/**
+ * Bublina poľa dlaždice (docs/navrhy/dnes-bubliny-poli.html): otvorená, kým je v stave, karta je vidno a pole má z čoho
+ * kresliť. @param {import('../state.js').AppState} state @param {Model | null} m @param {import('../../shared/dnes-bubliny.js').DnesFaza | null} d
+ * @param {Dom} dom
+ */
+function renderBublina(state, m, d, dom) {
+    const kind = BUBLINY.find((b) => b === state.mzChip);
+    const b = kind && m && !m.ask ? dnesBublina(kind, state, m, d) : null;
+    if (b) {
+        setText(dom.mzBublinaQ, b.q);
+        setText(dom.mzBublinaTitle, b.title);
+        dom.mzBublinaSheet.dataset.kind = b.kind;
+        setHtml(dom.mzBublinaObsah, bublinaHtml(b));
+    }
+    dialog(dom.mzBublinaSheet, !!b, () => opener(state, dom));
 }
 
 /**
@@ -243,7 +266,10 @@ function renderAnnounce(m, dom) {
 /** @param {import('../state.js').AppState} state @param {Dom} dom */
 export function renderMozem(state, dom) {
     renderTrieda(state, dom);
-    if (!shows(state, 'mozem')) return renderAnnounce(null, dom);
+    if (!shows(state, 'mozem')) {
+        renderBublina(state, null, null, dom);
+        return renderAnnounce(null, dom);
+    }
     const m = mozemSkyModel(state, { online: state.online, voice: state.voice, devices: state.doma, ranna: state.ranna });
     const d = m.ask || m.state === 'loading' ? null : dnesFaza(state, m.den, m.window, { voice: state.voice, devices: state.doma });
     // `?? null`: starý web/state.js z cache po nasadení pole mzCas nemá (CLAUDE.md, Nasadenie a cache).
@@ -252,5 +278,6 @@ export function renderMozem(state, dom) {
     renderNebo(n, dom);
     renderPocasie(state, n, dom);
     renderKarty(m.ask ? [] : dnesKarty(m, d), dom);
+    renderBublina(state, m, d, dom);
     renderAnnounce(m, dom);
 }
