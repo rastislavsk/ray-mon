@@ -75,14 +75,14 @@ zenit (`.wx[data-dnes]` v `css/dnes.css`). Pole ide s modelom počasia (`pocasie
 karta Teraz má ďalej svoje pole nad scénou.
 
 Nižšie dlaždice a zarovnanie s Teraz: `docs/navrhy/dnes-nizsie-dlazdice.html` (D + Z2), 23. 11. 2026. Graf dňa (Kheinshmetke)
-je zrušený aj s panelom, `grafModel` a stavom `terazPreview`; krivku dňa kreslí ďalej detail dňa karty 7 dní. Každá dlaždica
-pásu nesie dvojicu s tenkou čiarou medzi nimi (`docs/navrhy/dnes-vsetky-dvojice.html`, A + O2, 25. 11. 2026; `DVOJICE`
-v `shared/dnes-faza.js`): Dnes | Veľké veci, večer Dnešok | Zajtra (bez zajtrajška Dnešok | Kedy lepšie), Zo strechy | Ako keby,
-Predpoveď | Oblačnosť, Najviac slnka | Kedy lepšie. Sama ostane karta len bez dát. Karta Nabehlo nie je - cez deň je to pásik
-a riadok pod číslom Zo strechy. Na každé pole s bublinou sa ťuká celé (`docs/navrhy/dnes-bubliny-poli.html`, V3 + A, 27. 11. 2026): tlačidlo `.cast-tap` prekryje polovicu dlaždice a vpravo hore má šípku, na všetkých poliach rovnakú. Dnes a Zajtra
+je zrušený aj s panelom, `grafModel` a stavom `terazPreview`; krivku dňa kreslí ďalej detail dňa karty 7 dní. Každé pole
+má vlastnú polovičnú dlaždicu, dve sú vedľa seba a tretia vykukuje (`docs/navrhy/dnes-polia-samostatne.html`, B, 27. 11. 2026;
+dvojice s čiarou z `docs/navrhy/dnes-vsetky-dvojice.html` sú zrušené): Dnes, Veľké veci (večer Zajtra), Zo strechy, Ako keby,
+Predpoveď, Oblačnosť, Najviac slnka, Kedy lepšie. Celú šírku má dlaždica len bez dát. Karta Nabehlo nie je - cez deň je to pásik
+a riadok pod číslom Zo strechy. Na každé pole s bublinou sa ťuká celé (`docs/navrhy/dnes-bubliny-poli.html`, V3 + A, 27. 11. 2026): tlačidlo `.cast-tap` prekryje celú dlaždicu a vpravo hore má šípku, na všetkých poliach rovnakú. Dnes a Zajtra
 otvoria vysvetlenie triedy dňa (trieda slovom je v mene tlačidla, večerný Dnešok bublinu nemá), ostatné polia panel s obrázkom
 (`dnesBublina` v `shared/dnes-bubliny.js`, kreslí `web/render/mozem-bubliny.js`, krok navigácie `mzChip`). Teplotu po hodinách
-pre bublinu Predpoveď nesie predpoveď dňa (`temp`), staršia z cache nie. Veľké slovo je krátke (`DEN_WORDS.iny` ráno, cez deň aj pri Zajtra, meno dňa povie nadpis) - v polovici dlaždice
+pre bublinu Predpoveď nesie predpoveď dňa (`temp`), staršia z cache nie. Veľké slovo je krátke (`DEN_WORDS.iny` ráno, cez deň aj pri Zajtra, meno dňa povie nadpis) - v polovičnej dlaždici
 sa pri 360 px nič dlhšie nezmestí. Texty kariet sú krátke, prirovnania sú ikony. Posuvník dňa stojí presne vo výške stredu poľa toku karty Teraz: obloha nad ním
 je `--scena-h` (výška scény Teraz, `css/zaklad.css`) + 126 px, pás dlaždíc vyplní zvyšok (najmenej 124 px, potom sa
 stránka posúva). Keď sa na Teraz zmení niečo nad poľom toku, zmeň aj tých 126 px v `css/dnes.css` - stráži to e2e

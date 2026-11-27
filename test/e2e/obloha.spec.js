@@ -857,7 +857,7 @@ const modelKarty = (time, extra = {}, opts = {}) => {
 
 /**
  * Čo karta Dnes ukazuje: výkon a čo je to za číslo hore a pás dlaždíc - Dnes, Veľké veci, Zo strechy, večer
- * Zajtra a karty časti dňa, po jednej či po dvoch na dlaždici. Každá karta ako [druh, nadpis, hodnota či slovo, veta,
+ * Zajtra a karty časti dňa, každá na vlastnej dlaždici. Každá karta ako [druh, nadpis, hodnota či slovo, veta,
  * štítok či prirovnania].
  * @param {import('@playwright/test').Page} page
  */
@@ -897,7 +897,7 @@ const kartaZDlazdice = (k) => {
 /** To isté z modelu - pás skladá appka tou istou funkciou (dnesKarty). @param {ReturnType<typeof modelKarty>} m */
 const kartaZModelu = (m) => ({
     nebo: m.nebo ? [`${m.nebo.kw}kW`, `${m.nebo.slovo}${m.nebo.cas}`] : null,
-    karty: m.ask ? [] : dnesKarty(m, m.faza).map((d) => d.map(kartaZDlazdice)),
+    karty: m.ask ? [] : dnesKarty(m, m.faza).map((k) => [kartaZDlazdice(k)]),
 });
 
 /** Dlaždica pásu karty Dnes podľa druhu. @param {import('@playwright/test').Page} page @param {string} kind */
@@ -1045,17 +1045,20 @@ test.describe('karta Dnes', () => {
         const errors = await openObloha(page, { time: at('13:00') });
         await naDnes(page);
         const karty = page.locator('#mz-karty .karta');
-        await expect(karty).toHaveCount(4);
+        // Každé pole má vlastnú dlaždicu (docs/navrhy/dnes-polia-samostatne.html, B).
+        await expect(karty).toHaveCount(8);
         const bodky = page.locator('#mz-bodky i');
-        await expect(bodky).toHaveCount(4);
+        await expect(bodky).toHaveCount(8);
         const spat = page.getByRole('button', { name: 'Predchádzajúca karta' });
         const dalej = page.getByRole('button', { name: 'Ďalšia karta' });
         const aktivna = () => bodky.evaluateAll((b) => b.findIndex((x) => x.hasAttribute('data-on')));
         await expect.poll(aktivna).toBe(0);
         await expect(spat).toBeDisabled();
-        // Susedná karta vykukuje sprava - je vidno, že pás ide ďalej.
+        // Dve dlaždice sú celé a tretia vykukuje sprava - je vidno, že pás ide ďalej.
         const druha = await karty.nth(1).boundingBox();
-        expect(druha && druha.x < 390 && druha.x + druha.width > 390, 'druhá karta vykukuje').toBe(true);
+        expect(druha && druha.x + druha.width <= 390, 'druhá karta je celá').toBe(true);
+        const tretia = await karty.nth(2).boundingBox();
+        expect(tretia && tretia.x < 390 && tretia.x + tretia.width > 390, 'tretia karta vykukuje').toBe(true);
         await dalej.click();
         await expect.poll(aktivna).toBe(1);
         await dalej.click();
@@ -1066,7 +1069,7 @@ test.describe('karta Dnes', () => {
         await expect.poll(aktivna).toBe(1);
         // Posun pásu (ako prstom) rozsvieti bodku sám, na konci je šípka ďalej vypnutá.
         await page.locator('#mz-karty').evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
-        await expect.poll(aktivna).toBe(3);
+        await expect.poll(aktivna).toBe(7);
         await expect(dalej).toBeDisabled();
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'stránka ide do strán').toBe(true);
         // Zvislý ťah prstom cez pás posúva stránku.
@@ -1174,7 +1177,7 @@ test.describe('karta Dnes', () => {
             const b = dnesBublina(kind, input, sky, d);
             expect(b, kind).not.toBeNull();
             const pole = page.locator(`#mz-karty [data-bublina="${kind}"]`);
-            // Ťuká sa na celú polovicu dlaždice: tlačidlo ju prekryje.
+            // Ťuká sa na celú dlaždicu: tlačidlo ju prekryje.
             const [tap, cast] = await Promise.all([pole.boundingBox(), page.locator(`#mz-karty .cast[data-kind="${kind}"]`).boundingBox()]);
             expect(tap && cast && tap.width >= cast.width && tap.height >= cast.height, kind).toBe(true);
             await pole.evaluate((el) => {
@@ -1206,12 +1209,12 @@ test.describe('karta Dnes', () => {
             await page.setViewportSize({ width, height: 800 });
             const errors = await openObloha(page);
             await naDnes(page);
-            // Dlaždica Zo strechy | Ako keby je tretia v páse - posunie sa na ňu ako prstom.
-            const dvojica = page.locator('#mz-karty .karta:has([data-kind="eq"])');
+            // Dlaždica Ako keby je štvrtá v páse - posunie sa na ňu ako prstom.
+            const dlazdicaEq = page.locator('#mz-karty .karta:has([data-kind="eq"])');
             await page
                 .locator('#mz-karty')
-                .evaluate((el, x) => el.scrollTo({ left: x }), await dvojica.evaluate((el) => el.offsetLeft - 14));
-            await expect.poll(async () => Math.round((await dvojica.boundingBox())?.x ?? -1)).toBe(14);
+                .evaluate((el, x) => el.scrollTo({ left: x }), await dlazdicaEq.evaluate((el) => el.offsetLeft - 14));
+            await expect.poll(async () => Math.round((await dlazdicaEq.boundingBox())?.x ?? -1)).toBe(14);
             const eq = dlazdica(page, 'eq');
             await expect(eq.locator('.eq > li')).toHaveCount(3);
             const cisla = await eq.locator('.eq > li').evaluateAll((els) =>
@@ -2094,7 +2097,7 @@ for (const width of [390, 320]) {
                 .map((b) => b.textContent),
         );
         expect(zlomene).toEqual([]);
-        // Karta Dnes: v nízkych dlaždiciach (aj v polovici dvojice) sa nič neoreže (docs/navrhy/dnes-nizsie-dlazdice.html).
+        // Karta Dnes: v nízkych polovičných dlaždiciach sa nič neoreže (docs/navrhy/dnes-nizsie-dlazdice.html).
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
         const pretecie = await page.locator('#mz-karty .cast').evaluateAll((els) =>

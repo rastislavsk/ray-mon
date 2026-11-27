@@ -1,8 +1,8 @@
 // Karta Dnes podľa časti dňa (smer C v docs/navrhy/dnes-tri-smery.html): ráno plán na dnes, cez deň
 // odpočet okna na veľké veci, večer ako dopadol dnešok a zajtrajšok. Pod číslami pás kariet na
 // posúvanie (docs/navrhy/dnes-upravy.html, nové karty docs/navrhy/dnes-predpoved-graf.html): Predpoveď,
-// Oblačnosť, Najviac slnka a Kedy lepšie, večer Predpoveď na zajtra. Dlaždica pásu nesie dvojicu kariet
-// (docs/navrhy/dnes-nizsie-dlazdice.html, D; všetky na dve docs/navrhy/dnes-vsetky-dvojice.html, A).
+// Oblačnosť, Najviac slnka a Kedy lepšie, večer Predpoveď na zajtra. Každá karta má vlastnú polovičnú dlaždicu
+// (docs/navrhy/dnes-polia-samostatne.html, B).
 // K tomu vysvetlenie odznaku triedy dňa. Veľké slovo a čo dá strecha za celý deň počíta
 // shared/mozem.js, tu je len to, čo sa mení s časťou dňa. Čisté funkcie bez DOM, texty sú
 // v messages-core.js.
@@ -252,12 +252,12 @@ export function denVysvetlenie(input, kedy, { voice = 'drzy', devices = PLAN_DNA
 /**
  * Celý pás karty Dnes (docs/navrhy/dnes-obloha-posuvnik.html, A): to, čo bolo nad pásom, sú jeho prvé dlaždice -
  * Dnes (odznak a veľké slovo; večer nadpis Ako dopadol dnešok), Veľké veci (ráno plán, cez deň odpočet okna alebo
- * veta o ňom), Zo strechy s Ako keby (večer namerané a čo sľubovala predpoveď) a večer Zajtra. Za nimi karty časti
+ * veta o ňom), večer hneď za Dnes Zajtra, potom Zo strechy a Ako keby (večer namerané a čo sľubovala predpoveď). Za nimi karty časti
  * dňa (`d.karty`). Bez časti dňa (načítava sa, dáta nie sú) len Dnes so slovom a vetou, prečo dáta nie sú.
- * Vracia dlaždice - každá je jedna karta alebo dvojica (dvojice).
+ * Každá karta je vlastná dlaždica (docs/navrhy/dnes-polia-samostatne.html, B).
  * @param {{ word: string, lead: string, day: { label: string, value: string, eq: { ikona: string, value: string, label: string }[] } | null,
  *   den: Den | null }} sky veľké slovo, veta a čo dá strecha za celý deň (shared/mozem-sky.js)
- * @param {DnesFaza | null} d časť dňa (dnesFaza) @returns {Karta[][]}
+ * @param {DnesFaza | null} d časť dňa (dnesFaza) @returns {Karta[]}
  */
 export function dnesKarty(sky, d) {
     /** @type {Karta} */
@@ -269,34 +269,9 @@ export function dnesKarty(sky, d) {
         word: sky.word,
         text: sky.day ? '' : sky.lead,
     };
-    if (!d) return sky.word ? [[dnes]] : [];
+    if (!d) return sky.word ? [dnes] : [];
     const vecer = d.faza === 'vecer';
-    return dvojice(
-        [dnes, vecer ? null : velkeOf(d), ...strechaOf(sky.day, d), zajtraOf(d.tomorrow), ...d.karty].flatMap((k) => (k ? [k] : [])),
-    );
-}
-
-/**
- * Ktoré karty idú na jednu dlaždicu (docs/navrhy/dnes-vsetky-dvojice.html, A): prvá kľúčom, druhá prvou z hodnoty,
- * ktorá v páse je. Dnes ráno a cez deň s Veľkými vecami, večer so Zajtra, bez zajtrajška s Kedy lepšie.
- * @type {Partial<Record<Karta['kind'], Karta['kind'][]>>}
- */
-const DVOJICE = { dnes: ['velke', 'zajtra', 'lepsie'], strecha: ['eq'], predpoved: ['oblacnost'], slnko: ['lepsie'] };
-
-/**
- * Karty v poradí pásu poskladané do dlaždíc: prvá z dvojice si k sebe vezme druhú, nech je v páse kdekoľvek;
- * keď druhá nie je (bez dát len Dnes, strecha celý deň nedá nič), ostane na dlaždici sama.
- * @param {Karta[]} karty @returns {Karta[][]}
- */
-function dvojice(karty) {
-    /** @type {Set<Karta>} */
-    const vzate = new Set();
-    return karty.flatMap((k) => {
-        if (vzate.has(k)) return [];
-        const druha = (DVOJICE[k.kind] ?? []).map((kind) => karty.find((x) => x.kind === kind && !vzate.has(x))).find(Boolean);
-        if (druha) vzate.add(druha);
-        return [druha ? [k, druha] : [k]];
-    });
+    return [dnes, vecer ? null : velkeOf(d), zajtraOf(d.tomorrow), ...strechaOf(sky.day, d), ...d.karty].flatMap((k) => (k ? [k] : []));
 }
 
 /**

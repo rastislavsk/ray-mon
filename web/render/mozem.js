@@ -153,20 +153,18 @@ function tapHtml(k) {
 }
 
 /**
- * Dlaždica pásu (docs/navrhy/dnes-nizsie-dlazdice.html, D): jedna karta, alebo dvojica vedľa seba s tenkou čiarou
- * medzi nimi. Každá karta má svoj nadpis a `data-kind`. Slovo dneška nesie id, podľa ktorého ho nájdu testy (#mz-word).
- * @param {Karta[]} d
+ * Dlaždica pásu: každá karta má vlastnú (docs/navrhy/dnes-polia-samostatne.html, B), s nadpisom a `data-kind`.
+ * Slovo dneška nesie id, podľa ktorého ho nájdu testy (#mz-word).
+ * @param {Karta} k
  */
-function dlazdicaHtml(d) {
-    const cast = (/** @type {Karta} */ k) =>
-        `<div class="cast" data-kind="${k.kind}"><h2 class="glass-ttl">${escapeHtml(k.title)}</h2>${obsahHtml(k)}${tapHtml(k)}</div>`;
-    return `<section class="karta glass"${d.length > 1 ? ' data-dvoj' : ''}>${d.map(cast).join('<i class="deli" aria-hidden="true"></i>')}</section>`;
-}
+const dlazdicaHtml = (k) =>
+    `<section class="karta glass"><div class="cast" data-kind="${k.kind}"><h2 class="glass-ttl">${escapeHtml(k.title)}</h2>` +
+    `${obsahHtml(k)}${tapHtml(k)}</div></section>`;
 
 /**
  * Pás dlaždíc pod posuvníkom a pod ním bodky so šípkami (jedna dlaždica bez nich).
  * Ktorá bodka svieti, závisí od posunu pásu - nastaví ju syncBodky (aj pri posúvaní, mozem-interactions.js).
- * @param {Karta[][]} k @param {Dom} dom
+ * @param {Karta[]} k @param {Dom} dom
  */
 function renderKarty(k, dom) {
     show(dom.mzKarty, k.length > 0);
