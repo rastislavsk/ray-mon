@@ -317,68 +317,46 @@ async function dopytBojlera(request, key, now, max = MAX_BODY) {
 }
 
 /**
- * POST /bojler: `{ pecat, id, rele, w, e, zapKw, vypKw, t? }` od skriptu zásuvky (ID zariadenia, stav relé, príkon vo W,
- * počítadlo energie vo Wh, prahy a s teplomerom teplota vody v °C, docs/navrhy/bojler-teplota.html) -> `{ zapni, rucne, prebytokKw, maxC, minC }` (hranica teploty a návrat). V ručnom režime je `zapni` stav relé, takže ho
- * nezmení ani starší skript, ktorý `rucne` nepozná. Rozhoduje Durable Object účtu (shared/bojler.js). Hlásenie
- * od iného zariadenia, než ktoré bojler riadi, či bez merania príkonu -> 409 (zariadenieBojlera v shared/bojler.js).
- * @param {Request} request @param {Env} env @param {Date} now
+ * Cesta, ktorú vybavuje Durable Object účtu Huawei Northbound: JSON s pečaťou telefónu či zásuvky (nie odkazom na
+ * zdieľanie), z ktorého `dopyt` vyberie, čo ide do objektu (null = zlé telo, 400), a `odpoved` z výsledku objektu
+ * zloží odpoveď. Bez kľúča pečate či objektov 503, chyba zdroja ako pri meraní (chyba).
+ * @param {string} path cesta v objekte (worker/src/ucet.js) @param {(req: any) => object | null} dopyt
+ * @param {(r: any) => Response} odpoved @param {number} [max] najdlhšie telo
+ * @returns {(request: Request, env: Env, now: Date) => Promise<Response>}
  */
-export async function handleBojler(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const prahy = { zapKw: req.zapKw, vypKw: req.vypKw };
-        const hlasenie = { id: req.id, rele: req.rele, w: req.w, e: req.e, prahy, t: req.t };
-        const r = await ucet(env.UCTY, obsah.pristup, '/bojler', now, hlasenie);
-        // Iné zariadenie než to, ktoré bojler riadi (docs/navrhy/bojler-jedno-zariadenie.html): skript to berie ako ticho.
-        if (r.odmietnute) return json(409, { chyba: 'zariadenie' });
-        // Hranicu teploty (docs/navrhy/bojler-hranica.html) si skript zásuvky pamätá a stráži ju aj bez Workera.
-        const hranica = { maxC: r.maxC ?? null, minC: r.minC ?? null };
-        return json(200, { zapni: r.zapni === true, rucne: r.rucne === true, prebytokKw: r.prebytokKw ?? null, ...hranica });
-    } catch (err) {
-        return chyba(err);
-    }
+function cezUcet(path, dopyt, odpoved, max = MAX_BODY) {
+    return async (request, env, now) => {
+        const key = pecatKey(env.PECAT_KLUC);
+        if (!key || !env.UCTY) return json(503, { chyba: 'server' });
+        const { req, obsah } = await dopytBojlera(request, key, now, max);
+        const navyse = obsah ? dopyt(req) : null;
+        if (!obsah || !navyse) return json(400, { chyba: 'udaje' });
+        try {
+            return odpoved(await ucet(env.UCTY, obsah.pristup, path, now, navyse));
+        } catch (err) {
+            return chyba(err);
+        }
+    };
 }
 
-/**
- * POST /bojler-oznamenia: `{ pecat, endpoint, keys, on }` od appky (pečať telefónu) -> `{ ok }`. Zapne (`on`) či vypne
- * tomuto telefónu oznámenia o zapnutí a vypnutí bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html); posiela ich
- * Durable Object účtu pri hlásení zásuvky.
- * @param {Request} request @param {Env} env @param {Date} now
- */
-export async function handleBojlerOznam(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    const keys = klucOdberu(req?.keys);
-    if (!obsah || !platnyOdber(req.endpoint) || typeof req.on !== 'boolean' || (req.on && !keys)) return json(400, { chyba: 'udaje' });
-    try {
-        await ucet(env.UCTY, obsah.pristup, '/oznam', now, { endpoint: req.endpoint, keys, on: req.on });
-        return json(200, { ok: true });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+/** Dopyt bez ničoho navyše - stačí pečať. */
+const lenPecat = () => ({});
+/** Odpoveď po zápise. */
+const ok = () => json(200, { ok: true });
+/** Výsledok objektu, ktorý hlásil úspech (`ok`), inak zlé hlásenie. @param {any} r */
+const okAleboZle = (r) => (r.ok ? ok() : json(400, { chyba: 'udaje' }));
+/** Odpoveď s poslednými hodnotami bojlera po zmene nastavenia. @param {any} r */
+const okSBojlerom = (r) => json(200, { ok: true, bojler: r.bojler ?? null });
 
 /**
- * POST /auto-oznamenia: `{ pecat, endpoint, keys, z, k }` od appky (pečať telefónu) -> `{ ok }`. Tomuto telefónu zapne
- * oznámenia o začiatku (`z`) a konci (`k`) nabíjania auta; bez oboch ich vypne (docs/navrhy/auto-nabija.html).
- * @param {Request} request @param {Env} env @param {Date} now
+ * Odber oznámení telefónu (bojler, spotrebič na zásuvke): adresa, kľúče a `on` - zapnúť či vypnúť; bez kľúčov
+ * len vypnúť. Inak null.
+ * @param {any} req
  */
-export async function handleAutoOznam(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    const odber = odberAuta(req);
-    if (!obsah || !odber) return json(400, { chyba: 'udaje' });
-    try {
-        await ucet(env.UCTY, obsah.pristup, '/auto-oznam', now, odber);
-        return json(200, { ok: true });
-    } catch (err) {
-        return chyba(err);
-    }
+function odberOznamu(req) {
+    const keys = klucOdberu(req.keys);
+    if (!platnyOdber(req.endpoint) || typeof req.on !== 'boolean' || (req.on && !keys)) return null;
+    return { endpoint: req.endpoint, keys, on: req.on };
 }
 
 /**
@@ -386,222 +364,146 @@ export async function handleAutoOznam(request, env, now) {
  * @param {any} req
  */
 function odberAuta(req) {
-    const keys = klucOdberu(req?.keys);
-    if (!platnyOdber(req?.endpoint) || typeof req.z !== 'boolean' || typeof req.k !== 'boolean') return null;
+    const keys = klucOdberu(req.keys);
+    if (!platnyOdber(req.endpoint) || typeof req.z !== 'boolean' || typeof req.k !== 'boolean') return null;
     return (req.z || req.k) && !keys ? null : { endpoint: req.endpoint, keys, z: req.z, k: req.k };
 }
 
 /**
+ * POST /bojler: `{ pecat, id, rele, w, e, zapKw, vypKw, t? }` od skriptu zásuvky (ID zariadenia, stav relé, príkon vo W,
+ * počítadlo energie vo Wh, prahy a s teplomerom teplota vody v °C, docs/navrhy/bojler-teplota.html) -> `{ zapni, rucne,
+ * prebytokKw, maxC, minC }` (hranica teploty a návrat). V ručnom režime je `zapni` stav relé, takže ho nezmení ani starší
+ * skript, ktorý `rucne` nepozná. Rozhoduje Durable Object účtu (shared/bojler.js). Hlásenie od iného zariadenia, než ktoré
+ * bojler riadi, či bez merania príkonu -> 409 (zariadenieBojlera v shared/bojler.js).
+ */
+export const handleBojler = cezUcet(
+    '/bojler',
+    (req) => ({ id: req.id, rele: req.rele, w: req.w, e: req.e, prahy: { zapKw: req.zapKw, vypKw: req.vypKw }, t: req.t }),
+    (r) =>
+        // Iné zariadenie než to, ktoré bojler riadi (docs/navrhy/bojler-jedno-zariadenie.html): skript to berie ako ticho.
+        // Hranicu teploty (docs/navrhy/bojler-hranica.html) si skript zásuvky pamätá a stráži ju aj bez Workera.
+        r.odmietnute
+            ? json(409, { chyba: 'zariadenie' })
+            : json(200, {
+                  zapni: r.zapni === true,
+                  rucne: r.rucne === true,
+                  prebytokKw: r.prebytokKw ?? null,
+                  maxC: r.maxC ?? null,
+                  minC: r.minC ?? null,
+              }),
+);
+
+/**
+ * POST /bojler-oznamenia: `{ pecat, endpoint, keys, on }` od appky (pečať telefónu) -> `{ ok }`. Zapne (`on`) či vypne
+ * tomuto telefónu oznámenia o zapnutí a vypnutí bojlera (docs/navrhy/spotrebic-koniec-opakovanie.html); posiela ich
+ * Durable Object účtu pri hlásení zásuvky.
+ */
+export const handleBojlerOznam = cezUcet('/oznam', odberOznamu, ok);
+
+/**
+ * POST /auto-oznamenia: `{ pecat, endpoint, keys, z, k }` od appky (pečať telefónu) -> `{ ok }`. Tomuto telefónu zapne
+ * oznámenia o začiatku (`z`) a konci (`k`) nabíjania auta; bez oboch ich vypne (docs/navrhy/auto-nabija.html).
+ */
+export const handleAutoOznam = cezUcet('/auto-oznam', odberAuta, ok);
+
+/**
  * POST /auto: `{ pecat }` od appky (pečať telefónu) -> `{ auto }`, stav a behy nabíjania auta (null, kým objekt nič
  * nenameral). Appka sa pýta pri každej obnove dát, na Huawei nejde nič.
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleAuto(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { obsah } = await dopytBojlera(request, key, now);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/auto', now);
-        return json(200, { auto: r.auto ?? null });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleAuto = cezUcet('/auto', lenPecat, (r) => json(200, { auto: r.auto ?? null }));
+
+/** Polia hlásenia klimatizácie: surové odpovede lokálneho API Daikin (shared/klima-skript.js). */
+const KLIMA_ODPOVEDE = ['s', 'c', 'd', 'w', 't', 'r', 'b'];
 
 /**
  * POST /klima: `{ pecat, id, s, c, d?, w?, t?, r?, b? }` od skriptu na Shelly (docs/navrhy/klima-daikin.html): surové
  * odpovede lokálneho API klimatizácie Daikin -> `{ ok }`. Stav z nich skladá Durable Object účtu (shared/klima.js).
  * Hlásenie bez stavu či teplôt -> 400.
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleKlima(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const odpovede = Object.fromEntries(
-            ['s', 'c', 'd', 'w', 't', 'r', 'b'].filter((k) => typeof req[k] === 'string').map((k) => [k, req[k]]),
-        );
-        const r = await ucet(env.UCTY, obsah.pristup, '/klima', now, { odpovede });
-        return r.ok ? json(200, { ok: true }) : json(400, { chyba: 'udaje' });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleKlima = cezUcet(
+    '/klima',
+    (req) => ({ odpovede: Object.fromEntries(KLIMA_ODPOVEDE.filter((k) => typeof req[k] === 'string').map((k) => [k, req[k]])) }),
+    okAleboZle,
+);
 
 /**
  * POST /spotrebic: `{ pecat, id, vec, w, e }` od skriptu v zásuvke so spotrebičom (docs/navrhy/pracka-zasuvka.html) ->
  * `{ ok }`. Beh z hlásení rozozná Durable Object účtu (shared/zasuvka.js). Zlé hlásenie -> 400, iná zásuvka toho istého
  * spotrebiča, kým sa prvá ozýva -> 409.
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleSpotrebic(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/spotrebic', now, { vec: req.vec, id: req.id, w: req.w, e: req.e });
-        if (r.odmietnute) return json(409, { chyba: 'zariadenie' });
-        return r.ok ? json(200, { ok: true }) : json(400, { chyba: 'udaje' });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleSpotrebic = cezUcet(
+    '/spotrebic',
+    (req) => ({ vec: req.vec, id: req.id, w: req.w, e: req.e }),
+    (r) => (r.odmietnute ? json(409, { chyba: 'zariadenie' }) : okAleboZle(r)),
+);
 
 /**
  * POST /spotrebic-oznamenia: `{ pecat, endpoint, keys, on }` od appky (pečať telefónu) -> `{ ok }`. Zapne (`on`) či
  * vypne tomuto telefónu oznámenie o konci behu spotrebiča na zásuvke (docs/navrhy/pracka-zasuvka.html).
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleSpotrebicOznam(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    const keys = klucOdberu(req?.keys);
-    if (!obsah || !platnyOdber(req.endpoint) || typeof req.on !== 'boolean' || (req.on && !keys)) return json(400, { chyba: 'udaje' });
-    try {
-        await ucet(env.UCTY, obsah.pristup, '/spotrebic-oznam', now, { endpoint: req.endpoint, keys, on: req.on });
-        return json(200, { ok: true });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleSpotrebicOznam = cezUcet('/spotrebic-oznam', odberOznamu, ok);
 
 /**
  * POST /klima-stav: `{ pecat }` od appky (pečať telefónu) -> `{ klima }`, posledné hlásenie klimatizácie s dnešnými
  * bodmi a zdrojmi hodín (null, kým sa skript neozval). Appka sa pýta pri každej obnove dát, na Huawei nejde nič.
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleKlimaStav(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { obsah } = await dopytBojlera(request, key, now);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/klima-stav', now);
-        return json(200, { klima: r.klima ?? null });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleKlimaStav = cezUcet('/klima-stav', lenPecat, (r) => json(200, { klima: r.klima ?? null }));
 
 /**
  * POST /bojler-rezim: `{ pecat, rucne }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ ok, bojler }`.
  * V ručnom režime skript v zásuvke relé neprepína, len hlási (docs/navrhy/teraz-auto-tok.html).
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleBojlerRezim(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    if (!obsah || typeof req.rucne !== 'boolean') return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/rezim', now, { rucne: req.rucne });
-        return json(200, { ok: true, bojler: r.bojler ?? null });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleBojlerRezim = cezUcet('/rezim', (req) => (typeof req.rucne === 'boolean' ? { rucne: req.rucne } : null), okSBojlerom);
 
 /**
  * POST /bojler-hranica: `{ pecat, hranica }` od appky (pečať telefónu) -> `{ ok, bojler }`. Hranica teploty vody v °C (celé
  * číslo v rozsahu BOJLER.vodaMinC až vodaMaxC) alebo null - bez hranice (docs/navrhy/bojler-hranica.html).
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleBojlerHranica(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    if (!obsah || (req.hranica !== null && hranicaZ(req.hranica) === null)) return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/hranica', now, { hranica: req.hranica });
-        return json(200, { ok: true, bojler: r.bojler ?? null });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleBojlerHranica = cezUcet(
+    '/hranica',
+    (req) => (req.hranica === null || hranicaZ(req.hranica) !== null ? { hranica: req.hranica } : null),
+    okSBojlerom,
+);
 
 /**
  * POST /bojler-stav: `{ pecat }` od appky (pečať telefónu) -> `{ bojler }`, posledné hlásenie zásuvky (null, keď sa
  * ešte neozvala). Appka sa pýta každú minútu, aby dlaždica Bojler nečakala na meranie Huawei (raz za 5 minút).
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleBojlerStav(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { obsah } = await dopytBojlera(request, key, now);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/stav', now);
-        return json(200, { bojler: r.bojler ?? null });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleBojlerStav = cezUcet('/stav', lenPecat, (r) => json(200, { bojler: r.bojler ?? null }));
 
 /**
  * POST /historia: `{ pecat }` od appky (pečať telefónu, nie odkaz na zdieľanie) -> `{ dni }`, história elektrárne
  * pre učenie Plánu dňa (docs/navrhy/plan-dna-ucenie.html). Len Huawei Northbound - iné zdroje Durable Object nemajú.
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleHistoria(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { obsah } = await dopytBojlera(request, key, now);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/historia', now);
-        return json(200, { dni: r.dni });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleHistoria = cezUcet('/historia', lenPecat, (r) => json(200, { dni: r.dni }));
 
 /** Dátum YYYY-MM-DD. */
 const DATUM = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * POST /bezi: `{ pecat, d, zmeny }` od appky (pečať telefónu) -> `{ bezi, zasuvky }`, dnešné behy „Už beží“ všetkých
- * telefónov domácnosti (docs/navrhy/bezi-spolocne.html) a stav zásuviek spotrebičov (docs/navrhy/pracka-zasuvka.html). `d` je dnešok telefónu, `zmeny` behy spotrebičov, ktoré sa na ňom zmenili
- * (shared/bezi.js). Len Huawei Northbound - iné zdroje Durable Object nemajú.
- * @param {Request} request @param {Env} env @param {Date} now
+ * telefónov domácnosti (docs/navrhy/bezi-spolocne.html) a stav zásuviek spotrebičov (docs/navrhy/pracka-zasuvka.html).
+ * `d` je dnešok telefónu, `zmeny` behy spotrebičov, ktoré sa na ňom zmenili (shared/bezi.js). Len Huawei Northbound -
+ * iné zdroje Durable Object nemajú.
  */
-export async function handleBezi(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now);
-    if (!obsah || typeof req.d !== 'string' || !DATUM.test(req.d)) return json(400, { chyba: 'udaje' });
-    try {
-        const r = await ucet(env.UCTY, obsah.pristup, '/bezi', now, { d: req.d, zmeny: req.zmeny ?? [] });
-        return json(200, { bezi: r.bezi, zasuvky: r.zasuvky ?? {} });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleBezi = cezUcet(
+    '/bezi',
+    (req) => (typeof req.d === 'string' && DATUM.test(req.d) ? { d: req.d, zmeny: req.zmeny ?? [] } : null),
+    (r) => json(200, { bezi: r.bezi, zasuvky: r.zasuvky ?? {} }),
+);
 
 /**
  * POST /ucenie: `{ pecat, snimky?, behy?, od?, odznova? }` od appky (pečať telefónu) -> `{ ucenie }`, model učenia Plánu
  * dňa, ten istý pre všetky telefóny domácnosti (docs/navrhy/ucenie-vo-workeri.html). Telefón pošle snímku predpovede
  * dneška, raz pri prechode aj všetky svoje snímky, behy a „Začať odznova“; `odznova: true` sa učí od dneška. Dáta
  * prečistí Durable Object. Len Huawei Northbound - iné zdroje Durable Object nemajú.
- * @param {Request} request @param {Env} env @param {Date} now
  */
-export async function handleUcenie(request, env, now) {
-    const key = pecatKey(env.PECAT_KLUC);
-    if (!key || !env.UCTY) return json(503, { chyba: 'server' });
-    const { req, obsah } = await dopytBojlera(request, key, now, MAX_BODY_UCENIE);
-    if (!obsah) return json(400, { chyba: 'udaje' });
-    try {
-        const { snimky, behy, od, odznova } = req;
-        const r = await ucet(env.UCTY, obsah.pristup, '/ucenie', now, { snimky, behy, od, odznova });
-        return json(200, { ucenie: r.ucenie });
-    } catch (err) {
-        return chyba(err);
-    }
-}
+export const handleUcenie = cezUcet(
+    '/ucenie',
+    ({ snimky, behy, od, odznova }) => ({ snimky, behy, od, odznova }),
+    (r) => json(200, { ucenie: r.ucenie }),
+    MAX_BODY_UCENIE,
+);
 
 /** Odpoveď na uloženie odberu či pripomienky podľa stavu. @param {number} status */
 const oznamOdpoved = (status) => json(status, status === 200 ? { ok: true } : { chyba: status === 400 ? 'udaje' : 'server' });
