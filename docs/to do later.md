@@ -33,6 +33,9 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 `docs/navrhy/plan-dna-ucenie.html`). Termín je odhad, kedy bude dosť dát. Na každý je nastavená pripomienka
 (naplánovaná úloha v appke Claude).
 
+- **1. 12. 2026 – Zmazať jednorazovú opravu histórie** (zapísané 27. 11. 2026 pri audite): `opravaDvochZariadeni`
+  a `OPRAVA` vo `worker/src/ucet.js` po 1. 12. 2026 už nič nerobia (beží len do `OPRAVA.do`). Zmazať aj s kľúčom
+  `oprava1:` a testom.
 - **7. 12. 2026 – Pokojný plán 5a?** Po ~2 týždňoch Plánu dňa zo živých dát na S22 overiť, či časy na
   dlaždiciach neskáču. Ak áno, doplniť pamäť naposledy ukázaného času (posun aspoň o 30 min alebo zmena
   slnko ↔ sieť). Ak nie, riadok zmazať.
