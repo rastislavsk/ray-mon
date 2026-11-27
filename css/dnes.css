@@ -255,8 +255,8 @@
 .cas {
     font-weight: 800;
 }
-/* Dlaždica s dneškom: hláška začína v tej istej výške ako obsah druhej polovice (Veľké veci, Zajtra), nie v strede
-   svojej polovice - pri rôzne dlhých textoch by inak každá polovica začínala inde. */
+/* Dlaždica s dneškom: hláška začína v tej istej výške ako obsah susednej dlaždice (Veľké veci, Zajtra), nie v strede
+   svojej dlaždice - pri rôzne dlhých textoch by inak každá začínala inde. */
 .karta:has(> .cast[data-kind='dnes']) .cast > :nth-child(2) {
     margin-top: 4px;
 }
@@ -289,30 +289,22 @@
     outline-offset: -3px;
     border-radius: 22px;
 }
-/* Dlaždica nesie jednu kartu, alebo dvojicu vedľa seba s tenkou čiarou medzi nimi. Dve triedy: okraj skla (.glass nižšie
-   v súbore) by jej inak pridal 12 px navrch a dlaždica by nevyplnila výšku pásu. */
+/* Každá karta má vlastnú dlaždicu v polovičnej šírke (docs/navrhy/dnes-polia-samostatne.html, B): dve celé vedľa seba
+   a tretia vykukuje sprava, pás zastane na každej. Dve triedy: okraj skla (.glass nižšie v súbore) by jej inak pridal
+   12 px navrch a dlaždica by nevyplnila výšku pásu. */
 .karty > .karta {
-    flex: 0 0 calc(100% - 52px);
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(0, 1fr);
-    gap: 12px;
+    flex: 0 0 calc((100% - 40px) / 2);
+    grid-template-columns: minmax(0, 1fr);
     margin: 0;
     padding: 12px 14px;
     scroll-snap-align: start;
 }
-.karta[data-dvoj] {
-    grid-template-columns: minmax(0, 1fr) 1px minmax(0, 1fr);
-}
-/* Jediná dlaždica (večer bez zajtrajška) má celú šírku - nie je k čomu posúvať. */
+/* Jediná dlaždica (bez dát len Dnes) má celú šírku - nie je k čomu posúvať. */
 .karta:only-child {
     flex-basis: 100%;
 }
-.deli {
-    margin: 2px 0;
-    background: rgba(255, 255, 255, 0.22);
-}
 /* Karta v dlaždici: nadpis hore, obsah pod ním v strede zvyšnej výšky. Je kontajner - hodnota a slovo sa
-   zmenšia podľa jej šírky, nie okna, takže sa zmestia aj do polovice dlaždice. */
+   zmenšia podľa jej šírky, nie okna, takže sa zmestia aj do polovičnej dlaždice. */
 .cast {
     position: relative;
     display: flex;
@@ -321,15 +313,15 @@
     min-width: 0;
     container-type: inline-size;
 }
-/* Pole s bublinou (docs/navrhy/dnes-bubliny-poli.html, V3): ťuká sa na celú polovicu dlaždice - tlačidlo ju prekryje až po
+/* Pole s bublinou (docs/navrhy/dnes-bubliny-poli.html, V3): ťuká sa na celú dlaždicu - tlačidlo ju prekryje až po
    okraj skla - a vpravo hore je šípka, na všetkých poliach rovnaká a vo farbe nadpisu. Šípka je kreslená, písmo appky je
    podmnožina bez nej. */
 .cast-tap {
     position: absolute;
-    inset: -12px -6px;
+    inset: -12px -14px;
     padding: 0;
     border: 0;
-    border-radius: 16px;
+    border-radius: 22px;
     background: none;
     color: var(--dim);
     cursor: pointer;
@@ -338,7 +330,7 @@
     content: '';
     position: absolute;
     top: 17px;
-    right: 4px;
+    right: 12px;
     width: 6px;
     height: 6px;
     border: solid currentColor;
@@ -356,15 +348,15 @@
 .cast > :nth-child(2) {
     margin-top: auto;
 }
-.cast > :last-child {
+/* Tlačidlo cez pole je posledné, no stojí mimo toku - spodný okraj dostane posledný obsah pred ním. */
+.cast > :last-child,
+.cast > :has(+ .cast-tap:last-child) {
     margin-bottom: auto;
 }
-/* V polovici dlaždice redšie písmo nadpisu - „Najviac slnka“ sa musí zmestiť aj na 320 px. */
-.karta[data-dvoj] .glass-ttl {
-    letter-spacing: 0.05em;
-}
+/* V polovičnej dlaždici redšie písmo nadpisu - „Najviac slnka“ sa musí zmestiť aj na 320 px. */
 .karta .glass-ttl {
     margin: 0;
+    letter-spacing: 0.05em;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
