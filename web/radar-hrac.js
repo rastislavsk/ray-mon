@@ -2,7 +2,7 @@
 // v stave a nekreslí sa cez render (rovnako ako posun pásu dní). V stave je len to, čo si človek zvolil.
 
 import { RADAR } from '../shared/config.js';
-import { dazdVBode, detailBody, mercX, mercY, oblastBlokov, radarBloky } from '../shared/radar-data.js';
+import { dazdVBode, detailBody, mercX, mercY, oblakySatelitu, oblastBlokov, radarBloky } from '../shared/radar-data.js';
 import { farbaBajtu, krokovMinulost, obnovitRadar, osRadaru, pasOsi, popisChvile, typZrazok } from '../shared/radar.js';
 import { indexKroku, RadarData } from './radar-data.js';
 import { RadarVrstva } from './radar-gl.js';
@@ -36,7 +36,9 @@ function polnoc(ms) {
  *   dw: number, detail: Uint8Array[], tDazd: Array<WebGLTexture | null>, tOblaky: Array<WebGLTexture | null>,
  *   tSneh: Array<WebGLTexture | null>, tDetail: Array<WebGLTexture | null> }} Model
  * Dáta z obnovy, ktoré čakajú bokom, kým nepríde všetko a os nestojí: prehrávanie tak nikdy nemieša staré s novými.
- * @typedef {{ terazMs: number, hotove: boolean, snimky: Map<number, Uint8Array>,
+ * Snímka masky oblakov zo satelitu, sila 0–255 w × h.
+ * @typedef {{ w: number, h: number, f: Uint8Array }} Satelit
+ * @typedef {{ terazMs: number, hotove: boolean, snimky: Map<number, Uint8Array>, satelit: Map<number, Satelit>,
  *   pole: { gx: number, gy: number, g: number, bajty: Uint8Array } | null, model: Omit<Model, 'tDazd' | 'tOblaky' | 'tSneh' | 'tDetail'> | null }} Nove
  */
 
@@ -48,6 +50,10 @@ export class RadarHrac {
     /** @type {Map<number, { t: WebGLTexture | null, f: Uint8Array }>} snímky podľa indexu kroku */
     snimky = new Map();
     /** @type {Model | null} */ model = null;
+    /** @type {Array<{ ms: number, t: WebGLTexture | null }>} snímky masky oblakov, vzostupne podľa času */
+    satelit = [];
+    /** @type {Map<number, Satelit>} snímky satelitu, ktoré prišli skôr než mapa */
+    cakaSatelit = new Map();
     /** Okraj detailu modelu okolo domu v súradniciach obrázka 0–1: x0, y0, x1, y1. */
     detailUv = [-2, -2, -1, -1];
     /** @type {[number, number]} poloha domu v bodoch obrázka */
@@ -133,10 +139,20 @@ export class RadarHrac {
         const s = this.textury('tSneh');
         const d = this.textury('tDetail');
         const oblaky = { ca: c.a, cb: c.b, cf: c.f, sa: s.a, sb: s.b, sf: s.f, oblaky: this.store.get().radarOblaky };
+        // Merané oblaky zo satelitu majú prednosť pred modelom (docs/navrhy/radar-oblaky.html).
+        const sat = oblakySatelitu(
+            this.satelit.map((x) => x.ms),
+            this.casPolohy(),
+            this.terazMs,
+        );
+        const satelit = sat
+            ? { oa: this.satelit[sat.a].t, ob: this.satelit[sat.b].t, of: sat.f, ow: sat.vaha }
+            : { oa: null, ob: null, of: 0, ow: 0 };
         // Bez modelu je okraj detailu mimo obrázka, shader ho nepoužije.
         const det = this.model ? this.detailUv : [-2, -2, -1, -1];
         return {
             ...oblaky,
+            ...satelit,
             da: d.a,
             db: d.b,
             det,
@@ -328,6 +344,26 @@ export class RadarHrac {
         this.krasli();
     }
 
+    /** @param {number} ms @param {Satelit} s */
+    vlozSatelit(ms, { w, h, f }) {
+        const g = this.gl;
+        if (!g) return;
+        const i = this.satelit.findIndex((x) => x.ms >= ms);
+        if (i >= 0 && this.satelit[i].ms === ms) g.zmaz(this.satelit[i].t);
+        const novy = { ms, t: g.textura(w, h, f) };
+        if (i < 0) this.satelit.push(novy);
+        else this.satelit.splice(i, this.satelit[i].ms === ms ? 1 : 0, novy);
+    }
+
+    /** @param {number} ms @param {number} w @param {number} h @param {Uint8Array} f */
+    naSatelit(ms, w, h, f) {
+        if (this.nove) return void this.nove.satelit.set(ms, { w, h, f });
+        // Mapa ešte nie je hotová, textúry počkajú na ňu.
+        if (!this.gl?.gl) return void this.cakaSatelit.set(ms, { w, h, f });
+        this.vlozSatelit(ms, { w, h, f });
+        this.krasli();
+    }
+
     /** @param {{ gx: number, gy: number, g: number, bajty: Uint8Array }} m */
     naPohyb(m) {
         if (this.nove) return void (this.nove.pole = m);
@@ -359,6 +395,7 @@ export class RadarHrac {
             naSnimku: (i, f) => this.naSnimku(i, f),
             naPohyb: (m) => this.naPohyb(m),
             naModel: (m) => this.naModel(m),
+            naSatelit: (ms, w, h, f) => this.naSatelit(ms, w, h, f),
         });
         // Model sa začne sťahovať hneď, nečaká na mapu ani na snímky.
         this.data.nacitajModel(Date.now()).catch(() => {});
@@ -367,6 +404,8 @@ export class RadarHrac {
         // Mapa je „idle“, keď má všetky dlaždice výrezu.
         const mapa = new Promise((res) => map.once('idle', res));
         if (this.cakaModel) this.naModel(this.cakaModel);
+        for (const [ms, sn] of this.cakaSatelit) this.vlozSatelit(ms, sn);
+        this.cakaSatelit.clear();
         await this.obnov(mapa);
     }
 
@@ -381,7 +420,7 @@ export class RadarHrac {
         const now = Date.now();
         this.obnovene = now;
         /** @type {Nove | null} */
-        const nove = this.terazMs ? { terazMs: 0, hotove: false, snimky: new Map(), pole: null, model: null } : null;
+        const nove = this.terazMs ? { terazMs: 0, hotove: false, snimky: new Map(), satelit: new Map(), pole: null, model: null } : null;
         this.nove = nove;
         try {
             const t = await data.najnovsia(now);
@@ -393,7 +432,12 @@ export class RadarHrac {
                 this.kresliOs();
                 this.ukaz();
             }
-            const vsetko = Promise.all([data.dopln(t).catch(() => {}), data.nacitajModel(now).catch(() => {}), mapa]);
+            const vsetko = Promise.all([
+                data.dopln(t).catch(() => {}),
+                data.nacitajModel(now).catch(() => {}),
+                data.nacitajSatelit(now),
+                mapa,
+            ]);
             await Promise.race([vsetko, new Promise((res) => setTimeout(res, RADAR.cakanieMs))]);
         } catch (err) {
             this.nove = null;
@@ -413,6 +457,14 @@ export class RadarHrac {
         this.poz = Math.max(0, this.poz - (indexKroku(noveMs) - indexKroku(this.terazMs)));
     }
 
+    /** Nové snímky satelitu; staršie než os s rezervou na prechod už netreba. @param {Nove} n */
+    prevezmiSatelit(n) {
+        for (const [ms, sn] of n.satelit) this.vlozSatelit(ms, sn);
+        const starsi = n.terazMs - (RADAR.minulostMin + RADAR.satelit.prechodMin) * 60000;
+        for (const x of this.satelit.filter((x) => x.ms < starsi)) this.gl?.zmaz(x.t);
+        this.satelit = this.satelit.filter((x) => x.ms >= starsi);
+    }
+
     /** Dáta z obnovy na os, keď sú všetky a os stojí. */
     prevezmi() {
         const n = this.nove;
@@ -428,6 +480,7 @@ export class RadarHrac {
         }
         this.terazMs = n.terazMs;
         for (const [i, f] of n.snimky) if (i >= pod) this.vlozSnimku(i, f);
+        this.prevezmiSatelit(n);
         if (n.pole) this.naPohyb(n.pole);
         if (n.model) this.naModel(n.model);
         this.store.setState({ radarBezModelu: !this.model });

@@ -18,8 +18,8 @@ const FS = `#version 300 es
 precision highp float;
 in vec2 uv;
 out vec4 o;
-uniform sampler2D A, B, CA, CB, F, L, SA, SB, DA, DB;
-uniform float f, cf, sf, oblaky, pohyb, doba, slabne, mierka;
+uniform sampler2D A, B, CA, CB, F, L, SA, SB, DA, DB, OA, OB;
+uniform float f, cf, sf, of, ow, oblaky, pohyb, doba, slabne, mierka;
 uniform vec3 sneh;
 uniform vec4 vl;
 uniform float dpr, vlKrytie, detDazd, detPrechod;
@@ -71,7 +71,10 @@ void main() {
     r.a *= mix(1., vlKrytie, ws);
     vec2 vk = vlocka(uv * sz) * ws * smoothstep(.01, .05, v);
     float c = mix(mix(texture(CA, uv).r, texture(CB, uv).r, cf), dd.g, wd);
-    float ca = smoothstep(.2, 1., c) * .56 * oblaky;
+    // Merané oblaky zo satelitu (maska Meteosat) majú prednosť pred modelom, váhu ow dáva čas (docs/navrhy/radar-oblaky.html).
+    c = mix(c, mix(texture(OA, uv).r, texture(OB, uv).r, of), ow);
+    // Krytie rastie s oblačnosťou priamo úmerne: aj 30 % modelu je vidno (predtým pod 40 % takmer nič).
+    float ca = clamp(c, 0., 1.) * .56 * oblaky;
     vec3 cc = mix(vec3(.62, .68, .78), vec3(.9, .93, .98), smoothstep(.45, 1., c));
     vec4 hore = vec4(r.rgb * r.a, r.a);
     vec4 lem = vec4(vec3(.05, .08, .16), 1.) * vk.y * .45;
@@ -83,13 +86,15 @@ void main() {
     o *= k.x * k.y;
 }`;
 
-const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L', 'SA', 'SB', 'DA', 'DB']);
+const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L', 'SA', 'SB', 'DA', 'DB', 'OA', 'OB']);
 const CISLA = /** @type {const} */ ([
     'mapa',
     'rohy',
     'f',
     'cf',
     'sf',
+    'of',
+    'ow',
     'sneh',
     'vl',
     'dpr',
@@ -110,9 +115,10 @@ const CISLA = /** @type {const} */ ([
  * Čo kresliť v tejto chvíli: dve snímky a podiel medzi nimi, dve hodiny oblakov a podielu snehu a ich podiel.
  * `doba` je pri predpovedi počet krokov od poslednej snímky. Bez modelu je podiel snehu nula, všetko je dážď.
  * `det` je okraj detailu okolo domu v súradniciach obrázka (0–1), `detDazd` zapne zrážky z detailu (predpoveď modelu).
+ * `oa`, `ob` sú dve snímky masky oblakov zo satelitu, `of` podiel medzi nimi a `ow` váha satelitu proti modelu.
  * @typedef {{ a: WebGLTexture | null, b: WebGLTexture | null, f: number, ca: WebGLTexture | null, cb: WebGLTexture | null,
  *   cf: number, sa: WebGLTexture | null, sb: WebGLTexture | null, sf: number, da: WebGLTexture | null, db: WebGLTexture | null,
- *   det: number[], detDazd: boolean, pohyb: boolean, doba: number, slabne: number, oblaky: boolean }} Obraz
+ *   oa: WebGLTexture | null, ob: WebGLTexture | null, of: number, ow: number, det: number[], detDazd: boolean, pohyb: boolean, doba: number, slabne: number, oblaky: boolean }} Obraz
  */
 
 /**
@@ -198,7 +204,7 @@ export class RadarVrstva {
         gl.uniform2f(u.sz, w, h);
         gl.uniform3f(u.g, this.g[0], this.g[1], this.g[2]);
         gl.uniform1f(u.mierka, RADAR.pohyb.mierka);
-        [o.a, o.b ?? o.a, o.ca, o.cb, this.tPohyb, this.tLut, o.sa, o.sb, o.da, o.db].forEach((t, i) => {
+        [o.a, o.b ?? o.a, o.ca, o.cb, this.tPohyb, this.tLut, o.sa, o.sb, o.da, o.db, o.oa, o.ob].forEach((t, i) => {
             gl.activeTexture(gl.TEXTURE0 + i);
             gl.bindTexture(gl.TEXTURE_2D, t ?? this.tNic);
             gl.uniform1i(u[JEDNOTKY[i]], i);
@@ -206,6 +212,8 @@ export class RadarVrstva {
         gl.uniform1f(u.f, o.f);
         gl.uniform1f(u.cf, o.cf);
         gl.uniform1f(u.sf, o.sf);
+        gl.uniform1f(u.of, o.of);
+        gl.uniform1f(u.ow, o.ow);
         gl.uniform3f(u.sneh, RADAR.sneh.zmiesaneOd, RADAR.sneh.snehOd, RADAR.sneh.prechod);
         const v = RADAR.vlocky;
         gl.uniform4f(u.vl, v.bunkaPx, v.ramenoPx, v.hrubkaPx, v.hustota);

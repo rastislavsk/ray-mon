@@ -1,0 +1,144 @@
+<title>Oblaky na radare</title>
+<style>
+    :root {
+        color-scheme: dark;
+        --bg: #0b1222;
+        --plocha: #131c31;
+        --ciara: rgba(255, 255, 255, 0.12);
+        --text: #e8edf6;
+        --tlmene: #9fadc4;
+        --akcent: #8fb8ff;
+        --plus: #6fdcaa;
+        --minus: #ffa07a;
+    }
+    body {
+        background: var(--bg);
+        color: var(--text);
+        font:
+            15px/1.55 system-ui,
+            -apple-system,
+            'Segoe UI',
+            Roboto,
+            sans-serif;
+        margin: 0;
+    }
+    .obal {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 28px 16px 64px;
+    }
+    h1 {
+        font-size: 26px;
+        margin: 0 0 4px;
+    }
+    h2 {
+        font-size: 18px;
+        margin: 32px 0 8px;
+    }
+    .datum {
+        color: var(--tlmene);
+        margin: 0 0 20px;
+    }
+    .karta {
+        background: var(--plocha);
+        border: 1px solid var(--ciara);
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin: 12px 0;
+    }
+    .karta.zvolene {
+        border-color: var(--akcent);
+    }
+    .plus {
+        color: var(--plus);
+    }
+    .minus {
+        color: var(--minus);
+    }
+    table {
+        border-collapse: collapse;
+        width: 100%;
+    }
+    th,
+    td {
+        text-align: left;
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--ciara);
+    }
+    code {
+        color: var(--akcent);
+    }
+</style>
+<div class="obal">
+    <h1>Oblaky na karte Radar</h1>
+    <p class="datum">27. 11. 2026 · zvolené A + C</p>
+
+    <h2>Čo sa stalo</h2>
+    <p>
+        23. 11. 2026 o 19:51 ukazoval Radar nad Dvoranmi jasno, iná appka zamračené a naozaj bolo zamračené. Oblaky na Radare boli len model
+        ICON-EU (<code>cloud_cover</code> cez Open-Meteo), nie meranie.
+    </p>
+    <table>
+        <tr>
+            <th>hodina</th>
+            <th>ICON-EU</th>
+            <th>ICON-D2</th>
+            <th>ECMWF</th>
+        </tr>
+        <tr>
+            <td>19:00</td>
+            <td>29 %</td>
+            <td>9 %</td>
+            <td>36 %</td>
+        </tr>
+        <tr>
+            <td>20:00</td>
+            <td>44 %</td>
+            <td>0 %</td>
+            <td>30 %</td>
+        </tr>
+    </table>
+    <p>
+        Open-Meteo historical forecast pre 48,56 N, 18,17 E (poloha odhadnutá zo snímky), celé ako nízka oblačnosť. Všetky tri modely minuli
+        nízku inverznú oblačnosť (stratus). Maska oblakov Meteosat (<code>msg_fes:clm</code>, EUMETSAT WMS) pre 19:45 mala nad miestom
+        oblak, Viedeň a Maďarsko jasno - presne ako druhá appka. Shader navyše kreslil
+        <code>smoothstep(.2, 1., c) * .56</code>, takže 30 % modelu bolo asi 2 % krytia, neviditeľné.
+    </p>
+
+    <h2>Možnosti</h2>
+    <div class="karta zvolene">
+        <b>A - maska oblakov zo satelitu na meranú časť, model na predpoveď</b> (zvolené)<br />
+        <span class="plus">+ skutočné meranie, deň aj noc, bez nákladov, bez Workera</span><br />
+        <span class="minus">− len oblak / jasno, pixely okolo 4 km, mešká asi 18 minút, nový externý zdroj</span>
+    </div>
+    <div class="karta">
+        <b>B - infračervený snímok MTG (1 km)</b><br />
+        <span class="minus">− nízky stratus má v noci skoro teplotu zeme, práve tento prípad by ukázal zle</span>
+    </div>
+    <div class="karta zvolene">
+        <b>C - model kresliť poctivo</b> (zvolené k A)<br />
+        Krytie rastie priamo úmerne s oblačnosťou (<code>c * .56</code>), aj 30 % je vidno. Sám by tento prípad neopravil.
+    </div>
+    <div class="karta">
+        <b>D - oblaky len v predpovedi s nápisom „model“</b><br />
+        <span class="minus">− v meranej časti by oblaky zmizli</span>
+    </div>
+
+    <h2>Ako to funguje</h2>
+    <p>
+        Prehliadač (vlákno <code>web/radar-vypocet.js</code>) stiahne masku za dve hodiny osi po 15 minútach (<code>RADAR.satelit</code>,
+        <code>satelitCasy</code>), z PNG vyberie biele body ako oblak a dvakrát ich rozmaže (<code>oblakyZMasky</code>). Adresa nesie čas,
+        WMS posiela <code>max-age</code> 7 dní, takže ďalšie otvorenie sťahuje len nové snímky. Po poslednej snímke drží satelit do „teraz“
+        (oblaky sa za 20 minút veľa nepohnú), potom sa za <code>prechodMin</code> preleje do modelu; pred prvou snímkou rovnako
+        (<code>oblakySatelitu</code>). V rozsahoch Dnes a Zajtra platí to isté - hodiny bližšie ako dve hodiny dozadu majú satelit, ostatné
+        model.
+    </p>
+
+    <h2>Licencia</h2>
+    <p>
+        Hlavička WMS (<code>GetCapabilities</code>) uvádza <code>Fees none</code> a <code>AccessConstraints none</code>. Podľa výsledkov
+        hľadania sú dáta EUMETSAT označené ako Core voľne pod CC BY 4.0 s uvedením „obsahuje upravené dáta EUMETSAT“. Plné znenie Zásad dát
+        EUMETSAT (PDF je šifrované, stránka sa nedala prečítať) overené nie je - jeden zdroj tvrdí, že dáta mladšie ako hodina sú
+        „Recommended“ s poplatkom pre komerčné použitie. Appka je nekomerčná. Zdroj je v pätičke mapy (<code>RADAR.zdroj</code>).
+    </p>
+</div>

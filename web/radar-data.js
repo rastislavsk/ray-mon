@@ -1,8 +1,8 @@
 // Sťahovanie dát karty Radar. Najnovšia snímka ide prvá, aby bolo „Teraz“ hneď na displeji, staršie sa
 // dopĺňajú popri tom. Výpočty robí Web Worker (web/radar-vypocet.js).
 
-import { radarModelUrl, RADAR, WORKER_RADAR_URL } from '../shared/config.js';
-import { blokyParam, detailBody, modelBody, modelSnimky } from '../shared/radar-data.js';
+import { radarModelUrl, radarSatelitUrl, RADAR, WORKER_RADAR_URL } from '../shared/config.js';
+import { blokyParam, detailBody, modelBody, modelSnimky, satelitCasy } from '../shared/radar-data.js';
 import { krokovMinulost, radarKrok, radarTag } from '../shared/radar.js';
 import { loadRadarModel, saveRadarModel } from './storage.js';
 
@@ -18,14 +18,16 @@ export class RadarData {
     /** @type {Promise<void> | null} práve bežiace sťahovanie modelu */ modelBeh = null;
     /** @type {(() => void) | null} */ pohybHotovy = null;
     /** @type {(() => void) | null} */ modelHotovy = null;
+    /** @type {Set<number>} časy snímok satelitu, ktoré už prišli */ satelitHotove = new Set();
+    /** @type {(() => void) | null} */ satelitHotovy = null;
 
     /**
      * `stred` je poloha z Nastavenia, okolo nej je detail modelu.
      * @param {{ bloky: Array<{ row: number, col: number }>, oblast: import('../shared/radar-data.js').Oblast, stred: { lat: number, lon: number },
      *   naSnimku: (index: number, f: Uint8Array) => void, naPohyb: (m: { gx: number, gy: number, g: number, bajty: Uint8Array }) => void,
-     *   naModel: (m: any) => void }} o
+     *   naModel: (m: any) => void, naSatelit: (ms: number, w: number, h: number, f: Uint8Array) => void }} o
      */
-    constructor({ bloky, oblast, stred, naSnimku, naPohyb, naModel }) {
+    constructor({ bloky, oblast, stred, naSnimku, naPohyb, naModel, naSatelit }) {
         this.oblast = oblast;
         this.stred = stred;
         this.param = blokyParam(bloky);
@@ -33,6 +35,15 @@ export class RadarData {
         // Model má vlastné vlákno: v rade za snímkami a pohybom by oblaky čakali aj pol minúty.
         this.modelWorker = new Worker(new URL('./radar-vypocet.js', import.meta.url), { type: 'module' });
         this.modelWorker.onmessage = ({ data: m }) => {
+            if (m.druh === 'satelit') {
+                this.satelitHotove.add(m.ms);
+                return naSatelit(m.ms, m.w, m.h, m.f);
+            }
+            if (m.druh === 'satelit-hotovo') {
+                this.satelitHotovy?.();
+                this.satelitHotovy = null;
+                return;
+            }
             if (m.druh === 'model') naModel(m.model);
             this.modelHotovy?.();
             this.modelHotovy = null;
@@ -113,6 +124,22 @@ export class RadarData {
             this.hotovyPohyb();
             this.pohybHotovy = () => res(undefined);
             this.worker.postMessage({ druh: 'pohyb', indexy: [n, n - 2, n - 4] });
+        });
+    }
+
+    /**
+     * Snímky masky oblakov za minulosť osi, ktoré ešte nemáme. Skončí, keď vlákno spracuje všetky (aj neúspešné).
+     * @param {number} nowMs
+     */
+    nacitajSatelit(nowMs) {
+        if (this.satelitHotovy) return Promise.resolve();
+        const zoznam = satelitCasy(nowMs)
+            .filter((ms) => !this.satelitHotove.has(ms))
+            .map((ms) => ({ ms, url: radarSatelitUrl(this.oblast, ms) }));
+        if (!zoznam.length) return Promise.resolve();
+        return new Promise((res) => {
+            this.satelitHotovy = () => res(undefined);
+            this.modelWorker.postMessage({ druh: 'satelit', zoznam });
         });
     }
 

@@ -1032,6 +1032,21 @@ export const RADAR = {
     detailPrechod: 0.35,
     modelZjemnenie: 10,
     modelObnovaMs: 3 * 60 * 60 * 1000,
+    // Oblaky v meranej časti osi (docs/navrhy/radar-oblaky.html, A + C, 27. 11. 2026): maska oblakov Meteosat (EUMETSAT,
+    // CC BY 4.0) z verejného WMS, nie model. ICON-EU 23. 11. 2026 o 19:50 hlásil 30 % a bolo zamračené - modely nízku
+    // inverznú oblačnosť minú. Snímka je každých `krokMin`, vychádza asi o 18 minút (`meskaMin` s rezervou). Adresa
+    // nesie čas, takže ju prehliadač drží v cache (WMS posiela max-age 7 dní). Maska je len oblak / jasno s pixelmi
+    // okolo 4 km, preto sa rozmaže o `rozmaz` bodov. Po poslednej snímke drží satelit do „teraz“ a za `prechodMin`
+    // sa preleje do modelu; rovnako pred prvou snímkou.
+    satelit: {
+        url: 'https://view.eumetsat.int/geoserver/ows',
+        vrstva: 'msg_fes:clm',
+        krokMin: 15,
+        meskaMin: 20,
+        sirka: 256,
+        rozmaz: 2,
+        prechodMin: 60,
+    },
     farby: [
         { dbz: 8, farba: '#2b6cff', krytie: 0 },
         { dbz: 11, farba: '#2f7bff', krytie: 0.5 },
@@ -1085,7 +1100,7 @@ export const RADAR = {
     },
     styl: 'https://tiles.openfreemap.org/styles/dark',
     zoom: 5.6,
-    zdroj: 'Radar EUMETNET OPERA, CC BY 4.0, upravené · Model DWD ICON-EU, Open-Meteo, CC BY 4.0',
+    zdroj: 'Radar EUMETNET OPERA, CC BY 4.0, upravené · Oblaky: obsahuje upravené dáta EUMETSAT Meteosat · Model DWD ICON-EU, Open-Meteo, CC BY 4.0',
     // Výnimka z pravidla o závislostiach, len pre túto kartu. Pri zmene verzie treba zmeniť aj hashe (uvádza ich cdnjs).
     maplibre: {
         js: 'https://cdnjs.cloudflare.com/ajax/libs/maplibre-gl/5.24.0/maplibre-gl.js',
@@ -1102,6 +1117,25 @@ export function radarModelUrl(body) {
         'https://api.open-meteo.com/v1/forecast' +
         `?latitude=${zoznam('lat')}&longitude=${zoznam('lon')}` +
         '&hourly=precipitation,cloud_cover,snowfall,temperature_2m&models=icon_eu&forecast_days=2&timeformat=unixtime&timezone=auto'
+    );
+}
+
+/**
+ * Adresa masky oblakov pre výrez mapy (súradnice Mercator 0–1) v danom čase, obrázok PNG v EPSG:3857.
+ * @param {{ x0: number, y0: number, x1: number, y1: number }} o @param {number} ms
+ */
+export function radarSatelitUrl(o, ms) {
+    const { url, vrstva, sirka } = RADAR.satelit;
+    const obvod = 2 * Math.PI * 6378137;
+    /** @param {number} x */
+    const mx = (x) => Math.round((x - 0.5) * obvod);
+    /** @param {number} y */
+    const my = (y) => Math.round((0.5 - y) * obvod);
+    const vyska = Math.round((sirka * (o.y1 - o.y0)) / (o.x1 - o.x0));
+    return (
+        `${url}?service=WMS&version=1.3.0&request=GetMap&layers=${vrstva}&styles=&crs=EPSG:3857` +
+        `&bbox=${mx(o.x0)},${my(o.y1)},${mx(o.x1)},${my(o.y0)}&width=${sirka}&height=${vyska}&format=image/png` +
+        `&time=${new Date(ms).toISOString().slice(0, 16)}:00Z`
     );
 }
 

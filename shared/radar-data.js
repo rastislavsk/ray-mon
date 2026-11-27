@@ -574,3 +574,68 @@ export function modelSnimky(data) {
     });
     return { casy: prvy.time.map((/** @type {number} */ t) => t * 1000), ...polia(data.slice(0, hrube)), detail: polia(data.slice(hrube)) };
 }
+
+/**
+ * Časy snímok satelitu na os 2 h, vzostupne: od najnovšej, ktorá už asi vyšla, späť cez celú minulosť osi.
+ * Keď najnovšia ešte nevyšla, WMS vráti najbližšiu staršiu - na osi je potom jedna snímka dvakrát, nič viac.
+ * @param {number} nowMs @returns {number[]}
+ */
+export function satelitCasy(nowMs) {
+    const { krokMin, meskaMin } = RADAR.satelit;
+    const krok = krokMin * 60000;
+    const najnovsia = Math.floor((nowMs - meskaMin * 60000) / krok) * krok;
+    const n = Math.floor(RADAR.minulostMin / krokMin) + 1;
+    return Array.from({ length: n }, (_, i) => najnovsia - (n - 1 - i) * krok);
+}
+
+/**
+ * Maska oblakov z obrázka WMS (oblak je biely, jasno zelené či modré) ako sila 0–255. Maska je len áno / nie
+ * s hrubými pixelmi, preto sa dvakrát rozmaže štvorcom s polomerom `r` - okraj oblaku je potom mäkký.
+ * @param {Uint8ClampedArray | Uint8Array} rgba @param {number} w @param {number} h @param {number} [r]
+ * @returns {Uint8Array}
+ */
+export function oblakyZMasky(rgba, w, h, r = RADAR.satelit.rozmaz) {
+    let m = new Float32Array(w * h);
+    for (let i = 0; i < m.length; i++) {
+        const p = i * 4;
+        m[i] = rgba[p + 3] > 127 && rgba[p] > 200 && rgba[p + 1] > 200 && rgba[p + 2] > 200 ? 1 : 0;
+    }
+    /** Priemer cez 2r + 1 bodov v jednom smere, na okraji z toho, čo je. @param {Float32Array} v @param {boolean} zvislo */
+    const rozmaz = (v, zvislo) => {
+        const o = new Float32Array(v.length);
+        const [n, riadkov] = zvislo ? [h, w] : [w, h];
+        for (let a = 0; a < riadkov; a++) {
+            /** @param {number} i */
+            const bod = (i) => (zvislo ? i * w + a : a * w + i);
+            for (let i = 0; i < n; i++) {
+                let s = 0;
+                let k = 0;
+                for (let d = Math.max(0, i - r); d <= Math.min(n - 1, i + r); d++, k++) s += v[bod(d)];
+                o[bod(i)] = s / k;
+            }
+        }
+        return o;
+    };
+    for (let i = 0; i < 2; i++) m = rozmaz(rozmaz(m, false), true);
+    return Uint8Array.from(m, (v) => Math.round(v * 255));
+}
+
+/**
+ * Ktoré snímky satelitu ukázať v čase `ms` a s akou váhou proti modelu (docs/navrhy/radar-oblaky.html). Po poslednej
+ * snímke satelit drží do „teraz“ a potom sa za `prechodMin` preleje do modelu, pred prvou snímkou rovnako. Mimo toho null.
+ * @param {number[]} casy načítané snímky, vzostupne @param {number} ms @param {number} terazMs
+ * @returns {{ a: number, b: number, f: number, vaha: number } | null} indexy do `casy`, podiel medzi nimi a váha satelitu
+ */
+export function oblakySatelitu(casy, ms, terazMs) {
+    if (!casy.length) return null;
+    const prechod = RADAR.satelit.prechodMin * 60000;
+    const posledna = casy.length - 1;
+    const hranica = Math.max(casy[posledna], terazMs);
+    const vaha = ms < casy[0] ? 1 - (casy[0] - ms) / prechod : ms > hranica ? 1 - (ms - hranica) / prechod : 1;
+    if (vaha <= 0) return null;
+    if (ms <= casy[0]) return { a: 0, b: 0, f: 0, vaha };
+    if (ms >= casy[posledna]) return { a: posledna, b: posledna, f: 0, vaha };
+    let a = 0;
+    while (casy[a + 1] <= ms) a++;
+    return { a, b: a + 1, f: (ms - casy[a]) / (casy[a + 1] - casy[a]), vaha };
+}

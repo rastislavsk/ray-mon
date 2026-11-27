@@ -52,6 +52,11 @@ dopyte (288 bodov). Detail je jedna textúra RGB na hodinu (zrážky, oblaky, sn
 do hrubej mriežky; pás na osi berie hodnoty z jeho stredu. Uložený model má kľúč aj s polohou.
 Prvé Play po prvom načítaní ide od „teraz“ dopredu (`odTeraz` vo `web/radar-hrac.js`), ďalšie z konca či z „teraz“ od začiatku osi.
 
+Oblaky (`docs/navrhy/radar-oblaky.html`, A + C, 27. 11. 2026): v meranej časti osi a do „teraz“ sú zo satelitu - maska oblakov
+Meteosat z verejného WMS EUMETSAT (`RADAR.satelit`, `radarSatelitUrl`), ktorú sťahuje a rozmazáva vlákno `web/radar-vypocet.js`
+(`oblakyZMasky`). Za „teraz“ sa za `prechodMin` prelejú do modelu (`oblakySatelitu`). Model ICON-EU nízku inverznú oblačnosť
+minie (23. 11. 2026 hlásil 30 %, bolo zamračené), preto nemá prednosť. Krytie oblakov v shaderi rastie s oblačnosťou priamo úmerne.
+
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke
 sa preto vždy píše „predpoveď“, nikdy nie „radar“.
 
