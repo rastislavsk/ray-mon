@@ -456,10 +456,10 @@ test('po prepnutí karty je stránka navrchu', async ({ page }) => {
     await page.locator('#nav-mozem').click();
     await ocakavajKartu(page, 'mozem');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
-    // Späť vedie na kartu 7 dní tiež navrch.
+    // Späť z inej karty vedie na Teraz tiež navrch.
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     await page.goBack();
-    await ocakavajKartu(page, '7dni');
+    await ocakavajKartu(page, 'terazky');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     expect(errors).toEqual([]);
 });
@@ -591,13 +591,11 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         expect(errors).toEqual([]);
     });
 
-    test('tlačidlo Späť vracia po kartách, Dopredu ich vráti', async ({ page }) => {
+    test('tlačidlo Späť z inej karty skočí na Teraz, Dopredu vráti kartu', async ({ page }) => {
         const errors = await openObloha(page);
         await page.locator('#nav-7dni').click();
         await page.locator('#nav-nastavenie').click();
         await ocakavajKartu(page, 'nastavenie');
-        await page.goBack();
-        await ocakavajKartu(page, '7dni');
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
         await page.goForward();
@@ -605,20 +603,20 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         expect(errors).toEqual([]);
     });
 
-    test('Späť vráti posledných SPAT.krokov krokov, potom Teraz, potom bublinu a až ďalšie appku zavrie', async ({ page }) => {
+    test('Späť zatvorí, čo je otvorené na karte, potom Teraz, potom bublinu a až ďalšie appku zavrie', async ({ page }) => {
         const errors = await openObloha(page);
         const app = page.url();
-        const karty = /** @type {const} */ (['7dni', 'mozem', 'statistika', 'nastavenie', '7dni', 'mozem', 'statistika']);
-        for (const k of karty) {
+        for (const k of /** @type {const} */ (['7dni', 'mozem', 'statistika', 'nastavenie', 'mozem', '7dni'])) {
             await page.locator(`#nav-${k}`).click();
             await ocakavajKartu(page, k);
         }
-        // Späť ide po krokoch od posledného, najviac SPAT.krokov ...
-        for (const k of karty.slice(0, -1).reverse().slice(0, SPAT.krokov)) {
-            await page.goBack();
-            await ocakavajKartu(page, k);
-        }
-        // ... ďalšie skočí na Teraz, nech bolo krokov koľkokoľvek.
+        await page.locator('#sd-days [data-day="1"]').click();
+        await expect(page.locator('#sd-day')).toBeVisible();
+        // Najprv zatvorí detail dňa a ostane na karte 7 dní ...
+        await page.goBack();
+        await expect(page.locator('#sd-list')).toBeVisible();
+        await ocakavajKartu(page, '7dni');
+        // ... ďalšie Späť skočí na Teraz, karty pred ňou nevracia.
         await page.goBack();
         await ocakavajKartu(page, 'terazky');
         const bublina = page.locator('#spat-bublina');
@@ -631,6 +629,21 @@ test.describe('ťah prstom a tlačidlo Späť', () => {
         await expect(bublina).toBeHidden({ timeout: SPAT.bublinaMs + 2000 });
         expect(errors).toEqual([]);
         // Ďalšie Späť z appky odíde.
+        await page.goBack();
+        await expect.poll(() => page.url()).not.toBe(app);
+    });
+
+    test('na holej karte Teraz ukáže Späť hneď bublinu, aj keď sa sem prišlo z inej karty', async ({ page }) => {
+        const errors = await openObloha(page);
+        const app = page.url();
+        await page.locator('#nav-mozem').click();
+        await page.locator('#nav-7dni').click();
+        await page.locator('#nav-terazky').click();
+        await ocakavajKartu(page, 'terazky');
+        await page.goBack();
+        await ocakavajKartu(page, 'terazky');
+        await expect(page.locator('#spat-bublina')).toBeVisible();
+        expect(errors).toEqual([]);
         await page.goBack();
         await expect.poll(() => page.url()).not.toBe(app);
     });

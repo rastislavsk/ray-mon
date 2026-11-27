@@ -1,27 +1,36 @@
-// Tlačidlo Späť (web/nav-history.js): čo spraví Späť podľa poradia položky histórie.
+// Tlačidlo Späť (web/nav-history.js): čo spraví Späť podľa položky histórie a toho, kde človek stojí.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SPAT } from '../shared/config.js';
 import { kamSpat } from '../web/nav-history.js';
 
+const kde = (/** @type {Partial<{ doma: boolean, inaKarta: boolean }>} */ o = {}) => ({ doma: false, inaKarta: false, ...o });
+
 test('kamSpat: štartová položka ukáže bublinu, ďalšie Späť appku zavrie', () => {
-    assert.equal(kamSpat(0, 0), 'bublina');
-    assert.equal(kamSpat(0, 20), 'bublina');
+    assert.equal(kamSpat(0, 1, kde()), 'bublina');
+    assert.equal(kamSpat(0, 1, kde({ doma: true, inaKarta: true })), 'bublina');
 });
 
-test('kamSpat: posledných SPAT.krokov krokov sa vráti, ďalšie Späť skočí na Teraz', () => {
-    const vrch = 20;
-    for (let n = 1; n <= SPAT.krokov; n++) assert.equal(kamSpat(vrch - n, vrch), 'krok');
-    assert.equal(kamSpat(vrch - SPAT.krokov - 1, vrch), 'teraz');
-    assert.equal(kamSpat(2, vrch), 'teraz');
+test('kamSpat: na tej istej karte Späť zatvára krok po kroku', () => {
+    assert.equal(kamSpat(7, 8, kde()), 'krok');
+    assert.equal(kamSpat(2, 3, kde()), 'krok');
 });
 
-test('kamSpat: Teraz (položka 1) je cieľ skoku, nikdy neskáče', () => {
-    assert.equal(kamSpat(1, 20), 'krok');
-    assert.equal(kamSpat(1, 2), 'krok');
+test('kamSpat: položka inej karty skočí na Teraz, nech bolo krokov koľkokoľvek', () => {
+    assert.equal(kamSpat(7, 8, kde({ inaKarta: true })), 'teraz');
+    assert.equal(kamSpat(2, 3, kde({ inaKarta: true })), 'teraz');
 });
 
-test('kamSpat: pri menej krokoch Späť ide po nich až na Teraz', () => {
-    assert.equal(kamSpat(3, 4), 'krok');
-    assert.equal(kamSpat(2, 4), 'krok');
+test('kamSpat: Teraz (položka 1) je cieľ skoku, nikdy neskáče na Teraz', () => {
+    assert.equal(kamSpat(1, 2, kde({ inaKarta: true })), 'krok');
+    assert.equal(kamSpat(1, 2, kde()), 'krok');
+});
+
+test('kamSpat: z holej karty Teraz ide Späť na štartovú položku (bublina)', () => {
+    assert.equal(kamSpat(5, 6, kde({ doma: true, inaKarta: true })), 'start');
+    assert.equal(kamSpat(1, 2, kde({ doma: true })), 'start');
+});
+
+test('kamSpat: Dopredu je vždy len návrat na krok', () => {
+    assert.equal(kamSpat(3, 2, kde({ doma: true, inaKarta: true })), 'krok');
+    assert.equal(kamSpat(2, 1, kde({ doma: true, inaKarta: true })), 'krok');
 });

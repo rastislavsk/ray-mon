@@ -167,7 +167,7 @@ async function ozilo(page, druh = 'plan', vec) {
 }
 
 test.describe('ťuknutie na oznámenie', () => {
-    test('appka beží na inej karte: Teraz s oživenou ikonou prvého spotrebiča, Späť sa vráti na kartu', async ({ page }) => {
+    test('appka beží na inej karte: Teraz s oživenou ikonou prvého spotrebiča, Späť na holej Teraz ukáže bublinu', async ({ page }) => {
         await sledujAnimacie(page);
         await otvor(page);
         await expect(page.locator('#tz-co')).toBeVisible();
@@ -179,7 +179,8 @@ test.describe('ťuknutie na oznámenie', () => {
         await expect(page.locator('#tz-co')).toBeVisible();
         await ozilo(page);
         await page.goBack();
-        await ukazuje(page, 'mozem');
+        await ukazuje(page, 'terazky');
+        await expect(page.locator('#spat-bublina')).toBeVisible();
     });
 
     test('appka je zatvorená: adresa so značkou oživí ikonu, značka zmizne a obnovenie nič nezopakuje', async ({ page }) => {

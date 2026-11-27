@@ -310,9 +310,12 @@ tiež ustúpi šípke. Bodka stavu merania je v hlavičke za miestom (na stred r
 
 ## Tlačidlo Späť
 
-Späť vráti posledných 5 krokov navigácie (`SPAT.krokov`), ďalšie ide rovno na Teraz, na Teraz ukáže bublinu
-„Ďalším stlačením sa appka zatvorí“ a až ďalšie appku zavrie – rozhodnuté 19. 11. 2026. Každý krok (`navStep`
-vo `web/state.js`) je položka histórie s poradím `i` (`web/nav-history.js`); 0 je štart (bublina), 1 Teraz.
+Späť najprv zatvára, čo je otvorené na karte, kde človek je (detail, panel, okno, bublina, krok sprievodcu). Keď by sa
+vrátilo na inú kartu, ide rovno na Teraz, na holej karte Teraz ukáže bublinu „Ďalším stlačením sa appka zatvorí“ a až
+ďalšie appku zavrie – rozhodnuté 27. 11. 2026 (možnosť A, predtým 5 krokov naprieč kartami). Ku kartám, na ktorých človek
+bol predtým, sa nevracia; v prehľade so stĺpcami sú všetky stĺpce jedna karta. Každý krok (`navStep` vo `web/state.js`)
+je položka histórie s poradím `i` (`web/nav-history.js`); 0 je štart (bublina), 1 Teraz. Na Teraz a na štart appka pri
+Späť skáče `history.go` (`kamSpat`), položky iných kariet v histórii ostanú a len sa preskočia.
 **Položka histórie smie pribudnúť len pri ťuknutí** – Chrome položku pridanú bez neho pri ďalšom Späť preskočí.
 Riešenie so strážnou položkou vracanou pri Späť (#501) preto na S22 zatváralo appku priskoro. Zatváranie krížikom
 ide cez `stepBack` (`web/nav-back.js`), nie cez nový krok, inak by Späť zatvorené znovu otvorilo.
