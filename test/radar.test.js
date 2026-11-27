@@ -5,6 +5,7 @@ import {
     bajtNaDbz,
     blokyParam,
     dazdVBode,
+    detailBody,
     dbzNaBajt,
     hdf5Bloky,
     hraniceOblasti,
@@ -194,7 +195,8 @@ test('modelBody a adresa modelu', () => {
 });
 
 test('modelSnimky: poskladá hodiny a cudziu odpoveď odmietne', () => {
-    const n = RADAR.modelBodyX * RADAR.modelBodyY;
+    const hrube = RADAR.modelBodyX * RADAR.modelBodyY;
+    const n = hrube + RADAR.detailBody ** 2;
     const bod = {
         hourly: { time: [100, 3700], precipitation: [1, null], cloud_cover: [50, 60], snowfall: [0.7, 0], temperature_2m: [-1, null] },
     };
@@ -204,6 +206,10 @@ test('modelSnimky: poskladá hodiny a cudziu odpoveď odmietne', () => {
     assert.equal(m?.oblaky[1][0], 60);
     assert.equal(m?.sneh[0][0], 1, '1 mm vody = 0,7 cm snehu');
     assert.equal(m?.sneh[1][0], 0, 'bez zrážok a bez teploty dážď');
+    assert.equal(m?.dazd[0].length, hrube);
+    assert.equal(m?.detail.oblaky[0].length, RADAR.detailBody ** 2, 'za hrubou mriežkou je detail');
+    assert.equal(m?.detail.sneh[0][0], 1);
+    assert.equal(modelSnimky(Array.from({ length: hrube }, () => bod)), null, 'odpoveď bez detailu je cudzia');
     const bezSnehu = { hourly: { ...bod.hourly, snowfall: undefined } };
     assert.equal(modelSnimky(Array.from({ length: n }, () => bezSnehu)), null, 'odpoveď bez snehu je cudzia');
     assert.equal(modelSnimky({ hourly: {} }), null);
@@ -214,7 +220,9 @@ test('modelSnimky: poskladá hodiny a cudziu odpoveď odmietne', () => {
 test('parseUlozenyModel: platí pre ten istý výrez, deň a čas obnovy', () => {
     const bodov = RADAR.modelBodyX * RADAR.modelBodyY;
     const riadok = Array.from({ length: bodov }, () => 1);
-    const model = { casy: [1000, 3601000], dazd: [riadok, riadok], oblaky: [riadok, riadok], sneh: [riadok, riadok] };
+    const d = Array.from({ length: RADAR.detailBody ** 2 }, () => 1);
+    const detail = { dazd: [d, d], oblaky: [d, d], sneh: [d, d] };
+    const model = { casy: [1000, 3601000], dazd: [riadok, riadok], oblaky: [riadok, riadok], sneh: [riadok, riadok], detail };
     const at = 2000;
     const ok = { at, kluc: 'x', model };
     assert.deepEqual(parseUlozenyModel(ok, at + 1000, 'x'), { at, model });
@@ -226,7 +234,25 @@ test('parseUlozenyModel: platí pre ten istý výrez, deň a čas obnovy', () =>
     assert.equal(parseUlozenyModel({ ...ok, model: { ...model, oblaky: [riadok, [1]] } }, at + 1000, 'x'), null);
     assert.equal(parseUlozenyModel({ ...ok, model: { ...model, casy: [] } }, at + 1000, 'x'), null);
     assert.equal(parseUlozenyModel({ ...ok, model: { ...model, sneh: undefined } }, at + 1000, 'x'), null, 'uložený staršou appkou');
+    assert.equal(parseUlozenyModel({ ...ok, model: { ...model, detail: undefined } }, at + 1000, 'x'), null, 'bez detailu');
+    assert.equal(parseUlozenyModel({ ...ok, model: { ...model, detail: { ...detail, sneh: [riadok, riadok] } } }, at + 1000, 'x'), null);
     assert.equal(parseUlozenyModel(null, at, 'x'), null);
+});
+
+test('detailBody: štvorec so stredom v polohe, krok v km, po riadkoch od severu', () => {
+    const { body, okraj } = detailBody(48.66, 18.05);
+    const n = RADAR.detailBody;
+    assert.equal(body.length, n * n);
+    assert.ok(body[0].lat > body[n * n - 1].lat, 'prvý riadok je na severe');
+    assert.ok(body[0].lon < body[n - 1].lon);
+    // Krok medzi susednými bodmi v km (rovinne, na tak malej ploche stačí).
+    const km = (/** @type {{ lat: number, lon: number }} */ a, /** @type {{ lat: number, lon: number }} */ b) =>
+        Math.hypot((b.lon - a.lon) * 111.32 * Math.cos((a.lat * Math.PI) / 180), (b.lat - a.lat) * 110.57);
+    assert.ok(Math.abs(km(body[0], body[1]) - RADAR.detailKrokKm) < 0.5);
+    assert.ok(Math.abs(km(body[0], body[n]) - RADAR.detailKrokKm) < 0.5);
+    // Stred štvorca je poloha.
+    assert.ok(Math.abs((okraj.x0 + okraj.x1) / 2 - mercX(18.05)) < 1e-12);
+    assert.ok(Math.abs((okraj.y0 + okraj.y1) / 2 - mercY(48.66)) < 1e-12);
 });
 
 test('podielSnehu a typZrazok: zo snehu modelu, bez zrážok z teploty', () => {

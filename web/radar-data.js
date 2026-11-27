@@ -2,7 +2,7 @@
 // dopĺňajú popri tom. Výpočty robí Web Worker (web/radar-vypocet.js).
 
 import { radarModelUrl, RADAR, WORKER_RADAR_URL } from '../shared/config.js';
-import { blokyParam, modelBody, modelSnimky } from '../shared/radar-data.js';
+import { blokyParam, detailBody, modelBody, modelSnimky } from '../shared/radar-data.js';
 import { krokovMinulost, radarKrok, radarTag } from '../shared/radar.js';
 import { loadRadarModel, saveRadarModel } from './storage.js';
 
@@ -20,12 +20,14 @@ export class RadarData {
     /** @type {(() => void) | null} */ modelHotovy = null;
 
     /**
-     * @param {{ bloky: Array<{ row: number, col: number }>, oblast: import('../shared/radar-data.js').Oblast,
+     * `stred` je poloha z Nastavenia, okolo nej je detail modelu.
+     * @param {{ bloky: Array<{ row: number, col: number }>, oblast: import('../shared/radar-data.js').Oblast, stred: { lat: number, lon: number },
      *   naSnimku: (index: number, f: Uint8Array) => void, naPohyb: (m: { gx: number, gy: number, g: number, bajty: Uint8Array }) => void,
      *   naModel: (m: any) => void }} o
      */
-    constructor({ bloky, oblast, naSnimku, naPohyb, naModel }) {
+    constructor({ bloky, oblast, stred, naSnimku, naPohyb, naModel }) {
         this.oblast = oblast;
+        this.stred = stred;
         this.param = blokyParam(bloky);
         this.worker = new Worker(new URL('./radar-vypocet.js', import.meta.url), { type: 'module' });
         // Model má vlastné vlákno: v rade za snímkami a pohybom by oblaky čakali aj pol minúty.
@@ -135,14 +137,15 @@ export class RadarData {
 
     /** @param {number} nowMs */
     async stiahniModel(nowMs) {
-        const kluc = this.oblast.x0.toFixed(4);
+        // Detail závisí od polohy, nie len od výrezu.
+        const kluc = [this.oblast.x0, this.stred.lat, this.stred.lon].map((v) => v.toFixed(4)).join('|');
         const ulozeny = loadRadarModel(nowMs, kluc);
         if (ulozeny) {
             this.modelAt = ulozeny.at;
             return this.spracujModel(ulozeny.model);
         }
         this.modelAt = nowMs;
-        const body = modelBody(this.oblast);
+        const body = [...modelBody(this.oblast), ...detailBody(this.stred.lat, this.stred.lon).body];
         /** @type {unknown[]} */ const vsetko = [];
         for (let i = 0; i < body.length; i += RADAR.modelBodovNaDopyt) {
             const r = await fetch(radarModelUrl(body.slice(i, i + RADAR.modelBodovNaDopyt)));

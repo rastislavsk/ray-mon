@@ -41,27 +41,36 @@ function pohybZ(indexy) {
 }
 
 /**
- * Model ako obrázky v bajtoch. Zrážky v mm idú na dBZ podľa podielu snehu (docs/navrhy/radar-sneh.html),
- * podiel snehu 0–1 je 0–255.
- * @param {import('../shared/radar-data.js').RadarModel} m
+ * Polia modelu ako obrázky v bajtoch, zjemnené z mriežky nx × ny. Zrážky v mm idú na dBZ podľa podielu snehu
+ * (docs/navrhy/radar-sneh.html), oblačnosť 0–100 % a podiel snehu 0–1 na 0–255.
+ * @param {import('../shared/radar-data.js').ModelPolia} m @param {number} nx @param {number} ny
  */
-function model(m) {
-    const { modelBodyX: nx, modelBodyY: ny, modelZjemnenie: k } = RADAR;
+function polia(m, nx, ny) {
+    const k = RADAR.modelZjemnenie;
     /** @param {number[]} v */
     const jemne = (v) => zjemni(v, nx, ny, k);
     const sneh = m.sneh.map((v) => jemne(v).map((p) => Math.max(0, Math.min(1, p))));
-    /** @param {number[]} v @param {number} h */
-    const dazd = (v, h) => Uint8Array.from(jemne(v), (mm, i) => dbzNaBajt(mmNaDbz(Math.max(0, mm), sneh[h][i])));
-    /** @param {number[]} v */
-    const oblaky = (v) => Uint8Array.from(jemne(v), (p) => Math.max(0, Math.min(255, p * 2.55)));
     return {
-        casy: m.casy,
-        w: nx * k,
-        h: ny * k,
-        dazd: m.dazd.map(dazd),
-        oblaky: m.oblaky.map(oblaky),
+        dazd: m.dazd.map((v, h) => Uint8Array.from(jemne(v), (mm, i) => dbzNaBajt(mmNaDbz(Math.max(0, mm), sneh[h][i])))),
+        oblaky: m.oblaky.map((v) => Uint8Array.from(jemne(v), (p) => Math.max(0, Math.min(255, p * 2.55)))),
         sneh: sneh.map((v) => Uint8Array.from(v, (p) => Math.round(p * 255))),
     };
+}
+
+/**
+ * Model ako obrázky: hrubá mriežka po poliach, detail okolo domu v jednom obrázku RGB na hodinu (R zrážky, G oblaky,
+ * B podiel snehu), aby shader potreboval len dve textúry navyše.
+ * @param {import('../shared/radar-data.js').RadarModel} m
+ */
+function model(m) {
+    const { modelBodyX: nx, modelBodyY: ny, modelZjemnenie: k, detailBody: nd } = RADAR;
+    const d = polia(m.detail, nd, nd);
+    const detail = d.dazd.map((dz, h) => {
+        const rgb = new Uint8Array(dz.length * 3);
+        for (let i = 0; i < dz.length; i++) rgb.set([dz[i], d.oblaky[h][i], d.sneh[h][i]], i * 3);
+        return rgb;
+    });
+    return { casy: m.casy, w: nx * k, h: ny * k, ...polia(m, nx, ny), dw: nd * k, detail };
 }
 
 /** @param {any} m */

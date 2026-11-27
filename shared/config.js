@@ -1023,6 +1023,13 @@ export const RADAR = {
     modelBodyX: 16,
     modelBodyY: 14,
     modelBodovNaDopyt: 300,
+    // Detail okolo domu (27. 11. 2026): hrubá mriežka má body asi 115 km od seba, hranica snehu, oblaky aj dážď modelu boli
+    // pri dome rozmazané. Druhá mriežka detailBody × detailBody s krokom detailKrokKm (asi 90 km) so stredom v polohe z Nastavenia
+    // ide v tom istom dopyte: spolu 288 bodov, pod modelBodovNaDopyt a pod limitom 600 volaní za minútu, na ktorý narazila
+    // mriežka 20 × 30. Detail platí naplno do `detailPrechod` polomeru, ďalej sa kruhovo prelieva do hrubej mriežky.
+    detailBody: 8,
+    detailKrokKm: 13,
+    detailPrechod: 0.35,
     modelZjemnenie: 10,
     modelObnovaMs: 3 * 60 * 60 * 1000,
     farby: [
