@@ -18,11 +18,12 @@ const FS = `#version 300 es
 precision highp float;
 in vec2 uv;
 out vec4 o;
-uniform sampler2D A, B, CA, CB, F, L, SA, SB;
+uniform sampler2D A, B, CA, CB, F, L, SA, SB, DA, DB;
 uniform float f, cf, sf, oblaky, pohyb, doba, slabne, mierka;
 uniform vec3 sneh;
 uniform vec4 vl;
-uniform float dpr, vlKrytie;
+uniform float dpr, vlKrytie, detDazd, detPrechod;
+uniform vec4 det;
 uniform vec2 sz;
 uniform vec3 g;
 const float PI = 3.14159265;
@@ -52,8 +53,15 @@ void main() {
     float v = doba > 0.
         ? textureLod(A, uv - fl * doba, doba / 16.).r * slabne
         : mix(texture(A, uv - fl * f).r, texture(B, uv + fl * (1. - f)).r, f);
+    // Detail modelu okolo domu (R zrážky, G oblaky, B podiel snehu) má prednosť pred hrubou mriežkou, na okraji sa do nej
+    // prelieva. Zrážky z neho len pri predpovedi modelu (Dnes, Zajtra), v rozsahu 2 h sú zrážky z radaru.
+    vec2 dv = (uv - det.xy) / (det.zw - det.xy);
+    // Kruhový prechod: v strede detail, od polomeru detPrechod sa plynulo stráca, štvorec by bolo vidno.
+    float wd = 1. - smoothstep(detPrechod, 1., length(dv - .5) * 2.);
+    vec3 dd = mix(texture(DA, dv).rgb, texture(DB, dv).rgb, cf);
+    v = mix(v, dd.r, wd * detDazd);
     // Riadok farieb podľa podielu snehu z modelu: dážď, dážď so snehom, sneh (docs/navrhy/radar-sneh.html).
-    float s = mix(texture(SA, uv).r, texture(SB, uv).r, sf);
+    float s = mix(mix(texture(SA, uv).r, texture(SB, uv).r, sf), dd.b, wd);
     float x = (v * 255. + .5) / 256.;
     vec4 r = mix(
         mix(texture(L, vec2(x, .5 / 3.)), texture(L, vec2(x, 1.5 / 3.)), smoothstep(sneh.x - sneh.z, sneh.x + sneh.z, s)),
@@ -62,7 +70,7 @@ void main() {
     float ws = smoothstep(sneh.y - sneh.z, sneh.y + sneh.z, s);
     r.a *= mix(1., vlKrytie, ws);
     vec2 vk = vlocka(uv * sz) * ws * smoothstep(.01, .05, v);
-    float c = mix(texture(CA, uv).r, texture(CB, uv).r, cf);
+    float c = mix(mix(texture(CA, uv).r, texture(CB, uv).r, cf), dd.g, wd);
     float ca = smoothstep(.2, 1., c) * .56 * oblaky;
     vec3 cc = mix(vec3(.62, .68, .78), vec3(.9, .93, .98), smoothstep(.45, 1., c));
     vec4 hore = vec4(r.rgb * r.a, r.a);
@@ -75,7 +83,7 @@ void main() {
     o *= k.x * k.y;
 }`;
 
-const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L', 'SA', 'SB']);
+const JEDNOTKY = /** @type {const} */ (['A', 'B', 'CA', 'CB', 'F', 'L', 'SA', 'SB', 'DA', 'DB']);
 const CISLA = /** @type {const} */ ([
     'mapa',
     'rohy',
@@ -86,6 +94,9 @@ const CISLA = /** @type {const} */ ([
     'vl',
     'dpr',
     'vlKrytie',
+    'det',
+    'detDazd',
+    'detPrechod',
     'oblaky',
     'pohyb',
     'doba',
@@ -98,9 +109,10 @@ const CISLA = /** @type {const} */ ([
 /**
  * Čo kresliť v tejto chvíli: dve snímky a podiel medzi nimi, dve hodiny oblakov a podielu snehu a ich podiel.
  * `doba` je pri predpovedi počet krokov od poslednej snímky. Bez modelu je podiel snehu nula, všetko je dážď.
+ * `det` je okraj detailu okolo domu v súradniciach obrázka (0–1), `detDazd` zapne zrážky z detailu (predpoveď modelu).
  * @typedef {{ a: WebGLTexture | null, b: WebGLTexture | null, f: number, ca: WebGLTexture | null, cb: WebGLTexture | null,
- *   cf: number, sa: WebGLTexture | null, sb: WebGLTexture | null, sf: number, pohyb: boolean, doba: number, slabne: number,
- *   oblaky: boolean }} Obraz
+ *   cf: number, sa: WebGLTexture | null, sb: WebGLTexture | null, sf: number, da: WebGLTexture | null, db: WebGLTexture | null,
+ *   det: number[], detDazd: boolean, pohyb: boolean, doba: number, slabne: number, oblaky: boolean }} Obraz
  */
 
 /**
@@ -186,7 +198,7 @@ export class RadarVrstva {
         gl.uniform2f(u.sz, w, h);
         gl.uniform3f(u.g, this.g[0], this.g[1], this.g[2]);
         gl.uniform1f(u.mierka, RADAR.pohyb.mierka);
-        [o.a, o.b ?? o.a, o.ca, o.cb, this.tPohyb, this.tLut, o.sa, o.sb].forEach((t, i) => {
+        [o.a, o.b ?? o.a, o.ca, o.cb, this.tPohyb, this.tLut, o.sa, o.sb, o.da, o.db].forEach((t, i) => {
             gl.activeTexture(gl.TEXTURE0 + i);
             gl.bindTexture(gl.TEXTURE_2D, t ?? this.tNic);
             gl.uniform1i(u[JEDNOTKY[i]], i);
@@ -198,6 +210,9 @@ export class RadarVrstva {
         const v = RADAR.vlocky;
         gl.uniform4f(u.vl, v.bunkaPx, v.ramenoPx, v.hrubkaPx, v.hustota);
         gl.uniform1f(u.vlKrytie, v.krytie);
+        gl.uniform4f(u.det, o.det[0], o.det[1], o.det[2], o.det[3]);
+        gl.uniform1f(u.detDazd, o.detDazd ? 1 : 0);
+        gl.uniform1f(u.detPrechod, RADAR.detailPrechod);
         gl.uniform1f(u.dpr, window.devicePixelRatio || 1);
         gl.uniform1f(u.oblaky, o.oblaky ? 1 : 0);
         gl.uniform1f(u.pohyb, o.pohyb ? 1 : 0);
@@ -219,6 +234,15 @@ export class RadarVrstva {
         const t = novaTextura(gl, mip);
         nahraj(gl, t, { w, h, format: gl.R8, typ: gl.RED, data });
         if (mip) gl.generateMipmap(gl.TEXTURE_2D);
+        return t;
+    }
+
+    /** Obrázok RGB (detail modelu) ako textúra. @param {number} w @param {number} h @param {Uint8Array} data */
+    texturaRgb(w, h, data) {
+        const gl = this.gl;
+        if (!gl) return null;
+        const t = novaTextura(gl);
+        nahraj(gl, t, { w, h, format: gl.RGB8, typ: gl.RGB, data });
         return t;
     }
 

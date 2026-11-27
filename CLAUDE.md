@@ -46,7 +46,10 @@ nemajú), podiel snehu dáva model z toho istého dopytu (`snowfall`, `temperatu
 Shader vyberie riadok farieb dážď / dážď so snehom / sneh (`RADAR.farbySneh`, `farbyZmiesane`, `RADAR.sneh`), aj pre merané
 snímky - podľa hodiny modelu. Legenda sú tri ikony s pásmi bez slov. Model kreslí sneh vzťahom Z = 2000·S², nie ako dážď.
 Od 27. 11. 2026 je to V3 so statickými vločkami: sneh má znížené krytie a shader do neho kreslí biele vločky s tmavým lemom
-(`RADAR.vlocky`), ukotvené na mape, veľkosť v CSS px. Mriežka modelu má body asi 115 km od seba, preto je hranica snehu hladká.
+(`RADAR.vlocky`), ukotvené na mape, veľkosť v CSS px. Hrubá mriežka modelu má body asi 115 km od seba, preto je okolo
+polohy z Nastavenia detail `detailBody` × `detailBody` po `detailKrokKm` (`detailBody` v `shared/radar-data.js`) v tom istom
+dopyte (288 bodov). Detail je jedna textúra RGB na hodinu (zrážky, oblaky, sneh), v strede platí naplno a kruhovo sa prelieva
+do hrubej mriežky; pás na osi berie hodnoty z jeho stredu. Uložený model má kľúč aj s polohou.
 Prvé Play po prvom načítaní ide od „teraz“ dopredu (`odTeraz` vo `web/radar-hrac.js`), ďalšie z konca či z „teraz“ od začiatku osi.
 
 Predpoveď na 2 h je len posun poslednej snímky. Spätný test: druhá hodina je slabá a vznik búrky nevie. V appke

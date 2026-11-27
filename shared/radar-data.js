@@ -457,6 +457,25 @@ export function modelBody(o) {
     return out;
 }
 
+/** Obvod Zeme na rovníku v km: jednotka súradníc mapy (mercX, mercY) je pri šírke `lat` dlhá OBVOD_KM · cos(lat). */
+const OBVOD_KM = 40075.017;
+
+/**
+ * Body detailu okolo domu: štvorec `RADAR.detailBody` × `detailBody` s krokom `detailKrokKm`, stred v polohe, po riadkoch
+ * od severu, a jeho okraj v súradniciach mapy (ako `Oblast`).
+ * @param {number} lat @param {number} lon
+ * @returns {{ body: Array<{ lat: number, lon: number }>, okraj: { x0: number, y0: number, x1: number, y1: number } }}
+ */
+export function detailBody(lat, lon) {
+    const { detailBody: n, detailKrokKm: km } = RADAR;
+    const krok = km / (OBVOD_KM * Math.cos(lat * RAD));
+    const pol = ((n - 1) / 2) * krok;
+    const okraj = { x0: mercX(lon) - pol, y0: mercY(lat) - pol, x1: mercX(lon) + pol, y1: mercY(lat) + pol };
+    const body = [];
+    for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) body.push({ lat: latZ(okraj.y0 + j * krok), lon: lonZ(okraj.x0 + i * krok) });
+    return { body, okraj };
+}
+
 /** @param {number} a @param {number} b @param {number} c @param {number} d @param {number} t */
 const cub = (a, b, c, d, t) => b + 0.5 * t * (c - a + t * (2 * a - 5 * b + 4 * c - d + t * (3 * (b - c) + d - a)));
 
@@ -491,8 +510,10 @@ const tPrazdna = 10;
 const cerstvy = (at, nowMs) => typeof at === 'number' && at <= nowMs && nowMs - at < RADAR.modelObnovaMs;
 
 /**
- * Model po hodinách: zrážky v mm, oblačnosť v % a podiel snehu 0–1, každé [hodina][bod].
- * @typedef {{ casy: number[], dazd: number[][], oblaky: number[][], sneh: number[][] }} RadarModel
+ * Model po hodinách: zrážky v mm, oblačnosť v % a podiel snehu 0–1, každé [hodina][bod] hrubej mriežky (`modelBody`).
+ * `detail` je to isté pre detail okolo domu (`detailBody`).
+ * @typedef {{ dazd: number[][], oblaky: number[][], sneh: number[][] }} ModelPolia
+ * @typedef {ModelPolia & { casy: number[], detail: ModelPolia }} RadarModel
  */
 
 /**
@@ -508,7 +529,7 @@ export function podielSnehu(mm, cm, t) {
 
 /**
  * Model uložený v prehliadači, keď ešte platí: ten istý výrez, nie starší ako obnova a z toho istého dňa.
- * Uložený bez podielu snehu (staršia appka) neplatí, stiahne sa znova.
+ * Uložený bez podielu snehu alebo bez detailu (staršia appka) neplatí, stiahne sa znova.
  * @param {unknown} raw @param {number} nowMs @param {string} kluc výrez
  * @returns {{ at: number, model: RadarModel } | null}
  */
@@ -517,32 +538,39 @@ export function parseUlozenyModel(raw, nowMs, kluc) {
     const m = r?.model;
     if (r?.kluc !== kluc || !cerstvy(r.at, nowMs)) return null;
     if (!Array.isArray(m?.casy) || !m.casy.length || nowMs - m.casy[0] >= 864e5) return null;
-    const bodov = RADAR.modelBodyX * RADAR.modelBodyY;
-    /** @param {unknown} v */
-    const dobre = (v) => Array.isArray(v) && v.length === m.casy.length && v.every((h) => Array.isArray(h) && h.length === bodov);
-    return dobre(m.dazd) && dobre(m.oblaky) && dobre(m.sneh) ? { at: r.at, model: m } : null;
+    /** @param {any} p @param {number} bodov */
+    const dobre = (p, bodov) =>
+        ['dazd', 'oblaky', 'sneh'].every(
+            (k) =>
+                Array.isArray(p?.[k]) &&
+                p[k].length === m.casy.length &&
+                p[k].every((/** @type {unknown} */ h) => Array.isArray(h) && h.length === bodov),
+        );
+    return dobre(m, RADAR.modelBodyX * RADAR.modelBodyY) && dobre(m.detail, RADAR.detailBody ** 2) ? { at: r.at, model: m } : null;
 }
 
 /**
- * Odpovede Open-Meteo (pole bodov po riadkoch) ako snímky po hodinách, rovnako dlhé. Cudzia odpoveď je null.
+ * Odpovede Open-Meteo ako snímky po hodinách: najprv body hrubej mriežky (`modelBody`), za nimi body detailu
+ * (`detailBody`), všetky rovnako dlhé. Cudzia odpoveď je null.
  * @param {unknown} data
  * @returns {RadarModel | null} časy v ms
  */
 export function modelSnimky(data) {
-    const { modelBodyX: nx, modelBodyY: ny } = RADAR;
-    if (!Array.isArray(data) || data.length !== nx * ny) return null;
+    const hrube = RADAR.modelBodyX * RADAR.modelBodyY;
+    if (!Array.isArray(data) || data.length !== hrube + RADAR.detailBody ** 2) return null;
     const prvy = data[0]?.hourly;
     if (!Array.isArray(prvy?.time) || !prvy.time.length) return null;
     const n = prvy.time.length;
     const dlzka = ['precipitation', 'cloud_cover', 'snowfall', 'temperature_2m'];
     if (!data.every((b) => dlzka.every((k) => b?.hourly?.[k]?.length === n))) return null;
     const hodiny = Array.from({ length: n }, (_, i) => i);
-    return {
-        casy: prvy.time.map((/** @type {number} */ t) => t * 1000),
-        dazd: hodiny.map((t) => data.map((b) => b.hourly.precipitation[t] ?? 0)),
-        oblaky: hodiny.map((t) => data.map((b) => b.hourly.cloud_cover[t] ?? 0)),
+    /** @param {any[]} body @returns {ModelPolia} */
+    const polia = (body) => ({
+        dazd: hodiny.map((t) => body.map((b) => b.hourly.precipitation[t] ?? 0)),
+        oblaky: hodiny.map((t) => body.map((b) => b.hourly.cloud_cover[t] ?? 0)),
         sneh: hodiny.map((t) =>
-            data.map(({ hourly: h }) => podielSnehu(h.precipitation[t] ?? 0, h.snowfall[t] ?? 0, h.temperature_2m[t] ?? tPrazdna)),
+            body.map(({ hourly: h }) => podielSnehu(h.precipitation[t] ?? 0, h.snowfall[t] ?? 0, h.temperature_2m[t] ?? tPrazdna)),
         ),
-    };
+    });
+    return { casy: prvy.time.map((/** @type {number} */ t) => t * 1000), ...polia(data.slice(0, hrube)), detail: polia(data.slice(hrube)) };
 }
