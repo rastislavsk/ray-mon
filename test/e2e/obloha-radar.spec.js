@@ -247,7 +247,7 @@ test('Radar: ťah po osi zastaví prehrávanie a posunie čas, klávesnica ide p
     expect(errors).toEqual([]);
 });
 
-test('Radar: nespustí sa sám, prehrá os raz od začiatku a zastane', async ({ page }) => {
+test('Radar: nespustí sa sám, prvé Play ide od teraz, ďalšie od začiatku osi', async ({ page }) => {
     const errors = await otvor(page);
     await pripraveny(page);
     await page.waitForTimeout(600);
@@ -256,8 +256,13 @@ test('Radar: nespustí sa sám, prehrá os raz od začiatku a zastane', async ({
     await page.locator('#rd-rychlost').click();
     await page.locator('#rd-rychlost').click();
     await page.locator('#rd-hraj').click();
-    await expect(page.locator('#rd-druh')).toContainText('Pred ');
+    await expect(page.locator('#rd-druh')).toContainText('· predpoveď');
     await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť', { timeout: 10000 });
+    await expect(page.locator('#rd-druh')).toHaveText('O 2 h · predpoveď');
+    // Z konca ide ďalšie Play od začiatku osi, cez meranie.
+    await page.locator('#rd-hraj').click();
+    await expect(page.locator('#rd-druh')).toContainText('· meranie');
+    await expect(page.locator('#rd-hraj')).toHaveAttribute('aria-label', 'Pustiť', { timeout: 15000 });
     await expect(page.locator('#rd-druh')).toHaveText('O 2 h · predpoveď');
     expect(errors).toEqual([]);
 });

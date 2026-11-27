@@ -55,6 +55,8 @@ export class RadarHrac {
     beh = 0;
     /** @type {{ gx: number, gy: number, g: number, bajty: Uint8Array } | null} */ pole = null;
     /** @type {Promise<void> | null} */ zaciatok = null;
+    /** Prvé Play po prvom načítaní ide od „teraz“, nie od začiatku osi. */
+    odTeraz = false;
     pasCaka = 0;
     obnovene = 0;
     /** @type {any} model, ktorý prišiel skôr než mapa */ cakaModel = null;
@@ -375,7 +377,10 @@ export class RadarHrac {
             this.nove = null;
             throw err;
         }
-        if (!nove) return this.store.setState({ radarHotovo: true, radarBezModelu: !this.model });
+        if (!nove) {
+            this.odTeraz = true;
+            return this.store.setState({ radarHotovo: true, radarBezModelu: !this.model });
+        }
         nove.hotove = true;
         this.prevezmi();
     }
@@ -452,8 +457,10 @@ export class RadarHrac {
         if (!this.store.get().radarHra) return this.prevezmi();
         if (this.beh) return;
         this.posledny = performance.now();
-        // Z konca alebo z „teraz“ ide os od začiatku, inak odtiaľ, kam ju človek dal.
-        if (this.poz >= this.pocet || this.poz === this.teraz()) this.poz = 0;
+        // Prvé Play po načítaní ide od „teraz“ dopredu. Potom z konca alebo z „teraz“ od začiatku, inak odtiaľ,
+        // kam ju človek dal.
+        if (this.odTeraz && this.poz < this.pocet) this.odTeraz = false;
+        else if (this.poz >= this.pocet || this.poz === this.teraz()) this.poz = 0;
         this.beh = requestAnimationFrame((t) => this.tik(t));
     }
 
