@@ -3,22 +3,28 @@
 // položka histórie je len značka s krokom navigácie a jej poradím `i`.
 //
 // Poradie položiek: 0 je položka, na ktorej appka štartovala - Späť na ňu ukáže bublinu
-// a ďalšie Späť appku zavrie. 1 je karta Teraz, nad ňou kroky. Späť vráti posledných
-// SPAT.krokov krokov; ďalšie Späť skočí rovno na Teraz (1), nech bolo krokov koľkokoľvek.
+// a ďalšie Späť appku zavrie. 1 je karta Teraz, nad ňou kroky. Späť najprv zatvára, čo je
+// otvorené na karte, kde človek je (detail, panel, okno, krok sprievodcu). Keď by sa vrátilo
+// na inú kartu, skočí rovno na Teraz (1) a z holej karty Teraz na štartovú položku (bublina),
+// rozhodnuté 27. 11. 2026. Ku kartám, na ktorých človek bol predtým, sa Späť nevracia.
 //
 // Každá položka pribúda pri ťuknutí. Chrome položku pridanú bez neho (napr. pri Späť) pri ďalšom
 // Späť preskočí a appka by sa zavrela priskoro - to sa stalo riešeniu so strážnou položkou (#501).
-
-import { SPAT } from '../shared/config.js';
+// Skok dozadu (history.go) je v poriadku, nič nepridáva.
 
 /**
- * Čo spraví Späť, ktoré prišlo na položku `i`, keď najvyššia položka je `vrch`: na štartovej
- * položke bublina, za hranicou zapamätaných krokov skok na Teraz, inak návrat na krok.
- * @param {number} i @param {number} vrch @returns {'bublina' | 'teraz' | 'krok'}
+ * Čo spraví Späť, ktoré prišlo na položku `i`: na štartovej položke bublina, z holej karty Teraz
+ * skok na štartovú položku, na položku inej karty skok na Teraz, inak návrat na krok. Dopredu
+ * (`i` nad položkou, z ktorej sa odišlo) je vždy len návrat na krok.
+ * @param {number} i položka, na ktorú sa prišlo @param {number} z položka, z ktorej sa odišlo
+ * @param {{ doma: boolean, inaKarta: boolean }} kde stál človek na holej karte Teraz? je položka `i` z inej karty?
+ * @returns {'bublina' | 'start' | 'teraz' | 'krok'}
  */
-export function kamSpat(i, vrch) {
+export function kamSpat(i, z, { doma, inaKarta }) {
     if (i <= 0) return 'bublina';
-    return i > 1 && vrch - i > SPAT.krokov ? 'teraz' : 'krok';
+    if (i >= z) return 'krok';
+    if (doma) return 'start';
+    return i > 1 && inaKarta ? 'teraz' : 'krok';
 }
 
 /** Poradie položky histórie; cudzia či štartová položka je 0. @param {unknown} raw */
@@ -33,19 +39,18 @@ function poradie(raw) {
  * @template S, N
  * @param {{ get: () => S, setState: (patch: Partial<S>) => void, subscribe: (fn: (state: S, prev: S) => void) => unknown }} store
  * @param {{ step: (state: S) => N, same: (a: N, b: N) => boolean, parse: (raw: unknown) => N | null,
- *   change: (state: S, step: N) => Partial<S>, home: (state: S) => N, kraj: () => void }} nav krok zo stavu,
- *   ich porovnanie, krok z položky histórie (cudzia položka je null), zmena stavu pri návrate na krok,
- *   krok karty Teraz a čo ukázať na štartovej položke (bublinu pred zatvorením)
+ *   change: (state: S, step: N) => Partial<S>, home: (state: S) => N, karta: (step: N) => string, kraj: () => void }} nav
+ *   krok zo stavu, ich porovnanie, krok z položky histórie (cudzia položka je null), zmena stavu pri návrate na krok,
+ *   krok karty Teraz, karta kroku (Späť na inú kartu skočí na Teraz) a čo ukázať na štartovej položke (bublinu pred zatvorením)
  */
-export function trackHistory(store, { step, same, parse, change, home, kraj }) {
+export function trackHistory(store, { step, same, parse, change, home, karta, kraj }) {
     // Kým sa appka vracia späť, nesmie ten istý krok zapísať do histórie znovu - inak by
     // sa Späť zacyklilo na dvoch položkách a z appky by sa nedalo odísť.
     let vraciaSa = false;
-    // Kým beží skok na Teraz (history.go), popstate, ktoré ho spustilo, nič nevracia.
+    // Kým beží skok (history.go), popstate, ktoré ho spustilo, nič nevracia.
     let skace = false;
     // Po obnovení stránky stojí prehliadač na položke z minulého načítania - jej poradie ostáva.
     let i = poradie(history.state);
-    let vrch = i;
 
     history.replaceState({ step: step(store.get()), i }, '');
     store.subscribe((state, prev) => {
@@ -55,7 +60,6 @@ export function trackHistory(store, { step, same, parse, change, home, kraj }) {
         if (i === 0) history.pushState({ step: home(prev), i: ++i }, '');
         // `prev` hovorí, odkiaľ sa sem prišlo - podľa neho vie appka, či smie ísť cez históriu.
         history.pushState({ step: step(state), prev: step(prev), i: ++i }, '');
-        vrch = i;
     });
 
     window.addEventListener('popstate', (e) => {
@@ -63,12 +67,17 @@ export function trackHistory(store, { step, same, parse, change, home, kraj }) {
         // Cudzia položka (napr. odkaz s nastavením otvorený v tej istej karte mení len časť za
         // mriežkou) nie je krok appky - Späť sa pri nej správa ako bez appky.
         if (!to) return;
+        const z = i;
         i = poradie(e.state);
         if (skace) skace = false;
-        else if (kamSpat(i, vrch) === 'teraz') {
-            skace = true;
-            history.go(1 - i);
-            return;
+        else {
+            const tu = step(store.get());
+            const kam = kamSpat(i, z, { doma: same(tu, home(store.get())), inaKarta: karta(to) !== karta(tu) });
+            if (kam === 'start' || kam === 'teraz') {
+                skace = true;
+                history.go((kam === 'start' ? 0 : 1) - i);
+                return;
+            }
         }
         vraciaSa = true;
         // Rovnaká cesta ako pri kliku na navigáciu: jediný setState, jediné prekreslenie.

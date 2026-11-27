@@ -57,6 +57,8 @@ function initNavigation(store, dom) {
         parse: navStepFrom,
         change: navChange,
         home: (s) => navStep({ ...s, ...panelChange(s.panel, 'terazky') }),
+        // V prehľade sú všetky stĺpce jedna karta - Späť medzi nimi neskáče na Teraz.
+        karta: (n) => (n.dash ? 'prehlad' : n.panel),
         // Späť na štartovú položku: bublina „Ďalším stlačením sa appka zatvorí“, ďalšie Späť appku zavrie.
         kraj: () => {
             store.setState({ spatBublina: true });
