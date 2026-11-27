@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Dnes – bubliny polí dlaždíc</title>
+        <style>
+            /* Návrh a rozhodnutie (27. 11. 2026): šípka namiesto krúžku s i a bublina pre každé pole pásu karty Dnes.
+               Samostatný súbor, nič neimportuje z appky. Obrázky sú snímky appky pri 360 px (fixtures, 5. 9. 2026). */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --dim: rgba(255, 255, 255, 0.72);
+                --zelena: #b9f28c;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.45;
+            }
+            main {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 36px;
+            }
+            h1 {
+                margin: 0;
+                font-size: 2rem;
+                font-variation-settings: 'wdth' 115;
+            }
+            h2 {
+                margin: 0 0 8px;
+                font-size: 1.25rem;
+            }
+            p,
+            li {
+                max-width: 75ch;
+                color: var(--dim);
+            }
+            b {
+                color: #fff;
+            }
+            .rozh {
+                border-left: 3px solid var(--zelena);
+                padding-left: 12px;
+            }
+            .rad {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 16px;
+                align-items: flex-start;
+            }
+            figure {
+                margin: 0;
+                display: grid;
+                gap: 6px;
+            }
+            figure img {
+                width: 280px;
+                max-width: 100%;
+                border-radius: 14px;
+            }
+            figure.panel img {
+                width: 300px;
+            }
+            figcaption {
+                font-size: 0.8125rem;
+                color: var(--dim);
+                max-width: 300px;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Dnes – bubliny polí dlaždíc</h1>
+                <p>
+                    Pole Dnes malo v nadpise krúžok s i a ťukalo sa len naň. Návrh: šípka namiesto i, ťuká sa na celé pole, a bublina aj pre
+                    ostatné polia pásu. Vybrané 27. 11. 2026 v dotazníku: <b>V3 + A</b>, všetky šípky rovnakou farbou.
+                </p>
+            </header>
+
+            <section>
+                <h2>Šípka</h2>
+                <div class="rad">
+                    <figure>
+                        <img src="dnes-bubliny-poli/sipka-v1-0.png" alt="" />
+                        <figcaption>V1 · šípka v krúžku vo farbe triedy</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-bubliny-poli/sipka-v2-0.png" alt="" />
+                        <figcaption>V2 · šípka za nadpisom</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-bubliny-poli/sipka-v3-0.png" alt="" />
+                        <figcaption>V3 · šípka vpravo hore (návrh s farbou triedy na Dnes)</figcaption>
+                    </figure>
+                </div>
+                <p class="rozh">
+                    <b>Rozhodnuté V3:</b> šípka v pravom hornom rohu každej polovice, ktorá má bublinu, na všetkých poliach vo farbe nadpisu
+                    (farba triedy dňa na Dnes zmizla - povie ju bublina a meno tlačidla pre čítačku). Ťuká sa na celú polovicu dlaždice:
+                    tlačidlo <code>.cast-tap</code> ju prekryje až po okraj skla. Šípka stojí v medzere za kartou, aby sa „Najviac slnka“
+                    pri 360 px zmestilo celé (pri 320 px sa orezávalo už predtým).
+                </p>
+                <div class="rad">
+                    <figure>
+                        <img src="dnes-bubliny-poli/den-dl0.png" alt="" />
+                        <figcaption>Dnes | Veľké veci</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-bubliny-poli/den-dl1.png" alt="" />
+                        <figcaption>Zo strechy | Ako keby</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-bubliny-poli/den-dl2.png" alt="" />
+                        <figcaption>Predpoveď | Oblačnosť</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-bubliny-poli/den-dl3.png" alt="" />
+                        <figcaption>Najviac slnka | Kedy lepšie</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="dnes-bubliny-poli/vecer-dl0.png" alt="" />
+                        <figcaption>Večer: Dnešok bez bubliny | Zajtra</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section>
+                <h2>Čo sa otvorí</h2>
+                <ul>
+                    <li><b>A · spodný panel ako Dnes</b> - vybrané. Jednotné, priestor na graf, Späť ho zavrie.</li>
+                    <li>B · skok na kartu, kde to už je (7 dní, Plán dňa) - skoro bez kódu, ale odíde z karty Dnes.</li>
+                    <li>C · malá bublina pri dlaždici - graf sa do nej nezmestí.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Bubliny</h2>
+                <p>
+                    Dnes a Zajtra si nechali vysvetlenie triedy dňa. Ostatné polia dostali obrázok toho, čo pole hovorí len číslom. Model je
+                    <code>shared/dnes-bubliny.js</code>, kreslí <code>web/render/mozem-bubliny.js</code>. Predpoveď potrebovala teplotu po
+                    hodinách - predpoveď dňa ju odteraz nesie (<code>temp</code> v hodinách dňa, <code>shared/solar.js</code>); staršia
+                    predpoveď z cache ju nemá a bublina ukáže hodiny bez čísla.
+                </p>
+                <div class="rad">
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-dnes.png" alt="" />
+                        <figcaption>Dnes · ponechané</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-velke.png" alt="" />
+                        <figcaption>Veľké veci · okno na osi dňa, veci s časom z Plánu dňa</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-strecha.png" alt="" />
+                        <figcaption>Zo strechy cez deň · nabehlo, ešte príde, krivka</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/vecer-b-strecha.png" alt="" />
+                        <figcaption>Zo strechy večer · namerané a predpoveď</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-eq.png" alt="" />
+                        <figcaption>Ako keby · z čoho sa prepočty rátajú</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-predpoved.png" alt="" />
+                        <figcaption>Predpoveď · šesť hodín od východu po západ</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-oblacnost.png" alt="" />
+                        <figcaption>Oblačnosť · po hodinách, plný stĺpec 100 %</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-slnko.png" alt="" />
+                        <figcaption>Najviac slnka · stĺpce s kW</figcaption>
+                    </figure>
+                    <figure class="panel">
+                        <img src="dnes-bubliny-poli/den-b-lepsie.png" alt="" />
+                        <figcaption>Kedy lepšie · dni v kWh</figcaption>
+                    </figure>
+                </div>
+                <p class="rozh">
+                    Oblačnosť má oproti náhľadu v dotazníku percento nad každým stĺpcom namiesto mriežky 50 a 100 % - popisky mriežky v
+                    paneli zavadzali nadpisu.
+                </p>
+            </section>
+        </main>
+    </body>
+</html>

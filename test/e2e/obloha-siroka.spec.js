@@ -405,9 +405,12 @@ test.describe('klávesnica na počítači', () => {
         ).toBe(true);
         const stlpce = vStlpcoch.map((k) => k.column);
         expect(stlpce).toEqual([...stlpce].sort((a, b) => a - b));
-        // V stĺpci Dnes posuvník dňa, pás kariet (posúva sa šípkami) a v ňom odznak triedy dňa;
+        // V stĺpci Dnes posuvník dňa, pás kariet (posúva sa šípkami) a v ňom polia dlaždíc s bublinou;
         // odtlačok bežca (len keď bežec odíde z teraz) a bodky pod pásom Tab preskočí.
-        expect(vStlpcoch.filter((k) => k.column === 0).map((k) => k.name)).toEqual(['mz-os', 'mz-karty', 'button.chip-tap']);
+        const dnes = vStlpcoch.filter((k) => k.column === 0).map((k) => k.name);
+        expect(dnes.slice(0, 2)).toEqual(['mz-os', 'mz-karty']);
+        expect(dnes.slice(2).length).toBeGreaterThan(0);
+        expect(new Set(dnes.slice(2))).toEqual(new Set(['button.cast-tap']));
         // V stĺpci Teraz je prvá scéna toku energie (ťuknutie ukáže čísla).
         expect(vStlpcoch.find((k) => k.column === 1)?.name).toBe('tz-scena');
         expect(new Set(stlpce)).toEqual(new Set([0, 1, 2]));

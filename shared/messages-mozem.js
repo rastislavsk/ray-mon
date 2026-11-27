@@ -793,3 +793,68 @@ const MOZEM_SLUSNE = {
  * @param {import('./messages-zaklad.js').Voice} voice
  */
 export const mozemTexts = (voice) => (polite(voice) ? MOZEM_SLUSNE : MOZEM_DRZY);
+
+/**
+ * Bubliny polí dlaždíc karty Dnes (docs/navrhy/dnes-bubliny-poli.html): nadpis nad bublinou (`q`), krátke popisky
+ * grafov a poznámka pod nimi. Bez postoja a bez oslovenia - jeden text pre oba tóny. Pole Dnes a Zajtra má
+ * vlastné vysvetlenie triedy dňa (denVysvetlenieText).
+ */
+export const DNES_BUBLINY = {
+    /** Prístupné meno ťukacej polovice dlaždice: „Zo strechy, podrobnosti“. */
+    podrobnosti: 'podrobnosti',
+    teraz: 'teraz',
+    okno: 'okno',
+    nabehlo: 'nabehlo',
+    ePride: 'ešte príde',
+    predpoved: 'predpoveď',
+    namerane: 'namerané',
+    planDna: 'Časy sú z Plánu dňa na karte Teraz.',
+    bezVeci: 'Veľké veci si vyberieš v Nastavení.',
+    bezZrazok: 'Bez zrážok.',
+    oblacnost: 'Koľko oblohy zakrývajú oblaky v každej hodine.',
+    slnko: 'kW v každej hodine · tlmené už prešlo',
+    dni: 'kWh za deň podľa predpovede · podrobne na karte 7 dní',
+    zrazky: { dazd: 'dážď', sneh: 'sneh' },
+};
+
+/** Riadky bubliny Ako keby: z čoho sa prepočty rátajú. @type {Record<string, string>} */
+const AKO_KEBY_AKO = {
+    mobil: `jedno nabitie je asi ${fmtSum(EVERYDAY.phoneChargeKwh * 1000, 0)} Wh`,
+    auto: `elektrické auto prejde asi ${fmtSum(EVERYDAY.evKmPerKwh, 0)} km na kWh`,
+};
+
+/**
+ * Nadpisy bublín polí. Čísla a časy prichádzajú hotové (s jednotkou), tu sa len skladajú do vety.
+ * @param {{ kind: 'velke', okno: { od: number, do: number } | null, stav: 'go' | 'wait' | 'koniec' }
+ *   | { kind: 'strecha', vecer: boolean, kwh: string }
+ *   | { kind: 'eq', kwh: string }
+ *   | { kind: 'predpoved', popis: string, min: string, max: string }
+ *   | { kind: 'oblacnost', priemer: number, max: { pct: number, hour: number } | null }
+ *   | { kind: 'slnko', hodiny: string, kw: string }
+ *   | { kind: 'lepsie', den: string, kwh: string }} t
+ */
+export function dnesBublinaTitle(t) {
+    if (t.kind === 'velke') {
+        if (!t.okno) return 'Dnes bez okna na veľké veci';
+        if (t.stav === 'go') return `Slnko na veľké veci do ${hm(t.okno.do)}`;
+        return `Okno na veľké veci ${hm(t.okno.od)} – ${hm(t.okno.do)}`;
+    }
+    if (t.kind === 'strecha') return t.vecer ? `Dnes nabehlo ${t.kwh}` : `${t.kwh} za celý deň`;
+    if (t.kind === 'eq') return `${t.kwh} zo strechy je ako`;
+    if (t.kind === 'predpoved') return `${t.popis}, ${t.min} až ${t.max}`;
+    if (t.kind === 'oblacnost')
+        return t.max && t.max.pct > t.priemer
+            ? `Priemerne ${t.priemer} %, najviac ${t.max.pct} % o ${t.max.hour}:00`
+            : `Priemerne ${t.priemer} %`;
+    if (t.kind === 'slnko') return `${t.hodiny}, ${t.kw}`;
+    return `Najviac dá ${t.den}, ${t.kwh}`;
+}
+
+/**
+ * Z čoho sa ráta riadok bubliny Ako keby. CO2: sieť SR mínus stopa panelov rozpočítaná na ich výrobu (shared/carbon.js).
+ * @param {string} ikona @param {{ gridG: number, solarG: number, zdroj: string }} co2
+ */
+export function akoKebyAko(ikona, co2) {
+    if (ikona === 'co2') return `sieť SR má asi ${fmtSum(co2.gridG, 0)} g CO2 na kWh (${co2.zdroj}), panely asi ${fmtSum(co2.solarG, 0)} g`;
+    return AKO_KEBY_AKO[ikona] ?? '';
+}

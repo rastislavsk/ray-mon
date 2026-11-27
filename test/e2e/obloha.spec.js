@@ -21,13 +21,14 @@ import {
     WORKER_PV_URL,
     WORKER_TRASY_URL,
 } from '../../shared/config.js';
-import { MOZEM_WORDS } from '../../shared/messages.js';
+import { DNES_BUBLINY, MOZEM_WORDS } from '../../shared/messages.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
 import { cellAt, planCells } from '../../shared/day-chart.js';
 import { dayPlan } from '../../shared/day-plan.js';
 import { heroModel, stavMerania } from '../../shared/hero-model.js';
 import { HEADER_TEXTS, stavMeraniaText, TERAZ_BEZI, terazAutoText, vetaDlazdice } from '../../shared/messages-core.js';
 import { autoDnes } from '../../shared/auto-slnko.js';
+import { BUBLINY, dnesBublina } from '../../shared/dnes-bubliny.js';
 import { denVysvetlenie, dnesFaza, dnesKarty } from '../../shared/dnes-faza.js';
 import { dnesNeboModel } from '../../shared/dnes-nebo.js';
 import { pocasieTeraz, terazModel } from '../../shared/teraz.js';
@@ -873,7 +874,9 @@ const kartaVStranke = (page) =>
                           text(el, '.glass-ttl'),
                           text(el, '.k-val, .k-popis, .k-slovo'),
                           text(el, '.k-text, .k-teplo'),
-                          el.querySelector('.chip')?.textContent ?? [...el.querySelectorAll('.eq b')].map((b) => b.textContent).join('|'),
+                          el.querySelector('.eq')
+                              ? [...el.querySelectorAll('.eq b')].map((b) => b.textContent).join('|')
+                              : (el.querySelector('[data-bublina="dnes"], [data-bublina="zajtra"]')?.getAttribute('aria-label') ?? ''),
                       ]),
                   )
                 : [],
@@ -883,7 +886,9 @@ const kartaVStranke = (page) =>
 /** Dlaždica z modelu, ako ju ukazuje stránka. @param {import('../../shared/dnes-faza.js').Karta} k */
 const kartaZDlazdice = (k) => {
     if (k.kind === 'predpoved') return [k.kind, k.title, k.popis, `najnižšia ${k.min}najvyššia ${k.max}`, ''];
-    if (k.kind === 'dnes' || k.kind === 'zajtra') return [k.kind, k.title, k.word, k.text, k.chip];
+    // Trieda dňa je v mene tlačidla cez pole (docs/navrhy/dnes-bubliny-poli.html); bez nej pole bublinu nemá.
+    if (k.kind === 'dnes' || k.kind === 'zajtra')
+        return [k.kind, k.title, k.word, k.text, k.chip ? `${k.title}: ${k.chip}, ${DNES_BUBLINY.podrobnosti}` : ''];
     if (k.kind === 'eq') return [k.kind, k.title, '', '', k.eq.map((e) => e.value).join('|')];
     if (k.kind === 'oblacnost') return [k.kind, k.title, k.value, '', ''];
     return [k.kind, k.title, k.value, k.text, ''];
@@ -1074,7 +1079,7 @@ test.describe('karta Dnes', () => {
         expect(errors).toEqual([]);
     });
 
-    test('ťuknutie na odznak vysvetlí triedu dňa modelom; Escape, ťuknutie vedľa a Späť ho zavrú', async ({ page }) => {
+    test('ťuknutie na pole Dnes vysvetlí triedu dňa modelom; Escape, ťuknutie vedľa a Späť ho zavrú', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         const time = at('13:00');
         const errors = await openObloha(page, { time });
@@ -1090,7 +1095,7 @@ test.describe('karta Dnes', () => {
         const v = /** @type {import('../../shared/dnes-faza.js').DenVysvetlenie} */ (denVysvetlenie(input, 'dnes'));
         expect(v).not.toBeNull();
         const panel = page.locator('#mz-trieda-sheet');
-        const chip = page.locator('#mz-karty [data-trieda="dnes"]');
+        const chip = page.locator('#mz-karty [data-bublina="dnes"]');
         await chip.click();
         await expect(panel).toBeVisible();
         await expect(page.locator('#mz-trieda-chip')).toHaveText(v.chip);
@@ -1123,7 +1128,7 @@ test.describe('karta Dnes', () => {
         expect(errors).toEqual([]);
     });
 
-    test('večer vysvetlí odznak zajtrajška', async ({ page }) => {
+    test('večer vysvetlí triedu zajtrajška; večerný Dnešok bublinu nemá', async ({ page }) => {
         const time = at('21:00');
         const errors = await openObloha(page, { time });
         await naDnes(page);
@@ -1136,13 +1141,63 @@ test.describe('karta Dnes', () => {
             forecast: buildForecast(weather, time, SITE, PLANT),
         };
         const v = denVysvetlenie(input, 'zajtra');
-        await expect(page.locator('#mz-karty [data-trieda="dnes"]')).toHaveCount(0);
-        await page.locator('#mz-karty [data-trieda="zajtra"]').click();
+        await expect(page.locator('#mz-karty [data-bublina="dnes"]')).toHaveCount(0);
+        await page.locator('#mz-karty [data-bublina="zajtra"]').click();
         await expect(page.locator('#mz-trieda-sheet')).toBeVisible();
         await expect(page.locator('#mz-trieda-chip')).toHaveText(v?.chip ?? '-');
         await expect(page.locator('#mz-trieda-text')).toHaveText(v?.text ?? '-');
         await page.keyboard.press('Escape');
-        await expect(page.locator('#mz-karty [data-trieda="zajtra"]')).toBeFocused();
+        await expect(page.locator('#mz-karty [data-bublina="zajtra"]')).toBeFocused();
+        expect(errors).toEqual([]);
+    });
+
+    test('ťuknutie na pole dlaždice otvorí jeho bublinu modelom; šípka je na každom poli s bublinou', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        const time = at('13:00');
+        const errors = await openObloha(page, { time });
+        await naDnes(page);
+        const input = {
+            ...OWNER,
+            now: time,
+            loading: false,
+            known: /** @type {const} */ ('elektraren'),
+            pv,
+            forecast: buildForecast(weather, time, SITE, PLANT),
+        };
+        const sky = mozemSkyModel(input);
+        const d = dnesFaza(input, sky.den, sky.window);
+        // Každé pole pásu má bublinu - Dnes vysvetlenie triedy, ostatné svoju (docs/navrhy/dnes-bubliny-poli.html).
+        await expect(page.locator('#mz-karty .cast')).toHaveCount(BUBLINY.length + 1);
+        await expect(page.locator('#mz-karty .cast-tap')).toHaveCount(BUBLINY.length + 1);
+        const panel = page.locator('#mz-bublina-sheet');
+        for (const kind of BUBLINY) {
+            const b = dnesBublina(kind, input, sky, d);
+            expect(b, kind).not.toBeNull();
+            const pole = page.locator(`#mz-karty [data-bublina="${kind}"]`);
+            // Ťuká sa na celú polovicu dlaždice: tlačidlo ju prekryje.
+            const [tap, cast] = await Promise.all([pole.boundingBox(), page.locator(`#mz-karty .cast[data-kind="${kind}"]`).boundingBox()]);
+            expect(tap && cast && tap.width >= cast.width && tap.height >= cast.height, kind).toBe(true);
+            await pole.evaluate((el) => {
+                const t = /** @type {HTMLElement} */ (el.closest('.karta'));
+                t.parentElement?.scrollTo({ left: t.offsetLeft - 14 });
+            });
+            await pole.click();
+            await expect(panel).toBeVisible();
+            await expect(page.locator('#mz-bublina-q')).toHaveText(b?.q ?? '-');
+            await expect(page.locator('#mz-bublina-title')).toHaveText(b?.title ?? '-');
+            await expect(panel).toHaveAttribute('data-kind', kind);
+            expect(await panel.evaluate((el) => el.scrollWidth <= el.clientWidth), `${kind} ide do strán`).toBe(true);
+            if (kind === 'strecha') expect(await vazneNalezy(page)).toEqual([]);
+            await page.keyboard.press('Escape');
+            await expect(panel).toBeHidden();
+            await expect(pole).toBeFocused();
+        }
+        // Späť bublinu zavrie a karta ostane.
+        await page.locator('#mz-karty [data-bublina="eq"]').click();
+        await expect(panel).toBeVisible();
+        await page.goBack();
+        await expect(panel).toBeHidden();
+        await ocakavajKartu(page, 'mozem');
         expect(errors).toEqual([]);
     });
 
@@ -1189,11 +1244,15 @@ test.describe('karta Dnes', () => {
                         const box = el.getBoundingClientRect();
                         // Aj na výšku: slovo sa zmestí do nízkej dlaždice (docs/navrhy/dnes-nizsie-dlazdice.html).
                         const cast = /** @type {HTMLElement} */ (el.closest('.cast'));
+                        // Tlačidlo cez celé pole presahuje kartu zámerne (ťuká sa až po okraj skla) - meria sa len obsah.
+                        const spodok = Math.max(
+                            ...[...cast.children].filter((c) => !c.matches('.cast-tap')).map((c) => c.getBoundingClientRect().bottom),
+                        );
                         return (
                             el.scrollWidth <= el.clientWidth + 0.5 &&
                             box.left >= 0 &&
                             box.right <= innerWidth &&
-                            cast.scrollHeight <= cast.clientHeight + 1
+                            spodok <= cast.getBoundingClientRect().bottom + 1
                         );
                     },
                     [word, wordSize(word)],
@@ -2038,13 +2097,18 @@ for (const width of [390, 320]) {
         // Karta Dnes: v nízkych dlaždiciach (aj v polovici dvojice) sa nič neoreže (docs/navrhy/dnes-nizsie-dlazdice.html).
         await page.locator('#nav-mozem').click();
         await ocakavajKartu(page, 'mozem');
-        const pretecie = await page
-            .locator('#mz-karty .cast')
-            .evaluateAll((els) =>
-                els
-                    .filter((e) => e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1)
-                    .map((e) => e.getAttribute('data-kind')),
-            );
+        const pretecie = await page.locator('#mz-karty .cast').evaluateAll((els) =>
+            els
+                .filter((e) => {
+                    // Tlačidlo cez celé pole presahuje kartu zámerne (docs/navrhy/dnes-bubliny-poli.html) - kým sa meria, nie je.
+                    const tap = e.querySelector(':scope > .cast-tap');
+                    tap?.classList.add('hidden');
+                    const von = e.scrollHeight > e.clientHeight + 1 || e.scrollWidth > e.clientWidth + 1;
+                    tap?.classList.remove('hidden');
+                    return von;
+                })
+                .map((e) => e.getAttribute('data-kind')),
+        );
         expect(pretecie, 'tieto karty v dlaždici pretečú').toEqual([]);
         expect(errors).toEqual([]);
     });
