@@ -31,7 +31,7 @@ Odložené 22. 10. 2026. Zdieľanie nastavenia elektrárne musí v appke z obcho
 
 Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrhy/plan-dna-zive-data.html`,
 `docs/navrhy/plan-dna-ucenie.html`). Termín je odhad, kedy bude dosť dát. Na každý je nastavená pripomienka
-(naplánovaná úloha v appke Claude).
+(naplánovaná úloha na claude.ai, beží v cloude).
 
 - **1. 12. 2026 – Zmazať jednorazovú opravu histórie** (zapísané 27. 11. 2026 pri audite): `opravaDvochZariadeni`
   a `OPRAVA` vo `worker/src/ucet.js` po 1. 12. 2026 už nič nerobia (beží len do `OPRAVA.do`). Zmazať aj s kľúčom
