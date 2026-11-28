@@ -5,7 +5,7 @@
 // na karte Teraz je počas nabíjania o behu s oranžovou ikonou (nie zelenou - tú majú spotrebiče, o ktorých appka vie
 // naisto) a panel Auto ukáže beh, os dňa a behy za týždeň. Čisté funkcie - čas a dáta prichádzajú ako parametre.
 
-import { AUTO_NABIJA, AUTO_SLNKO, BOJLER, DEVICES } from './config.js';
+import { AUTO_NABIJA, AUTO_SLNKO, BOJLER, MINUTES_PER_DAY, NABIJACKA_KW } from './config.js';
 import { dayNameShort, fmt1, minutesToTimeStr } from './format.js';
 import { male } from './messages-teraz.js';
 import { money } from './messages-zaklad.js';
@@ -15,9 +15,8 @@ import { bandAt, bandById, scheduleFor } from './tariff.js';
 import { isObj } from './valid.js';
 
 const MIN = 60 * 1000;
-const DEN = 24 * 60 * MIN;
+const DEN = MINUTES_PER_DAY * MIN;
 const Q = BOJLER.qMin * MIN;
-const MAX_KW = /** @type {(typeof DEVICES)[number]} */ (DEVICES.find((d) => d.name === 'Auto')).powerKw;
 
 /**
  * Beh nabíjania: začiatok `m` a koniec `k` (ms; null - ešte sa nabíja), energia `wh` a z toho zo siete `whSiet`, výkon
@@ -78,7 +77,7 @@ export function krokAuta(stav, { at, domKw, sietKw }) {
         domKw,
         sietKw,
         spojite: s.at > 0 && at - s.at <= AUTO_NABIJA.medzeraMin * MIN,
-        kw: Math.min(MAX_KW, Math.max(0, domKw - s.zakladKw)),
+        kw: Math.min(NABIJACKA_KW, Math.max(0, domKw - s.zakladKw)),
     };
     return posl && posl.k === null ? sBehom(k, posl) : bezBehu(k);
 }
@@ -213,7 +212,7 @@ export function autoDlazdicaNabija(b, tz) {
 function pasmo(tariff, at, tz) {
     if (!tariff) return null;
     const d = new Date(at);
-    return bandAt(tariff, scheduleFor(tariff, localDateKey(d, tz)), Math.min(localMinutes(d, tz), 24 * 60 - 1));
+    return bandAt(tariff, scheduleFor(tariff, localDateKey(d, tz)), Math.min(localMinutes(d, tz), MINUTES_PER_DAY - 1));
 }
 
 /**
@@ -265,7 +264,7 @@ function kedy(at, now, tz) {
 }
 
 /** Pozícia minúty dňa na osi 0 - 24 h v %. @param {number} m */
-const naOsi = (m) => Math.round((Math.min(24 * 60, Math.max(0, m)) / (24 * 60)) * 10000) / 100;
+const naOsi = (m) => Math.round((Math.min(MINUTES_PER_DAY, Math.max(0, m)) / MINUTES_PER_DAY) * 10000) / 100;
 
 /**
  * Úseky dnešných behov na osi 0 - 24 h po štvrťhodinách: v každej najprv slnko, potom sieť (v drahom pásme `vt`).

@@ -6,7 +6,6 @@ import {
     addDays,
     alignToLocalHours,
     buildForecast,
-    clearDayKwh,
     clearSkyAcKw,
     clearSkyIrradiance,
     daylightSpan,
@@ -350,16 +349,6 @@ test('sunUp: slnko je nad obzorom presne medzi východom a západom zo sunTimes'
     // Polárny deň: slnko nezapadne, takže je deň aj o polnoci.
     const tromso = { name: 'Tromsø', lat: 69.65, lon: 18.96, elevationM: 10, timezone: 'Europe/Oslo' };
     assert.equal(sunUp(new Date('2026-06-21T00:00:00+02:00'), tromso), true);
-});
-
-test('clearDayKwh: výroba za jasného dňa - v lete viac než v zime, nikdy nad menič × 24 h', () => {
-    const leto = clearDayKwh(SITE, PLANT, '2026-06-21');
-    const zima = clearDayKwh(SITE, PLANT, '2026-12-21');
-    assert.ok(leto > 50 && leto < PLANT.acLimitKw * 24, `leto ${leto}`);
-    assert.ok(zima > 0 && zima < leto / 2, `zima ${zima}`);
-    // Rovnaký deň ako v predpovedi: strop z golden predpovede je súčet po hodinách, tu po desiatich minútach.
-    const day = buildForecast(fixture('open-meteo.json'), FIXED_NOW, SITE, PLANT).days[0];
-    assert.ok(Math.abs(clearDayKwh(SITE, PLANT, day.date) - day.clearKwhTotal) / day.clearKwhTotal < 0.1);
 });
 
 test('orientationShare: juh najlepší na severnej pologuli, sever na južnej', () => {

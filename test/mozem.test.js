@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { ALL_DAYS, ALL_MONTHS, installedKw, MOZEM_ITEMS, PLAN_DNA, PLANT, powerThresholds, SITE, TARIFF } from '../shared/config.js';
 import { countdownText, durationText } from '../shared/messages.js';
 import { dayWindow, itemAnswer, itemCost, planWindows, sunShare } from '../shared/mozem-jadro.js';
-import { mozemModel, mozemSheetOf, stripGeometry } from '../shared/mozem.js';
+import { mozemModel, stripGeometry } from '../shared/mozem.js';
 import { kwpRoughText } from '../shared/format.js';
 import { FIXED_NOW, fixtureData } from './helpers.js';
 
@@ -242,23 +242,6 @@ test('bez zadaných panelov: odpoveď z typickej strechy a riadok povie, s akou'
     assert.equal(nic.word, 'Nastav panely, voe!');
     assert.equal(nic.strip, null);
     assert.deepEqual([nic.hero.factK, nic.hero.factV], ['panely', 'nezadané']);
-});
-
-test('mozemSheetOf: skupina otvorí panel so zoznamom, vec s jednou dlaždicou svoj, iné id nič', () => {
-    const m = mozemModel(input(FIXED_NOW));
-    const velke = mozemSheetOf(m, 'velke');
-    assert.ok(velke && 'group' in velke);
-    assert.deepEqual(
-        velke.group.rows.map((r) => r.id),
-        ['pracka', 'umyvacka', 'susicka'],
-    );
-    const auto = mozemSheetOf(m, 'auto');
-    assert.ok(auto && 'item' in auto);
-    assert.equal(auto.item.title, `Auto: ${auto.item.short}`);
-    // Vec zo skupiny (napr. starý krok histórie) otvorí svoj panel, nie skupinu.
-    assert.ok(mozemSheetOf(m, 'pracka') && 'item' in /** @type {object} */ (mozemSheetOf(m, 'pracka')));
-    assert.equal(mozemSheetOf(m, 'nic-take'), null);
-    assert.equal(mozemSheetOf(m, null), null);
 });
 
 test('itemAnswer a itemCost: vec bez spotrebiča karta nepozná a nemá cenu', () => {

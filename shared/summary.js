@@ -133,9 +133,6 @@ const cestaOf = (input, km, today, period) => vyberCestu(km, trasyPre(input.tras
 /** Veľké číslo: do 100 kWh s desatinou („18,4“), potom celé („9 112“); bez súčtu pomlčka. @param {number | null} kwh */
 export const bigText = (kwh) => (kwh === null ? '–' : fmtSum(kwh < 100 ? Math.round(kwh * 10) / 10 : Math.round(kwh), kwh < 100 ? 1 : 0));
 
-/** kWh do textu: „31,7“, od tisíc „9 112“; bez údaja pomlčka. @param {number | null} kwh */
-export const kwhText = (kwh) => (kwh === null ? '–' : fmtSum(kwh, 1));
-
 /**
  * Obrázok pod veľkým číslom: dnešok voči predpovedi, mesiac ako štvorčeky dní, rok ako stĺpce
  * mesiacov, celý čas ako splatený uhlík panelov.

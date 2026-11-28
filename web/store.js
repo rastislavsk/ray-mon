@@ -19,10 +19,13 @@ export function createStore(initial) {
             state = { ...state, ...patch };
             listeners.forEach((fn) => fn(state, prev));
         },
-        /** @param {(state: T, prev: T) => void} fn */
+        /** Pridá odberateľa; vráti jeho odhlásenie, ktoré druhým zavolaním nič nespraví. @param {(state: T, prev: T) => void} fn */
         subscribe(fn) {
             listeners.push(fn);
-            return () => listeners.splice(listeners.indexOf(fn), 1);
+            return () => {
+                const i = listeners.indexOf(fn);
+                if (i >= 0) listeners.splice(i, 1);
+            };
         },
     };
 }

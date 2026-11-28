@@ -1,7 +1,7 @@
 // Karta Radar: čas, os, farby a podkladová mapa. Čisté funkcie, čas vstupuje ako parameter.
 // Návrh: docs/navrhy/radar.html.
 
-import { RADAR } from './config.js';
+import { MINUTES_PER_DAY, RADAR } from './config.js';
 import { bajtNaDbz } from './radar-data.js';
 
 /** @typedef {'2h' | 'dnes' | 'zajtra'} RadarRozsah */
@@ -39,7 +39,7 @@ export const krokovSpolu = krokovMinulost + RADAR.buducnostMin / RADAR.krokMin;
 /** Čas zo zarovnaných minút. @param {number} ms @param {number} posunMin posun miestneho času od UTC */
 export function hhmm(ms, posunMin) {
     const m = Math.round(ms / 60000) + posunMin;
-    const d = ((m % 1440) + 1440) % 1440;
+    const d = ((m % MINUTES_PER_DAY) + MINUTES_PER_DAY) % MINUTES_PER_DAY;
     return `${p2(Math.floor(d / 60))}:${p2(d % 60)}`;
 }
 

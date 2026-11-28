@@ -90,7 +90,9 @@ async function pripomen(data) {
  */
 async function klik(action, data) {
     if (action === 'pripomen' && data?.remind) return pripomen(data);
-    const url = new URL(data?.app ?? './', ROOT);
+    // Len vlastná stránka: oznámenie nesmie otvoriť cudziu adresu, ani keby ju niekto do textu podstrčil.
+    const adresa = new URL(data?.app ?? './', ROOT);
+    const url = adresa.origin === new URL(ROOT).origin ? adresa : new URL(ROOT);
     const appka = (/** @type {string} */ u) => new URL(u).pathname.replace(/index\.html$/, '') === url.pathname;
     const okna = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const okno = okna.find((c) => appka(c.url));

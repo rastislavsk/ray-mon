@@ -121,3 +121,23 @@ test('handleRadar: cache odpovie bez servera a nová odpoveď sa do nej uloží'
     assert.equal(r.status, 200);
     assert.equal(s.rozsahy.length, pocet);
 });
+
+test('handleRadar: blok, ktorý neprišiel celý (výpadok, rozsah ignorovaný), je 502 a do cache nejde', async () => {
+    for (const blok of [new Response('', { status: 503 }), new Response(new Uint8Array([1, 2]), { status: 206 })]) {
+        let ulozene = false;
+        const s = {
+            ...server(),
+            fetchImpl: /** @type {typeof fetch} */ (
+                /** @type {unknown} */ (
+                    async (/** @type {string} */ _url, /** @type {{ headers: { range: string } }} */ init) =>
+                        init.headers.range.startsWith('bytes=0-') ? new Response(hlavicka(), { status: 206 }) : blok
+                )
+            ),
+            cache: /** @type {any} */ ({ match: async () => undefined, put: async () => void (ulozene = true) }),
+        };
+        const r = await handleRadar(new Request(URL_OK), s);
+        assert.equal(r.status, 502);
+        assert.equal(r.headers.get('cache-control'), 'no-store');
+        assert.equal(ulozene, false);
+    }
+});

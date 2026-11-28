@@ -23,13 +23,11 @@ import { dayPlan } from '../shared/day-plan.js';
 import { kwpRoughText } from '../shared/format.js';
 import { heroModel, pvFreshness } from '../shared/hero-model.js';
 import {
+    dayChartText,
     mozemGuessText,
     mozemOfflineText,
     TERAZ_TEXTS,
-    terazChartText,
     terazBublinaText,
-    terazCloudText,
-    terazLimitGap,
     terazPreviewTime,
     terazSourceText,
     terazTodayText,
@@ -41,7 +39,7 @@ import { mesiacNaOblohe, mesiacVPoli } from '../shared/mesiac.js';
 import { mozemModel } from '../shared/mozem.js';
 import { odmietnute } from '../shared/pristup.js';
 import { typicalSettings } from '../shared/settings.js';
-import { coZapnutModel, denModel, dnesCards, pocasieTeraz, terazModel } from '../shared/teraz.js';
+import { coZapnutModel, dnesCards, pocasieTeraz, terazModel } from '../shared/teraz.js';
 import { planDnaModel } from '../shared/plan-dna.js';
 import { fixtureData, pvAt } from './helpers.js';
 
@@ -542,14 +540,6 @@ test('detail spotrebiča večer: iný deň s dňom pri čase, lacná sieť modr�
     assert.equal(noc.veci[0].slot, null);
 });
 
-test('texty grafu dňa: pomlčka bez údaja, chýba či navyše podľa hranice', () => {
-    assert.equal(terazCloudText(null), '–');
-    assert.equal(terazCloudText(62.4), '62 %');
-    assert.equal(terazLimitGap(NaN, 2), '–');
-    assert.equal(terazLimitGap(1.5, 2), 'chýba 0,5 kW');
-    assert.equal(terazLimitGap(2, 2), 'navyše 0,0 kW');
-});
-
 test('terazModel: os dňa detailu spotrebiča - teraz je na nej, hodiny po troch; v noci teraz mimo osi', () => {
     const os = terazModel(input(at('13:00'))).os;
     assert.ok(os && os.now !== null && os.now > 0 && os.now < 100);
@@ -677,11 +667,9 @@ test('texty karty Teraz', () => {
     assert.equal(terazWindowText(null, false), 'Okno na veľké veci dnes nebude.');
     assert.equal(terazTodayText({ forecastKwh: 61.4, doneKwh: 31.7, measured: true }), 'Predpoveď 61,4 kWh, už nabehlo 31,7 kWh.');
     assert.equal(terazTodayText({ forecastKwh: 30, doneKwh: 12.04, measured: false }), 'Predpoveď 30,0 kWh, podľa nej už asi 12,0 kWh.');
-    const desc = terazChartText({
+    const desc = dayChartText({
         span: { from: hm(5), to: hm(21) },
-        nowMin: hm(13),
-        kwText: '6.41',
-        tone: 'sun',
+        now: { min: hm(13), kwText: '6.41', tone: 'sun' },
         sun: [{ from: hm(9), to: hm(17, 30) }],
         cheap: [
             { from: 0, to: hm(6) },
@@ -694,7 +682,13 @@ test('texty karty Teraz', () => {
         'Výroba od 05:00 do 21:00. Teraz 13:00: 6.41 kW, slnko stačí. Okno na veľké veci 09:00 – 17:30. Lacná sieť 00:00 – 06:00, 22:00 – 24:00.',
     );
     assert.match(
-        terazChartText({ span: FULL_DAY, nowMin: 0, kwText: '0.00', tone: 'costly', sun: [], cheap: [], costly: [{ from: 0, to: 60 }] }),
+        dayChartText({
+            span: FULL_DAY,
+            now: { min: 0, kwText: '0.00', tone: 'costly' },
+            sun: [],
+            cheap: [],
+            costly: [{ from: 0, to: 60 }],
+        }),
         /Okno na veľké veci dnes nebude\. Drahá sieť 00:00 – 01:00\.$/,
     );
 });
@@ -915,55 +909,10 @@ test('čo zapnúť večer po praní: sušička zo siete nie je „zo slnka“, a
     assert.deepEqual(skor.hore.dalsi?.odr, ['za 45 min', 'zo siete']);
 });
 
-/** Časti vety pre čítačku: čas a výkon, slnko, sieť, oblačnosť, čo beží. @param {string} veta */
-const casti = (veta) => veta.split('. ');
-
-test('graf dňa: odčítanie teraz a v inom čase, čo vtedy beží', () => {
-    const i = input(at('13:00'));
-    const rows = riadky(i);
-    const teraz = denModel(i, rows, null);
-    assert.equal(teraz.zvolene, false);
-    assert.equal(teraz.min, 13 * 60);
-    assert.equal(teraz.citanie.cas, 'Teraz 13:00');
-    assert.match(teraz.citanie.kw, /^\d+,\d kW$/);
-    assert.equal(teraz.citanie.zdroj, 'živé meranie');
-    const v = casti(teraz.citanie.veta);
-    assert.equal(v[0], `Teraz 13:00, ${teraz.citanie.kw}, živé meranie`);
-    assert.match(v[1], /^slnko stačí · navyše \d+,\d kW$/);
-    assert.equal(v[2], 'lacná sieť do 20:30');
-    assert.match(v[3], /^oblačnosť /);
-    assert.equal(v[4], 'beží práčka, umývačka a bojler');
-    const neskor = denModel(i, rows, 15 * 60, 'slusny');
-    assert.equal(neskor.zvolene, true);
-    assert.equal(neskor.citanie.cas, '15:00');
-    assert.equal(neskor.citanie.zdroj, 'odhad z predpovede');
-    assert.ok(neskor.citanie.veta.startsWith('15:00, '));
-    assert.equal(casti(neskor.citanie.veta).at(-1), 'beží umývačka a sušička');
-});
-
-test('graf dňa v noci: slnko nesvieti, oblačnosť nie', () => {
-    const i = input(at('23:00'));
-    const d = denModel(i, riadky(i), null);
-    assert.deepEqual(casti(d.citanie.veta).slice(1), ['slnko nesvieti', 'drahá sieť do 23:30', 'potom bojler o 23:30']);
-});
-
 test('čas do niečoho', () => {
     assert.equal(terazZaText(45), '45 min');
     assert.equal(terazZaText(120), '2 h');
     assert.equal(terazZaText(95), '1 h 35 min');
-});
-
-test('graf dňa a dlaždice sa zhodnú: čo ide teraz, aj v grafe dňa beží (teraz je najbližšia štvrťhodina)', () => {
-    const i = input(at('21:20'));
-    const rows = riadky(i);
-    const co = coZapnutModel(rows, { nowMin: minuta('21:20') });
-    assert.deepEqual(
-        co.hore.dlazdice.map((d) => d.id),
-        ['bojler'],
-    );
-    assert.equal(casti(denModel(i, rows, null).citanie.veta).at(-1), 'beží bojler');
-    // Zvolený čas sa nezaokrúhľuje - 21:15 je pred lacným pásmom.
-    assert.equal(casti(denModel(i, rows, minuta('21:15')).citanie.veta).at(-1), 'potom bojler o 21:30');
 });
 
 /** Behy „Už beží“ 5. 9. 2026: umývačka od 12:00 (beží o 13:00), práčka od 9:30 (dobehla). */

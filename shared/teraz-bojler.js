@@ -2,7 +2,7 @@
 // dlaždica Bojler podľa toho, čo hlási zásuvka (variant A, len stav), a panel „Bojler dnes“
 // (docs/navrhy/bojler-panel.html, A) s teplotou a behmi na jednej osi, energiou podľa zdroja a behmi. Čisté funkcie - stav dostanú, texty a čísla vrátia.
 
-import { BOJLER } from './config.js';
+import { BOJLER, MINUTES_PER_DAY } from './config.js';
 import { bojlerStav, suctyDna } from './bojler.js';
 import { krivkaVody, stupne, vodaTeraz } from './bojler-voda.js';
 import { fmt1, minutesToTimeStr } from './format.js';
@@ -15,7 +15,7 @@ import { bandAt, bandById, scheduleFor } from './tariff.js';
 const MIN = 60 * 1000;
 
 // Pás dňa v paneli: celý deň (os zdieľa s krivkou teploty), popisky každých 6 hodín.
-const PAS = { odMin: 0, doMin: 24 * 60, krokMin: 6 * 60 };
+const PAS = { odMin: 0, doMin: MINUTES_PER_DAY, krokMin: 6 * 60 };
 
 export const TERAZ_BOJLER_TEXTS = {
     von: 'do siete',
@@ -176,7 +176,7 @@ function podielDnes(den) {
 export function drahaDna(tariff, den) {
     if (!tariff) return () => false;
     const schedule = scheduleFor(tariff, den);
-    return (m) => bandAt(tariff, schedule, Math.min(m, 24 * 60 - 1)).level === 'draha';
+    return (m) => bandAt(tariff, schedule, Math.min(m, MINUTES_PER_DAY - 1)).level === 'draha';
 }
 
 /** Má tarifa v deň `den` drahé pásmo? Pri jednosadzbovej panel VT neukáže. @param {Tariff | null} tariff @param {string} den */
