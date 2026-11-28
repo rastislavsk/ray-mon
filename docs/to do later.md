@@ -89,6 +89,8 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 - **Graf dňa na Teraz pre ľudí, čo nečítajú grafy** (1. 11. 2026, bez výberu): `docs/navrhy/teraz-obraz-dna.html`
   (A stuha dňa, B plán na dráhe s kapsulami). Mockupy na vetve `claude/teraz-obraz-dna`.
 - **Karta Dnes a ranné oznámenie nepoznajú núdzové časy** z karty Teraz – zladiť.
+- **Sušička „zapni teraz“ pri možno suchom praní** (27. 11. 2026): overiť v `zs:` / `bz:`, či zásuvka nerozdelila jedno
+  pranie na dva behy. Návrh textov dlaždíc zamietnutý 28. 11. 2026; čas umývačky 19:30 je pri tarife Dvorany správny.
 - **Mapa Radaru na širokej obrazovke prekrýva navigáciu** (zistené pri audite, neopravené).
 
 ## Overiť na telefóne alebo na skutočných dňoch
