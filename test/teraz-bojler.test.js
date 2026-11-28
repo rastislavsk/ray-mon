@@ -197,8 +197,9 @@ test('Čo riadi bojler? (Shelly / Ray-mon): riadok pod nadpisom a prepínač s p
     const auto = bojlerDetail(info(), NOW, TZ);
     assert.deepEqual(auto.rezim, { rucne: false, popis: 'Zapne pri prebytku od 2,3 kW, vypne pod 2,0 kW.' });
     const r = bojlerDetail(info({ rucne: true }), NOW, TZ);
-    // Kto bojler riadi, ukáže prepínač v tom istom paneli - riadok stavu to neopakuje.
-    assert.equal(r.pod, 'Hreje od 12:30');
+    // Kto bojler riadi, ukáže prepínač v tom istom paneli - riadok stavu to neopakuje; na jeho konci je príkon zásuvky.
+    assert.equal(r.pod, 'Hreje od 12:30 · 2,2 kW');
+    assert.deepEqual([TERAZ_BOJLER_TEXTS.rezim.riadi(true), TERAZ_BOJLER_TEXTS.rezim.riadi(false)], ['riadi Shelly', 'riadi Ray-mon']);
     assert.equal(r.rezim.rucne, true);
     assert.match(r.rezim.popis, /appke Shelly/);
     assert.deepEqual(
@@ -212,13 +213,15 @@ test('Čo riadi bojler? (Shelly / Ray-mon): riadok pod nadpisom a prepínač s p
     const vyp = bojlerDetail(info({ rucne: true, rele: false, w: 0, den: { ...DEN, behy: [DEN.behy[0]] } }), NOW, TZ);
     assert.equal(vyp.pod, 'Vypnutý od 11:25');
     assert.equal(bojlerDetail(info({ rucne: true, rele: false, w: 0, den: null }), NOW, TZ).pod, 'Vypnutý');
-    assert.equal(bojlerDetail(info({ den: null }), NOW, TZ).pod, 'Hreje');
+    assert.equal(bojlerDetail(info({ den: null }), NOW, TZ).pod, 'Hreje · 2,2 kW');
 });
 
 test('panel Bojler dnes (A): pás na osi 0 - 24 h, energia podľa zdroja a behy', () => {
     const d = bojlerDetail(info(), NOW, TZ);
-    assert.equal(d.nadpis, 'Bojler dnes');
-    assert.equal(d.pod, 'Hreje od 12:30');
+    assert.equal(d.nadpis, 'Bojler');
+    assert.equal(d.pod, 'Hreje od 12:30 · 2,2 kW');
+    // Súčet zo zaokrúhlených častí: 3,6 + 0,2.
+    assert.equal(d.spolu, '3,8 kWh');
     // Bez tarify (či pri jednosadzbovej) je sieť jedna časť.
     assert.deepEqual(
         d.energia.map((c) => [c.tone, c.v, c.l]),
@@ -228,7 +231,8 @@ test('panel Bojler dnes (A): pás na osi 0 - 24 h, energia podľa zdroja a behy'
         ],
     );
     assert.equal(d.hrial, '2× zapnutý · hrial 1 h 45 min');
-    assert.equal(d.behyNadpis, 'Behy dnes');
+    assert.equal(d.behyNadpis, 'Behy');
+    assert.equal(d.behyPocet, '2 dnes');
     assert.deepEqual(d.behy, [
         {
             cas: '10:40 – 11:25',
@@ -267,10 +271,10 @@ test('panel Bojler dnes (A): pás na osi 0 - 24 h, energia podľa zdroja a behy'
         [
             ['slnko', '3,6 kWh', 'slnko'],
             ['siet', '0,1 kWh', 'sieť'],
-            ['vt', '0,1 kWh', 'sieť vo VT'],
+            ['vt', '0,1 kWh', 'drahá sieť'],
         ],
     );
-    assert.equal(vt.behy[1].sr, '2,0 kWh zo slnka, 0,1 kWh zo siete, 0,1 kWh zo siete vo VT');
+    assert.equal(vt.behy[1].sr, '2,0 kWh zo slnka, 0,1 kWh zo siete, 0,1 kWh zo siete v drahom pásme');
 });
 
 test('panel so štvrťhodinami (D2): VT presne, sieť na páse tam, kde naozaj bola', () => {
@@ -346,14 +350,15 @@ test('teplomer (P1): krivka v paneli a plán s teplotou vody', () => {
         [835, 47.6],
     ]);
     const d = bojlerDetail(info({ voda, teploty, rele: false, w: 0 }), NOW, TZ, { zapne: 870, dohreje: 900, nahriaty: false });
-    // Teplotu vody ukáže krivka, riadok stavu ju neopakuje.
-    assert.deepEqual([d.pod, d.plan], ['Čaká na prebytok', 'dohreje okolo 15:00']);
+    // Teplota vody je veľké číslo a pod ním plán; riadok stavu ju neopakuje.
+    assert.deepEqual([d.pod, d.velke, d.veta], ['Čaká na prebytok', '48 °C', 'Dohreje okolo 15:00']);
     assert.equal(d.voda?.bod.text, '48 °C');
     const nedohreje = bojlerDetail(info({ voda }), NOW, TZ, { zapne: null, dohreje: null, nahriaty: false });
-    assert.equal(nedohreje.plan, 'slnko ho dnes asi nedohreje');
+    assert.equal(nedohreje.veta, 'Slnko ho dnes asi nedohreje');
     assert.equal(nedohreje.voda, null, 'bez bodov krivka nie je');
-    assert.equal(bojlerDetail(info(), NOW, TZ, { zapne: null, dohreje: 900, nahriaty: false }).plan, 'dohreje okolo 15:00');
-    assert.equal(bojlerDetail(info(), NOW, TZ, { zapne: null, dohreje: 900, nahriaty: true }).plan, '');
+    assert.equal(bojlerDetail(info(), NOW, TZ, { zapne: null, dohreje: 900, nahriaty: false }).veta, 'Dohreje okolo 15:00');
+    assert.equal(bojlerDetail(info(), NOW, TZ, { zapne: null, dohreje: 900, nahriaty: true }).veta, '');
+    assert.equal(bojlerDetail(info(), NOW, TZ).velke, '', 'bez teplomera veľké číslo nie je');
 });
 
 test('hranica teploty: nahriata na hranicu na dlaždici aj v paneli, čiara hranice na krivke', () => {

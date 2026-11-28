@@ -7,7 +7,7 @@ import { autoDlazdicaNabija, nabijaSa } from './auto-nabija.js';
 import { autoDna } from './auto-slnko.js';
 import { daSaZapisat, navrhBehu, zoZvysku } from './bezi.js';
 import { interpolate } from './chart-model.js';
-import { installedKw, PLAN_DNA, TARIFF_LIMITS } from './config.js';
+import { installedKw, MINUTES_PER_DAY, MOZEM_ITEMS, PLAN_DNA, TARIFF_LIMITS } from './config.js';
 import { dayPlan } from './day-plan.js';
 import { heroModel } from './hero-model.js';
 import {
@@ -35,8 +35,9 @@ import { chosen } from './plan-dna.js';
 import { offlineLead, pvStatus } from './mozem-sky.js';
 import { pocasie } from './pocasie.js';
 import { pristupModel } from './pristup.js';
-import { daylightSpan, localDateKey, localMinutes, localToUtc } from './solar.js';
-import { bojlerRiadeny } from './teraz-bojler.js';
+import { localDateKey, localMinutes, localToUtc } from './solar.js';
+import { bojlerRiadeny, maDrahu } from './teraz-bojler.js';
+import { casti, PANEL_TEXTS, spoluKwh } from './teraz-panel.js';
 import { tokDnaModel } from './teraz-scena.js';
 import { dalsieSlnko, denInyModel, dniTyzdna, hrebenModel, nudzaRiadok, nudzoveCasy } from './tyzden.js';
 import { domProfil, potrebaBojlera } from './ucenie.js';
@@ -75,7 +76,8 @@ export function terazModel(input, { online = true, voice = 'drzy', devices, den 
     const note = estimate ? null : noteOf(input, now, voice);
     const m = mozemModel(input, { voice, devices });
     const { rows, behy, bojler } = m.plan ?? { rows: [], behy: [], bojler: null };
-    const os = denOs(daylightSpan(input.site, localDateKey(input.now, input.site.timezone)), localMinutes(input.now, input.site.timezone));
+    // Os detailu spotrebiča je celý deň 0 - 24 h ako v ostatných paneloch (docs/navrhy/teraz-panely-zladenie.html, C).
+    const os = denOs({ from: 0, to: MINUTES_PER_DAY }, localMinutes(input.now, input.site.timezone));
     const teraz = { nowMin: now.minutes, behy };
     return {
         ...empty('ok', estimate),
@@ -200,10 +202,12 @@ function dnesOf(input, rows, teraz, span, voice) {
         const z = zasuvka(id);
         return z ? { stav: 'meria', hotove: hotove(id), cas: null, w: z.w } : null;
     };
+    const dnesBehy = dnesBehyOf(input, teraz, span);
     const moze = (/** @type {VecDetail} */ v) =>
         daSaZapisat(v.id)
             ? {
                   ...v,
+                  ...dnesBehy(v.id),
                   zapis: meraZapis(v.id) ?? {
                       stav: /** @type {const} */ ('moze'),
                       hotove: hotove(v.id),
@@ -218,7 +222,7 @@ function dnesOf(input, rows, teraz, span, voice) {
             ...nudza.map((n) => moze(n.detail)),
             ...bezia.map((b) => {
                 const z = meraZapis(b.id);
-                const d = behDetail(b, span, z ?? { stav: 'bezi', hotove: hotove(b.id), cas: cas(b.id) });
+                const d = { ...behDetail(b, span, z ?? { stav: 'bezi', hotove: hotove(b.id), cas: cas(b.id) }), ...dnesBehy(b.id) };
                 return z ? { ...d, why: TERAZ_BEZI.zasuvka.why } : d;
             }),
         ],
@@ -241,6 +245,46 @@ function behDetail(b, span, zapis) {
                   dnes: true,
               };
     return { id: b.id, name: b.name, tone: 'bezi', den: '', ...terazBehVecText(b, b.name, zoZvysku(b.id)), slot, zapis };
+}
+
+/**
+ * Dnešné behy spotrebiča `id` na osi a energia z nich (odhad z typického programu) - behyVeci pre dnešok.
+ * @param {TerazInput} input @param {{ behy?: import('./plan-dna.js').BehRow[], nowMin: number }} teraz @param {{ from: number, to: number }} span
+ */
+function dnesBehyOf(input, teraz, span) {
+    const sVt = maDrahu(input.tariff, localDateKey(input.now, input.site.timezone));
+    return (/** @type {string} */ id) =>
+        behyVeci(
+            (teraz.behy ?? []).filter((b) => b.id === id),
+            { span, nowMin: teraz.nowMin, runKwh: MOZEM_ITEMS.find((x) => x.id === id)?.runKwh ?? 0, sVt },
+        );
+}
+
+/**
+ * Dnešné behy spotrebiča (Plán dňa, `behy`) v detaile: úseky na osi (`useky`, plné - čo už bežalo, bežiaci po teraz;
+ * farba podľa zdroja, ktorý v behu prevládal) a energia dneška (`energia`) - odhad z typického programu (`runKwh`, bežiaci
+ * podľa toho, koľko z neho prešlo) rozdelený podielom slnka a drahého pásma, ktorý ráta Plán dňa. Bez behov `energia` null.
+ * @param {import('./plan-dna.js').BehRow[]} behy @param {{ span: { from: number, to: number }, nowMin: number, runKwh: number, sVt: boolean }} k
+ */
+function behyVeci(behy, { span, nowMin, runKwh, sVt }) {
+    const useky = behy.flatMap((b) => {
+        const po = b.kind === 'run' ? Math.min(b.end, Math.max(b.start, nowMin)) : b.end;
+        if (po <= b.start) return [];
+        const tone = b.podiel >= 50 ? 'slnko' : b.draha >= 50 ? 'vt' : 'siet';
+        return [{ left: spanPct(span, b.start), width: Math.round((spanPct(span, po) - spanPct(span, b.start)) * 10) / 10, tone }];
+    });
+    if (!behy.length) return { useky, energia: null };
+    const e = behy.reduce(
+        (sum, b) => {
+            const cast = b.kind === 'run' ? Math.min(1, Math.max(0, (nowMin - b.start) / Math.max(1, b.end - b.start))) : 1;
+            const wh = runKwh * 1000 * cast;
+            const slnko = (wh * b.podiel) / 100;
+            const vt = Math.min(wh - slnko, (wh * b.draha) / 100);
+            return { slnko: sum.slnko + slnko, siet: sum.siet + wh - slnko - vt, vt: sum.vt + vt };
+        },
+        { slnko: 0, siet: 0, vt: 0 },
+    );
+    return { useky, energia: { casti: casti(e, sVt), spolu: `≈ ${spoluKwh(casti(e, sVt))}`, suhrn: PANEL_TEXTS.odhad(behy.length) } };
 }
 
 /** Minúta dňa ako hodnota výberu času, „09:05“. @param {number} min */
@@ -432,7 +476,11 @@ function soFar(hourly, nowMin) {
  * modrý, núdzový čas s kúskom slnka zlatý (`part`), čo beží, krémový (`bezi`). `zapis`: spotrebič sa dá zapísať.
  * @typedef {{ id: string, name: string, tone: string, den: string, kedy: string, cas: string, why: string,
  *   slot: { left: number, width: number, tone: 'go' | 'cheap' | 'part' | 'bezi', dnes: boolean } | null,
- *   zapis?: VecZapis }} VecDetail
+ *   zapis?: VecZapis, useky?: Array<{ left: number, width: number, tone: string }>, energia?: VecEnergia | null }} VecDetail
+ */
+/**
+ * Energia dneška v detaile spotrebiča: časti podľa zdroja, súčet a riadok pod nimi.
+ * @typedef {{ casti: ReturnType<typeof casti>, spolu: string, suhrn: string }} VecEnergia
  */
 /**
  * Zápis v detaile spotrebiča: dnes sa dá zapísať, že beží (`moze`, tlačidlo „Už beží“), alebo už beží (`bezi`). Spotrebič,
@@ -635,13 +683,12 @@ function spanPct(span, m) {
 }
 
 /**
- * Os dnešného svetla pre detail spotrebiča: hodiny po troch a „teraz“ v % osi (mimo osi null).
- * Zajtrajšok a ďalšie dni idú na tú istú os - dĺžka dňa sa za týždeň zmení o pár minút.
+ * Os pre detail spotrebiča: hodiny po šiestich a „teraz“ v % osi (mimo osi null).
  * @param {{ from: number, to: number }} span @param {number} nowMin
  */
 function denOs(span, nowMin) {
     const pct = (/** @type {number} */ m) => spanPct(span, m);
     /** @type {Array<{ label: string, at: number }>} */ const ticks = [];
-    for (let h = Math.ceil(span.from / 180) * 3; h * 60 <= span.to; h += 3) ticks.push({ label: String(h), at: pct(h * 60) });
+    for (let h = Math.ceil(span.from / 360) * 6; h * 60 <= span.to; h += 6) ticks.push({ label: String(h), at: pct(h * 60) });
     return { span, ticks, now: nowMin >= span.from && nowMin <= span.to ? pct(nowMin) : null };
 }

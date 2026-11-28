@@ -7,7 +7,8 @@ import { dateParts, dayNameShort, fmt1 } from './format.js';
 import { klimaSpojena } from './klima.js';
 import { male } from './messages-teraz.js';
 import { addDays, localDateKey, localMinutes } from './solar.js';
-import { casti, drahaDna, maDrahu } from './teraz-bojler.js';
+import { drahaDna, maDrahu } from './teraz-bojler.js';
+import { casti, spoluKwh } from './teraz-panel.js';
 
 /** @typedef {import('./klima.js').KlimaStav} KlimaStav */
 /** @typedef {import('./config.js').Tariff} Tariff */
@@ -26,17 +27,17 @@ export const TERAZ_KLIMA_TEXTS = {
     mlci: 'klimatizácia mlčí',
     bezSpojenia: 'skript alebo Wi-Fi',
     rezim: { kurenie: 'kúri', chladenie: 'chladí', auto: 'automaticky', susenie: 'suší', ventilator: 'vetrá' },
-    pod: (/** @type {string} */ rezim, /** @type {string} */ nast, /** @type {string} */ kw) => `${rezim} na ${nast} · ${kw} kW teraz`,
+    pod: (/** @type {string} */ rezim, /** @type {string} */ nast, /** @type {string} */ kw) => `${rezim} na ${nast} · ${kw} kW`,
     vypnuta: 'vypnutá',
     neozyva: (/** @type {string} */ ako) => `neozýva sa ${ako}`,
     doma: 'doma',
     vonku: 'vonku',
     nastavene: 'nastavené',
     kwhHodina: 'kWh za hodinu',
-    dnesSpolu: (/** @type {string} */ kwh) => `Dnes ${kwh} kWh`,
-    bezi: (/** @type {string} */ ako) => `beží ${ako}`,
+    /** Veta pod teplotou doma (veľké číslo panela). */
+    vonkuVeta: (/** @type {string} */ t) => `Vonku ${t}`,
+    bezi: (/** @type {string} */ ako) => `Beží ${ako}`,
     vcera: (/** @type {string} */ kwh) => `včera ${kwh} kWh`,
-    dni14: 'Posledných 14 dní',
     najviac: (/** @type {string} */ kedy, /** @type {string} */ kwh) => `Najviac ${kedy}: ${kwh} kWh`,
     rok: 'Tento rok a minulý',
     kurenieRok: (/** @type {number} */ r) => `kúrenie ${r}`,
@@ -71,6 +72,9 @@ export const TERAZ_KLIMA_TEXTS = {
 
 /** Teplota bez slov: „2°“, „23,5°“, bez údaja „–“. @param {number | null} t */
 const st = (t) => (t === null ? '–' : `${Number.isInteger(t) ? String(t) : fmt1(t).replace(/,0$/, '')}°`);
+
+/** Teplota s jednotkou: „21,6 °C“, „2 °C“. @param {number} t */
+const tep = (t) => `${Number.isInteger(t) ? String(t) : fmt1(t).replace(/,0$/, '')} °C`;
 
 /** Ako dlho: „18 min“, „3 h“. @param {number} ms */
 const ticho = (ms) => (ms < 60 * MIN ? `${Math.max(0, Math.floor(ms / MIN))} min` : `${Math.floor(ms / (60 * MIN))} h`);
@@ -321,8 +325,9 @@ function podrobnosti(k, now) {
 }
 
 /**
- * Panel Klíma (docs/navrhy/klima-daikin.html): nadpis, čo robí, graf dňa, energia dneška podľa zdroja (VT len pri tarife
- * s drahým pásmom), ako dlho dnes beží a včerajšok, 14 dní, rok a podrobnosti.
+ * Panel Klíma (docs/navrhy/klima-daikin.html; kostra docs/navrhy/teraz-panely-zladenie.html, C): nadpis, čo robí,
+ * teplota doma veľkým číslom a pod ňou vonku, graf dňa, energia dneška podľa zdroja (VT len pri tarife s drahým pásmom)
+ * so súčtom, ako dlho dnes beží a včerajšok, 14 dní, rok a podrobnosti.
  * @param {KlimaStav} k @param {Date} now @param {string} tz @param {Tariff | null} tariff
  */
 export function klimaDetail(k, now, tz, tariff) {
@@ -330,12 +335,16 @@ export function klimaDetail(k, now, tz, tariff) {
     const dnes = localDateKey(now, tz);
     const beh = k.behMin === null ? '' : T.bezi(k.behMin >= 60 ? `${Math.floor(k.behMin / 60)} h ${k.behMin % 60} min` : `${k.behMin} min`);
     const e = energiaDnes(k, dnes, tariff);
+    const vcera = k.vcera === null ? '' : T.vcera(kwh(k.vcera));
     return {
         nadpis: T.meno,
         pod: podText(k, now),
+        velke: k.domaC === null ? '' : tep(k.domaC),
+        veta: k.vonkuC === null ? '' : T.vonkuVeta(tep(k.vonkuC)),
         graf: grafDna(k, dnes, localMinutes(now, tz)),
         energia: casti(e, maDrahu(tariff, dnes)),
-        beh: [T.dnesSpolu(kwh(e.slnko + e.siet + e.vt)), beh, k.vcera === null ? '' : T.vcera(kwh(k.vcera))].filter(Boolean).join(' · '),
+        spolu: spoluKwh(casti(e, maDrahu(tariff, dnes))),
+        beh: beh ? [beh, vcera].filter(Boolean).join(' · ') : vcera.charAt(0).toUpperCase() + vcera.slice(1),
         dni: dni14(k, dnes),
         rok: rokModel(k, dnes),
         podrobnosti: podrobnosti(k, now),

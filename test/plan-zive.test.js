@@ -235,8 +235,15 @@ test('texty: po bojleri pri spotrebiči, zapne okolo na dlaždici bojlera, dohre
     const plan = { zapne: 675, dohreje: 770, nahriaty: false };
     assert.deepEqual(bojlerDlazdica(caka, now, SITE.timezone, plan).odr, ['čaká na slnko', 'zapne okolo 11:15']);
     assert.deepEqual(bojlerDlazdica(caka, now, SITE.timezone).odr[1], 'zapne pri 2,3 kW');
-    assert.equal(bojlerDetail(caka, now, SITE.timezone, plan).plan, 'dohreje okolo 12:50');
-    assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, dohreje: null }).plan, 'slnko ho dnes asi nedohreje');
-    assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, nahriaty: true }).plan, '');
-    assert.equal(bojlerDetail(caka, now, SITE.timezone).plan, '');
+    // Plán je veta pod veľkým číslom (teplotou vody) a obrys na páse od zapnutia po dohriatie.
+    const d = bojlerDetail(caka, now, SITE.timezone, plan);
+    assert.equal(d.veta, 'Dohreje okolo 12:50');
+    assert.deepEqual(
+        d.pas.useky.filter((u) => u.plan).map((u) => [u.left, u.width]),
+        [[46.88, 6.59]],
+    );
+    assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, dohreje: null }).veta, 'Slnko ho dnes asi nedohreje');
+    assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, nahriaty: true }).veta, '');
+    assert.equal(bojlerDetail(caka, now, SITE.timezone).veta, '');
+    assert.equal(bojlerDetail(caka, now, SITE.timezone, { ...plan, dohreje: null }).pas.useky.filter((u) => u.plan).length, 0);
 });

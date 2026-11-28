@@ -11,6 +11,7 @@ import { hlavickaModel, stavRiadok } from '../../shared/hlavicka.js';
 import { klimaUkaz } from '../../shared/klima.js';
 import { PLAN_DNA_NOTE, TERAZ_BEZI, TERAZ_HREBEN, terazBublinaText, vetaDlazdice, voiceTexts } from '../../shared/messages-core.js';
 import { terazModel } from '../../shared/teraz.js';
+import { krivkaVyroby, PANEL_TEXTS } from '../../shared/teraz-panel.js';
 import { bojlerDetail, bojlerDlazdica, bojlerDrahaDnes, bojlerRiadeny, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
 import { klimaDetail, klimaDlazdica, TERAZ_KLIMA_TEXTS } from '../../shared/teraz-klima.js';
 import { localDateKey, localMinutes } from '../../shared/solar.js';
@@ -297,19 +298,56 @@ const predHtml = (pred) => (pred ? `<span class="sr">${escapeHtml(pred)} </span>
 /** Malá jednotka za veľkým číslom („~70 km“), s nezlomiteľnou medzerou - číslo sa nezalomí. @param {string | undefined} za */
 const zaHtml = (za) => (za ? `<span class="pred"> ${escapeHtml(za)}</span>` : '');
 
+/** Farba plánu spotrebiča na páse podľa druhu úseku: zo slnka zlatá, zo siete (lacnej či po praní) modrá. */
+const PLAN_ZDROJ = /** @type {Record<string, string>} */ ({ go: 'slnko', cheap: 'siet', part: 'siet' });
+
 /**
- * Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, na nej plný úsek
- * spotrebiča (zo slnka zelený, z lacnej siete modrý), pri dnešku biela čiara „teraz“, pod tým hodiny.
- * Všetko v % osi, takže sa naťahuje so šírkou panelu.
- * @param {NonNullable<Model['os']>} os @param {NonNullable<Model['veci'][number]['slot']>} slot
+ * Os dňa v detaile spotrebiča (docs/navrhy/teraz-panely-zladenie.html, C): nad ňou krivka výroby dneška (prečo vtedy),
+ * na páse plné úseky toho, čo dnes bežalo (farba zdroja, ktorý prevládal), a obrysom plán; pri dnešku čiarka teraz,
+ * pod tým hodiny 0 - 24. Všetko v % osi, takže sa naťahuje so šírkou panelu.
+ * @param {NonNullable<Model['os']>} os
+ * @param {{ den: string, slot: Model['veci'][number]['slot'], useky: Array<{ left: number, width: number, tone: string }> }} v
+ * @param {string | null} krivka
  */
-function osHtml(os, slot) {
-    const now = slot.dnes && os.now !== null ? `<i class="os-teraz" style="left:${os.now}%"></i>` : '';
-    const ticks = os.ticks.map((t) => `<span class="os-t" style="left:${t.at}%">${t.label}</span>`).join('');
+function vecGrafHtml(os, v, krivka) {
+    const dnes = v.den === '';
+    const useky = [
+        ...v.useky.map((u) => ({ ...u, plan: false })),
+        ...(v.slot && v.slot.tone !== 'bezi'
+            ? [{ left: v.slot.left, width: v.slot.width, tone: PLAN_ZDROJ[v.slot.tone], plan: true }]
+            : []),
+    ];
     return (
-        `<div class="os"><i class="os-ciara"></i>` +
-        `<i class="os-usek" data-tone="${slot.tone}" style="left:${slot.left}%;width:${slot.width}%"></i>${now}${ticks}</div>`
+        (dnes && krivka
+            ? `<svg class="au-krivka" viewBox="0 0 96 40" preserveAspectRatio="none" aria-hidden="true"><path d="${krivka}"/></svg>`
+            : '') +
+        `<div class="bj-pas">${useky
+            .map((u) => `<i data-tone="${u.tone}"${u.plan ? ' data-plan' : ''} style="left:${u.left}%;width:${u.width}%"></i>`)
+            .join('')}</div>` +
+        (dnes && os.now !== null ? `<i class="bj-teraz" style="left:${os.now}%"></i>` : '') +
+        `<div class="bj-osi">${os.ticks.map((t) => `<span style="left:${t.at}%">${t.label}</span>`).join('')}</div>`
     );
+}
+
+/**
+ * Energia dnes v kostre panelov: nadpis so súčtom vpravo, pásik a čísla podľa zdroja a pod nimi riadok (`suhrn`).
+ * @param {Array<{ tone: string, wh: number, v: string, l: string }>} casti @param {string} spolu @param {string} [suhrn]
+ */
+const energiaHtml = (casti, spolu, suhrn = '') =>
+    `<p class="pn-en-n"><span>${escapeHtml(PANEL_TEXTS.energia)}</span><b>${escapeHtml(spolu)}</b></p>` +
+    stoh(casti) +
+    `<div class="bj-zdroje">${casti
+        .map((c) => `<div><b>${escapeHtml(c.v)}</b><small><i data-tone="${c.tone}"></i>${escapeHtml(c.l)}</small></div>`)
+        .join('')}</div>` +
+    (suhrn ? `<p class="bj-hrial">${escapeHtml(suhrn)}</p>` : '');
+
+/**
+ * Zbalený riadok kostry: meno vľavo, hodnota vpravo (bez prvku hodnoty len meno).
+ * @param {HTMLElement} n @param {HTMLElement | null} v @param {string} meno @param {string} [hodnota]
+ */
+function zbalene(n, v, meno, hodnota = '') {
+    setText(n, meno);
+    if (v) setText(v, hodnota);
 }
 
 /**
@@ -333,7 +371,9 @@ function renderVecSheet(state, m, dom, dlazdice = []) {
 }
 
 /**
- * Obsah detailu spotrebiča `v`: hlava, veta z dlaždice `dl`, čas, os dňa, zápis a prečo. `lenVeta`: detail bez plánu (auto).
+ * Obsah detailu spotrebiča `v` v kostre panelov (docs/navrhy/teraz-panely-zladenie.html, C): hlava s príkonom zásuvky,
+ * čas a veta z dlaždice `dl`, os dňa s krivkou výroby, zápis, energia dnes a zbalené behy, nastavenie a prečo.
+ * `lenVeta`: detail bez plánu (auto).
  * @param {import('../state.js').AppState} state
  * @param {{ v: Model['veci'][number], os: NonNullable<Model['os']>, dl: Dlazdica | null, lenVeta: boolean }} o @param {Dom} dom
  */
@@ -341,20 +381,42 @@ function renderVecObsah(state, { v, os, dl, lenVeta }, dom) {
     dom.tzVecSheet.dataset.tone = v.tone;
     setHtml(dom.tzVecIco, vecIcon(v.id));
     setText(dom.tzVecName, v.name);
-    setText(dom.tzVecKedy, v.kedy);
+    /** @type {import('../../shared/teraz.js').VecZapis | null} */
+    const z = 'zapis' in v ? /** @type {any} */ (v.zapis) : null;
+    // Príkon zo zásuvky na konci riadku pod nadpisom ako pri bojleri, aute a klíme.
+    const kw = z?.stav === 'meria' ? TERAZ_BEZI.zasuvka.kw(z.w ?? 0) : '';
+    setText(dom.tzVecKedy, [v.kedy, kw].filter(Boolean).join(' · '));
     const veta = dl ? vetaDlazdice(dl.odr, dl.potom) : '';
     show(dom.tzVecVeta, veta !== '');
     setText(dom.tzVecVeta, veta);
     // Čas iného dňa nikdy bez dňa - inak by sa čítal ako dnešný.
     show(dom.tzVecCas, !lenVeta);
     setHtml(dom.tzVecCas, `${v.den ? `<span class="vec-den">${escapeHtml(v.den)}</span>` : ''}${escapeHtml(v.cas)}`);
-    show(dom.tzVecPas, !!v.slot);
-    setHtml(dom.tzVecPas, v.slot ? osHtml(os, v.slot) : '');
+    renderVecDen(state, v, os, dom);
     renderZapis(v, dom);
     renderZasuvka(state, v, dom);
     setText(dom.tzVecWhy, v.why);
+    show(dom.tzVecWhy, !!v.why);
     // Že naraz ide len toľko, koľko strecha utiahne, hovorí o Pláne dňa - auto v ňom nie je.
     if (lenVeta) show(dom.tzVecNote, false);
+    zbalene(dom.tzVecPrecoN, null, PANEL_TEXTS.preco);
+    show(dom.tzVecPrecoD, !!v.why || !dom.tzVecNote.classList.contains('hidden'));
+}
+
+/**
+ * Os dňa detailu spotrebiča (krivka výroby dneška - nameraná, potom predpoveď - nad pásom behov a plánu) a energia dnes.
+ * Detail iného dňa (shared/tyzden.js) a auta behy ani energiu nemá.
+ * @param {import('../state.js').AppState} state @param {Model['veci'][number]} v @param {NonNullable<Model['os']>} os @param {Dom} dom
+ */
+function renderVecDen(state, v, os, dom) {
+    const useky = 'useky' in v ? (v.useky ?? []) : [];
+    const naOsi = !!v.slot || useky.length > 0;
+    const krivka = naOsi && state.forecast ? krivkaVyroby(dayPlan(state).map((x) => x.kw)) : null;
+    show(dom.tzVecPas, naOsi);
+    setHtml(dom.tzVecPas, naOsi ? vecGrafHtml(os, { den: v.den, slot: v.slot, useky }, krivka) : '');
+    const e = 'energia' in v ? (v.energia ?? null) : null;
+    show(dom.tzVecEnergia, !!e);
+    setHtml(dom.tzVecEnergia, e ? energiaHtml(e.casti, e.spolu, e.suhrn) : '');
 }
 
 /**
@@ -405,9 +467,9 @@ function renderZasuvka(state, v, dom) {
     const z = 'zapis' in v ? /** @type {any} */ (v.zapis) : null;
     const meria = z?.stav === 'meria';
     const Z = TERAZ_BEZI.zasuvka;
-    show(dom.tzVecMeria, meria);
-    setText(dom.tzVecMeria, meria ? Z.meria(z?.w ?? 0) : '');
-    show(dom.tzVecOznam, meria);
+    // Nastavenie má len spotrebič na zásuvke: oznámenie o konci behu.
+    show(dom.tzVecNastD, meria);
+    zbalene(dom.tzVecNastN, dom.tzVecNastV, PANEL_TEXTS.nastavenie, state.zasuvkaOznam ? PANEL_TEXTS.zapnute : PANEL_TEXTS.vypnute);
     setText(dom.tzVecOznamT, Z.oznam);
     dom.tzVecOznam.setAttribute('aria-checked', String(state.zasuvkaOznam ?? false));
     const stav = state.zasuvkaOznamStav ?? null;
@@ -478,9 +540,13 @@ function polohaKolies(dom) {
     }
 }
 
-/** Čo dnes už dobehlo: riadok na beh, čas vpravo. @param {import('../../shared/teraz.js').VecZapis['hotove']} hotove @param {Dom} dom */
+/**
+ * Čo dnes už dobehlo: zbalené pod Behy s počtom, riadok na beh, čas vpravo.
+ * @param {import('../../shared/teraz.js').VecZapis['hotove']} hotove @param {Dom} dom
+ */
 function renderHotove(hotove, dom) {
-    show(dom.tzVecHotove, hotove.length > 0);
+    show(dom.tzVecBehyD, hotove.length > 0);
+    zbalene(dom.tzVecBehyN, dom.tzVecBehyPocet, PANEL_TEXTS.behy, PANEL_TEXTS.dnes(hotove.length));
     setHtml(dom.tzVecHotove, hotove.map((h) => `<li>${escapeHtml(h.text)}<span>${escapeHtml(h.cas)}</span></li>`).join(''));
 }
 
@@ -612,8 +678,9 @@ function bojlerTeraz(state, co, plan) {
 }
 
 /**
- * Panel Bojler dnes (docs/navrhy/bojler-panel.html, A): stav s plánom, teplota a pás behov na jednej osi, energia podľa
- * zdroja, behy a čo riadi bojler. Otvorený, kým je v stave tzVec 'bojler' a bojler riadi zásuvka.
+ * Panel Bojler (docs/navrhy/bojler-panel.html, A; kostra docs/navrhy/teraz-panely-zladenie.html, C): stav s príkonom,
+ * teplota vody a pod ňou plán, teplota a pás behov na jednej osi, energia podľa zdroja so súčtom, zbalené behy a čo
+ * riadi bojler s oznámeniami. Otvorený, kým je v stave tzVec 'bojler' a bojler riadi zásuvka.
  * @param {import('../state.js').AppState} state @param {Dom} dom @param {Model['bojler']} plan
  */
 function renderBojlerSheet(state, dom, plan) {
@@ -623,13 +690,13 @@ function renderBojlerSheet(state, dom, plan) {
         setHtml(dom.tzBojlerIco, vecIcon('bojler'));
         setText(dom.tzBojlerTtl, d.nadpis);
         setText(dom.tzBojlerPod, d.pod);
-        setText(dom.tzBojlerPlan, d.plan);
-        show(dom.tzBojlerPlan, !!d.plan);
+        renderVelke(dom.tzBojlerVelkeB, dom.tzBojlerVelke, dom.tzBojlerVeta, d.velke, d.veta);
         renderVoda(d.voda, dom.tzBojlerVoda);
         renderBojlerPas(d.pas, dom.tzBojlerPas);
         renderBojlerEnergia(d, dom);
         renderBojlerRezim(state, d.rezim, dom);
         renderBojlerOznam(state, dom);
+        zbalene(dom.tzBojlerNastN, dom.tzBojlerNastV, PANEL_TEXTS.nastavenie, TERAZ_BOJLER_TEXTS.rezim.riadi(d.rezim.rucne));
     }
     dialog(dom.tzBojlerSheet, !!b, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="bojler"]') : null));
 }
@@ -642,7 +709,9 @@ function renderBojlerPas(pas, el) {
     setHtml(
         el,
         `<div class="bj-pas">` +
-            pas.useky.map((u) => `<i data-tone="${u.tone}" style="left:${u.left}%;width:${u.width}%"></i>`).join('') +
+            pas.useky
+                .map((u) => `<i data-tone="${u.tone}"${u.plan ? ' data-plan' : ''} style="left:${u.left}%;width:${u.width}%"></i>`)
+                .join('') +
             `</div><i class="bj-teraz" style="left:${pas.teraz}%"></i>` +
             `<div class="bj-osi">${pas.ticks.map((t) => `<span style="left:${t.at}%">${t.label}</span>`).join('')}</div>`,
     );
@@ -656,23 +725,26 @@ const stoh = (casti) =>
         .join('')}</span>`;
 
 /**
- * Energia dňa (pásik a čísla podľa zdroja), koľkokrát a ako dlho hrial a behy zbalené pod nadpisom s počtom.
+ * Veľké číslo panela a veta pod ním; bez oboch celý blok preč.
+ * @param {HTMLElement} blok @param {HTMLElement} cislo @param {HTMLElement} vetaEl @param {string} velke @param {string} veta
+ */
+function renderVelke(blok, cislo, vetaEl, velke, veta) {
+    show(blok, !!velke || !!veta);
+    show(cislo, !!velke);
+    setText(cislo, velke);
+    show(vetaEl, !!veta);
+    setText(vetaEl, veta);
+}
+
+/**
+ * Energia dňa (súčet, pásik a čísla podľa zdroja), koľkokrát a ako dlho hrial a behy zbalené pod nadpisom s počtom.
  * Či sú behy rozbalené, drží prvok `<details>` sám - render na to nesiaha.
  * @param {ReturnType<typeof bojlerDetail>} d @param {Dom} dom
  */
 function renderBojlerEnergia(d, dom) {
-    setHtml(
-        dom.tzBojlerEnergia,
-        stoh(d.energia) +
-            `<div class="bj-zdroje">${d.energia
-                .map((c) => `<div><b>${escapeHtml(c.v)}</b><small><i data-tone="${c.tone}"></i>${escapeHtml(c.l)}</small></div>`)
-                .join('')}</div>`,
-    );
-    setText(dom.tzBojlerHrial, d.hrial);
-    show(dom.tzBojlerHrial, !!d.hrial);
+    setHtml(dom.tzBojlerEnergia, energiaHtml(d.energia, d.spolu, d.hrial));
     show(dom.tzBojlerBehyD, d.behy.length > 0);
-    setText(dom.tzBojlerBehyN, d.behyNadpis);
-    setText(dom.tzBojlerBehyPocet, String(d.behy.length));
+    zbalene(dom.tzBojlerBehyN, dom.tzBojlerBehyPocet, d.behyNadpis, d.behyPocet);
     setHtml(
         dom.tzBojlerBehy,
         d.behy
@@ -822,27 +894,12 @@ function renderAutoSheet(state, dom) {
         setHtml(dom.tzAutoIco, vecIcon('auto'));
         setText(dom.tzAutoTtl, d.nadpis);
         setText(dom.tzAutoPod, d.pod);
+        // Posledný beh je veľké číslo panela (km a pod nimi kWh, kedy a podiel slnka).
+        renderVelke(dom.tzAutoVelkeB, dom.tzAutoVelke, dom.tzAutoVeta, d.beh ? `${d.beh.km} km` : '', d.beh?.veta ?? '');
         renderAutoOs(d.os, dom.tzAutoOs);
-        show(dom.tzAutoBeh, !!d.beh);
-        setHtml(
-            dom.tzAutoBeh,
-            d.beh
-                ? `<b>${escapeHtml(d.beh.km)}<small>km</small></b><p><strong>${escapeHtml(d.beh.kwh)} · ${escapeHtml(d.beh.kedy)}</strong>` +
-                      `${escapeHtml(d.beh.slnko)}</p>`
-                : '',
-        );
-        show(dom.tzAutoEnergia, !!d.beh);
-        setHtml(
-            dom.tzAutoEnergia,
-            d.beh
-                ? stoh(d.beh.energia) +
-                      `<div class="bj-zdroje">${d.beh.energia
-                          .map((c) => `<div><b>${escapeHtml(c.v)}</b><small><i data-tone="${c.tone}"></i>${escapeHtml(c.l)}</small></div>`)
-                          .join('')}</div>`
-                : '',
-        );
-        show(dom.tzAutoBehyB, d.behy.length > 0);
-        setText(dom.tzAutoBehyN, d.behyNadpis);
+        setHtml(dom.tzAutoEnergia, energiaHtml(d.energia, d.spolu));
+        show(dom.tzAutoBehyD, d.behy.length > 0);
+        zbalene(dom.tzAutoBehyN, dom.tzAutoBehyPocet, d.behyNadpis, d.behyPocet);
         setHtml(
             dom.tzAutoBehy,
             d.behy
@@ -861,6 +918,7 @@ function renderAutoSheet(state, dom) {
                 .join(''),
         );
         renderAutoOznam(state, dom);
+        zbalene(dom.tzAutoPrecoN, null, PANEL_TEXTS.precoAsi);
         setText(dom.tzAutoPozn, d.poznamka);
     }
     dialog(dom.tzAutoSheet, !!info, () => (shows(state, 'terazky') ? dom.tzCo.querySelector('[data-vec="auto"]') : null));
@@ -878,7 +936,9 @@ function klimaTeraz(state) {
 }
 
 /**
- * Panel Klíma (docs/navrhy/klima-daikin.html): otvorený, kým je v stave tzVec 'klima' a appka má stav klimatizácie.
+ * Panel Klíma (docs/navrhy/klima-daikin.html; kostra docs/navrhy/teraz-panely-zladenie.html, C): teplota doma a vonku,
+ * graf dňa, energia so súčtom a zbalené 14 dní, rok a podrobnosti. Otvorený, kým je v stave tzVec 'klima' a appka má
+ * stav klimatizácie.
  * @param {import('../state.js').AppState} state @param {Dom} dom
  */
 function renderKlimaSheet(state, dom) {
@@ -888,16 +948,14 @@ function renderKlimaSheet(state, dom) {
         setHtml(dom.tzKlimaIco, vecIcon('klima'));
         setText(dom.tzKlimaTtl, d.nadpis);
         setText(dom.tzKlimaPod, d.pod);
+        renderVelke(dom.tzKlimaVelkeB, dom.tzKlimaVelke, dom.tzKlimaVeta, d.velke, d.veta);
         renderKlimaGraf(d.graf, dom.tzKlimaGraf);
-        setHtml(
-            dom.tzKlimaEnergia,
-            stoh(d.energia) +
-                `<div class="bj-zdroje">${d.energia
-                    .map((c) => `<div><b>${escapeHtml(c.v)}</b><small><i data-tone="${c.tone}"></i>${escapeHtml(c.l)}</small></div>`)
-                    .join('')}</div>`,
-        );
-        setText(dom.tzKlimaBeh, d.beh);
+        setHtml(dom.tzKlimaEnergia, energiaHtml(d.energia, d.spolu, d.beh));
+        show(dom.tzKlimaDniD, !!d.dni);
+        zbalene(dom.tzKlimaDniN, null, PANEL_TEXTS.dni14);
         renderKlimaDni(d.dni, dom.tzKlimaDni);
+        show(dom.tzKlimaRokD, !!d.rok);
+        zbalene(dom.tzKlimaRokN, null, TERAZ_KLIMA_TEXTS.rok);
         renderKlimaRok(d.rok, dom.tzKlimaRok);
         setText(dom.tzKlimaPodrN, TERAZ_KLIMA_TEXTS.podrobnosti);
         setHtml(dom.tzKlimaPodr, d.podrobnosti.map(([l, v]) => `<p><span>${escapeHtml(l)}</span><b>${escapeHtml(v)}</b></p>`).join(''));
@@ -943,8 +1001,7 @@ function renderKlimaDni(d, el) {
     if (!d) return;
     setHtml(
         el,
-        `<p class="bj-nast-n">${escapeHtml(TERAZ_KLIMA_TEXTS.dni14)}</p>` +
-            `<div class="kl-dni" aria-hidden="true">${d.stlpce.map((s) => `<i style="height:${s.h}%"${s.dnes ? ' data-dnes' : ''}></i>`).join('')}</div>` +
+        `<div class="kl-dni" aria-hidden="true">${d.stlpce.map((s) => `<i style="height:${s.h}%"${s.dnes ? ' data-dnes' : ''}></i>`).join('')}</div>` +
             `<div class="kl-os" aria-hidden="true">${d.popisky.map((p) => `<span>${escapeHtml(p)}</span>`).join('')}</div>` +
             (d.najviac ? `<p class="bj-hrial">${escapeHtml(d.najviac)}</p>` : ''),
     );
@@ -959,10 +1016,9 @@ function renderKlimaRok(r, el) {
         `<span${minuly ? ' data-minuly' : ''}><i data-k="c" style="height:${s.c}%"></i><i data-k="k" style="height:${s.k}%"></i></span>`;
     setHtml(
         el,
-        `<p class="bj-nast-n">${escapeHtml(TERAZ_KLIMA_TEXTS.rok)}</p>` +
-            `<div class="kl-rok" aria-hidden="true">${r.mesiace
-                .map((m) => `<span>${stlpec(m.minuly, true)}${m.tento ? stlpec(m.tento, false) : '<span></span>'}</span>`)
-                .join('')}</div>` +
+        `<div class="kl-rok" aria-hidden="true">${r.mesiace
+            .map((m) => `<span>${stlpec(m.minuly, true)}${m.tento ? stlpec(m.tento, false) : '<span></span>'}</span>`)
+            .join('')}</div>` +
             `<div class="kl-os" aria-hidden="true">${r.mesiace.map((m) => `<span>${escapeHtml(m.m)}</span>`).join('')}</div>` +
             `<div class="bj-zdroje">${r.sucty
                 .map((s) => `<div><b>${escapeHtml(s.v)}</b><small><i data-k="${s.tone}"></i>${escapeHtml(s.l)}</small></div>`)
@@ -996,6 +1052,7 @@ function renderAutoOznam(state, dom) {
     const T = AUTO_NABIJA_TEXTS;
     const o = state.autoOznam ?? { z: false, k: false };
     const stav = state.autoOznamStav ?? null;
+    zbalene(dom.tzAutoNastN, dom.tzAutoNastV, PANEL_TEXTS.nastavenie, o.z || o.k ? PANEL_TEXTS.zapnute : PANEL_TEXTS.vypnute);
     setText(dom.tzAutoOznamZT, T.oznamZ);
     setText(dom.tzAutoOznamKT, T.oznamK);
     dom.tzAutoOznamZ.setAttribute('aria-checked', String(o.z));

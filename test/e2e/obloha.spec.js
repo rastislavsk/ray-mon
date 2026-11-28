@@ -1588,9 +1588,19 @@ test.describe('karta Teraz', () => {
             await expect(page.locator('#tz-vec-cas')).toHaveText(v.cas);
             await expect(page.locator('#tz-vec-why')).toHaveText(v.why);
             await expect(page.locator('#tz-vec-note')).toHaveText('Naraz len toľko, koľko strecha utiahne.');
-            // Úsek spotrebiča na osi dňa a dnes aj „teraz“.
-            await expect(page.locator('#tz-vec-pas .os-usek')).toHaveAttribute('data-tone', v.slot?.tone ?? '');
-            await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(1);
+            // Plán spotrebiča obrysom na osi 0 - 24 h farbou zdroja, nad ňou krivka výroby dneška a dnes aj „teraz“
+            // (docs/navrhy/teraz-panely-zladenie.html, C).
+            await expect(page.locator('#tz-vec-pas .bj-pas i[data-plan]')).toHaveAttribute(
+                'data-tone',
+                v.slot?.tone === 'go' ? 'slnko' : 'siet',
+            );
+            await expect(page.locator('#tz-vec-pas .bj-teraz')).toHaveCount(1);
+            await expect(page.locator('#tz-vec-pas .au-krivka')).toHaveCount(1);
+            await expect(page.locator('#tz-vec-pas .bj-osi span')).toHaveText(['0', '6', '12', '18', '24']);
+            // Prečo je zbalené pod riadkom, energiu dnes spotrebič bez behu nemá.
+            await expect(page.locator('#tz-vec-preco-d')).not.toHaveAttribute('open');
+            await expect(page.locator('#tz-vec-why')).toBeHidden();
+            await expect(page.locator('#tz-vec-energia')).toBeHidden();
             expect(await vazneNalezy(page)).toEqual([]);
             // Okrem krížika vpravo hore je jediné tlačidlo „Už beží“. Escape vráti fokus na dlaždicu či riadok,
             // z ktorého sa detail otvoril.
@@ -1773,8 +1783,9 @@ test.describe('karta Teraz', () => {
         await page.locator(`#tz-dlazdice [data-vec="${later.id}"]`).click();
         await expect(page.locator('#tz-vec-cas .vec-den')).toHaveText('Zajtra');
         await expect(page.locator('#tz-vec-cas')).toHaveText(`Zajtra${later.cas}`);
-        await expect(page.locator('#tz-vec-pas .os-usek')).toHaveCount(1);
-        await expect(page.locator('#tz-vec-pas .os-teraz')).toHaveCount(0);
+        await expect(page.locator('#tz-vec-pas .bj-pas i[data-plan]')).toHaveCount(1);
+        await expect(page.locator('#tz-vec-pas .bj-teraz')).toHaveCount(0);
+        await expect(page.locator('#tz-vec-pas .au-krivka')).toHaveCount(0);
         expect(await vazneNalezy(page)).toEqual([]);
         expect(errors).toEqual([]);
     });

@@ -195,6 +195,17 @@ dom naučený profil (bez učenia `HOUSE_BASE_KW`) + bojler podľa `potrebaBojle
 Plánu dňa (auto nie), sieť je rozdiel zaokrúhlených čísel - netto za deň. Hláška triedy dňa (`DEN_WORDS.iny`) ostala len
 na karte Dnes; pravidlá s „novou vecou“ z PR #525 boli zrušené už predtým.
 
+## Panely dlaždíc karty Teraz: jedna kostra
+
+Návrh a rozhodnutie: `docs/navrhy/teraz-panely-zladenie.html` (C + súčet, 28. 11. 2026). Detail spotrebiča, Bojler, Auto
+a Klíma majú rovnaké veci na rovnakom mieste: hlava (meno veci, riadok stavu normálnym písmom s príkonom na konci za bodkou),
+veľké číslo s vetou (čas od–do, teplota vody a pod ňou dohriatie, km posledného behu, teplota doma), os 0 – 24 h (hore prečo
+vtedy - krivka výroby, teplota vody či teploty klímy -, dole pás behov: plné = stalo sa, obrys `data-plan` = plán), akcia
+(len „Už beží“), Energia dnes so súčtom vpravo (`spoluKwh` zo zaokrúhlených častí) a pod ňou zbalené `<details>` Behy,
+Posledných 14 dní, Nastavenie (riadenie a oznámenia), Prečo. Čo vec nemá, chýba, poradie zvyšku sa nemení. Texty kostry,
+`casti` a `krivkaVyroby` sú v `shared/teraz-panel.js`; drahé pásmo je všade „drahá sieť“. Energia spotrebiča bez merania
+je odhad z typického programu a podielov Plánu dňa (`behyVeci` v `shared/teraz.js`). Nový údaj panela patrí na miesto kostry.
+
 ## Dlaždice bez farby stavu
 
 Dlaždica ukazuje len čísla (`docs/navrhy/teraz-dlazdice-cisla.html`, B + P1, 27. 11. 2026): veľké číslo so značkou, čo

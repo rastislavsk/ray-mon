@@ -266,7 +266,10 @@ test('klimaDlazdica: skript mlčí - tón chyba a ako dlho', () => {
 test('klimaDetail: nadpis, graf, energia, beh, 14 dní, rok a podrobnosti', () => {
     const d = klimaDetail(odWorkera(), new Date(NOW), TZ, TARIFA);
     assert.equal(d.nadpis, 'Klíma');
-    assert.equal(d.pod, 'Kúri na 23,5 °C · 1,2 kW teraz');
+    assert.equal(d.pod, 'Kúri na 23,5 °C · 1,2 kW');
+    // Veľké číslo panela je teplota doma, pod ním vonku (docs/navrhy/teraz-panely-zladenie.html).
+    assert.match(d.velke, /^\d+(,\d)? °C$/);
+    assert.match(d.veta, /^Vonku -?\d+(,\d)? °C$/);
     assert.ok(d.graf);
     assert.match(d.graf.doma, /^M0 /);
     assert.equal(d.graf.popisky.length, 2);
@@ -279,7 +282,8 @@ test('klimaDetail: nadpis, graf, energia, beh, 14 dní, rok a podrobnosti', () =
         d.energia.map((c) => c.tone),
         ['slnko', 'siet', 'vt'],
     );
-    assert.equal(d.beh, 'Dnes 12,9 kWh · beží 11 h 17 min · včera 26,7 kWh');
+    assert.equal(d.spolu, '12,9 kWh');
+    assert.equal(d.beh, 'Beží 11 h 17 min · včera 26,7 kWh');
     assert.equal(d.dni?.stlpce.length, 14);
     assert.equal(d.dni?.stlpce[13].dnes, true);
     assert.equal(d.dni?.najviac, 'Najviac v stredu 25. 11.: 26,7 kWh');
@@ -318,7 +322,8 @@ test('klimaDetail: vypnutá, mlčí, bez dát a ventilátor', () => {
     assert.equal(vyp.graf, null);
     assert.equal(vyp.dni, null);
     assert.equal(vyp.rok, null);
-    assert.equal(vyp.beh, 'Dnes 0,0 kWh · beží 45 min');
+    assert.equal(vyp.spolu, '0,0 kWh');
+    assert.equal(vyp.beh, 'Beží 45 min');
     assert.deepEqual(vyp.podrobnosti.slice(0, 5), [
         ['Režim', 'vypnutá'],
         ['Kompresor', 'stojí'],

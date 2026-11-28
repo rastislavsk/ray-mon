@@ -11,7 +11,9 @@ import { male } from './messages-teraz.js';
 import { money } from './messages-zaklad.js';
 import { kmOf } from './mozem-jadro.js';
 import { localDateKey, localMinutes } from './solar.js';
-import { bandAt, bandById, scheduleFor } from './tariff.js';
+import { bandAt, scheduleFor } from './tariff.js';
+import { maDrahu } from './teraz-bojler.js';
+import { casti, krivkaVyroby, PANEL_TEXTS, spoluKwh } from './teraz-panel.js';
 import { isObj } from './valid.js';
 
 const MIN = 60 * 1000;
@@ -171,9 +173,6 @@ export const AUTO_NABIJA_TEXTS = {
     naposledy: (/** @type {string} */ kedy) => `Nenabíja sa · naposledy ${kedy}`,
     vTomto: 'v tomto behu',
     zoSlnka: (/** @type {number} */ pct) => `${pct} % zo slnka`,
-    zdroj: { slnko: 'slnko', siet: 'sieť', vt: 'drahá sieť' },
-    zdrojSr: { slnko: 'zo slnka', siet: 'zo siete', vt: 'zo siete v drahom pásme' },
-    behyNadpis: 'Posledné nabíjania',
     dnes: 'dnes',
     vcera: 'včera',
     slnkoDnes: 'Slnko by dnes dalo',
@@ -206,7 +205,7 @@ export function autoDlazdicaNabija(b, tz) {
 }
 
 /** @typedef {import('./config.js').Tariff} Tariff */
-/** @typedef {'slnko' | 'siet' | 'vt'} Ton */
+/** @typedef {import('./teraz-panel.js').Ton} Ton */
 
 /** Pásmo tarify v čase `at` (bez tarify null). @param {Tariff | null} tariff @param {number} at @param {string} tz */
 function pasmo(tariff, at, tz) {
@@ -236,22 +235,6 @@ function energiaBehu(b, tariff, tz) {
         },
         { slnko: 0, siet: 0, vt: 0, uspora: 0 },
     );
-}
-
-/** Má tarifa v deň `den` drahé pásmo? @param {Tariff | null} tariff @param {string} den */
-const maDrahu = (tariff, den) => !!tariff && scheduleFor(tariff, den).changes.some((c) => bandById(tariff, c.band).level === 'draha');
-
-/**
- * Časti energie podľa zdroja: Wh, kWh textom, popis a to isté pre čítačku. Bez drahého pásma je sieť jedna časť.
- * @param {{ slnko: number, siet: number, vt: number }} e @param {boolean} sVt
- */
-function casti(e, sVt) {
-    const T = AUTO_NABIJA_TEXTS;
-    const tony = /** @type {Ton[]} */ (sVt ? ['slnko', 'siet', 'vt'] : ['slnko', 'siet']);
-    return tony.map((tone) => {
-        const wh = Math.max(0, tone === 'siet' && !sVt ? e.siet + e.vt : e[tone]);
-        return { tone, wh, v: `${fmt1(wh / 1000)} kWh`, l: T.zdroj[tone], sr: T.zdrojSr[tone] };
-    });
 }
 
 /** Kedy: „dnes 13:20“, „včera 22:05“, inak skratka dňa. @param {number} at @param {Date} now @param {string} tz */
@@ -296,17 +279,6 @@ function useky(behy, { now, tz, tariff }) {
 }
 
 /**
- * Krivka výroby dneška na osi (plocha v SVG 0 - 96 × 0 - 40, štvrťhodiny), bez výroby null.
- * @param {number[] | null} vyroba kW po štvrťhodinách od polnoci
- */
-function krivka(vyroba) {
-    const max = vyroba ? Math.max(...vyroba) : 0;
-    if (!vyroba || !(max > 0)) return null;
-    const y = (/** @type {number} */ kw) => Math.round((40 - (kw / max) * 36) * 10) / 10;
-    return `M0 40${vyroba.map((kw, i) => ` L${i + 0.5} ${y(kw)}`).join('')} L96 40 Z`;
-}
-
-/**
  * Riadok pod nadpisom panelu: nabíja sa od kedy a akým výkonom, inak kedy naposledy. @param {BehAuta | null} teraz
  * @param {BehAuta | null} posl @param {Date} now @param {string} tz
  */
@@ -317,24 +289,40 @@ function podText(teraz, posl, now, tz) {
 }
 
 /**
- * Posledný beh v paneli: km veľkým, kWh a kedy (počas nabíjania „v tomto behu“), podiel slnka a energia podľa zdroja.
- * @param {BehAuta} b @param {{ slnko: number, siet: number, vt: number }} e @param {{ teraz: boolean, tz: string, sVt: boolean }} k
+ * Posledný beh v paneli ako veľké číslo: km a pod nimi kWh, kedy (počas nabíjania „v tomto behu“) a podiel slnka.
+ * @param {BehAuta} b @param {{ slnko: number, siet: number, vt: number }} e @param {{ teraz: boolean, tz: string }} k
  */
-function behModel(b, e, { teraz, tz, sVt }) {
+function behModel(b, e, { teraz, tz }) {
     const T = AUTO_NABIJA_TEXTS;
+    const kedy = teraz ? T.vTomto : `${hm(b.m, tz)} – ${hm(/** @type {number} */ (b.k), tz)}`;
+    const slnko = b.wh > 0 ? T.zoSlnka(Math.round((100 * e.slnko) / b.wh)) : '';
     return {
         km: `+${kmBehu(b)}`,
-        kwh: `${fmt1(b.wh / 1000)} kWh`,
-        kedy: teraz ? T.vTomto : `${hm(b.m, tz)} – ${hm(/** @type {number} */ (b.k), tz)}`,
-        slnko: b.wh > 0 ? T.zoSlnka(Math.round((100 * e.slnko) / b.wh)) : '',
-        energia: casti(e, sVt),
+        veta: [`${fmt1(b.wh / 1000)} kWh ${kedy}`, slnko].filter(Boolean).join(' · '),
     };
 }
 
 /**
- * Panel Auto (docs/navrhy/auto-nabija.html, P2): čo sa deje teraz, os dňa s výrobou a behmi, posledný beh (km, kWh,
- * podiel slnka, energia podľa zdroja), behy za týždeň, čo by dalo slnko dnes a koľko auto chytilo zo slnka za 7 dní
- * (s úsporou podľa ceny pásma). @param {AutoInfo} info
+ * Energia dneška podľa zdroja vo Wh: štvrťhodiny behov, ktoré patria dnešku (nočné nabíjanie cez polnoc len jeho dnešná časť).
+ * @param {BehAuta[]} behy @param {{ now: Date, tz: string, tariff: Tariff | null }} k
+ */
+function energiaDnes(behy, { now, tz, tariff }) {
+    const polnoc = now.getTime() - localMinutes(now, tz) * MIN - (now.getTime() % MIN);
+    return behy.reduce(
+        (e, b) => {
+            const q0 = Math.floor(b.m / Q);
+            const dnes = { ...b, q: b.q.map((x, i) => ((q0 + i + 1) * Q > polnoc ? x : /** @type {[number, number]} */ ([0, 0]))) };
+            const x = energiaBehu(dnes, tariff, tz);
+            return { slnko: e.slnko + x.slnko, siet: e.siet + x.siet, vt: e.vt + x.vt };
+        },
+        { slnko: 0, siet: 0, vt: 0 },
+    );
+}
+
+/**
+ * Panel Auto (docs/navrhy/auto-nabija.html, P2; kostra docs/navrhy/teraz-panely-zladenie.html, C): čo sa deje teraz,
+ * posledný beh veľkým číslom (km, pod nimi kWh a podiel slnka), os dňa s výrobou a behmi, energia dneška podľa zdroja
+ * so súčtom, behy za týždeň, čo by dalo slnko dnes a koľko auto chytilo zo slnka za 7 dní (s úsporou podľa ceny pásma). @param {AutoInfo} info
  * @param {{ now: Date, tz: string, tariff: Tariff | null, slnko: { kwh: number, km: number } | null, vyroba: number[] | null }} k
  */
 export function autoDetail(info, { now, tz, tariff, slnko, vyroba }) {
@@ -352,13 +340,22 @@ export function autoDetail(info, { now, tz, tariff, slnko, vyroba }) {
         { kwh: 0, uspora: 0 },
     );
     const pod = podText(teraz, posl, now, tz);
+    const eDnes = energiaDnes(behy, { now, tz, tariff });
     return {
         nadpis: T.nadpis,
         pod: pod.charAt(0).toUpperCase() + pod.slice(1),
         nabija: !!teraz,
-        os: { useky: useky(behy, { now, tz, tariff }), krivka: krivka(vyroba), teraz: naOsi(localMinutes(now, tz)), popis: T.osPopis },
-        beh: posl && e ? behModel(posl, e, { teraz: posl === teraz, tz, sVt }) : null,
-        behyNadpis: T.behyNadpis,
+        os: {
+            useky: useky(behy, { now, tz, tariff }),
+            krivka: krivkaVyroby(vyroba),
+            teraz: naOsi(localMinutes(now, tz)),
+            popis: T.osPopis,
+        },
+        beh: posl && e ? behModel(posl, e, { teraz: posl === teraz, tz }) : null,
+        energia: casti(eDnes, sVt),
+        spolu: spoluKwh(casti(eDnes, sVt)),
+        behyNadpis: PANEL_TEXTS.nabijania,
+        behyPocet: String(behy.length),
         behy: [...behy].reverse().map((b) => {
             const x = energiaBehu(b, tariff, tz);
             const c = casti(x, sVt);
