@@ -31,7 +31,7 @@ Odložené 22. 10. 2026. Zdieľanie nastavenia elektrárne musí v appke z obcho
 
 Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrhy/plan-dna-zive-data.html`,
 `docs/navrhy/plan-dna-ucenie.html`). Termín je odhad, kedy bude dosť dát. Na každý je nastavená pripomienka
-(naplánovaná úloha v appke Claude).
+(naplánovaná úloha na claude.ai, beží v cloude).
 
 - **1. 12. 2026 – Zmazať jednorazovú opravu histórie** (zapísané 27. 11. 2026 pri audite): `opravaDvochZariadeni`
   a `OPRAVA` vo `worker/src/ucet.js` po 1. 12. 2026 už nič nerobia (beží len do `OPRAVA.do`). Zmazať aj s kľúčom
@@ -89,6 +89,8 @@ Odložené 19. 11. 2026 pri návrhu učenia Plánu dňa z histórie (`docs/navrh
 - **Graf dňa na Teraz pre ľudí, čo nečítajú grafy** (1. 11. 2026, bez výberu): `docs/navrhy/teraz-obraz-dna.html`
   (A stuha dňa, B plán na dráhe s kapsulami). Mockupy na vetve `claude/teraz-obraz-dna`.
 - **Karta Dnes a ranné oznámenie nepoznajú núdzové časy** z karty Teraz – zladiť.
+- **Sušička „zapni teraz“ pri možno suchom praní** (27. 11. 2026): overiť v `zs:` / `bz:`, či zásuvka nerozdelila jedno
+  pranie na dva behy. Návrh textov dlaždíc zamietnutý 28. 11. 2026; čas umývačky 19:30 je pri tarife Dvorany správny.
 - **Mapa Radaru na širokej obrazovke prekrýva navigáciu** (zistené pri audite, neopravené).
 
 ## Overiť na telefóne alebo na skutočných dňoch
