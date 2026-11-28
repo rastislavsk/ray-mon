@@ -165,7 +165,8 @@ export const TERAZ_BEZI = {
      * a vypínač oznámenia o konci behu pre tento telefón.
      */
     zasuvka: {
-        meria: (/** @type {number} */ w) => (w >= 10 ? `Meria zásuvka · teraz ${fmt1(w / 1000)} kW` : 'Meria zásuvka · teraz nebeží'),
+        /** Príkon zo zásuvky na konci riadku pod nadpisom detailu, pod 10 W nič (spotrebič nebeží). */
+        kw: (/** @type {number} */ w) => (w >= 10 ? `${fmt1(w / 1000)} kW` : ''),
         oznam: 'Oznámiť, keď dobehne',
         /** Bežiaci beh zo zásuvky: koniec je odhad, kým zásuvka nezmeria skutočný. */
         why: 'Začiatok zmerala zásuvka. Koniec je odhad podľa predošlých behov, skutočný zmeria tiež.',

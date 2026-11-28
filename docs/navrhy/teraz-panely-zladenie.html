@@ -1,0 +1,1377 @@
+<!doctype html>
+<html lang="sk">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Zladenie panelov spotrebičov</title>
+        <style>
+            /* Návrh (28. 11. 2026): panely, ktoré otvorí ťuknutie na dlaždicu na karte Teraz (práčka, sušička, umývačka,
+               bojler, auto, klíma), s jednou kostrou - rovnaké veci na rovnakom mieste. Náhľady majú šírku S22 (360 px),
+               písmo a štýly podľa css/statistika.css (.sheet), css/nastavenie.css (.vec-top) a css/teraz.css (.bj-*).
+               Čísla v náhľadoch sú vymyslené, aby bolo vidno všetky časti - nie sú z merania. Snímky „dnes“ sú z e2e
+               testov (fixtures, pevný čas 13:00), nie z telefónu. */
+            @font-face {
+                font-family: 'Archivo';
+                font-weight: 100 900;
+                font-stretch: 62% 125%;
+                src: url('../../fonts/archivo-obloha.woff2') format('woff2');
+            }
+            :root {
+                color-scheme: dark;
+                --bg: #0b1226;
+                --card: #131c36;
+                --dim: rgba(255, 255, 255, 0.72);
+                --line: rgba(255, 255, 255, 0.16);
+                --yes: #b9f28c;
+                --cheap: #7cc4ff;
+                --costly: #ff6b5b;
+                --slnko: #ffd166;
+                --no: #ff8f7a;
+                --font: 'Archivo', -apple-system, 'Segoe UI', Arial, sans-serif;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            body {
+                margin: 0;
+                background: var(--bg);
+                color: #fff;
+                font-family: var(--font);
+                line-height: 1.5;
+            }
+            main {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding: 40px 16px 80px;
+                display: grid;
+                gap: 44px;
+            }
+            h1 {
+                margin: 0;
+                font-size: clamp(1.8rem, 5vw, 2.6rem);
+                font-weight: 900;
+                line-height: 1.1;
+            }
+            h2 {
+                margin: 0 0 12px;
+                font-size: 1.35rem;
+                font-weight: 900;
+            }
+            h3 {
+                margin: 0 0 6px;
+                font-size: 1.05rem;
+                font-weight: 800;
+            }
+            p,
+            li,
+            td {
+                color: var(--dim);
+            }
+            b,
+            strong,
+            th {
+                color: #fff;
+            }
+            code {
+                font-size: 0.9em;
+                color: #cfe3ff;
+            }
+            ul,
+            ol {
+                margin: 6px 0;
+                padding-left: 20px;
+            }
+            .karta {
+                background: var(--card);
+                border-radius: 18px;
+                padding: 20px;
+            }
+            .tab-obal {
+                overflow-x: auto;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+            th,
+            td {
+                text-align: left;
+                vertical-align: top;
+                padding: 8px 10px;
+                border-bottom: 1px solid var(--line);
+            }
+            th {
+                font-size: 0.8rem;
+            }
+            .moznosti {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 14px;
+            }
+            .moznost {
+                background: var(--card);
+                border-radius: 16px;
+                padding: 16px;
+                border: 2px solid transparent;
+            }
+            .moznost[data-odp] {
+                border-color: var(--yes);
+            }
+            .stitok {
+                display: inline-block;
+                font-size: 0.75rem;
+                font-weight: 800;
+                padding: 1px 8px;
+                border-radius: 999px;
+                margin-left: 6px;
+                vertical-align: 2px;
+                background: var(--yes);
+                color: #14300c;
+            }
+            .plus {
+                color: var(--yes);
+            }
+            .minus {
+                color: var(--no);
+            }
+            .nove {
+                color: var(--yes);
+                font-weight: 700;
+            }
+            .worker {
+                color: var(--slnko);
+                font-weight: 700;
+            }
+            .pozn {
+                font-size: 0.85rem;
+            }
+
+            /* ---- Snímky dnešného stavu ---- */
+            .snimky {
+                display: flex;
+                gap: 16px;
+                overflow-x: auto;
+                padding-bottom: 8px;
+                align-items: flex-start;
+            }
+            .snimky figure {
+                margin: 0;
+                flex: none;
+                width: 260px;
+            }
+            .snimky img {
+                width: 100%;
+                border-radius: 14px;
+                display: block;
+            }
+            figcaption {
+                font-size: 0.85rem;
+                color: var(--dim);
+                margin-top: 6px;
+            }
+
+            /* ---- Náhľady panelov (rozmery appky) ---- */
+            .nahlady {
+                display: flex;
+                gap: 22px;
+                overflow-x: auto;
+                padding-bottom: 10px;
+                align-items: flex-start;
+            }
+            .nahlad {
+                flex: none;
+                width: 392px;
+                padding-left: 32px;
+            }
+            .nahlad > p {
+                font-size: 0.85rem;
+                margin: 8px 2px 0;
+            }
+            .sh {
+                position: relative;
+                width: 360px;
+                border-radius: 26px 26px 0 0;
+                background: #0e1532;
+                box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+                color: #fff;
+            }
+            .sh-in {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr);
+                gap: 10px;
+                padding: 18px 18px 22px;
+            }
+            .sh p {
+                margin: 0;
+                font-size: 0.9375rem;
+                line-height: 1.4;
+            }
+            .x {
+                position: absolute;
+                top: 14px;
+                right: 14px;
+                width: 28px;
+                height: 28px;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.16);
+                display: grid;
+                place-items: center;
+            }
+            .x svg {
+                width: 12px;
+                height: 12px;
+                stroke: #fff;
+                stroke-width: 2.6;
+                stroke-linecap: round;
+            }
+            /* Čiara 82 % výšky S22 (max-height panelu): čo je pod ňou, treba doscrollovať. */
+            .zlom {
+                position: absolute;
+                left: -8px;
+                right: -8px;
+                height: 0;
+                border-top: 2px dashed rgba(255, 207, 122, 0.85);
+                pointer-events: none;
+            }
+            .zlom.skry {
+                display: none;
+            }
+            .zlom span {
+                position: absolute;
+                right: 8px;
+                top: -20px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: #ffcf7a;
+                background: var(--bg);
+                padding: 0 6px;
+                border-radius: 4px;
+            }
+            .top {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding-right: 36px;
+            }
+            .ico {
+                flex: none;
+                width: 48px;
+                height: 48px;
+                display: grid;
+                place-items: center;
+                border-radius: 50%;
+                background: rgba(255, 255, 255, 0.12);
+            }
+            .ico svg {
+                width: 26px;
+                height: 26px;
+                fill: none;
+                stroke: #fff;
+                stroke-width: 1.6;
+                stroke-linecap: round;
+                stroke-linejoin: round;
+            }
+            .ico[data-zap] {
+                background: #f2f5fb;
+                box-shadow: 0 0 16px rgba(242, 245, 251, 0.65);
+            }
+            .ico[data-zap] svg {
+                stroke: #0e1532;
+            }
+            .top h4 {
+                margin: 0;
+                font-size: 1.5rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 115;
+                line-height: 1.15;
+            }
+            .pod {
+                margin-top: 2px !important;
+                font-size: 0.875rem !important;
+                color: var(--dim);
+            }
+            .pod b {
+                color: #fff;
+                font-variant-numeric: tabular-nums;
+            }
+            .pod-velke {
+                font-size: 0.8125rem !important;
+                font-weight: 800;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .sh .velke {
+                margin-top: 4px;
+                font-size: 2.25rem;
+                font-weight: 900;
+                font-variation-settings: 'wdth' 112;
+                font-variant-numeric: tabular-nums;
+                line-height: 1;
+                white-space: nowrap;
+            }
+            .sh .velke small {
+                margin-left: 4px;
+                font-size: 1.1rem;
+            }
+            .veta {
+                font-size: 1rem !important;
+                font-weight: 600;
+            }
+            .graf {
+                position: relative;
+                margin: 8px 0 0;
+            }
+            .graf svg.k {
+                display: block;
+                width: 100%;
+                height: 64px;
+            }
+            .k .slnko {
+                fill: rgba(255, 209, 102, 0.22);
+                stroke: var(--slnko);
+                stroke-width: 1.5;
+                vector-effect: non-scaling-stroke;
+            }
+            .k .voda {
+                fill: rgba(255, 255, 255, 0.1);
+                stroke: #fff;
+                stroke-width: 2;
+                vector-effect: non-scaling-stroke;
+            }
+            .k .ciel {
+                stroke: rgba(255, 255, 255, 0.6);
+                stroke-dasharray: 3 3;
+                stroke-width: 1;
+                vector-effect: non-scaling-stroke;
+            }
+            .k .doma {
+                fill: none;
+                stroke: #fff;
+                stroke-width: 2;
+                vector-effect: non-scaling-stroke;
+            }
+            .k .vonku {
+                fill: none;
+                stroke: var(--cheap);
+                stroke-width: 2;
+                vector-effect: non-scaling-stroke;
+            }
+            .g-t {
+                position: absolute;
+                font-size: 0.75rem;
+                font-weight: 800;
+                white-space: nowrap;
+                transform: translate(6px, -50%);
+            }
+            .g-t[data-vlavo] {
+                transform: translate(calc(-100% - 6px), -50%);
+            }
+            .stlpce {
+                display: flex;
+                gap: 2px;
+                align-items: flex-end;
+                height: 34px;
+            }
+            .stlpce i {
+                flex: 1;
+                border-radius: 2px 2px 0 0;
+            }
+            .pas {
+                position: relative;
+                height: 12px;
+                margin-top: 4px;
+                border-radius: 3px;
+                background: rgba(255, 255, 255, 0.08);
+            }
+            .pas i {
+                position: absolute;
+                top: 0;
+                bottom: 0;
+                border-radius: 2px;
+            }
+            .pas i[data-plan] {
+                background: transparent !important;
+                box-shadow: inset 0 0 0 2px var(--f);
+            }
+            .teraz {
+                position: absolute;
+                top: 0;
+                bottom: 20px;
+                width: 1.5px;
+                margin-left: -0.75px;
+                background: rgba(255, 255, 255, 0.6);
+            }
+            .osi {
+                position: relative;
+                height: 16px;
+                margin-top: 4px;
+            }
+            .osi span {
+                position: absolute;
+                transform: translateX(-50%);
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .osi span:first-child {
+                transform: none;
+            }
+            .osi span:last-child {
+                transform: translateX(-100%);
+            }
+            [data-t='slnko'] {
+                --f: var(--slnko);
+                background: var(--slnko);
+            }
+            [data-t='siet'] {
+                --f: var(--cheap);
+                background: var(--cheap);
+            }
+            [data-t='vt'] {
+                --f: var(--costly);
+                background: var(--costly);
+            }
+            [data-t='hotovo'] {
+                --f: rgba(255, 255, 255, 0.45);
+                background: rgba(255, 255, 255, 0.45);
+            }
+            .btn {
+                display: block;
+                width: 100%;
+                min-height: 48px;
+                border: 0;
+                border-radius: 14px;
+                background: #fff;
+                color: #0e1532;
+                font: inherit;
+                font-weight: 800;
+            }
+            .energia {
+                display: grid;
+                gap: 8px;
+            }
+            .stoh {
+                display: flex;
+                gap: 2px;
+                height: 12px;
+                border-radius: 6px;
+                overflow: hidden;
+                background: rgba(255, 255, 255, 0.08);
+            }
+            .zdroje {
+                display: grid;
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+                gap: 6px;
+            }
+            .zdroje b {
+                display: block;
+                font-size: 1.2rem;
+                font-weight: 900;
+                font-variant-numeric: tabular-nums;
+                line-height: 1.15;
+                white-space: nowrap;
+            }
+            .zdroje small {
+                display: flex;
+                align-items: center;
+                gap: 5px;
+                font-size: 0.78rem;
+                color: var(--dim);
+            }
+            .zdroje small i {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+            }
+            .suhrn {
+                font-size: 0.875rem !important;
+                color: var(--dim);
+            }
+            .nadpis {
+                margin: 6px 0 0 !important;
+                font-size: 0.75rem !important;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                color: var(--dim);
+            }
+            .fold {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                min-height: 48px;
+                border-top: 1px solid var(--line);
+                font-weight: 700;
+                font-size: 0.9375rem;
+            }
+            .fold:first-of-type {
+                margin-top: 4px;
+            }
+            .fold span {
+                margin-left: auto;
+                color: var(--dim);
+                font-weight: 600;
+                font-size: 0.875rem;
+            }
+            .fold::after {
+                content: '';
+                width: 7px;
+                height: 7px;
+                margin: 0 4px 3px 2px;
+                border-right: 2px solid var(--dim);
+                border-bottom: 2px solid var(--dim);
+                transform: rotate(45deg);
+            }
+            .riadok {
+                display: grid;
+                grid-template-columns: 6.5em 1fr 4.4em;
+                align-items: center;
+                gap: 10px;
+                height: 40px;
+                border-top: 1px solid rgba(255, 255, 255, 0.12);
+                font-size: 0.875rem;
+                font-variant-numeric: tabular-nums;
+                white-space: nowrap;
+                color: #fff;
+            }
+            .riadok .stoh {
+                height: 8px;
+            }
+            .riadok b {
+                text-align: right;
+            }
+            .dni {
+                display: flex;
+                gap: 4px;
+                align-items: flex-end;
+                height: 56px;
+            }
+            .dni span {
+                flex: 1;
+                display: flex;
+                flex-direction: column-reverse;
+                height: 100%;
+                gap: 1px;
+            }
+            .dni i {
+                display: block;
+                border-radius: 2px;
+            }
+            .dni span[data-dnes] {
+                outline: 1.5px solid #fff;
+                outline-offset: 1px;
+                border-radius: 2px;
+            }
+            .dni-os {
+                display: flex;
+                justify-content: space-between;
+                font-size: 0.7rem;
+                font-weight: 700;
+                color: var(--dim);
+            }
+            .prep {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                min-height: 48px;
+                border-top: 1px solid var(--line);
+                font-weight: 700;
+                font-size: 0.9375rem;
+            }
+            .prep span {
+                flex: 1;
+            }
+            .tg {
+                width: 46px;
+                height: 28px;
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.24);
+                position: relative;
+            }
+            .tg::after {
+                content: '';
+                position: absolute;
+                top: 3px;
+                left: 3px;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: #fff;
+            }
+            .tg[data-on] {
+                background: var(--yes);
+            }
+            .tg[data-on]::after {
+                left: 21px;
+            }
+            .seg {
+                display: flex;
+                gap: 3px;
+                padding: 3px;
+                border: 1px solid rgba(255, 255, 255, 0.18);
+                border-radius: 999px;
+                background: rgba(255, 255, 255, 0.06);
+            }
+            .seg span {
+                flex: 1;
+                text-align: center;
+                padding: 9px 0;
+                border-radius: 999px;
+                font-weight: 700;
+                font-size: 0.9rem;
+            }
+            .seg span[data-on] {
+                background: #fff;
+                color: #0e1532;
+            }
+            .male {
+                font-size: 0.8125rem !important;
+                color: var(--dim);
+            }
+            .zvyraz {
+                outline: 2px dashed var(--yes);
+                outline-offset: 4px;
+                border-radius: 6px;
+            }
+            .legenda-slot {
+                display: inline-grid;
+                place-items: center;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: var(--yes);
+                color: #14300c;
+                font-size: 0.75rem;
+                font-weight: 900;
+                margin-right: 6px;
+            }
+            .slot-cislo {
+                position: absolute;
+                left: -50px;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: var(--yes);
+                color: #14300c;
+                font-size: 0.75rem;
+                font-weight: 900;
+                display: grid;
+                place-items: center;
+            }
+            .s-wrap {
+                position: relative;
+            }
+        </style>
+    </head>
+    <body>
+        <main>
+            <header>
+                <h1>Panely spotrebičov na karte Teraz – jedna kostra</h1>
+                <p>
+                    Návrh z 28. 11. 2026. Ťuknutie na dlaždicu otvorí panel – dnes má každý spotrebič vlastné poradie, vlastné slová a
+                    vlastnú os. Cieľ: to, čo majú spoločné (stav, príkon, deň na osi, energia podľa zdroja, behy, história, oznámenia), je v
+                    každom paneli na tom istom mieste a vyzerá rovnako. Čo je len jeho, ostáva – a dopĺňa sa tam, kde to dáva zmysel.
+                </p>
+                <div class="karta" style="border: 2px solid var(--yes); margin: 14px 0">
+                    <h3>Rozhodnuté 28. 11. 2026: C + súčet</h3>
+                    <p>
+                        Možnosť <b>C</b> (dnešok hore, zvyšok zbalený). V riadku <b>Energia dnes</b> je vpravo súčet kWh – preto z riadku
+                        pod energiou zmizlo „Dnes … kWh“. Veľké číslo bojlera je <b>teplota vody</b> a pod ním čas dohriatia, klímy
+                        <b>teplota doma</b>. Drahé pásmo je všade <b>„drahá sieť“</b>. Worker ide samostatným PR po appke: appka musí
+                        fungovať aj so starším Workerom, miesta pre nové dáta (14 dní bojlera a auta, energia zo zásuvky) sa ukážu, až keď
+                        dáta prídu.
+                    </p>
+                </div>
+                <p class="pozn">
+                    Snímky „dnes“ sú z e2e testov (fixtures, pevný čas 13:00), nie z telefónu. Čísla v náhľadoch sú vymyslené, aby bolo
+                    vidno všetky časti. Žltá čiarkovaná čiara v náhľadoch je 82 % výšky S22 – po nej sa panel musí posúvať.
+                </p>
+            </header>
+
+            <section>
+                <h2>Ako to vyzerá dnes</h2>
+                <div class="snimky">
+                    <figure>
+                        <img src="img/teraz-panely/vec-pracka.png" alt="Detail práčky dnes" />
+                        <figcaption>Práčka (bez zásuvky): veľké od–do, os 6–21, Už beží, prečo.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/teraz-panely/zasuvka-detail.png" alt="Detail práčky na zásuvke dnes" />
+                        <figcaption>Práčka na zásuvke: príkon pod osou, oznámenie, poznámka.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/teraz-panely/bojler-dnes.png" alt="Panel Bojler dnes" />
+                        <figcaption>Bojler dnes: teplota a pás 0–24, energia, riadenie, oznámenie. Príkon chýba.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/teraz-panely/auto-panel.png" alt="Panel Auto dnes" />
+                        <figcaption>Auto: výroba a pás, energia posledného behu, zoznam, súčty, 2 oznámenia.</figcaption>
+                    </figure>
+                    <figure>
+                        <img src="img/teraz-panely/klima-panel.png" alt="Panel Klíma dnes" />
+                        <figcaption>Klíma: teploty a kWh za hodinu, energia, 14 dní, rok, podrobnosti.</figcaption>
+                    </figure>
+                </div>
+            </section>
+
+            <section class="karta">
+                <h2>Čo je dnes rozhádzané</h2>
+                <div class="tab-obal">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Čo</th>
+                                <th>Práčka / sušička / umývačka</th>
+                                <th>Bojler</th>
+                                <th>Auto</th>
+                                <th>Klíma</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><b>Nadpis</b></td>
+                                <td>Práčka</td>
+                                <td>Bojler <b>dnes</b></td>
+                                <td>Auto</td>
+                                <td>Klíma</td>
+                            </tr>
+                            <tr>
+                                <td><b>Riadok pod nadpisom</b></td>
+                                <td>VEĽKÝMI PÍSMENAMI („TERAZ ZO SLNKA“)</td>
+                                <td>normálne („Hreje · dohreje okolo 13:55“)</td>
+                                <td>normálne, s príkonom</td>
+                                <td>normálne, s príkonom</td>
+                            </tr>
+                            <tr>
+                                <td><b>Príkon teraz</b></td>
+                                <td>pod osou „Meria zásuvka · teraz 2,1 kW“ (len zásuvka)</td>
+                                <td class="minus">chýba (zásuvka ho pritom meria)</td>
+                                <td>v riadku „≈ 7,2 kW“</td>
+                                <td>v riadku „1,2 kW teraz“</td>
+                            </tr>
+                            <tr>
+                                <td><b>Veľké číslo</b></td>
+                                <td>od–do</td>
+                                <td class="minus">žiadne (teplota len v grafe)</td>
+                                <td>+40 km</td>
+                                <td class="minus">žiadne</td>
+                            </tr>
+                            <tr>
+                                <td><b>Os dňa</b></td>
+                                <td>6–21, hrubý svietiaci úsek</td>
+                                <td>0–24, tenký pás</td>
+                                <td>0–24, tenký pás</td>
+                                <td>0–24, stĺpce kWh</td>
+                            </tr>
+                            <tr>
+                                <td><b>Energia podľa zdroja</b></td>
+                                <td class="minus">žiadna</td>
+                                <td>dnes</td>
+                                <td>len posledný beh</td>
+                                <td>dnes</td>
+                            </tr>
+                            <tr>
+                                <td><b>Drahé pásmo slovom</b></td>
+                                <td>–</td>
+                                <td>„sieť vo VT“</td>
+                                <td>„drahá sieť“</td>
+                                <td>„sieť vo VT“</td>
+                            </tr>
+                            <tr>
+                                <td><b>Behy</b></td>
+                                <td>„dobehlo“ hore nad časom</td>
+                                <td>Behy dnes – zbalené</td>
+                                <td>Posledné nabíjania – rozbalené</td>
+                                <td>–</td>
+                            </tr>
+                            <tr>
+                                <td><b>Dlhšie obdobie</b></td>
+                                <td>–</td>
+                                <td>–</td>
+                                <td>súčet 7 dní riadkom</td>
+                                <td>14 dní stĺpce + rok</td>
+                            </tr>
+                            <tr>
+                                <td><b>Oznámenia</b></td>
+                                <td>zásuvka: prepínač pod príkonom; bez zásuvky v bublinke po „Nastaviť“</td>
+                                <td>prepínač úplne dole</td>
+                                <td>dva prepínače pred poznámkou</td>
+                                <td>–</td>
+                            </tr>
+                            <tr>
+                                <td><b>Vysvetlenie</b></td>
+                                <td>prečo + „Naraz len toľko…“ dole</td>
+                                <td>popis riadenia v strede</td>
+                                <td>poznámka „asi“ úplne dole</td>
+                                <td>Podrobnosti zbalené</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="karta">
+                <h2>Kostra: deväť miest v pevnom poradí</h2>
+                <p>
+                    Poradie ide podľa otázok, s ktorými človek na dlaždicu ťuká:
+                    <b
+                        >čo to robí teraz → kedy a koľko → ako išiel deň → čo s tým môžem urobiť → koľko energie a odkiaľ → ako je to
+                        zvyčajne → nastavenie → prečo</b
+                    >. Miesto, ktoré spotrebič nemá, sa preskočí, poradie ostatných sa nemení. Zelené <span class="nove">nové</span> je
+                    doplnené, žlté <span class="worker">Worker</span> potrebuje zmenu Workera (ostatné appka už má).
+                </p>
+                <div class="tab-obal">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Miesto</th>
+                                <th>Práčka / sušička / umývačka</th>
+                                <th>Bojler</th>
+                                <th>Auto</th>
+                                <th>Klíma</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><span class="legenda-slot">1</span><b>Hlava</b><br />ikona, meno veci, stav · príkon</td>
+                                <td>Práčka<br />Teraz zo slnka · <span class="nove">2,1 kW</span> (len so zásuvkou)</td>
+                                <td>Bojler (bez „dnes“)<br />Hreje zo slnka · <span class="nove">2,1 kW</span></td>
+                                <td>Auto<br />Asi sa nabíja od 12:00 · ≈ 7,2 kW</td>
+                                <td>Klíma<br />Kúri na 23,5 °C · 1,2 kW</td>
+                            </tr>
+                            <tr>
+                                <td><span class="legenda-slot">2</span><b>Veľké číslo + veta</b><br />to najdôležitejšie</td>
+                                <td>13:00 – 15:00<br />veta z dlaždice</td>
+                                <td><span class="nove">52 °C</span> (bez teplomera „do 13:55“)<br />Dohreje okolo 13:55.</td>
+                                <td>+40 km<br />7,2 kWh v tomto behu, polovica zo slnka.</td>
+                                <td><span class="nove">21,6 °C doma</span><br />Vonku 2 °C, nastavená 23,5 °C.</td>
+                            </tr>
+                            <tr>
+                                <td><span class="legenda-slot">3</span><b>Deň na osi 0–24</b><br />hore „prečo vtedy“, dole pás behov</td>
+                                <td><span class="nove">krivka slnka</span> + pás: dobehnuté plné, plán obrysom</td>
+                                <td>teplota vody (bez teplomera krivka slnka) + pás, <span class="nove">dohriatie obrysom</span></td>
+                                <td>krivka slnka + pás nabíjaní</td>
+                                <td>teploty + stĺpce kWh za hodinu (tie sú jej pás)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="legenda-slot">4</span><b>Akcia</b></td>
+                                <td>Už beží / kolieska / Nastaviť</td>
+                                <td>–</td>
+                                <td>–</td>
+                                <td>–</td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <span class="legenda-slot">5</span><b>Energia dnes</b><br />pásik + slnko / sieť / drahá sieť + riadok
+                                </td>
+                                <td>
+                                    <span class="nove">zásuvka: zmerané</span> <span class="worker">Worker</span><br />
+                                    <span class="nove">bez zásuvky: ≈ odhad</span> z typického programu
+                                </td>
+                                <td>ako dnes + <span class="nove">včera</span> v riadku</td>
+                                <td><span class="nove">dnes</span> (nie posledný beh – ten je v 2)</td>
+                                <td>ako dnes</td>
+                            </tr>
+                            <tr>
+                                <td><span class="legenda-slot">6</span><b>Behy</b><br />riadok: kedy · pásik · číslo</td>
+                                <td>dnes a predtým (presunuté zhora)</td>
+                                <td>Behy dnes</td>
+                                <td>Nabíjania (km)</td>
+                                <td>– (beží celý deň)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="legenda-slot">7</span><b>Posledných 14 dní</b><br />stĺpce podľa zdroja</td>
+                                <td><span class="nove">behy za deň</span></td>
+                                <td><span class="nove">kWh za deň</span> <span class="worker">Worker</span></td>
+                                <td><span class="nove">km za deň</span> <span class="worker">Worker</span> (drží 7 dní)</td>
+                                <td>ako dnes + rok a minulý (len klíma)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="legenda-slot">8</span><b>Nastavenie</b><br />riadenie a oznámenia</td>
+                                <td>Oznámiť, keď dobehne</td>
+                                <td>Čo riadi bojler? + Oznámiť zapnutie a vypnutie</td>
+                                <td>Oznámiť začiatok / koniec</td>
+                                <td>– (nič sa nastaviť nedá)</td>
+                            </tr>
+                            <tr>
+                                <td><span class="legenda-slot">9</span><b>Prečo a podrobnosti</b></td>
+                                <td>prečo práve vtedy, „Naraz len toľko…“, čo meria zásuvka</td>
+                                <td>čo znamená riadenie, kedy zapne / vypne</td>
+                                <td>prečo „asi“</td>
+                                <td>Podrobnosti (Wi-Fi, firmvér…)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <h3 style="margin-top: 18px">Pravidlá, ktoré platia vo všetkých</h3>
+                <ul>
+                    <li><b>Nadpis = meno veci</b>, nie stav ani režim: Práčka, Bojler, Auto, Klíma. Režim klímy je v riadku pod ním.</li>
+                    <li><b>Riadok pod nadpisom normálnym písmom</b>, príkon teraz vždy na jeho konci za bodkou – keď ho appka vie.</li>
+                    <li><b>Os vždy 0 – 24</b> s rovnakými značkami 0 6 12 18 24 a čiarkou teraz. <b>Plné = stalo sa, obrys = plán.</b></li>
+                    <li>
+                        <b>Farby zdrojov</b> všade rovnaké: slnko zlaté, sieť modrá, drahá sieť červená. Slovo vždy <b>„drahá sieť“</b> (nie
+                        „sieť vo VT“).
+                    </li>
+                    <li>
+                        <b>Nadpisy častí</b> rovnakým štýlom a rovnakými slovami: Energia dnes, Behy, Posledných 14 dní, Nastavenie, Prečo.
+                    </li>
+                    <li><b>Oznámenia sú vždy v časti Nastavenie</b>, nikdy uprostred panela.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2>Možnosti usporiadania</h2>
+                <div class="moznosti">
+                    <div class="moznost">
+                        <h3>Z – len zladiť vzhľad</h3>
+                        <p>
+                            Poradie častí ostane, aké je. Zjednotí sa len nadpis, riadok pod ním, príkon v riadku, os 0–24, slovo „drahá
+                            sieť“ a oznámenia vždy na koniec.
+                        </p>
+                        <ul>
+                            <li class="plus">najmenej práce, skoro len CSS a texty</li>
+                            <li class="plus">nič nové, nič sa nepresúva</li>
+                            <li class="minus">poradie ostane rôzne – energiu raz hľadáš pod grafom, raz pod číslom</li>
+                            <li class="minus">nič sa nedopĺňa (bojler bez príkonu, práčka bez energie)</li>
+                        </ul>
+                    </div>
+                    <div class="moznost">
+                        <h3>A – kostra, všetko rozbalené</h3>
+                        <p>Deväť miest pod sebou, všetko viditeľné, posúva sa prstom.</p>
+                        <ul>
+                            <li class="plus">nič nie je schované, žiadne ťuknutie navyše</li>
+                            <li class="plus">rovnaké poradie všade</li>
+                            <li class="minus">bojler, auto a klíma sú na S22 dve až tri obrazovky dlhé</li>
+                            <li class="minus">nastavenie a oznámenia sú úplne dole, ďaleko</li>
+                        </ul>
+                    </div>
+                    <div class="moznost">
+                        <h3>B – kostra so záložkami</h3>
+                        <p>Pod hlavou prepínač <b>Dnes · 14 dní · Nastavenie</b>, rovnaký vo všetkých paneloch.</p>
+                        <ul>
+                            <li class="plus">krátke panely, skoro bez posúvania</li>
+                            <li class="plus">záložka sa hľadá vždy rovnako</li>
+                            <li class="minus">nový ovládací prvok; Späť musí riešiť aj záložku (krok navigácie?)</li>
+                            <li class="minus">práčka a klíma majú záložky skoro prázdne</li>
+                            <li class="minus">behy a 14 dní nevidno naraz s dneškom</li>
+                        </ul>
+                    </div>
+                    <div class="moznost" data-odp>
+                        <h3>C – kostra, dnešok hore, zvyšok zbalený <span class="stitok">odporúčam</span></h3>
+                        <p>
+                            Miesta 1 – 5 (teraz a dnes) sú vždy otvorené a vyzerajú v každom paneli rovnako. 6 – 9 sú riadky, ktoré sa
+                            ťuknutím rozbalia, s rovnakými menami a s číslom vpravo (počet behov, „vypnuté“…).
+                        </p>
+                        <ul>
+                            <li class="plus">prvá obrazovka je vo všetkých rovnaká – to, čo človek hľadá najčastejšie</li>
+                            <li class="plus">rozbaľovanie už appka má (Behy dnes, Podrobnosti), nič nové na ovládanie</li>
+                            <li class="plus">krátke panely, dlhé veci (rok klímy) nezavadzajú</li>
+                            <li class="minus">oznámenia o ťuknutie hlbšie (riadok ukáže „zapnuté / vypnuté“)</li>
+                            <li class="minus">viac práce ako Z – presuny v HTML, testy e2e</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section>
+                <h2>C – všetky štyri panely</h2>
+                <p>Rovnaké miesta majú rovnaké číslo (zelený krúžok vľavo).</p>
+                <div class="nahlady" id="nahlady-c"></div>
+            </section>
+
+            <section>
+                <h2>Pre porovnanie: Bojler v Z, A a B</h2>
+                <div class="nahlady" id="nahlady-ab"></div>
+            </section>
+
+            <section class="karta">
+                <h2>Čo je nové a odkiaľ to vezme</h2>
+                <div class="tab-obal">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Čo</th>
+                                <th>Kde</th>
+                                <th>Dáta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Príkon bojlera v riadku</td>
+                                <td>Bojler 1</td>
+                                <td>appka ho má (<code>bojler.w</code> z hlásenia zásuvky), len ho neukazuje</td>
+                            </tr>
+                            <tr>
+                                <td>Teplota vody ako veľké číslo</td>
+                                <td>Bojler 2</td>
+                                <td>appka ju má (teplomer), dnes len v grafe</td>
+                            </tr>
+                            <tr>
+                                <td>Teplota doma ako veľké číslo</td>
+                                <td>Klíma 2</td>
+                                <td>appka ju má, dnes len popiskou v grafe</td>
+                            </tr>
+                            <tr>
+                                <td>Krivka slnka nad osou spotrebiča</td>
+                                <td>Práčka 3</td>
+                                <td>appka ju má (tá istá výroba dňa ako v paneli Auto)</td>
+                            </tr>
+                            <tr>
+                                <td>Energia behu práčky</td>
+                                <td>Práčka 5</td>
+                                <td>
+                                    bez zásuvky odhad z typického programu (Plán dňa ho pozná); zásuvka posiela počítadlo energie, Worker ho
+                                    má v behu, no do spoločných behov ho nedáva – <span class="worker">treba Worker</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Energia auta dnes</td>
+                                <td>Auto 5</td>
+                                <td>appka ju má (behy z <code>/auto</code>), dnes ráta len posledný beh</td>
+                            </tr>
+                            <tr>
+                                <td>Bojler včera a 14 dní</td>
+                                <td>Bojler 5, 7</td>
+                                <td>
+                                    Worker drží energiu bojlera po dňoch v histórii (<code>hd:</code>), appke ju dnes neposiela –
+                                    <span class="worker">treba Worker</span> (napr. 14 čísel navyše v <code>/bojler-stav</code>)
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Behy práčky za 14 dní</td>
+                                <td>Práčka 7</td>
+                                <td>appka ich má (história behov v telefóne, spoločné behy)</td>
+                            </tr>
+                            <tr>
+                                <td>Auto za 14 dní</td>
+                                <td>Auto 7</td>
+                                <td>
+                                    Worker drží nabíjania 7 dní (<code>AUTO_NABIJA.dni</code>) – <span class="worker">zvýšiť na 14</span>,
+                                    alebo pri aute ukázať 7 dní
+                                </td>
+                            </tr>
+                            <tr>
+                                <td>Plán obrysom na osi</td>
+                                <td>všetky 3</td>
+                                <td>len kreslenie; plán bojlera a spotrebiča appka pozná</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="pozn">
+                    Klíme som oznámenia nedopĺňal: appka ju len sleduje a push by potreboval novú logiku vo Workeri (kedy oznámiť –
+                    zapnutie? výpadok spojenia?). Ak ich chceš, je to samostatná téma.
+                </p>
+            </section>
+
+            <section class="karta">
+                <h2>Otázky na teba</h2>
+                <ol>
+                    <li>Ktorá možnosť: <b>Z, A, B alebo C</b>?</li>
+                    <li>Veľké číslo bojlera: <b>teplota vody</b> (navrhujem), alebo čas dohriatia?</li>
+                    <li>Klíma: veľké číslo <b>teplota doma</b> (navrhujem), alebo príkon / kWh dnes?</li>
+                    <li>Slovo pre drahé pásmo: <b>„drahá sieť“</b> (navrhujem, ako pásik dlaždice), alebo „sieť vo VT“?</li>
+                    <li>Časti so zmenou Workera (bojler 14 dní, energia zo zásuvky, auto 14 dní) robiť hneď, alebo najprv len appku?</li>
+                </ol>
+            </section>
+        </main>
+
+        <script>
+            // Náhľady panelov. Čísla sú vymyslené.
+            const IKONY = {
+                pracka: '<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M4 7.5h16M7.5 5.3h.01M10.5 5.3h.01"/><circle cx="12" cy="14" r="4"/>',
+                bojler: '<rect x="6" y="2.5" width="12" height="19" rx="6"/><path d="M12 8.5c-1.6 2-2.4 3.3-2.4 4.4a2.4 2.4 0 0 0 4.8 0c0-1.1-.8-2.4-2.4-4.4z"/>',
+                auto: '<path d="M3.5 15.5v-3.2L5.6 7.6a1.5 1.5 0 0 1 1.4-1h10a1.5 1.5 0 0 1 1.4 1l2.1 4.7v3.2a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><path d="M3.5 12.3h17"/><circle cx="7.5" cy="16.5" r="1.7"/><circle cx="16.5" cy="16.5" r="1.7"/>',
+                klima: '<rect x="2.5" y="4.5" width="19" height="8.5" rx="2"/><path d="M6 10h12"/><path d="M8 15.5c.7 1.1-.7 2.2 0 3.3M12 15.5c.7 1.1-.7 2.2 0 3.3M16 15.5c.7 1.1-.7 2.2 0 3.3"/>',
+            };
+            const X = '<div class="x"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2l-8 8"/></svg></div>';
+            const TERAZ = (13 / 24) * 100;
+            const pct = (h) => (h / 24) * 100;
+
+            // Jedno miesto kostry s číslom vľavo.
+            const slot = (n, html) => `<div class="s-wrap">${n ? `<span class="slot-cislo">${n}</span>` : ''}${html}</div>`;
+            const hlava = (id, meno, pod, zap) =>
+                `<div class="top"><span class="ico"${zap ? ' data-zap' : ''}><svg viewBox="0 0 24 24">${IKONY[id]}</svg></span><div><h4>${meno}</h4><p class="pod">${pod}</p></div></div>`;
+            const velke = (cislo, veta) =>
+                `<div><p class="velke">${cislo}</p>${veta ? `<p class="veta" style="margin-top:8px">${veta}</p>` : ''}</div>`;
+            const osi =
+                '<div class="osi"><span style="left:0">0</span><span style="left:25%">6</span><span style="left:50%">12</span><span style="left:75%">18</span><span style="left:100%">24</span></div>';
+            const pas = (useky) =>
+                `<div class="pas">${useky.map((u) => `<i data-t="${u.t}"${u.plan ? ' data-plan' : ''} style="left:${pct(u.od)}%;width:${pct(u.do - u.od)}%"></i>`).join('')}</div>`;
+            const SLNKO = '<path class="slnko" d="M27 64 C 36 64, 40 10, 50 10 S 63 64, 70 64 Z"/>';
+            const graf = (svg, useky, popisky = '', extra = '') =>
+                `<div class="graf"><svg class="k" viewBox="0 0 96 64" preserveAspectRatio="none">${svg}</svg>${popisky}${extra}${useky ? pas(useky) : ''}<i class="teraz" style="left:${TERAZ}%"></i>${osi}</div>`;
+            const energia = (casti, suhrn, nadpis = 'Energia dnes') => {
+                const spolu = casti.reduce((s, c) => s + c[0], 0) || 1;
+                const f = (x) => x.toFixed(1).replace('.', ',');
+                return (
+                    `<div class="energia">${nadpis ? `<p class="nadpis">${nadpis}</p>` : ''}` +
+                    `<div class="stoh">${casti
+                        .filter((c) => c[0] > 0)
+                        .map((c) => `<i data-t="${c[2]}" style="flex-grow:${Math.round((c[0] / spolu) * 100)}"></i>`)
+                        .join('')}</div>` +
+                    `<div class="zdroje">${casti.map((c) => `<div><b>${c[3] ?? ''}${f(c[0])} kWh</b><small><i data-t="${c[2]}"></i>${c[1]}</small></div>`).join('')}</div>` +
+                    (suhrn ? `<p class="suhrn">${suhrn}</p>` : '') +
+                    '</div>'
+                );
+            };
+            const fold = (meno, vpravo) => `<div class="fold">${meno}<span>${vpravo ?? ''}</span></div>`;
+            const zbalene = (riadky) => `<div>${riadky.map((r) => fold(r[0], r[1])).join('')}</div>`;
+            const prep = (text, on) => `<div class="prep"><span>${text}</span><i class="tg"${on ? ' data-on' : ''}></i></div>`;
+            const riadok = (kedy, casti, cislo) =>
+                `<div class="riadok"><span>${kedy}</span><span class="stoh">${casti.map((c) => `<i data-t="${c[1]}" style="flex-grow:${c[0]}"></i>`).join('')}</span><b>${cislo}</b></div>`;
+            const dni14 = (data) =>
+                `<p class="nadpis">Posledných 14 dní</p><div class="dni">${data
+                    .map(
+                        (d, i) =>
+                            `<span${i === data.length - 1 ? ' data-dnes' : ''}>${d.map((c) => `<i data-t="${c[1]}" style="height:${c[0]}%"></i>`).join('')}</span>`,
+                    )
+                    .join('')}</div><div class="dni-os"><span>So</span><span>So</span><span>dnes</span></div>`;
+            // Panel: obsah a voliteľná čiara 82 % výšky S22 (780 px × 0,82 = 640 px).
+            const panel = (obsah, popis, zlom = true) =>
+                `<div class="nahlad"><div class="sh">${X}<div class="sh-in">${obsah}</div>${zlom ? '<div class="zlom" style="top:640px"><span>koniec prvej obrazovky S22</span></div>' : ''}</div>${popis ? `<p>${popis}</p>` : ''}</div>`;
+
+            const BOJLER_GRAF = graf(
+                '<line class="ciel" x1="0" x2="96" y1="8" y2="8"/><path class="voda" d="M30 40 L 36 34 L 44 22 L 52 14 L 52 64 L 30 64 Z"/>',
+                [
+                    { od: 7.5, do: 9, t: 'siet' },
+                    { od: 11, do: 13, t: 'slnko' },
+                    { od: 13, do: 14, t: 'slnko', plan: true },
+                ],
+                `<b class="g-t" style="left:${TERAZ}%;top:14px">52 °C</b><span class="g-t" data-vlavo style="left:100%;top:8px;font-weight:600;color:var(--dim)">hranica 60 °C</span>`,
+            );
+
+            // ---- C: všetky štyri ----
+            const c = [];
+            c.push(
+                panel(
+                    slot(1, hlava('pracka', 'Práčka', 'Teraz zo slnka')) +
+                        slot(2, velke('13:00 – 15:00', 'Zapni teraz, zo slnka.')) +
+                        slot(
+                            3,
+                            graf(SLNKO, [
+                                { od: 7.7, do: 9.2, t: 'siet' },
+                                { od: 13, do: 15, t: 'slnko', plan: true },
+                            ]),
+                        ) +
+                        slot(4, '<button class="btn">Už beží</button>') +
+                        slot(
+                            5,
+                            energia(
+                                [
+                                    [0, 'slnko', 'slnko'],
+                                    [0.9, 'sieť', 'siet'],
+                                    [0, 'drahá sieť', 'vt'],
+                                ],
+                                'Dnes 1× · program ≈ 1 h 30 min',
+                                'Energia dnes · odhad',
+                            ),
+                        ) +
+                        slot(
+                            6,
+                            zbalene([
+                                ['Behy', '1 dnes'],
+                                ['Posledných 14 dní', '9×'],
+                                ['Nastavenie', 'oznámenie vypnuté'],
+                                ['Prečo práve vtedy', ''],
+                            ]),
+                        ),
+                    'Práčka bez zásuvky: plán obrysom, ranný beh plný. Energia je odhad z typického programu. Na zásuvke má v riadku príkon „· 2,1 kW“ a energiu zmeranú.',
+                ),
+            );
+            c.push(
+                panel(
+                    slot(1, hlava('bojler', 'Bojler', 'Hreje zo slnka · <b>2,1 kW</b>', true)) +
+                        slot(2, velke('52 °C', 'Dohreje okolo 13:55.')) +
+                        slot(3, BOJLER_GRAF) +
+                        slot(
+                            5,
+                            energia(
+                                [
+                                    [3.1, 'slnko', 'slnko'],
+                                    [1.4, 'sieť', 'siet'],
+                                    [0, 'drahá sieť', 'vt'],
+                                ],
+                                '2× zapnutý · hrial 3 h 20 min · včera 4,2 kWh',
+                            ),
+                        ) +
+                        slot(
+                            6,
+                            zbalene([
+                                ['Behy', '2 dnes'],
+                                ['Posledných 14 dní', ''],
+                                ['Nastavenie', 'riadi Ray-mon'],
+                                ['Prečo', ''],
+                            ]),
+                        ),
+                    'Bojler: teplota vody je veľké číslo, dohriatie obrysom na páse, príkon v riadku. Bez teplomera je veľké „do 13:55“ a nad pásom krivka slnka.',
+                ),
+            );
+            c.push(
+                panel(
+                    slot(1, hlava('auto', 'Auto', 'Asi sa nabíja od 12:00 · <b>≈ 7,2 kW</b>', true)) +
+                        slot(2, velke('+40<small>km</small>', '7,2 kWh v tomto behu, polovica zo slnka.')) +
+                        slot(
+                            3,
+                            graf(SLNKO, [
+                                { od: 0.2, do: 2.5, t: 'siet' },
+                                { od: 12, do: 13, t: 'slnko' },
+                            ]),
+                        ) +
+                        slot(
+                            5,
+                            energia(
+                                [
+                                    [3.6, 'slnko', 'slnko'],
+                                    [9.8, 'sieť', 'siet'],
+                                    [0, 'drahá sieť', 'vt'],
+                                ],
+                                'Slnko by dnes dalo ~200 km · zo slnka za 7 dní ~20 km',
+                            ),
+                        ) +
+                        slot(
+                            6,
+                            zbalene([
+                                ['Nabíjania', '2 dnes'],
+                                ['Posledných 14 dní', ''],
+                                ['Nastavenie', 'oznámenia vypnuté'],
+                                ['Prečo „asi“', ''],
+                            ]),
+                        ),
+                    'Auto: energia je za celý dnešok (aj nočné nabíjanie), posledný beh je veľké číslo.',
+                ),
+            );
+            c.push(
+                panel(
+                    slot(1, hlava('klima', 'Klíma', 'Kúri na 23,5 °C · <b>1,2 kW</b>', true)) +
+                        slot(2, velke('21,6 °C', 'Doma. Vonku 2 °C.')) +
+                        slot(
+                            3,
+                            `<div class="graf"><svg class="k" viewBox="0 0 96 64" preserveAspectRatio="none" style="height:56px"><line class="ciel" x1="0" x2="96" y1="8" y2="8"/><path class="doma" d="M0 14 L 20 15 L 40 13 L 52 14"/><path class="vonku" d="M0 50 L 24 52 L 44 44 L 52 42"/></svg>` +
+                                `<b class="g-t" style="left:${TERAZ}%;top:14px">doma 21,6°</b><b class="g-t" style="left:${TERAZ}%;top:42px;color:var(--cheap)">vonku 2°</b>` +
+                                `<div class="stlpce">${Array.from({ length: 24 }, (_, h) =>
+                                    h < 13
+                                        ? `<i data-t="${h >= 9 && h < 13 ? 'slnko' : h >= 6 && h < 9 ? 'vt' : 'siet'}" style="height:${40 + ((h * 37) % 50)}%"></i>`
+                                        : '<i style="background:rgba(255,255,255,0.06);height:100%"></i>',
+                                ).join('')}</div><i class="teraz" style="left:${TERAZ}%"></i>${osi}</div>`,
+                        ) +
+                        slot(
+                            5,
+                            energia(
+                                [
+                                    [1.8, 'slnko', 'slnko'],
+                                    [12, 'sieť', 'siet'],
+                                    [1.8, 'drahá sieť', 'vt'],
+                                ],
+                                'Beží 11 h 17 min · včera 28,8 kWh',
+                            ),
+                        ) +
+                        slot(
+                            7,
+                            zbalene([
+                                ['Posledných 14 dní', ''],
+                                ['Tento rok a minulý', ''],
+                                ['Podrobnosti', ''],
+                            ]),
+                        ),
+                    'Klíma: stĺpce kWh za hodinu sú jej pás (farbou zdroja, nie oranžovou). Behy ani Nastavenie nemá – riadky chýbajú, poradie zvyšku sedí.',
+                ),
+            );
+            document.getElementById('nahlady-c').innerHTML = c.join('');
+
+            // ---- Z, A, B pre bojler ----
+            const ab = [];
+            ab.push(
+                panel(
+                    hlava('bojler', 'Bojler', 'Hreje · dohreje okolo 13:55 · <b>2,1 kW</b>', true) +
+                        BOJLER_GRAF +
+                        energia(
+                            [
+                                [3.1, 'slnko', 'slnko'],
+                                [1.4, 'sieť', 'siet'],
+                                [0, 'drahá sieť', 'vt'],
+                            ],
+                            '2× zapnutý · hrial 3 h 20 min',
+                            false,
+                        ) +
+                        fold('Behy dnes', '2') +
+                        '<p class="nadpis">Čo riadi bojler?</p><div class="seg"><span>Shelly</span><span data-on>Ray-mon</span></div><p class="male">Zapne pri prebytku od 2,3 kW, vypne pod 2,0 kW.</p>' +
+                        prep('Oznámiť zapnutie a vypnutie', false),
+                    '<b>Z:</b> poradie ako dnes, len nadpis bez „dnes“, príkon v riadku, „drahá sieť“.',
+                ),
+            );
+            ab.push(
+                panel(
+                    slot(1, hlava('bojler', 'Bojler', 'Hreje zo slnka · <b>2,1 kW</b>', true)) +
+                        slot(2, velke('52 °C', 'Dohreje okolo 13:55.')) +
+                        slot(3, BOJLER_GRAF) +
+                        slot(
+                            5,
+                            energia(
+                                [
+                                    [3.1, 'slnko', 'slnko'],
+                                    [1.4, 'sieť', 'siet'],
+                                    [0, 'drahá sieť', 'vt'],
+                                ],
+                                '2× zapnutý · hrial 3 h 20 min · včera 4,2 kWh',
+                            ),
+                        ) +
+                        slot(
+                            6,
+                            '<p class="nadpis">Behy</p>' +
+                                riadok('7:30 – 9:00', [[1, 'siet']], '1,4 kWh') +
+                                riadok('11:00 – 13:00', [[1, 'slnko']], '3,1 kWh'),
+                        ) +
+                        slot(
+                            7,
+                            dni14(
+                                [3, 4, 2, 5, 4, 3, 6, 4, 3, 5, 4, 2, 4, 4.5].map((v, i) => [
+                                    [v * 8, 'slnko'],
+                                    [(6 - v) * 6, 'siet'],
+                                ]),
+                            ),
+                        ) +
+                        slot(
+                            8,
+                            '<p class="nadpis">Nastavenie</p><div class="seg"><span>Shelly</span><span data-on>Ray-mon</span></div>' +
+                                prep('Oznámiť zapnutie a vypnutie', false),
+                        ) +
+                        slot(9, '<p class="nadpis">Prečo</p><p class="male">Zapne pri prebytku od 2,3 kW, vypne pod 2,0 kW.</p>'),
+                    '<b>A:</b> všetko otvorené. Nastavenie je pod čiarou prvej obrazovky.',
+                ),
+            );
+            ab.push(
+                panel(
+                    slot(1, hlava('bojler', 'Bojler', 'Hreje zo slnka · <b>2,1 kW</b>', true)) +
+                        '<div class="seg"><span data-on>Dnes</span><span>14 dní</span><span>Nastavenie</span></div>' +
+                        slot(2, velke('52 °C', 'Dohreje okolo 13:55.')) +
+                        slot(3, BOJLER_GRAF) +
+                        slot(
+                            5,
+                            energia(
+                                [
+                                    [3.1, 'slnko', 'slnko'],
+                                    [1.4, 'sieť', 'siet'],
+                                    [0, 'drahá sieť', 'vt'],
+                                ],
+                                '2× zapnutý · hrial 3 h 20 min · včera 4,2 kWh',
+                            ),
+                        ) +
+                        slot(6, fold('Behy', '2 dnes')),
+                    '<b>B:</b> záložky pod hlavou. Behy, 14 dní a nastavenie sú v ďalších záložkách.',
+                    false,
+                ),
+            );
+            document.getElementById('nahlady-ab').innerHTML = ab.join('');
+            // Čiara prvej obrazovky len tam, kde je panel vyšší - inak by ležala pod ním.
+            const zlomy = () =>
+                document
+                    .querySelectorAll('.sh')
+                    .forEach((sh) => sh.querySelector('.zlom')?.classList.toggle('skry', sh.offsetHeight <= 640));
+            zlomy();
+            document.fonts.ready.then(zlomy);
+        </script>
+    </body>
+</html>

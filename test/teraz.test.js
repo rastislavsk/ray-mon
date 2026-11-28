@@ -502,6 +502,8 @@ test('terazModel: detail spotrebiča - kedy, od-do, prečo, deň a úsek na osi 
             cas: '13:00 – 15:00',
             why: 'Ohrev chytí slnko.',
             slot: undefined,
+            useky: [],
+            energia: null,
             zapis: { stav: 'moze', hotove: [], cas: null },
         },
     );
@@ -534,17 +536,27 @@ test('detail spotrebiča večer: iný deň s dňom pri čase, lacná sieť modr�
     assert.equal(pracka?.kedy, 'Zajtra zo slnka');
     assert.equal(pracka?.slot?.dnes, false);
     assert.equal(pracka?.slot?.tone, 'go');
-    // Lacná sieť celá v noci je mimo osi dňa - úsek nie je, aby sa neprilepil na kraj.
+    // Os je celý deň 0 - 24 h (docs/navrhy/teraz-panely-zladenie.html): lacná sieť v noci je na nej po polnoc.
     const noc = terazModel(input(at('23:00')), { devices: ['bojler'] });
     assert.equal(noc.veci[0].cas, '23:30 – 07:30');
-    assert.equal(noc.veci[0].slot, null);
+    assert.equal(noc.veci[0].slot?.left, Math.round(((23 * 60 + 30) / 1440) * 1000) / 10);
+    assert.equal(noc.veci[0].slot?.tone, 'cheap');
 });
 
-test('terazModel: os dňa detailu spotrebiča - teraz je na nej, hodiny po troch; v noci teraz mimo osi', () => {
+test('terazModel: os dňa detailu spotrebiča - celý deň 0 - 24 h po šiestich hodinách, teraz je na nej aj v noci', () => {
     const os = terazModel(input(at('13:00'))).os;
-    assert.ok(os && os.now !== null && os.now > 0 && os.now < 100);
-    assert.ok(os.ticks.every((t) => Number(t.label) % 3 === 0));
-    assert.equal(terazModel(input(at('23:00'))).os?.now, null);
+    assert.deepEqual(
+        os?.ticks.map((t) => [t.label, t.at]),
+        [
+            ['0', 0],
+            ['6', 25],
+            ['12', 50],
+            ['18', 75],
+            ['24', 100],
+        ],
+    );
+    assert.equal(os?.now, Math.round(((13 * 60) / 1440) * 1000) / 10);
+    assert.equal(terazModel(input(at('23:00'))).os?.now, Math.round(((23 * 60) / 1440) * 1000) / 10);
 });
 
 test('terazModel: meranie mlčí - odhad z krivky dňa, povie odkedy; plán a odporúčanie z predpovede', () => {
@@ -960,7 +972,7 @@ test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať s
     const m = terazModel(input(at('13:00'), { bezi: ZAPISY }));
     const umyvacka = detail(m, 'umyvacka');
     assert.deepEqual(
-        { ...umyvacka, slot: undefined, why: undefined },
+        { ...umyvacka, slot: undefined, why: undefined, useky: undefined, energia: undefined },
         {
             id: 'umyvacka',
             name: 'Umývačka',
@@ -970,6 +982,8 @@ test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať s
             cas: '12:00 – 14:30',
             why: undefined,
             slot: undefined,
+            useky: undefined,
+            energia: undefined,
             zapis: { stav: 'bezi', hotove: [], cas: { zvysok: null, od: '12:00', max: '13:00', konci: 'skončí o 14:30' } },
         },
     );
@@ -1001,6 +1015,28 @@ test('spotrebič beží: detail so zápisom, krémový úsek na osi; zapísať s
     assert.deepEqual('zapis' in kratko && kratko.zapis?.cas?.zvysok, { h: 0, m: 5 });
 });
 
+test('detail spotrebiča: dnešné behy plné na osi, energia dnes odhadom z typického programu', () => {
+    const m = terazModel(input(at('13:00'), { bezi: ZAPISY }));
+    /** @param {string} id */
+    const dnes = (id) => {
+        const v = detail(m, id);
+        return { useky: 'useky' in v ? (v.useky ?? []) : [], energia: 'energia' in v ? (v.energia ?? null) : null };
+    };
+    // Na osi je plné len to, čo už bežalo (12:00 až teraz 13:00); energia podľa toho, koľko z programu prešlo.
+    assert.deepEqual(
+        dnes('umyvacka').useky.map((u) => [u.left, u.width]),
+        [[50, 4.2]],
+    );
+    assert.equal(dnes('umyvacka').energia?.suhrn, '1× dnes · odhad podľa typického programu');
+    // Dobehnuté pranie 9:30 – 11:30: celý typický program (1 kWh).
+    assert.equal(dnes('pracka').energia?.spolu, '≈ 1,0 kWh');
+    assert.deepEqual(
+        dnes('pracka').useky.map((u) => [u.left, u.width]),
+        [[39.6, 8.3]],
+    );
+    assert.equal(dnes('susicka').energia, null, 'bez behov dnes energia nie je');
+});
+
 test('spotrebič na zásuvke (U1): bez „Už beží“ a nastavenia času, so zmeraným príkonom; zásuvka, ktorá mlčí, nie', () => {
     const teraz = at('13:00').getTime();
     const zasuvky = { pracka: { at: teraz - 60000, w: 2100, bezi: true }, umyvacka: { at: teraz - 60000, w: 3, bezi: false } };
@@ -1012,8 +1048,9 @@ test('spotrebič na zásuvke (U1): bez „Už beží“ a nastavenia času, so z
     const mlci = terazModel(input(at('13:00'), { zasuvky: stara }));
     assert.equal('zapis' in detail(mlci, 'pracka') && detail(mlci, 'pracka').zapis?.stav, 'moze');
     assert.equal(detail(m, 'pracka').why, TERAZ_BEZI.zasuvka.why);
-    assert.equal(TERAZ_BEZI.zasuvka.meria(2100), 'Meria zásuvka · teraz 2,1 kW');
-    assert.equal(TERAZ_BEZI.zasuvka.meria(3), 'Meria zásuvka · teraz nebeží');
+    // Príkon zo zásuvky ide na koniec riadku pod nadpisom detailu, keď spotrebič nebeží, nie je.
+    assert.equal(TERAZ_BEZI.zasuvka.kw(2100), '2,1 kW');
+    assert.equal(TERAZ_BEZI.zasuvka.kw(3), '');
 });
 
 test('nastavenie času: po „Už beží“ návrh, ktorý ešte nie je uložený - kolieska práčky, čas zapnutia umývačky', () => {

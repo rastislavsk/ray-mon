@@ -1020,22 +1020,28 @@
             </div>
         </dialog>
 
-        <!-- Detail spotrebiča na karte Teraz: kedy a odkiaľ, od-do, jeho úsek na páse dňa a prečo práve vtedy. -->
-        <dialog id="tz-vec-sheet" class="sheet vec-sheet" aria-labelledby="tz-vec-name" aria-describedby="tz-vec-why">
+        <!-- Panely dlaždíc karty Teraz majú jednu kostru (docs/navrhy/teraz-panely-zladenie.html, C + súčet): hlava s príkonom,
+             veľké číslo a veta, os 0 - 24 h (hore prečo vtedy, dole pás behov; plné = stalo sa, obrys = plán), akcia,
+             Energia dnes so súčtom, potom zbalené Behy, Posledných 14 dní, Nastavenie a Prečo. Čo spotrebič nemá, chýba,
+             poradie zvyšku sa nemení. Texty dopĺňa render. -->
+
+        <!-- Detail spotrebiča: kedy a odkiaľ, od-do, dnešné behy a plán na osi dňa, „Už beží“, energia dnes (odhad). -->
+        <dialog id="tz-vec-sheet" class="sheet vec-sheet" aria-labelledby="tz-vec-name" aria-describedby="tz-vec-veta">
             <div class="sheet-in">
                 <div class="vec-top">
                     <span id="tz-vec-ico" class="vec-ico" aria-hidden="true"></span>
                     <div>
                         <h2 id="tz-vec-name"></h2>
-                        <p id="tz-vec-kedy" class="vec-kedy"></p>
+                        <!-- Kedy a odkiaľ, pri spotrebiči na zásuvke s príkonom (docs/navrhy/pracka-zasuvka.html, U1). -->
+                        <p id="tz-vec-kedy" class="bj-pod"></p>
                     </div>
                 </div>
-                <!-- Slová z dlaždice ako veta (docs/navrhy/teraz-dlazdice-cisla.html, P1): dlaždica ukazuje len čísla. -->
-                <p id="tz-vec-veta" class="vec-veta"></p>
-                <!-- Čo dnes už dobehlo (docs/navrhy/spotrebic-koniec-opakovanie.html). -->
-                <ul id="tz-vec-hotove" class="vec-hotove hidden"></ul>
-                <p id="tz-vec-cas" class="vec-cas"></p>
-                <div id="tz-vec-pas" class="vec-pas" aria-hidden="true"></div>
+                <div class="pn-velke">
+                    <p id="tz-vec-cas" class="vec-cas"></p>
+                    <!-- Slová z dlaždice ako veta (docs/navrhy/teraz-dlazdice-cisla.html, P1): dlaždica ukazuje len čísla. -->
+                    <p id="tz-vec-veta" class="vec-veta"></p>
+                </div>
+                <div id="tz-vec-pas" class="bj-graf" aria-hidden="true"></div>
                 <!-- Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html, docs/navrhy/spotrebic-cas-nastavenie.html, A + D): „Už beží“
                      ukáže nastavenie času - kolieska zvyšku programu (práčka, sušička) či výber času zapnutia (umývačka). Uloží až
                      „Nastaviť“, ktoré zavrie panel a ukáže bublinu #vec-bublina. Položky koliesok píše render. -->
@@ -1055,31 +1061,46 @@
                     <button type="button" id="tz-vec-ok" class="pbtn"></button>
                     <button type="button" id="tz-vec-zrus" class="pbtn ghost"></button>
                 </div>
-                <!-- Spotrebič na zásuvke Shelly (docs/navrhy/pracka-zasuvka.html, U1): namiesto „Už beží“ zmeraný príkon a oznámenie
-                     o konci behu pre tento telefón. -->
-                <p id="tz-vec-meria" class="vec-meria hidden"></p>
-                <button type="button" id="tz-vec-oznam" class="bj-oznam hidden" role="switch" aria-checked="false">
-                    <span id="tz-vec-oznam-t"></span>
-                    <i class="tg" aria-hidden="true"></i>
-                </button>
-                <p id="tz-vec-oznam-chyba" class="wz-msg hidden" role="status"></p>
-                <p id="tz-vec-why"></p>
-                <p id="tz-vec-note" class="dim"></p>
+                <div id="tz-vec-energia" class="bj-energia"></div>
+                <!-- Čo dnes už dobehlo (docs/navrhy/spotrebic-koniec-opakovanie.html). -->
+                <details id="tz-vec-behy-d" class="bj-behy-d">
+                    <summary><span id="tz-vec-behy-n"></span><span id="tz-vec-behy-pocet" class="bj-behy-pocet"></span></summary>
+                    <ul id="tz-vec-hotove" class="vec-hotove"></ul>
+                </details>
+                <!-- Oznámenie o konci behu zo zásuvky Shelly pre tento telefón (docs/navrhy/pracka-zasuvka.html, U1). -->
+                <details id="tz-vec-nast-d" class="bj-behy-d">
+                    <summary><span id="tz-vec-nast-n"></span><span id="tz-vec-nast-v" class="bj-behy-pocet"></span></summary>
+                    <button type="button" id="tz-vec-oznam" class="bj-oznam" role="switch" aria-checked="false">
+                        <span id="tz-vec-oznam-t"></span>
+                        <i class="tg" aria-hidden="true"></i>
+                    </button>
+                    <p id="tz-vec-oznam-chyba" class="wz-msg hidden" role="status"></p>
+                </details>
+                <details id="tz-vec-preco-d" class="bj-behy-d">
+                    <summary><span id="tz-vec-preco-n"></span></summary>
+                    <div class="pn-preco">
+                        <p id="tz-vec-why"></p>
+                        <p id="tz-vec-note" class="dim"></p>
+                    </div>
+                </details>
             </div>
         </dialog>
 
-        <!-- Bojler dnes (docs/navrhy/bojler-panel.html, A): otvorí ho dlaždica Bojler, keď bojler riadi zásuvka.
-             Stav a plán v riadku pod nadpisom, teplota vody a pás behov na jednej osi 0 - 24 h, energia podľa zdroja,
-             behy (zbalené), dole nastavenie: čo riadi bojler (docs/navrhy/teraz-auto-tok.html) a oznámenia. -->
+        <!-- Bojler (docs/navrhy/bojler-panel.html, A): otvorí ho dlaždica Bojler, keď bojler riadi zásuvka. Stav s príkonom,
+             teplota vody a pod ňou kedy dohreje, teplota vody a pás behov na jednej osi 0 - 24 h, energia podľa zdroja,
+             behy a nastavenie (čo riadi bojler, docs/navrhy/teraz-auto-tok.html, a oznámenia) zbalené. -->
         <dialog id="tz-bojler-sheet" class="sheet vec-sheet bojler-sheet" aria-labelledby="tz-bojler-ttl">
             <div class="sheet-in">
                 <div class="vec-top">
                     <span id="tz-bojler-ico" class="vec-ico" aria-hidden="true"></span>
                     <div>
                         <h2 id="tz-bojler-ttl"></h2>
-                        <!-- Stav a za bodkou plán (kedy dohreje) v jednom riadku. -->
-                        <p class="bj-pod"><span id="tz-bojler-pod"></span><span id="tz-bojler-plan" class="bj-plan hidden"></span></p>
+                        <p id="tz-bojler-pod" class="bj-pod"></p>
                     </div>
+                </div>
+                <div id="tz-bojler-velke-b" class="pn-velke">
+                    <p id="tz-bojler-velke" class="vec-cas"></p>
+                    <p id="tz-bojler-veta" class="vec-veta"></p>
                 </div>
                 <!-- Teplota vody (docs/navrhy/bojler-teplota.html, P1; bez teplomera skrytá) a pod ňou pás behov. Čiarka teraz
                      prechádza oboma, os hodín je pod pásom. -->
@@ -1088,7 +1109,6 @@
                     <div id="tz-bojler-pas" aria-hidden="true"></div>
                 </div>
                 <div id="tz-bojler-energia" class="bj-energia"></div>
-                <p id="tz-bojler-hrial" class="bj-hrial"></p>
                 <details id="tz-bojler-behy-d" class="bj-behy-d">
                     <summary>
                         <span id="tz-bojler-behy-n"></span>
@@ -1096,36 +1116,40 @@
                     </summary>
                     <div id="tz-bojler-behy" class="bj-behy"></div>
                 </details>
-                <!-- Čo riadi bojler: Ray-mon podľa prebytku, alebo Shelly (ručne, časovačom v appke Shelly) - vtedy
-                     skript v zásuvke len hlási. Texty dopĺňa render (TERAZ_BOJLER_TEXTS.rezim). -->
-                <div class="bj-nast">
-                    <p id="tz-bojler-rezim-n" class="bj-nast-n"></p>
-                    <div id="tz-bojler-rezim" class="bj-rezim" role="group" aria-labelledby="tz-bojler-rezim-n">
-                        <button type="button" data-bojler-rezim="rucne" aria-pressed="false"></button>
-                        <button type="button" data-bojler-rezim="appka" aria-pressed="true"></button>
+                <details id="tz-bojler-nast-d" class="bj-behy-d">
+                    <summary><span id="tz-bojler-nast-n"></span><span id="tz-bojler-nast-v" class="bj-behy-pocet"></span></summary>
+                    <!-- Čo riadi bojler: Ray-mon podľa prebytku, alebo Shelly (ručne, časovačom v appke Shelly) - vtedy
+                         skript v zásuvke len hlási. Texty dopĺňa render (TERAZ_BOJLER_TEXTS.rezim). -->
+                    <div class="bj-nast">
+                        <p id="tz-bojler-rezim-n" class="bj-nast-n"></p>
+                        <div id="tz-bojler-rezim" class="bj-rezim" role="group" aria-labelledby="tz-bojler-rezim-n">
+                            <button type="button" data-bojler-rezim="rucne" aria-pressed="false"></button>
+                            <button type="button" data-bojler-rezim="appka" aria-pressed="true"></button>
+                        </div>
+                        <p id="tz-bojler-rezim-t" class="bj-rezim-t"></p>
+                        <!-- Potvrdenie, že Worker režim uložil: na chvíľu namiesto popisu režimu (BOJLER_ULOZENE_MS). -->
+                        <p id="tz-bojler-rezim-ok" class="bj-rezim-t bj-rezim-ok hidden" role="status">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <circle cx="12" cy="12" r="11" />
+                                <path d="M7 12.4l3.2 3.1L17 8.8" />
+                            </svg>
+                            <span id="tz-bojler-rezim-ok-t"></span>
+                        </p>
+                        <p id="tz-bojler-rezim-chyba" class="wz-msg hidden" role="status"></p>
                     </div>
-                    <p id="tz-bojler-rezim-t" class="bj-rezim-t"></p>
-                    <!-- Potvrdenie, že Worker režim uložil: na chvíľu namiesto popisu režimu (BOJLER_ULOZENE_MS). -->
-                    <p id="tz-bojler-rezim-ok" class="bj-rezim-t bj-rezim-ok hidden" role="status">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <circle cx="12" cy="12" r="11" />
-                            <path d="M7 12.4l3.2 3.1L17 8.8" />
-                        </svg>
-                        <span id="tz-bojler-rezim-ok-t"></span>
-                    </p>
-                    <p id="tz-bojler-rezim-chyba" class="wz-msg hidden" role="status"></p>
-                </div>
-                <!-- Oznámenia o zapnutí a vypnutí bojlera pre tento telefón (docs/navrhy/spotrebic-koniec-opakovanie.html). -->
-                <button type="button" id="tz-bojler-oznam" class="bj-oznam" role="switch" aria-checked="false">
-                    <span id="tz-bojler-oznam-t"></span>
-                    <i class="tg" aria-hidden="true"></i>
-                </button>
-                <p id="tz-bojler-oznam-chyba" class="wz-msg hidden" role="status"></p>
+                    <!-- Oznámenia o zapnutí a vypnutí bojlera pre tento telefón (docs/navrhy/spotrebic-koniec-opakovanie.html). -->
+                    <button type="button" id="tz-bojler-oznam" class="bj-oznam" role="switch" aria-checked="false">
+                        <span id="tz-bojler-oznam-t"></span>
+                        <i class="tg" aria-hidden="true"></i>
+                    </button>
+                    <p id="tz-bojler-oznam-chyba" class="wz-msg hidden" role="status"></p>
+                </details>
             </div>
         </dialog>
 
         <!-- Auto (docs/navrhy/auto-nabija.html, P2): otvorí ho dlaždica Auto, kým appka vie o nabíjaní od Workera. Čo sa deje
-             teraz, os dňa s výrobou a behmi, posledný beh, posledné nabíjania, súčty a oznámenia o začiatku a konci. -->
+             teraz, posledný beh veľkým číslom, os dňa s výrobou a behmi, energia dneška, súčty, potom zbalené nabíjania,
+             oznámenia o začiatku a konci a prečo „asi“. -->
         <dialog id="tz-auto-sheet" class="sheet vec-sheet bojler-sheet auto-sheet" aria-labelledby="tz-auto-ttl">
             <div class="sheet-in">
                 <div class="vec-top">
@@ -1135,31 +1159,40 @@
                         <p id="tz-auto-pod" class="bj-pod"></p>
                     </div>
                 </div>
+                <div id="tz-auto-velke-b" class="pn-velke">
+                    <p id="tz-auto-velke" class="vec-cas"></p>
+                    <p id="tz-auto-veta" class="vec-veta"></p>
+                </div>
                 <div class="bj-graf">
                     <div id="tz-auto-os" role="img"></div>
                 </div>
-                <div id="tz-auto-beh" class="au-beh"></div>
                 <div id="tz-auto-energia" class="bj-energia"></div>
-                <div id="tz-auto-behy-b" class="au-behy">
-                    <p id="tz-auto-behy-n" class="bj-nast-n"></p>
-                    <div id="tz-auto-behy" class="bj-behy"></div>
-                </div>
                 <div id="tz-auto-sucty" class="au-sucty"></div>
-                <button type="button" id="tz-auto-oznam-z" class="bj-oznam" role="switch" aria-checked="false">
-                    <span id="tz-auto-oznam-z-t"></span>
-                    <i class="tg" aria-hidden="true"></i>
-                </button>
-                <button type="button" id="tz-auto-oznam-k" class="bj-oznam au-oznam-k" role="switch" aria-checked="false">
-                    <span id="tz-auto-oznam-k-t"></span>
-                    <i class="tg" aria-hidden="true"></i>
-                </button>
-                <p id="tz-auto-oznam-chyba" class="wz-msg hidden" role="status"></p>
-                <p id="tz-auto-pozn" class="au-pozn"></p>
+                <details id="tz-auto-behy-d" class="bj-behy-d">
+                    <summary><span id="tz-auto-behy-n"></span><span id="tz-auto-behy-pocet" class="bj-behy-pocet"></span></summary>
+                    <div id="tz-auto-behy" class="bj-behy"></div>
+                </details>
+                <details id="tz-auto-nast-d" class="bj-behy-d">
+                    <summary><span id="tz-auto-nast-n"></span><span id="tz-auto-nast-v" class="bj-behy-pocet"></span></summary>
+                    <button type="button" id="tz-auto-oznam-z" class="bj-oznam" role="switch" aria-checked="false">
+                        <span id="tz-auto-oznam-z-t"></span>
+                        <i class="tg" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" id="tz-auto-oznam-k" class="bj-oznam" role="switch" aria-checked="false">
+                        <span id="tz-auto-oznam-k-t"></span>
+                        <i class="tg" aria-hidden="true"></i>
+                    </button>
+                    <p id="tz-auto-oznam-chyba" class="wz-msg hidden" role="status"></p>
+                </details>
+                <details id="tz-auto-preco-d" class="bj-behy-d">
+                    <summary><span id="tz-auto-preco-n"></span></summary>
+                    <p id="tz-auto-pozn" class="pn-preco"></p>
+                </details>
             </div>
         </dialog>
 
-        <!-- Klíma (docs/navrhy/klima-daikin.html): otvorí ho dlaždica Klíma. Čo robí, graf dňa (teploty a kWh za hodinu),
-             energia dneška podľa zdroja, 14 dní, rok a podrobnosti. -->
+        <!-- Klíma (docs/navrhy/klima-daikin.html): otvorí ho dlaždica Klíma. Čo robí, teplota doma a vonku, graf dňa
+             (teploty a kWh za hodinu), energia dneška podľa zdroja, potom zbalené 14 dní, rok a podrobnosti. -->
         <dialog id="tz-klima-sheet" class="sheet vec-sheet bojler-sheet klima-sheet" aria-labelledby="tz-klima-ttl">
             <div class="sheet-in">
                 <div class="vec-top">
@@ -1169,11 +1202,20 @@
                         <p id="tz-klima-pod" class="bj-pod"></p>
                     </div>
                 </div>
+                <div id="tz-klima-velke-b" class="pn-velke">
+                    <p id="tz-klima-velke" class="vec-cas"></p>
+                    <p id="tz-klima-veta" class="vec-veta"></p>
+                </div>
                 <div id="tz-klima-graf" class="bj-graf kl-graf" role="img"></div>
                 <div id="tz-klima-energia" class="bj-energia"></div>
-                <p id="tz-klima-beh" class="bj-hrial"></p>
-                <div id="tz-klima-dni" class="kl-blok"></div>
-                <div id="tz-klima-rok" class="kl-blok"></div>
+                <details id="tz-klima-dni-d" class="bj-behy-d">
+                    <summary><span id="tz-klima-dni-n"></span></summary>
+                    <div id="tz-klima-dni" class="kl-blok"></div>
+                </details>
+                <details id="tz-klima-rok-d" class="bj-behy-d">
+                    <summary><span id="tz-klima-rok-n"></span></summary>
+                    <div id="tz-klima-rok" class="kl-blok"></div>
+                </details>
                 <details id="tz-klima-podr-d" class="bj-behy-d">
                     <summary><span id="tz-klima-podr-n"></span></summary>
                     <div id="tz-klima-podr" class="bj-behy kl-podr"></div>

@@ -55,6 +55,7 @@ import { BOJLER_TEXTS, bojlerSekcia } from '../../shared/nastavenie-bojler.js';
 import { UCENIE_TEXTS } from '../../shared/nastavenie-ucenie.js';
 import { naucene } from '../../shared/ucenie.js';
 import { bojlerDetail, bojlerDlazdica, TERAZ_BOJLER_TEXTS, tokDetail } from '../../shared/teraz-bojler.js';
+import { PANEL_TEXTS } from '../../shared/teraz-panel.js';
 import { scenaModel } from '../../shared/teraz-scena.js';
 import { kwpText, minutesToTimeStr } from '../../shared/format.js';
 import { mozemSkyModel } from '../../shared/mozem-sky.js';
@@ -1282,18 +1283,21 @@ test.describe('bojler na prebytky', () => {
         const sheet = page.locator('#tz-bojler-sheet');
         await expect(sheet).toBeVisible();
         await expect(page.locator('#tz-vec-sheet')).toBeHidden();
-        // Panel A (docs/navrhy/bojler-panel.html): tarifa s drahým pásmom, energia je slnko, sieť a sieť vo VT.
+        // Panel A (docs/navrhy/bojler-panel.html) v kostre panelov (docs/navrhy/teraz-panely-zladenie.html, C): tarifa
+        // s drahým pásmom, energia je slnko, sieť a drahá sieť so súčtom vpravo.
         const d = bojlerDetail(info, FIXED_NOW, SITE.timezone, null, TARIFF);
         expect(d.energia.map((c) => c.tone)).toEqual(['slnko', 'siet', 'vt']);
+        await expect(page.locator('#tz-bojler-ttl')).toHaveText('Bojler');
         await expect(page.locator('#tz-bojler-pod')).toHaveText(d.pod);
+        await expect(page.locator('#tz-bojler-energia .pn-en-n')).toHaveText(`${PANEL_TEXTS.energia}${d.spolu}`);
         await expect(page.locator('#tz-bojler-energia .bj-zdroje b')).toHaveText(d.energia.map((c) => c.v));
         await expect(page.locator('#tz-bojler-energia .bj-zdroje small')).toHaveText(d.energia.map((c) => c.l));
-        await expect(page.locator('#tz-bojler-hrial')).toHaveText(d.hrial);
-        await expect(page.locator('#tz-bojler-pas .bj-pas i')).toHaveCount(d.pas.useky.length);
+        await expect(page.locator('#tz-bojler-energia .bj-hrial')).toHaveText(d.hrial);
+        await expect(page.locator('#tz-bojler-pas .bj-pas i:not([data-plan])')).toHaveCount(d.pas.useky.length);
         await expect(page.locator('#tz-bojler-pas .bj-osi span')).toHaveText(['0', '6', '12', '18', '24']);
         // Behy sú zbalené pod nadpisom s počtom, ťuknutie ich rozbalí.
         const behy = page.locator('#tz-bojler-behy p');
-        await expect(page.locator('#tz-bojler-behy-d summary span')).toHaveText([d.behyNadpis, String(d.behy.length)]);
+        await expect(page.locator('#tz-bojler-behy-d summary span')).toHaveText([d.behyNadpis, d.behyPocet]);
         await expect(behy.first()).toBeHidden();
         await page.locator('#tz-bojler-behy-d summary').click();
         await expect(behy).toHaveCount(2);
@@ -1304,6 +1308,14 @@ test.describe('bojler na prebytky', () => {
         const vysky = await behy.evaluateAll((ps) => ps.map((p) => p.getBoundingClientRect().height));
         expect(new Set(vysky).size, 'riadky behov rovnako vysoké').toBe(1);
         await expect(page.locator('#tz-bojler-pas .bj-teraz')).toHaveCount(1);
+        // Čo riadi bojler a oznámenia sú zbalené v Nastavení, vpravo kto riadi.
+        await expect(page.locator('#tz-bojler-nast-d summary span')).toHaveText([
+            PANEL_TEXTS.nastavenie,
+            TERAZ_BOJLER_TEXTS.rezim.riadi(false),
+        ]);
+        await expect(page.locator('#tz-bojler-rezim')).toBeHidden();
+        await page.locator('#tz-bojler-nast-d summary').click();
+        await expect(page.locator('#tz-bojler-rezim')).toBeVisible();
         await expect(page.locator('#tz-bojler-rezim-n')).toHaveText(TERAZ_BOJLER_TEXTS.rezim.nazov);
         const axe = await new AxeBuilder({ page }).include('#tz-bojler-sheet').analyze();
         expect(axe.violations).toEqual([]);
@@ -1359,12 +1371,18 @@ test.describe('bojler na prebytky', () => {
         const d = autoDetail(auto, { now: FIXED_NOW, tz: SITE.timezone, tariff: TARIFF, slnko: null, vyroba: null });
         await expect(page.locator('#tz-auto-pod')).toHaveText(d.pod);
         await expect(sheet.locator('.vec-ico')).toHaveCSS('color', 'rgb(255, 179, 92)');
-        await expect(page.locator('#tz-auto-beh b')).toHaveText(`${d.beh?.km}km`);
-        await expect(page.locator('#tz-auto-energia .bj-zdroje b')).toHaveText((d.beh?.energia ?? []).map((c) => c.v));
+        // Posledný beh je veľké číslo, energia je za celý dnešok so súčtom (docs/navrhy/teraz-panely-zladenie.html, C).
+        await expect(page.locator('#tz-auto-velke')).toHaveText(`${d.beh?.km} km`);
+        await expect(page.locator('#tz-auto-veta')).toHaveText(d.beh?.veta ?? '');
+        await expect(page.locator('#tz-auto-energia .pn-en-n')).toHaveText(`${PANEL_TEXTS.energia}${d.spolu}`);
+        await expect(page.locator('#tz-auto-energia .bj-zdroje b')).toHaveText(d.energia.map((c) => c.v));
         await expect(page.locator('#tz-auto-os .bj-pas i')).toHaveCount(d.os.useky.length);
         await expect(page.locator('#tz-auto-os .au-krivka path')).toHaveCount(1);
         await expect(page.locator('#tz-auto-os .bj-osi span')).toHaveText(['0', '6', '12', '18', '24']);
         const behy = page.locator('#tz-auto-behy p');
+        await expect(page.locator('#tz-auto-behy-d summary span')).toHaveText([PANEL_TEXTS.nabijania, d.behyPocet]);
+        await expect(page.locator('#tz-auto-nast-d summary span')).toHaveText([PANEL_TEXTS.nastavenie, PANEL_TEXTS.vypnute]);
+        await expect(page.locator('#tz-auto-preco-d summary span')).toHaveText(PANEL_TEXTS.precoAsi);
         await expect(behy.locator('> span:first-child')).toHaveText(d.behy.map((r) => r.cas));
         await expect(behy.locator('b')).toHaveText(d.behy.map((r) => r.km));
         await expect(page.locator('#tz-auto-sucty p b').last()).toHaveText(d.tyzden.v);
@@ -1493,8 +1511,11 @@ test.describe('bojler na prebytky', () => {
         const prDl = page.locator('#tz-co [data-vec="pracka"]');
         await expect(prDl).toHaveAttribute('data-zapnuty', '');
         await prDl.click();
-        await expect(page.locator('#tz-vec-meria')).toHaveText(TERAZ_BEZI.zasuvka.meria(2100));
+        // Príkon zo zásuvky je na konci riadku pod nadpisom, oznámenie o konci v zbalenom Nastavení.
+        await expect(page.locator('#tz-vec-kedy')).toHaveText(/ · 2,1 kW$/);
         await expect(page.locator('#tz-vec-zapis')).toBeHidden();
+        await expect(page.locator('#tz-vec-nast-d summary span')).toHaveText([PANEL_TEXTS.nastavenie, PANEL_TEXTS.vypnute]);
+        await page.locator('#tz-vec-nast-d summary').click();
         await expect(page.locator('#tz-vec-oznam')).toBeVisible();
         await expect(page.locator('#tz-vec-oznam-t')).toHaveText(TERAZ_BEZI.zasuvka.oznam);
         await expect(page.locator('#tz-vec-oznam')).toHaveAttribute('aria-checked', 'false');
@@ -1504,8 +1525,8 @@ test.describe('bojler na prebytky', () => {
         // Sušička zásuvku nemá: „Už beží“ ostáva.
         await page.locator('#tz-co [data-vec="susicka"]').click();
         await expect(page.locator('#tz-vec-zapol')).toBeVisible();
-        await expect(page.locator('#tz-vec-meria')).toBeHidden();
-        await expect(page.locator('#tz-vec-oznam')).toBeHidden();
+        await expect(page.locator('#tz-vec-nast-d')).toBeHidden();
+        await expect(page.locator('#tz-vec-kedy')).not.toContainText('kW');
         await page.keyboard.press('Escape');
         // Nastavenie: zásuvka práčky sa ozvala, skript pre sušičku.
         // Nastavenie: každá zásuvka pod svojím spotrebičom, umývačka (vypnutá) zásuvku nemá (L1).
@@ -1596,6 +1617,8 @@ test.describe('bojler na prebytky', () => {
         const errors = await openObloha(page, { settings: { ...OWNER, zdroj: NB_ZDROJ }, bojler: BOJLER_INFO });
         const R = TERAZ_BOJLER_TEXTS.rezim;
         await page.locator('#tz-dlazdice [data-vec="bojler"]').click();
+        // Čo riadi bojler je v zbalenom Nastavení (docs/navrhy/teraz-panely-zladenie.html, C).
+        await page.locator('#tz-bojler-nast-d summary').click();
         const appka = page.locator('[data-bojler-rezim="appka"]');
         const rucne = page.locator('[data-bojler-rezim="rucne"]');
         await expect(appka).toHaveText(R.appka);
@@ -1620,6 +1643,8 @@ test.describe('bojler na prebytky', () => {
         await page.reload();
         await expect(page.locator('#tz-dlazdice [data-vec="bojler"]')).toHaveAttribute('data-tone', 'tiche');
         await page.locator('#tz-dlazdice [data-vec="bojler"]').click();
+        await expect(page.locator('#tz-bojler-nast-v')).toHaveText(R.riadi(true));
+        await page.locator('#tz-bojler-nast-d summary').click();
         await expect(rucne).toHaveAttribute('aria-pressed', 'true');
         // Nepodarí sa uložiť: prepínač sa vráti a povie to.
         zlyhaj = true;
@@ -1708,7 +1733,14 @@ test.describe('klimatizácia Daikin (docs/navrhy/klima-daikin.html)', () => {
         await expect(page.locator('#tz-klima-graf .kl-hod span')).toHaveCount(24);
         await expect(page.locator('#tz-klima-graf .kl-t')).toHaveText((d.graf?.popisky ?? []).map((p) => p.text));
         await expect(page.locator('#tz-klima-energia .bj-zdroje b')).toHaveText(d.energia.map((c) => c.v));
-        await expect(page.locator('#tz-klima-beh')).toHaveText(d.beh);
+        // Kostra panelov (docs/navrhy/teraz-panely-zladenie.html, C): teplota doma veľkým číslom, súčet energie vpravo,
+        // 14 dní, rok a podrobnosti zbalené.
+        await expect(page.locator('#tz-klima-velke')).toHaveText(d.velke);
+        await expect(page.locator('#tz-klima-veta')).toHaveText(d.veta);
+        await expect(page.locator('#tz-klima-energia .pn-en-n')).toHaveText(`${PANEL_TEXTS.energia}${d.spolu}`);
+        await expect(page.locator('#tz-klima-energia .bj-hrial')).toHaveText(d.beh);
+        await expect(page.locator('#tz-klima-dni-d summary')).toHaveText(PANEL_TEXTS.dni14);
+        await expect(page.locator('#tz-klima-dni')).toBeHidden();
         await expect(page.locator('#tz-klima-dni .kl-dni i')).toHaveCount(14);
         await expect(page.locator('#tz-klima-rok .bj-zdroje b')).toHaveText((d.rok?.sucty ?? []).map((s) => s.v));
         await sheet.evaluate((el) => [el, ...el.querySelectorAll('.sheet-in')].forEach((x) => x.scrollTo(0, 0)));

@@ -909,56 +909,6 @@
         transform: rotate(360deg);
     }
 }
-/* Os dňa v detaile spotrebiča (docs/navrhy/teraz-iny-den.html, 1A): tenká os, plný úsek spotrebiča,
-   pri dnešku biela čiara „teraz“ a hodiny pod tým. Polohy sú v % osi. */
-.os {
-    position: relative;
-    height: 64px;
-    margin: 4px 6px 0;
-}
-.os i {
-    position: absolute;
-}
-.os-ciara {
-    top: 22px;
-    right: 0;
-    left: 0;
-    height: 8px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.14);
-}
-.os-usek {
-    top: 14px;
-    min-width: 24px;
-    height: 24px;
-    border-radius: 12px;
-    background: var(--yes);
-    box-shadow: 0 0 18px rgba(185, 242, 140, 0.6);
-}
-.os-usek[data-tone='cheap'] {
-    background: var(--cheap);
-    box-shadow: 0 0 18px rgba(124, 196, 255, 0.6);
-}
-.os-usek[data-tone='part'] {
-    background: #ffd166;
-    box-shadow: 0 0 18px rgba(255, 209, 102, 0.6);
-}
-.os-teraz {
-    top: 8px;
-    width: 3px;
-    height: 36px;
-    margin-left: -1.5px;
-    border-radius: 2px;
-    background: #fff;
-}
-.os-t {
-    position: absolute;
-    bottom: 0;
-    transform: translateX(-50%);
-    font-size: 0.75rem;
-    font-variant-numeric: tabular-nums;
-    color: var(--dim);
-}
 /* Oblačnosť po hodinách nad krivkou: jasno svetlé, zamračené tmavosivé (`--c` je oblačnosť v %,
    web/day-chart.js), bunka pod čiarou náhľadu má okraj. */
 .dc-cloud {
@@ -1229,13 +1179,6 @@
 .dl[data-tone='chyba'][data-vec='klima'] b {
     color: var(--amber-text);
 }
-/* Spotrebič beží (docs/navrhy/teraz-bezi-spotrebic.html): dlaždica je na skle ako ostatné, „do 14:30“ a „beží“ povedia
-   odrážky. Na osi v detaile je jeho úsek krémový. Čo dobehlo, vlastnú dlaždicu nemá - dlaždica s ďalším časom
-   má odrážku „dnes už 1×“ (docs/navrhy/spotrebic-koniec-opakovanie.html). */
-.os-usek[data-tone='bezi'] {
-    background: #fff4d6;
-    box-shadow: 0 0 18px rgba(255, 244, 214, 0.6);
-}
 /* Zápis v detaile spotrebiča (docs/navrhy/spotrebic-cas-nastavenie.html, A + D): „Už beží“, potom nastavenie času
    s „Nastaviť“ a pri bežiacom „Nebeží“. */
 .vec-zapis {
@@ -1245,11 +1188,6 @@
 }
 .vec-zapis .pbtn {
     justify-self: stretch;
-}
-/* Spotrebič na zásuvke (docs/navrhy/pracka-zasuvka.html, U1): namiesto „Už beží“ zmeraný príkon. */
-.vec-meria {
-    margin: 14px 0 0;
-    font-weight: 700;
 }
 /* Nastavenie času: nad ním „Zostáva“ či „Zapnutá o“, pod ním kedy skončí. */
 .vec-nastav {
@@ -1337,7 +1275,7 @@
 /* Čo dnes už dobehlo: riadok na behu, čas vpravo. */
 .vec-hotove {
     list-style: none;
-    margin: 12px 0 0;
+    margin: 0 0 12px;
     padding: 0;
     display: grid;
     gap: 6px;
@@ -1390,9 +1328,6 @@
     font-size: 0.875rem;
     color: var(--dim);
 }
-.bj-plan::before {
-    content: ' · ';
-}
 .bj-graf {
     position: relative;
     margin: 16px 0 4px;
@@ -1412,19 +1347,25 @@
 .bj-pas i[data-tone='hotovo'] {
     background: rgba(255, 255, 255, 0.45);
 }
-.bojler-sheet [data-tone='slnko'] {
+.vec-sheet [data-tone='slnko'] {
     --bj-farba: #ffd166;
 }
-.bojler-sheet [data-tone='siet'] {
+.vec-sheet [data-tone='siet'] {
     --bj-farba: var(--cheap);
 }
-.bojler-sheet [data-tone='vt'] {
+.vec-sheet [data-tone='vt'] {
     --bj-farba: var(--costly);
 }
 .bj-pas i[data-tone],
 .bj-stoh i,
 .bj-zdroje small i {
     background: var(--bj-farba, rgba(255, 255, 255, 0.45));
+}
+/* Plán na páse (docs/navrhy/teraz-panely-zladenie.html, C): obrys farbou zdroja - plné je, čo sa stalo. */
+.bj-pas i[data-plan] {
+    background: none;
+    border-radius: 3px;
+    box-shadow: inset 0 0 0 2px var(--bj-farba, rgba(255, 255, 255, 0.45));
 }
 /* Čiarka teraz cez krivku teploty aj pás, nad osou hodín. */
 .bj-teraz {
@@ -1663,45 +1604,9 @@
     stroke-width: 1.5;
     vector-effect: non-scaling-stroke;
 }
-.au-beh {
-    display: flex;
-    align-items: flex-end;
-    gap: 14px;
-    margin-top: 10px;
-}
-.au-beh b {
-    font-size: 2.6rem;
-    font-weight: 900;
-    line-height: 0.95;
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-}
-.au-beh b small {
-    margin-left: 4px;
-    font-size: 1.1rem;
-}
-.au-beh p {
-    margin: 0;
-    padding-bottom: 3px;
-    font-size: 0.875rem;
-    color: var(--dim);
-}
-.au-beh p strong {
-    display: block;
-    color: #fff;
-    font-size: 1rem;
-}
-.au-behy {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.16);
-}
 .au-sucty {
     display: grid;
     gap: 6px;
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid rgba(255, 255, 255, 0.16);
     font-size: 0.875rem;
 }
 .au-sucty p {
@@ -1714,15 +1619,6 @@
 .au-sucty b {
     color: #fff;
     text-align: right;
-}
-.au-oznam-k {
-    margin-top: 4px;
-    border-top: 0;
-}
-.au-pozn {
-    margin: 12px 0 0;
-    font-size: 0.8125rem;
-    color: var(--dim);
 }
 /* Vypínač oznámení bojlera na konci panela Bojler dnes (docs/navrhy/spotrebic-koniec-opakovanie.html); prepínač .tg
    je spoločný s Nastavením (css/nastavenie.css). */
@@ -1907,7 +1803,7 @@
     background: var(--kl-kurenie);
 }
 .kl-blok {
-    margin-top: 20px;
+    margin-bottom: 12px;
 }
 .kl-dni {
     gap: 4px;
@@ -1960,4 +1856,69 @@
 }
 .kl-podr p {
     grid-template-columns: 1fr auto;
+}
+/* Kostra panelov dlaždíc (docs/navrhy/teraz-panely-zladenie.html, C + súčet, 28. 11. 2026): veľké číslo s vetou,
+   Energia dnes so súčtom vpravo a zbalené riadky (Behy, Posledných 14 dní, Nastavenie, Prečo) jeden pod druhým. */
+.pn-velke {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+}
+.pn-en-n {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+}
+.pn-en-n span {
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--dim);
+}
+.pn-en-n b {
+    font-size: 1rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+/* Riadky za sebou bez medzery mriežky: platí za každým viditeľným riadkom (skrytý susedný by inak posunul ďalší nahor). */
+.bj-behy-d:not(.hidden) ~ .bj-behy-d {
+    margin-top: -10px;
+}
+/* Šípka zbaleného riadku je vždy vpravo, aj keď riadok nemá hodnotu (Prečo, Podrobnosti). */
+.bj-behy-d summary > span:first-child {
+    flex: 1;
+}
+.bj-energia + .bj-behy-d,
+.au-sucty + .bj-behy-d {
+    margin-top: 6px;
+}
+.pn-preco {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 12px;
+    font-size: 0.875rem;
+    color: var(--dim);
+}
+.pn-preco p {
+    font-size: inherit;
+}
+/* V zbalenom Nastavenie sú riadenie a prepínače pod sebou bez vlastnej čiary nad prvým. */
+.bj-behy-d .bj-nast {
+    margin: 0;
+    padding: 0 0 4px;
+    border-top: 0;
+}
+.bj-behy-d > .bj-oznam {
+    margin-top: 0;
+    padding: 12px 0;
+}
+.bj-behy-d summary + .bj-oznam {
+    border-top: 0;
+    padding-top: 0;
+}
+.bj-behy-d > .bj-oznam:last-of-type {
+    margin-bottom: 4px;
 }

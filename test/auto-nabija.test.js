@@ -209,10 +209,12 @@ test('panel Auto počas nabíjania: riadok stavu, beh, energia podľa zdroja s V
     assert.equal(d.nabija, true);
     assert.equal(d.pod, 'Asi sa nabíja od 12:00 · ≈ 7,2 kW');
     assert.equal(d.beh?.km, '+40');
-    assert.equal(d.beh?.kedy, AUTO_NABIJA_TEXTS.vTomto);
-    assert.equal(d.beh?.slnko, '63 % zo slnka');
+    assert.equal(d.beh?.veta, `7,2 kWh ${AUTO_NABIJA_TEXTS.vTomto} · 63 % zo slnka`);
+    // Energia dnes: včerajší beh do nej nepatrí, súčet vpravo v riadku Energia dnes.
+    assert.equal(d.spolu, '7,2 kWh');
+    assert.equal(d.behyPocet, '2');
     assert.deepEqual(
-        d.beh?.energia.map((c) => [c.tone, c.wh]),
+        d.energia.map((c) => [c.tone, c.wh]),
         [
             ['slnko', 4500],
             ['siet', 1800],
@@ -239,9 +241,9 @@ test('panel Auto po nabíjaní a bez behov', () => {
     const d = autoDetail({ at: T0 + 3 * 60 * MIN, behy: [hotovy] }, { now, tz: TZ, tariff: null, slnko: null, vyroba: null });
     assert.equal(d.nabija, false);
     assert.equal(d.pod, 'Nenabíja sa · naposledy dnes 13:00');
-    assert.equal(d.beh?.kedy, '12:00 – 13:00');
+    assert.equal(d.beh?.veta, '7,2 kWh 12:00 – 13:00 · 63 % zo slnka');
     assert.deepEqual(
-        d.beh?.energia.map((c) => c.tone),
+        d.energia.map((c) => c.tone),
         ['slnko', 'siet'],
     );
     assert.equal(d.os.krivka, null);
@@ -250,6 +252,7 @@ test('panel Auto po nabíjaní a bez behov', () => {
     const prazdny = autoDetail({ at: T0, behy: [] }, { now, tz: TZ, tariff: null, slnko: null, vyroba: [0, 0] });
     assert.equal(prazdny.pod, 'Nenabíja sa');
     assert.equal(prazdny.beh, null);
+    assert.equal(prazdny.spolu, '0,0 kWh');
     assert.equal(prazdny.os.krivka, null);
     const stary = autoDetail(
         { at: T0, behy: [{ ...BEH, m: T0 - 3 * 24 * 60 * MIN, k: T0 - 3 * 24 * 60 * MIN + 60 * MIN }] },
